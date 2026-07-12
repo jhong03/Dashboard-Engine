@@ -243,6 +243,34 @@ function removeSelected() {
   renderAll();
 }
 
+// ── Image import (dialog + staging live in main; we just get a rel + uri) ──
+
+async function importImage() {
+  const res = await aegis.importImage(Object.keys(state.assets));
+  if (!res.ok) {
+    if (res.error) setStatus(res.error, true);
+    return null; // cancelled or refused
+  }
+  state.assets[res.rel] = res.uri;
+  setStatus(`IMPORTED ${res.rel} — written into the pack when you SAVE`);
+  return res.rel;
+}
+
+async function importImageAsComponent() {
+  const rel = await importImage();
+  if (!rel) return;
+  state.pack.components.push({
+    type: 'image',
+    rect: [...DEFAULT_RECTS.image],
+    z: 1,
+    // Imported art is usually decoration — start chromeless.
+    style: { ...DEFAULT_STYLE, panel: false },
+    options: { src: rel, fit: 'contain' },
+  });
+  state.selected = state.pack.components.length - 1;
+  renderAll();
+}
+
 // ── Inspector ───────────────────────────────────────────────────────────────
 
 function field(labelText, control, onClear) {
@@ -353,17 +381,20 @@ function optionFields(component, panel) {
     panel.append(field('TEXT', area));
   } else if (type === 'image') {
     const choices = Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')]);
-    if (choices.length === 0) {
-      const none = document.createElement('p');
-      none.className = 'ed-empty';
-      none.textContent = 'No images in this pack’s assets/ folder.';
-      panel.append(none);
-    } else {
+    if (choices.length > 0) {
       panel.append(
         field('IMAGE', selectControl(o.src, choices, set('src'))),
         field('FIT', selectControl(o.fit, [['contain', 'Contain'], ['cover', 'Cover']], set('fit'))),
       );
     }
+    const importBtn = document.createElement('button');
+    importBtn.className = 'btn tiny';
+    importBtn.textContent = 'IMPORT NEW IMAGE…';
+    importBtn.addEventListener('click', async () => {
+      const rel = await importImage();
+      if (rel) { o.src = rel; renderAll(); }
+    });
+    panel.append(importBtn);
   } else if (type === 'divider') {
     panel.append(field('DIRECTION', selectControl(o.orientation, [['h', 'Horizontal'], ['v', 'Vertical']], set('orientation'))));
   } else if (type === 'calendar') {
@@ -489,6 +520,14 @@ function renderSkinTab(panel) {
   panel.appendChild(sectionLabel('WALLPAPER'));
   const choices = [['', 'none'], ...Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')])];
   panel.appendChild(field('IMAGE', selectControl(skin.wallpaper || '', choices, (v) => { skin.wallpaper = v || null; renderAll(); })));
+  const importBtn = document.createElement('button');
+  importBtn.className = 'btn tiny';
+  importBtn.textContent = 'IMPORT WALLPAPER…';
+  importBtn.addEventListener('click', async () => {
+    const rel = await importImage();
+    if (rel) { skin.wallpaper = rel; renderAll(); }
+  });
+  panel.appendChild(importBtn);
 }
 
 function renderPersonaTab(panel) {
@@ -600,6 +639,7 @@ async function init() {
   $('itab-persona').addEventListener('click', () => { state.tab = 'persona'; syncTabs(); renderInspector(); });
   $('btn-save').addEventListener('click', () => save(false));
   $('btn-save-apply').addEventListener('click', () => save(true));
+  $('btn-import-image').addEventListener('click', importImageAsComponent);
 
   renderAll();
   setStatus('DRAG COMPONENTS FROM THE PALETTE · CLICK TO SELECT · ARROWS NUDGE · DEL REMOVES');

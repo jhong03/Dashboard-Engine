@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('aegis', {
   packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
   assetsAll: (id) => ipcRenderer.invoke('aegis:packs:assetsAll', String(id)),
   editorSave: (baseId, pack) => ipcRenderer.invoke('aegis:editor:save', { baseId: String(baseId), pack }),
+  importImage: (existingNames) => ipcRenderer.invoke('aegis:editor:importImage', existingNames),
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
