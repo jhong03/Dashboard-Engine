@@ -10,17 +10,17 @@
     "fallback": { "engine": "system", "match": "United States" }
   },
   "prosody": {
-    "pitchShift": 1.5,
-    "rate": 195,
-    "expressiveness": 1.35,
-    "steadiness": 0.3,
+    "pitchShift": 0.0,
+    "rate": 185,
+    "expressiveness": 1.15,
+    "steadiness": 0.45,
     "pauseSentence": 220,
     "pauseComma": 70
   },
   "timbre": {
-    "warmth": 1.0,
-    "brightness": 2.5,
-    "presence": 1.5,
+    "warmth": 1.5,
+    "brightness": 1.5,
+    "presence": 1.0,
     "sibilance": -1.0,
     "breath": 0.0
   },
