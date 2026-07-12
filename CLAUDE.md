@@ -10,15 +10,16 @@ We ship the engine. Users author the characters. We never ship or bundle a copyr
 
 ## Current milestone
 
-**M2 — Dashboard Skin Engine.** (M1, the voice tuning panel, shipped 2026-07-12.)
+**M3 — Pack Ecosystem.** (M1 voice panel and M2 skin engine shipped 2026-07-12.)
 
-M2 renders the visual half of a Persona Pack: a dashboard window whose entire look — palette, typography choice, textures, layout — comes from pack data. Scope decisions, agreed and fixed:
+AEGIS is an ENGINE, not a personal dashboard app: designers anywhere publish packs, users subscribe and install them, the engine renders whatever arrives. M3 builds that loop. Scope decisions, agreed and fixed:
 
-- **Normal app window.** No wallpaper-layer injection, no always-on-top overlay yet.
-- **Packs are design tokens + declarative layout only.** JSON plus image assets, sanitized and clamped exactly like voice profiles. No CSS, no JS, no font files in packs. A pack is untrusted third-party content from day one.
-- **Built-in widgets only:** clock, system stats, persona status. No module SDK.
+- **Engine/content split.** The repo ships the engine plus exactly two built-in reference packs (aegis-holo, ember-archive). Installed packs live in the user-data directory, never in the repo.
+- **Portable pack format:** `.aegispack` (zip of pack.json + assets), imported/exported in-app. Zip contents are validated with the same hostility as everything else (entry-name allowlist, size caps, no zip-slip).
+- **Registry feeds:** users subscribe to https index URLs (anyone can host one — it's a static JSON listing packs with version, download URL, sha256). In-app browse / install / update / uninstall. Integrity comes from the index-pinned sha256; authenticity is trust in the registry you added, like any package feed.
+- Packs remain pure data — the schema-2 declarative canvas, no code, no fonts.
 
-The module system, marketplace, and LLM bridge remain out of scope. If a task seems to require them, stop and ask.
+Still out of scope: hosted marketplace service (accounts, payments, moderation), the module SDK (packs defining new component types), and the LLM bridge. If a task seems to require them, stop and ask.
 
 ## Stack
 
