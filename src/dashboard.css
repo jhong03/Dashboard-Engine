@@ -1,8 +1,9 @@
 /* Dashboard skin engine. Every colour, texture intensity, and shape choice
    here is driven by CSS custom properties that dashboard.js sets from the
    ACTIVE PACK's sanitized tokens — this file defines structure, packs define
-   look. Defaults below mirror the aegis-holo factory pack so the window is
-   never unstyled, even for a heartbeat. */
+   look. Components live on a free percent canvas and may override tokens
+   locally (element-scoped custom properties). Defaults mirror aegis-holo so
+   the window is never unstyled, even for a heartbeat. */
 
 @font-face {
   font-family: 'Rajdhani';
@@ -24,7 +25,6 @@
 }
 
 :root {
-  /* Pack tokens (set by dashboard.js; these are aegis-holo fallbacks). */
   --void: #04080F;
   --accent: #3FD8FF;
   --accent-bright: #7FE9FF;
@@ -36,10 +36,7 @@
   --hairline-dim: rgba(63, 216, 255, 0.14);
   --glow: rgba(63, 216, 255, 0.5);
   --radius: 0px;
-  --gap: 14px;
   --ls: 0.22em;
-  /* Texture "inks": final rgba colours computed by dashboard.js from the
-     pack's intensity knobs, so each layer can be zeroed independently. */
   --scan-ink: rgba(0, 0, 0, 0.18);
   --grid-ink: rgba(63, 216, 255, 0.03);
   --glow-wash: rgba(63, 216, 255, 0.07);
@@ -152,36 +149,41 @@ select {
 }
 .btn:hover { background: var(--panel-bg); box-shadow: 0 0 12px var(--glow); }
 
-/* ── Widget grid ────────────────────────────────────────────────────────── */
+/* ── Component canvas ───────────────────────────────────────────────────── */
 
-.grid {
+.canvas-outer {
   position: relative;
   z-index: 3;
   flex: 1;
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-  grid-template-rows: repeat(8, 1fr);
-  gap: var(--gap);
-  padding: var(--gap);
   min-height: 0;
 }
+.canvas {
+  position: absolute;
+  inset: 0; /* dashboard.js sets inset:<padding>% from the pack */
+}
 
-.widget {
-  position: relative;
-  background: var(--panel-bg);
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-  box-shadow: 0 0 18px rgba(0, 0, 0, 0.25), inset 0 0 40px rgba(0, 0, 0, 0.12);
-  padding: 14px 18px;
+.comp {
+  position: absolute;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 6px;
+  padding: 14px 18px;
   overflow: hidden;
-  min-height: 0;
+  border-radius: var(--radius);
+  /* Pack style.fontScale multiplies everything inside (child sizes are em). */
+  font-size: calc(15px * var(--font-scale, 1));
 }
-/* Corner notches, toggled by the pack's shape token. */
-body.notches .widget::before, body.notches .widget::after {
+.comp.panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--hairline);
+  box-shadow: 0 0 18px rgba(0, 0, 0, 0.25), inset 0 0 40px rgba(0, 0, 0, 0.12);
+}
+.comp.panel.borderless { border-color: transparent; }
+
+/* Corner notches: skin default via body class, per-component opt-out. */
+body.notches .comp.panel:not(.no-notches)::before,
+body.notches .comp.panel:not(.no-notches)::after {
   content: '';
   position: absolute;
   width: 12px; height: 12px;
@@ -189,34 +191,37 @@ body.notches .widget::before, body.notches .widget::after {
   opacity: 0.8;
   pointer-events: none;
 }
-body.notches .widget::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
-body.notches .widget::after  { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+body.notches .comp.panel:not(.no-notches)::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+body.notches .comp.panel:not(.no-notches)::after  { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
 
-.widget-label {
-  font-size: 0.62rem;
+.comp-label {
+  font-size: 0.62em;
   font-weight: 600;
   letter-spacing: 0.28em;
   color: var(--muted);
+  flex-shrink: 0;
 }
-body.uppercase .widget-label { text-transform: uppercase; }
+body.uppercase .comp-label { text-transform: uppercase; }
+
+.fill-canvas { flex: 1 1 auto; width: 100%; min-height: 0; }
 
 /* clock */
 .clock-time {
   font-family: var(--font-mono);
-  font-size: clamp(2rem, 7vw, 4.4rem);
+  font-size: 3.2em;
   color: var(--accent);
   text-shadow: 0 0 18px var(--glow);
   line-height: 1;
 }
 .clock-date {
-  font-size: 0.9rem;
+  font-size: 0.82em;
   letter-spacing: 0.14em;
   color: var(--muted);
 }
 
-/* stats */
-.stat-row { display: grid; grid-template-columns: 52px 1fr 132px; gap: 12px; align-items: center; }
-.stat-name { font-size: 0.72rem; letter-spacing: 0.2em; color: var(--muted); }
+/* stats + bar meters */
+.stat-row { display: grid; grid-template-columns: 52px 1fr 132px; gap: 12px; align-items: center; flex-shrink: 0; }
+.stat-name { font-size: 0.72em; letter-spacing: 0.2em; color: var(--muted); }
 .stat-bar {
   height: 6px;
   border: 1px solid var(--hairline-dim);
@@ -232,11 +237,25 @@ body.uppercase .widget-label { text-transform: uppercase; }
   transition: width 0.6s ease;
 }
 .stat-bar > span.hot { background: var(--warn); }
-.stat-value { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent-bright); text-align: right; }
+.stat-value { font-family: var(--font-mono); font-size: 0.78em; color: var(--accent-bright); text-align: right; }
+
+/* ring meter */
+.ring-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.ring-wrap .fill-canvas { position: absolute; inset: 0; height: 100%; }
+.ring-value {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 1.4em;
+  color: var(--accent-bright);
+  pointer-events: none;
+}
 
 /* status (persona) */
 .status-name {
-  font-size: clamp(1.6rem, 4.5vw, 2.6rem);
+  font-size: 2.2em;
   font-weight: 700;
   letter-spacing: var(--ls);
   color: var(--accent);
@@ -244,10 +263,10 @@ body.uppercase .widget-label { text-transform: uppercase; }
   line-height: 1.05;
 }
 body.uppercase .status-name { text-transform: uppercase; }
-.status-tagline { font-size: 0.82rem; letter-spacing: 0.2em; color: var(--muted); }
+.status-tagline { font-size: 0.8em; letter-spacing: 0.2em; color: var(--muted); }
 .status-line {
   font-family: var(--font-mono);
-  font-size: 0.85rem;
+  font-size: 0.82em;
   color: var(--gold);
   letter-spacing: 0.08em;
   margin-top: 4px;
@@ -260,6 +279,41 @@ body.uppercase .status-name { text-transform: uppercase; }
   margin-left: 2px;
 }
 @keyframes cursor { 50% { opacity: 0; } }
+
+/* text */
+.text-body {
+  font-size: 1.1em;
+  line-height: 1.45;
+  letter-spacing: var(--ls);
+  color: var(--accent-bright);
+  white-space: pre-wrap;
+}
+
+/* image */
+.comp-image { padding: 0; }
+.image-body { width: 100%; height: 100%; }
+.image-body.fit-contain { object-fit: contain; }
+.image-body.fit-cover { object-fit: cover; }
+
+/* divider — always chromeless, whatever the style block says */
+.comp-divider {
+  padding: 0;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.comp-divider::before, .comp-divider::after { display: none !important; }
+.comp-divider .divider-line { position: absolute; }
+.comp-divider.divider-h .divider-line {
+  left: 0; right: 0; top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hairline), transparent);
+}
+.comp-divider.divider-v .divider-line {
+  top: 0; bottom: 0; left: 50%;
+  width: 1px;
+  background: linear-gradient(0deg, transparent, var(--hairline), transparent);
+}
 
 .foot {
   position: relative;

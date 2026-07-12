@@ -1,5 +1,5 @@
 {
-  "schema": 1,
+  "schema": 2,
   "name": "Ember Archive",
   "author": "AEGIS",
   "persona": {
@@ -24,14 +24,42 @@
     },
     "typography": { "display": "system-serif", "uppercase": false, "letterSpacing": 0.03 },
     "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.3, "vignette": 0.55 },
-    "shape": { "cornerNotches": false, "borderOpacity": 0.2, "panelOpacity": 0.6, "radius": 8 }
+    "shape": { "cornerNotches": false, "borderOpacity": 0.2, "panelOpacity": 0.6, "radius": 8 },
+    "wallpaper": "assets/hearth.png"
   },
-  "layout": {
-    "gap": 18,
-    "widgets": [
-      { "type": "clock", "area": [1, 1, 7, 4], "options": { "format": "12h", "seconds": false, "showDate": true } },
-      { "type": "status", "area": [8, 1, 5, 4] },
-      { "type": "stats", "area": [1, 5, 12, 4], "options": { "cpu": true, "mem": true } }
-    ]
-  }
+  "canvas": { "padding": 3 },
+  "components": [
+    { "type": "image", "rect": [66, 6, 30, 40], "z": 0,
+      "options": { "src": "assets/seal.png", "fit": "contain" },
+      "style": { "panel": false, "opacity": 0.5, "rotate": -6 } },
+
+    { "type": "analog-clock", "rect": [4, 8, 26, 44], "z": 2,
+      "options": { "seconds": true },
+      "style": { "panel": true, "border": true } },
+
+    { "type": "text", "rect": [34, 10, 30, 14], "z": 2,
+      "options": { "text": "the archive keeps\nits own hours" },
+      "style": { "panel": false, "fontScale": 1.5, "align": "left", "rotate": -1 } },
+
+    { "type": "status", "rect": [34, 28, 30, 24], "z": 2,
+      "style": { "panel": false } },
+
+    { "type": "clock", "rect": [72, 50, 24, 16], "z": 2,
+      "options": { "format": "12h", "seconds": false, "showDate": false },
+      "style": { "panel": false, "align": "right", "fontScale": 0.8, "glow": 0 } },
+
+    { "type": "divider", "rect": [4, 56, 60, 3], "z": 2, "options": { "orientation": "h" } },
+
+    { "type": "sparkline", "rect": [4, 61, 34, 30], "z": 2,
+      "options": { "bind": "cpu", "label": "the machine's pulse" },
+      "style": { "panel": true, "border": false, "glow": 0.15 } },
+
+    { "type": "meter", "rect": [42, 61, 22, 30], "z": 2,
+      "options": { "bind": "mem", "variant": "bar", "label": "shelf space" },
+      "style": { "panel": true, "border": false } },
+
+    { "type": "text", "rect": [70, 88, 26, 8], "z": 3,
+      "options": { "text": "est. MMXXVI · open all night" },
+      "style": { "panel": false, "font": "mono", "fontScale": 0.7, "align": "right", "textColor": "#8A6F58" } }
+  ]
 }

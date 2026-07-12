@@ -34,10 +34,11 @@ function main() {
     let totalWarnings = 0;
     for (const p of listed.packs) {
       const { pack, warnings } = packs.loadPack(APP_ROOT, p.id);
-      const wp = packs.wallpaperDataUri(APP_ROOT, pack);
-      const all = [...warnings, ...wp.warnings];
+      const collected = packs.collectAssets(APP_ROOT, pack);
+      const all = [...warnings, ...collected.warnings];
       totalWarnings += all.length;
-      console.log(`  ${all.length === 0 ? 'CLEAN' : 'WARN '}  ${p.id} — ${pack.layout.widgets.length} widget(s), wallpaper: ${wp.uri ? 'yes' : 'none'}`);
+      const assetCount = Object.keys(collected.assets).length;
+      console.log(`  ${all.length === 0 ? 'CLEAN' : 'WARN '}  ${p.id} — ${pack.components.length} component(s), ${assetCount} asset(s)`);
       for (const w of all) console.log(`         ${w}`);
     }
     if (totalWarnings > 0) {

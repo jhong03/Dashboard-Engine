@@ -1,9 +1,10 @@
 'use strict';
 
 // Dashboard renderer: turns a sanitized Persona Pack into CSS custom
-// properties and widget DOM. Packs never inject CSS or markup — every token
-// arrives pre-clamped from lib/packs.js, and everything rendered here is
-// created with textContent, never innerHTML.
+// properties and component DOM on a free-form percent canvas. Packs never
+// inject CSS or markup — every token arrives pre-clamped from lib/packs.js,
+// everything here is created with textContent (never innerHTML), and image
+// sources are data URIs prepared by the main process.
 
 /* global aegis */
 
@@ -17,9 +18,19 @@ const FONT_STACKS = {
   'mono': "'Share Tech Mono', Consolas, monospace",
 };
 
+// Telemetry history depth for sparklines: 90 samples at 2 s = 3 minutes.
+const HISTORY_LENGTH = 90;
+const TELEMETRY_INTERVAL_MS = 2000;
+
 const state = {
   packId: null,
-  timers: [],       // widget intervals, cleared on every re-render
+  pack: null,
+  timers: [],
+  observers: [],
+  telemetry: {
+    subscribers: [],                 // update callbacks fed by one shared loop
+    history: { cpu: [], mem: [] },   // rolling 0–100 series
+  },
   unsubscribe: null,
 };
 
@@ -36,9 +47,9 @@ function rgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha)).toFixed(3)})`;
 }
 
-// ── Skin application ────────────────────────────────────────────────────────
+// ── Skin application (global tokens) ────────────────────────────────────────
 
-function applySkin(pack, wallpaper) {
+function applySkin(pack, assets) {
   const { palette, typography, texture, shape } = pack.skin;
   const root = document.documentElement.style;
 
@@ -59,105 +70,84 @@ function applySkin(pack, wallpaper) {
   root.setProperty('--vignette-ink', rgba('#000000', 0.85 * texture.vignette));
 
   root.setProperty('--radius', `${shape.radius}px`);
-  root.setProperty('--gap', `${pack.layout.gap}px`);
   root.setProperty('--ls', `${typography.letterSpacing}em`);
   root.setProperty('--font-display', FONT_STACKS[typography.display]);
 
   document.body.classList.toggle('uppercase', typography.uppercase);
   document.body.classList.toggle('notches', shape.cornerNotches);
-  document.body.style.backgroundImage = wallpaper ? `url(${wallpaper})` : 'none';
+  document.body.style.backgroundImage =
+    pack.skin.wallpaper && assets[pack.skin.wallpaper] ? `url(${assets[pack.skin.wallpaper]})` : 'none';
 }
 
-// ── Widgets ─────────────────────────────────────────────────────────────────
+// Per-component overrides become element-scoped CSS custom properties, so
+// the same stylesheet serves both the skin default and the local override.
+function applyComponentStyle(el, style, pack) {
+  const accent = style.accent || pack.skin.palette.accent;
+  if (style.accent) {
+    el.style.setProperty('--accent', style.accent);
+    el.style.setProperty('--glow', rgba(style.accent, 0.45 * pack.skin.texture.glow));
+    el.style.setProperty('--hairline', rgba(style.accent, pack.skin.shape.borderOpacity));
+    el.style.setProperty('--hairline-dim', rgba(style.accent, pack.skin.shape.borderOpacity * 0.5));
+  }
+  if (style.glow !== null) {
+    el.style.setProperty('--glow', rgba(accent, 0.45 * style.glow));
+  }
+  if (style.textColor) el.style.setProperty('--accent-bright', style.textColor);
+  if (style.font) el.style.setProperty('--font-display', FONT_STACKS[style.font]);
+  if (style.fontScale !== null) el.style.setProperty('--font-scale', String(style.fontScale));
+  if (style.align) el.style.textAlign = style.align;
+  if (style.opacity !== null) el.style.opacity = String(style.opacity);
+  if (style.padding !== null) el.style.padding = `${style.padding}px`;
+  if (style.rotate !== null) el.style.transform = `rotate(${style.rotate}deg)`;
 
-function widgetShell(widget) {
-  const el = document.createElement('section');
-  el.className = `widget widget-${widget.type}`;
-  const [col, row, spanC, spanR] = widget.area;
-  el.style.gridColumn = `${col} / span ${spanC}`;
-  el.style.gridRow = `${row} / span ${spanR}`;
-  return el;
+  const panel = style.panel !== null ? style.panel : true;
+  el.classList.toggle('panel', panel);
+  const border = style.border !== null ? style.border : panel;
+  el.classList.toggle('borderless', !border);
+  if (style.notches !== null) el.classList.toggle('no-notches', !style.notches);
 }
 
-function buildClock(widget, el) {
-  const label = document.createElement('span');
-  label.className = 'widget-label';
-  label.textContent = 'Local time';
-  const time = document.createElement('div');
-  time.className = 'clock-time';
-  const date = document.createElement('div');
-  date.className = 'clock-date display-case';
-  el.append(label, time);
-  if (widget.options.showDate) el.append(date);
+// ── Shared telemetry loop ───────────────────────────────────────────────────
 
-  const tick = () => {
-    const now = new Date();
-    let hours = now.getHours();
-    let suffix = '';
-    if (widget.options.format === '12h') {
-      suffix = hours >= 12 ? ' PM' : ' AM';
-      hours = hours % 12 || 12;
-    }
-    const parts = [String(hours).padStart(2, '0'), String(now.getMinutes()).padStart(2, '0')];
-    if (widget.options.seconds) parts.push(String(now.getSeconds()).padStart(2, '0'));
-    time.textContent = parts.join(':') + suffix;
-    if (widget.options.showDate) {
-      date.textContent = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-    }
-  };
-  tick();
-  state.timers.push(setInterval(tick, 250));
-}
-
-function statRow(name) {
-  const row = document.createElement('div');
-  row.className = 'stat-row';
-  const label = document.createElement('span');
-  label.className = 'stat-name';
-  label.textContent = name;
-  const bar = document.createElement('div');
-  bar.className = 'stat-bar';
-  const fill = document.createElement('span');
-  bar.appendChild(fill);
-  const value = document.createElement('span');
-  value.className = 'stat-value';
-  value.textContent = '—';
-  row.append(label, bar, value);
-  return { row, fill, value };
-}
-
-function buildStats(widget, el) {
-  const label = document.createElement('span');
-  label.className = 'widget-label';
-  label.textContent = 'System telemetry';
-  el.appendChild(label);
-
-  const cpu = widget.options.cpu ? statRow('CPU') : null;
-  const mem = widget.options.mem ? statRow('MEM') : null;
-  if (cpu) el.appendChild(cpu.row);
-  if (mem) el.appendChild(mem.row);
-
-  const gb = (bytes) => (bytes / 2 ** 30).toFixed(1);
-  const update = async () => {
+function startTelemetry() {
+  if (state.telemetry.subscribers.length === 0) return;
+  const tick = async () => {
     const res = await aegis.stats();
     if (!res.ok) return;
-    if (cpu) {
-      cpu.fill.style.width = `${res.cpuPercent}%`;
-      cpu.fill.classList.toggle('hot', res.cpuPercent >= 85);
-      cpu.value.textContent = `${res.cpuPercent} %`;
+    const values = {
+      cpu: res.cpuPercent,
+      mem: Math.round((res.memUsedBytes / res.memTotalBytes) * 100),
+      memText: `${(res.memUsedBytes / 2 ** 30).toFixed(1)} / ${(res.memTotalBytes / 2 ** 30).toFixed(1)} GB`,
+    };
+    for (const key of ['cpu', 'mem']) {
+      const series = state.telemetry.history[key];
+      series.push(values[key]);
+      if (series.length > HISTORY_LENGTH) series.shift();
     }
-    if (mem) {
-      const pct = Math.round((res.memUsedBytes / res.memTotalBytes) * 100);
-      mem.fill.style.width = `${pct}%`;
-      mem.fill.classList.toggle('hot', pct >= 90);
-      mem.value.textContent = `${gb(res.memUsedBytes)} / ${gb(res.memTotalBytes)} GB`;
-    }
+    for (const update of state.telemetry.subscribers) update(values);
   };
-  update();
-  state.timers.push(setInterval(update, 2000));
+  tick();
+  state.timers.push(setInterval(tick, TELEMETRY_INTERVAL_MS));
 }
 
-function buildStatus(pack, el) {
+// Canvas-backed components redraw on resize; one observer per canvas.
+function observeCanvas(canvas, draw) {
+  const observer = new ResizeObserver(() => {
+    canvas.width = Math.max(1, canvas.clientWidth * devicePixelRatio);
+    canvas.height = Math.max(1, canvas.clientHeight * devicePixelRatio);
+    draw();
+  });
+  observer.observe(canvas);
+  state.observers.push(observer);
+}
+
+function cssVar(el, name) {
+  return getComputedStyle(el).getPropertyValue(name).trim();
+}
+
+// ── Component builders ──────────────────────────────────────────────────────
+
+function buildStatus(component, el, pack) {
   const name = document.createElement('div');
   name.className = 'status-name';
   name.textContent = pack.persona.name;
@@ -180,19 +170,304 @@ function buildStatus(pack, el) {
   }
 }
 
-function renderWidgets(pack) {
-  for (const timer of state.timers) clearInterval(timer);
-  state.timers = [];
+function buildClock(component, el) {
+  const time = document.createElement('div');
+  time.className = 'clock-time';
+  const date = document.createElement('div');
+  date.className = 'clock-date display-case';
+  el.append(time);
+  if (component.options.showDate) el.append(date);
 
-  const grid = $('grid');
-  grid.textContent = '';
-  for (const widget of pack.layout.widgets) {
-    const el = widgetShell(widget);
-    if (widget.type === 'clock') buildClock(widget, el);
-    else if (widget.type === 'stats') buildStats(widget, el);
-    else if (widget.type === 'status') buildStatus(pack, el);
-    grid.appendChild(el);
+  const tick = () => {
+    const now = new Date();
+    let hours = now.getHours();
+    let suffix = '';
+    if (component.options.format === '12h') {
+      suffix = hours >= 12 ? ' PM' : ' AM';
+      hours = hours % 12 || 12;
+    }
+    const parts = [String(hours).padStart(2, '0'), String(now.getMinutes()).padStart(2, '0')];
+    if (component.options.seconds) parts.push(String(now.getSeconds()).padStart(2, '0'));
+    time.textContent = parts.join(':') + suffix;
+    if (component.options.showDate) {
+      date.textContent = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    }
+  };
+  tick();
+  state.timers.push(setInterval(tick, 250));
+}
+
+function buildAnalogClock(component, el) {
+  const canvas = document.createElement('canvas');
+  canvas.className = 'fill-canvas';
+  el.appendChild(canvas);
+
+  const draw = () => {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2;
+    const radius = Math.min(w, h) / 2 - 6 * devicePixelRatio;
+    if (radius <= 0) return;
+
+    const accent = cssVar(el, '--accent');
+    const bright = cssVar(el, '--accent-bright');
+    const hairline = cssVar(el, '--hairline');
+    const gold = cssVar(el, '--gold');
+
+    ctx.lineWidth = 1 * devicePixelRatio;
+    ctx.strokeStyle = hairline;
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Hour ticks
+    ctx.strokeStyle = accent;
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      const inner = i % 3 === 0 ? radius * 0.86 : radius * 0.92;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.sin(angle) * inner, cy - Math.cos(angle) * inner);
+      ctx.lineTo(cx + Math.sin(angle) * radius * 0.97, cy - Math.cos(angle) * radius * 0.97);
+      ctx.stroke();
+    }
+
+    const now = new Date();
+    const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
+    const minutes = now.getMinutes() + seconds / 60;
+    const hours = (now.getHours() % 12) + minutes / 60;
+
+    const hand = (angle, length, width, colour) => {
+      ctx.strokeStyle = colour;
+      ctx.lineWidth = width * devicePixelRatio;
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      ctx.lineTo(cx + Math.sin(angle) * length, cy - Math.cos(angle) * length);
+      ctx.stroke();
+    };
+    hand((hours / 12) * Math.PI * 2, radius * 0.5, 3, bright);
+    hand((minutes / 60) * Math.PI * 2, radius * 0.72, 2, accent);
+    if (component.options.seconds) hand((seconds / 60) * Math.PI * 2, radius * 0.8, 1, gold);
+
+    ctx.fillStyle = accent;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3 * devicePixelRatio, 0, Math.PI * 2);
+    ctx.fill();
+  };
+
+  observeCanvas(canvas, draw);
+  state.timers.push(setInterval(draw, component.options.seconds ? 100 : 1000));
+}
+
+function statRow(name) {
+  const row = document.createElement('div');
+  row.className = 'stat-row';
+  const label = document.createElement('span');
+  label.className = 'stat-name';
+  label.textContent = name;
+  const bar = document.createElement('div');
+  bar.className = 'stat-bar';
+  const fill = document.createElement('span');
+  bar.appendChild(fill);
+  const value = document.createElement('span');
+  value.className = 'stat-value';
+  value.textContent = '—';
+  row.append(label, bar, value);
+  return { row, fill, value };
+}
+
+function buildStats(component, el) {
+  const cpu = component.options.cpu ? statRow('CPU') : null;
+  const mem = component.options.mem ? statRow('MEM') : null;
+  if (cpu) el.appendChild(cpu.row);
+  if (mem) el.appendChild(mem.row);
+
+  state.telemetry.subscribers.push((values) => {
+    if (cpu) {
+      cpu.fill.style.width = `${values.cpu}%`;
+      cpu.fill.classList.toggle('hot', values.cpu >= 85);
+      cpu.value.textContent = `${values.cpu} %`;
+    }
+    if (mem) {
+      mem.fill.style.width = `${values.mem}%`;
+      mem.fill.classList.toggle('hot', values.mem >= 90);
+      mem.value.textContent = values.memText;
+    }
+  });
+}
+
+function buildMeter(component, el) {
+  const bind = component.options.bind;
+  const label = document.createElement('span');
+  label.className = 'comp-label';
+  label.textContent = component.options.label || bind.toUpperCase();
+
+  if (component.options.variant === 'bar') {
+    const { row, fill, value } = statRow(component.options.label || bind.toUpperCase());
+    row.querySelector('.stat-name').remove();
+    row.style.gridTemplateColumns = '1fr 76px';
+    el.append(label, row);
+    state.telemetry.subscribers.push((values) => {
+      fill.style.width = `${values[bind]}%`;
+      fill.classList.toggle('hot', values[bind] >= 85);
+      value.textContent = bind === 'mem' ? values.memText : `${values[bind]} %`;
+    });
+    return;
   }
+
+  // Ring: canvas arc + centred value.
+  const wrap = document.createElement('div');
+  wrap.className = 'ring-wrap';
+  const canvas = document.createElement('canvas');
+  canvas.className = 'fill-canvas';
+  const value = document.createElement('span');
+  value.className = 'ring-value';
+  value.textContent = '—';
+  wrap.append(canvas, value);
+  el.append(label, wrap);
+
+  let current = 0;
+  const draw = () => {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const cx = w / 2, cy = h / 2;
+    const radius = Math.min(w, h) / 2 - 8 * devicePixelRatio;
+    if (radius <= 0) return;
+    const start = -Math.PI / 2;
+
+    ctx.lineWidth = 5 * devicePixelRatio;
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = cssVar(el, '--hairline-dim');
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = current >= 85 ? cssVar(el, '--warn') : cssVar(el, '--accent');
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, start, start + (current / 100) * Math.PI * 2);
+    ctx.stroke();
+  };
+
+  observeCanvas(canvas, draw);
+  state.telemetry.subscribers.push((values) => {
+    current = values[bind];
+    value.textContent = `${current}%`;
+    draw();
+  });
+}
+
+function buildSparkline(component, el) {
+  const bind = component.options.bind;
+  const label = document.createElement('span');
+  label.className = 'comp-label';
+  label.textContent = component.options.label || `${bind.toUpperCase()} HISTORY`;
+  const canvas = document.createElement('canvas');
+  canvas.className = 'fill-canvas spark';
+  el.append(label, canvas);
+
+  const draw = () => {
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0, 0, w, h);
+    const series = state.telemetry.history[bind];
+    if (series.length < 2) return;
+    const accent = cssVar(el, '--accent');
+    const step = w / (HISTORY_LENGTH - 1);
+    const yFor = (v) => h - (v / 100) * (h - 4 * devicePixelRatio) - 2 * devicePixelRatio;
+
+    // Filled area, then the line on top.
+    const startX = w - (series.length - 1) * step;
+    ctx.beginPath();
+    ctx.moveTo(startX, h);
+    series.forEach((v, i) => ctx.lineTo(startX + i * step, yFor(v)));
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fillStyle = cssVar(el, '--glow-wash');
+    ctx.fill();
+
+    ctx.beginPath();
+    series.forEach((v, i) => {
+      const x = startX + i * step;
+      if (i === 0) ctx.moveTo(x, yFor(v));
+      else ctx.lineTo(x, yFor(v));
+    });
+    ctx.strokeStyle = accent;
+    ctx.lineWidth = 1.5 * devicePixelRatio;
+    ctx.stroke();
+  };
+
+  observeCanvas(canvas, draw);
+  state.telemetry.subscribers.push(() => draw());
+}
+
+function buildText(component, el) {
+  const text = document.createElement('div');
+  text.className = 'text-body display-case';
+  text.textContent = component.options.text;
+  el.appendChild(text);
+}
+
+function buildImage(component, el, assets) {
+  const uri = assets[component.options.src];
+  if (!uri) return; // asset missing — warning already surfaced by main
+  const img = document.createElement('img');
+  img.className = `image-body fit-${component.options.fit}`;
+  img.alt = '';
+  img.src = uri;
+  el.appendChild(img);
+}
+
+function buildDivider(component, el) {
+  // The line is a real child, not a pseudo-element — the corner-notch
+  // decorations own ::before/::after on components.
+  el.classList.add(`divider-${component.options.orientation}`);
+  const line = document.createElement('span');
+  line.className = 'divider-line';
+  el.appendChild(line);
+}
+
+const BUILDERS = {
+  status: buildStatus,
+  clock: buildClock,
+  'analog-clock': buildAnalogClock,
+  stats: buildStats,
+  meter: buildMeter,
+  sparkline: buildSparkline,
+  text: buildText,
+  divider: buildDivider,
+};
+
+// ── Canvas render ───────────────────────────────────────────────────────────
+
+function renderComponents(pack, assets) {
+  for (const timer of state.timers) clearInterval(timer);
+  for (const observer of state.observers) observer.disconnect();
+  state.timers = [];
+  state.observers = [];
+  state.telemetry.subscribers = [];
+
+  const canvas = $('canvas');
+  canvas.textContent = '';
+  canvas.style.inset = `${pack.canvas.padding}%`;
+
+  for (const component of pack.components) {
+    const el = document.createElement('section');
+    el.className = `comp comp-${component.type}`;
+    const [x, y, w, h] = component.rect;
+    el.style.left = `${x}%`;
+    el.style.top = `${y}%`;
+    el.style.width = `${w}%`;
+    el.style.height = `${h}%`;
+    el.style.zIndex = String(component.z);
+    applyComponentStyle(el, component.style, pack);
+
+    if (component.type === 'image') buildImage(component, el, assets);
+    else BUILDERS[component.type](component, el, pack);
+    canvas.appendChild(el);
+  }
+  startTelemetry();
 }
 
 // ── Pack loading ────────────────────────────────────────────────────────────
@@ -205,8 +480,9 @@ async function loadPack(id) {
     return;
   }
   state.packId = res.pack.id;
-  applySkin(res.pack, res.wallpaper);
-  renderWidgets(res.pack);
+  state.pack = res.pack;
+  applySkin(res.pack, res.assets);
+  renderComponents(res.pack, res.assets);
 
   $('persona-name').textContent = res.pack.persona.name;
   $('persona-tagline').textContent = res.pack.persona.tagline;
@@ -218,7 +494,7 @@ async function loadPack(id) {
     foot.textContent = `PACK WARNINGS: ${res.warnings.join(' · ')}`;
     foot.className = 'mono foot warn';
   } else {
-    foot.textContent = `PACK ${res.pack.id} · ${res.pack.layout.widgets.length} WIDGETS · EDIT packs/${res.pack.id}/pack.json TO RESKIN LIVE`;
+    foot.textContent = `PACK ${res.pack.id} · ${res.pack.components.length} COMPONENTS · EDIT packs/${res.pack.id}/pack.json TO RESKIN LIVE`;
     foot.className = 'mono foot';
   }
 }
