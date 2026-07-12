@@ -259,31 +259,35 @@ body {
   background: linear-gradient(0deg, transparent, var(--hairline), transparent);
 }
 
-/* calendar */
+/* calendar — the grid stretches to fill whatever box the pack gives it:
+   weekday header row stays compact, day rows share the remaining height. */
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
+  grid-auto-rows: 1fr;
+  grid-template-rows: auto;
   gap: 0.1cqw 0.21cqw;
   flex: 1 1 auto;
   min-height: 0;
-  align-content: start;
 }
 .cal-head {
   font-size: 0.56em;
   font-weight: 600;
   letter-spacing: 0.14em;
   color: var(--muted);
-  text-align: center;
-  padding-bottom: 2px;
+  display: grid;
+  place-items: center;
+  padding-bottom: 0.1cqw;
 }
 .cal-day {
   font-family: var(--font-mono);
   font-size: 0.72em;
   color: var(--accent-bright);
-  text-align: center;
-  padding: 1px 0;
+  display: grid;
+  place-items: center;
   border-radius: 2px;
   opacity: 0.75;
+  min-height: 0;
 }
 .cal-day.today {
   opacity: 1;
@@ -298,13 +302,13 @@ body {
 .cal-day.has-rem::after {
   content: '';
   position: absolute;
-  left: calc(50% - 2px);
-  bottom: -2px;
-  width: 4px; height: 4px;
+  left: calc(50% - 0.1cqw);
+  bottom: 8%;
+  width: 0.21cqw; height: 0.21cqw;
   border-radius: 50%;
   background: var(--gold);
 }
-.cal-day.today.has-rem::after { background: var(--void); bottom: 1px; }
+.cal-day.today.has-rem::after { background: var(--void); }
 
 /* agenda (daily planner) */
 .agenda {
