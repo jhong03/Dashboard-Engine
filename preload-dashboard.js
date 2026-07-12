@@ -22,4 +22,5 @@ contextBridge.exposeInMainWorld('aegis', {
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   onActiveChanged: subscription('aegis:active:changed'),   // manager picked a pack
   stats: () => ipcRenderer.invoke('aegis:stats'),
+  weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
 });

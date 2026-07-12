@@ -74,12 +74,20 @@ art behind widgets.
 | `status` | — | persona name, tagline, rotating ticker |
 | `clock` | `format` (`24h`/`12h`), `seconds`, `showDate` | digital clock |
 | `analog-clock` | `seconds` | drawn clock face in your palette |
-| `stats` | `cpu`, `mem` | labelled bars |
-| `meter` | `bind` (`cpu`/`mem`), `variant` (`ring`/`bar`), `label` | one live value |
+| `stats` | `cpu`, `mem`, `disk`, `battery` | labelled bars |
+| `meter` | `bind` (`cpu`/`mem`/`disk`/`battery`), `variant` (`ring`/`bar`), `label` | one live value |
 | `sparkline` | `bind`, `label` | 3-minute history graph |
 | `text` | `text` (≤200 chars, `\n` allowed) | free text block |
 | `image` | `src` (`assets/…`), `fit` (`contain`/`cover`) | your art, ≤5 MB each |
 | `divider` | `orientation` (`h`/`v`) | hairline rule |
+| `calendar` | `weekStart` (`mon`/`sun`) | month grid, today marked |
+| `countdown` | `target` (ISO date), `label` | days/hours to a date |
+| `weather` | `lat`, `lon`, `place` | current conditions (Open-Meteo, no key — the one component that goes online) |
+
+Rather not hand-write JSON? Open any pack in the **editor** (manager → pack
+→ OPEN IN EDITOR, or `--edit <id>`): drag components from the palette, move/
+resize/restyle them, edit the skin and persona, save. Editing a pack you
+didn't author forks it to a copy in your library — originals stay pristine.
 
 ## Per-component style overrides
 

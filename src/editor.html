@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:">
+  <title>AEGIS Editor</title>
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="editor.css">
+</head>
+<body class="editor-body">
+
+  <header class="ed-bar">
+    <div class="ed-brand">
+      <h1>AEGIS <span>EDITOR</span></h1>
+      <p class="mono ed-sub" id="ed-base">—</p>
+    </div>
+    <label class="visually-hidden" for="ed-name">Pack name</label>
+    <input id="ed-name" class="ed-name" maxlength="60" spellcheck="false">
+    <div class="ed-actions">
+      <button class="btn" id="btn-save">SAVE</button>
+      <button class="btn primary" id="btn-save-apply">SAVE &amp; APPLY</button>
+    </div>
+  </header>
+  <p class="mono ed-status" id="ed-status" role="status" aria-live="polite"></p>
+
+  <div class="ed-main">
+    <aside class="ed-palette" aria-label="Component palette">
+      <h2>COMPONENTS</h2>
+      <p class="mono ed-hint">drag onto the canvas<br>or double-click to add</p>
+      <ul id="palette"></ul>
+    </aside>
+
+    <main class="ed-stage-outer">
+      <div class="ed-stage" id="stage">
+        <div class="skin-root ed-skin" id="skin">
+          <div class="canvas" id="canvas"></div>
+        </div>
+        <div class="ed-overlay" id="overlay"></div>
+      </div>
+    </main>
+
+    <aside class="ed-inspector" aria-label="Inspector">
+      <div class="ed-tabs" role="tablist">
+        <button class="tab" id="itab-component" aria-selected="true">COMPONENT</button>
+        <button class="tab" id="itab-skin" aria-selected="false">SKIN</button>
+        <button class="tab" id="itab-persona" aria-selected="false">PERSONA</button>
+      </div>
+      <div class="ed-panel" id="inspector"></div>
+    </aside>
+  </div>
+
+  <script src="components.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

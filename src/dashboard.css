@@ -1,7 +1,8 @@
-/* Desktop surface styles. Every colour, texture intensity, and shape choice
-   is driven by CSS custom properties that dashboard.js sets from the ACTIVE
-   PACK's sanitized tokens — this file defines structure, packs define look.
-   Defaults mirror aegis-holo so the surface is never unstyled. */
+/* Skin-surface styles, shared by the desktop (dashboard.html, where <body>
+   is the skin root) and the editor canvas (editor.html, where a div is).
+   Every colour, texture intensity, and shape choice is driven by CSS custom
+   properties set from the ACTIVE PACK's sanitized tokens — this file defines
+   structure, packs define look. Defaults mirror aegis-holo. */
 
 @font-face {
   font-family: 'Rajdhani';
@@ -47,20 +48,27 @@
 
 body {
   background-color: var(--void);
-  background-size: cover;
-  background-position: center;
   color: var(--accent-bright);
   font-family: var(--font-display);
   font-weight: 600;
   height: 100vh;
   overflow: hidden;
 }
-body.uppercase .display-case { text-transform: uppercase; }
+
+/* The skin root: the element carrying pack tokens, textures, wallpaper. */
+.skin-root {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  font-family: var(--font-display);
+  color: var(--accent-bright);
+}
+.skin-root.uppercase .display-case { text-transform: uppercase; }
 
 /* Texture layers — pure CSS, per-layer ink colours from pack tokens. */
-body::before {
+.skin-root::before {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 2;
@@ -70,9 +78,9 @@ body::before {
     linear-gradient(0deg, var(--grid-ink) 0 1px, transparent 1px 100%);
   background-size: 100% 3px, 48px 48px, 48px 48px;
 }
-body::after {
+.skin-root::after {
   content: '';
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
@@ -92,7 +100,8 @@ body::after {
 }
 .canvas {
   position: absolute;
-  inset: 0; /* dashboard.js sets inset:<padding>% from the pack */
+  inset: 0; /* the renderer sets inset:<padding>% from the pack */
+  z-index: 3;
 }
 
 .comp {
@@ -113,8 +122,8 @@ body::after {
 }
 .comp.panel.borderless { border-color: transparent; }
 
-body.notches .comp.panel:not(.no-notches)::before,
-body.notches .comp.panel:not(.no-notches)::after {
+.skin-root.notches .comp.panel:not(.no-notches)::before,
+.skin-root.notches .comp.panel:not(.no-notches)::after {
   content: '';
   position: absolute;
   width: 12px; height: 12px;
@@ -122,8 +131,8 @@ body.notches .comp.panel:not(.no-notches)::after {
   opacity: 0.8;
   pointer-events: none;
 }
-body.notches .comp.panel:not(.no-notches)::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
-body.notches .comp.panel:not(.no-notches)::after  { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+.skin-root.notches .comp.panel:not(.no-notches)::before { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+.skin-root.notches .comp.panel:not(.no-notches)::after  { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
 
 .comp-label {
   font-size: 0.62em;
@@ -132,7 +141,7 @@ body.notches .comp.panel:not(.no-notches)::after  { bottom: -1px; right: -1px; b
   color: var(--muted);
   flex-shrink: 0;
 }
-body.uppercase .comp-label { text-transform: uppercase; }
+.skin-root.uppercase .comp-label { text-transform: uppercase; }
 
 .fill-canvas { flex: 1 1 auto; width: 100%; min-height: 0; }
 
@@ -193,7 +202,7 @@ body.uppercase .comp-label { text-transform: uppercase; }
   text-shadow: 0 0 16px var(--glow);
   line-height: 1.05;
 }
-body.uppercase .status-name { text-transform: uppercase; }
+.skin-root.uppercase .status-name { text-transform: uppercase; }
 .status-tagline { font-size: 0.8em; letter-spacing: 0.2em; color: var(--muted); }
 .status-line {
   font-family: var(--font-mono);
@@ -245,6 +254,42 @@ body.uppercase .status-name { text-transform: uppercase; }
   width: 1px;
   background: linear-gradient(0deg, transparent, var(--hairline), transparent);
 }
+
+/* calendar */
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px 4px;
+  flex: 1 1 auto;
+  min-height: 0;
+  align-content: start;
+}
+.cal-head {
+  font-size: 0.56em;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  color: var(--muted);
+  text-align: center;
+  padding-bottom: 2px;
+}
+.cal-day {
+  font-family: var(--font-mono);
+  font-size: 0.72em;
+  color: var(--accent-bright);
+  text-align: center;
+  padding: 1px 0;
+  border-radius: 2px;
+  opacity: 0.75;
+}
+.cal-day.today {
+  opacity: 1;
+  color: var(--void);
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--glow);
+}
+
+/* countdown + weather share the big-number look */
+.countdown-value, .weather-temp { font-size: 2.6em; }
 
 @media (prefers-reduced-motion: reduce) {
   .status-line::after { animation: none; }

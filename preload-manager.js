@@ -29,4 +29,5 @@ contextBridge.exposeInMainWorld('aegis', {
   },
 
   openPanel: () => ipcRenderer.invoke('aegis:open-panel'),
+  openEditor: (id) => ipcRenderer.invoke('aegis:open-editor', String(id)),
 });

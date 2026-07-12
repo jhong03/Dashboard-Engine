@@ -34,6 +34,7 @@ const NO_DESKTOP = process.argv.includes('--no-desktop');
 let panelWindow = null;
 let managerWindow = null;
 let dashboardWindow = null;
+let editorWindow = null;
 let tray = null;
 let desktopPaused = false;
 
@@ -85,6 +86,28 @@ function createManagerWindow() {
     query: { view: process.env.AEGIS_VIEW || '' },
   });
   managerWindow.on('closed', () => { managerWindow = null; });
+}
+
+function createEditorWindow(packId) {
+  if (editorWindow) {
+    editorWindow.focus();
+    return;
+  }
+  editorWindow = new BrowserWindow({
+    width: 1380,
+    height: 860,
+    minWidth: 1200,
+    minHeight: 720,
+    backgroundColor: '#04080F',
+    webPreferences: {
+      ...COMMON_WEB_PREFERENCES,
+      preload: path.join(__dirname, 'preload-editor.js'),
+    },
+  });
+  editorWindow.loadFile(path.join(__dirname, 'src', 'editor.html'), {
+    query: { pack: packId || 'aegis-holo' },
+  });
+  editorWindow.on('closed', () => { editorWindow = null; });
 }
 
 // Reparent the dashboard under the shell's wallpaper layer. The hwnd is
@@ -222,6 +245,8 @@ function openFirstWindows() {
   }
   createDashboardWindow(); // the desktop persona, immediately
   createManagerWindow();   // the engine app: content navigation + selection
+  const editAt = process.argv.indexOf('--edit');
+  if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'aegis-holo');
 }
 
 // One engine instance owns the desktop; a second launch just re-opens the
@@ -231,14 +256,19 @@ function openFirstWindows() {
 if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => {
-    if (!WANT_PANEL) createManagerWindow();
+  app.on('second-instance', (event, argv) => {
+    if (WANT_PANEL) return;
+    // `aegis --edit <id>` from a second launch opens the editor here.
+    const editAt = argv.indexOf('--edit');
+    if (editAt !== -1) createEditorWindow(argv[editAt + 1] || 'aegis-holo');
+    else createManagerWindow();
   });
 
   app.whenReady().then(() => {
     warnAboutUnauditedVoices();
     registerIpcHandlers(__dirname, USER_DIR, {
       openPanel: createPanelWindow,
+      openEditor: createEditorWindow,
       onActivePack: notifyActivePack,
     });
     if (!WANT_PANEL) createTray();
