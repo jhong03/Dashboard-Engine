@@ -8,12 +8,16 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const voicebank = require('./lib/voicebank');
+const packs = require('./lib/packs');
+const settings = require('./lib/settings');
 const { registerIpcHandlers } = require('./lib/ipc');
 const { userDataDir } = require('./lib/paths');
+
+const USER_DIR = userDataDir();
 
 // `npm run panel` / the selftest open only the tuning panel.
 const WANT_PANEL = process.env.AEGIS_SELFTEST === '1' || process.argv.includes('--panel');
@@ -30,6 +34,8 @@ const NO_DESKTOP = process.argv.includes('--no-desktop');
 let panelWindow = null;
 let managerWindow = null;
 let dashboardWindow = null;
+let tray = null;
+let desktopPaused = false;
 
 const COMMON_WEB_PREFERENCES = {
   // Non-negotiable (CLAUDE.md): the renderer never touches Node.
@@ -148,6 +154,58 @@ async function createDashboardWindow() {
   }
 }
 
+// Broadcast an active-pack change to every window that cares — the desktop
+// repaints, the manager updates its indicator and badges.
+function notifyActivePack(id) {
+  for (const win of [dashboardWindow, managerWindow]) {
+    if (win && !win.isDestroyed()) win.webContents.send('aegis:active:changed', { id });
+  }
+}
+
+function setActivePackFromTray(id) {
+  settings.setActivePack(USER_DIR, id);
+  notifyActivePack(id);
+}
+
+function toggleDesktop() {
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
+  desktopPaused = !desktopPaused;
+  if (desktopPaused) dashboardWindow.hide();
+  else dashboardWindow.show();
+}
+
+// ── Tray: the engine's home. Menu is rebuilt on every right-click so the
+// pack list and the active radio are always current — Wallpaper Engine
+// habits, AEGIS contents.
+function buildTrayMenu() {
+  const listed = packs.listPacks(__dirname, USER_DIR);
+  const active = settings.getActivePack(USER_DIR) || 'aegis-holo';
+  return Menu.buildFromTemplate([
+    { label: 'Open Manager', click: createManagerWindow },
+    { label: 'Voice Tuning', click: createPanelWindow },
+    { type: 'separator' },
+    {
+      label: 'Switch Pack',
+      submenu: listed.packs.map((p) => ({
+        label: p.name,
+        type: 'radio',
+        checked: p.id === active,
+        click: () => setActivePackFromTray(p.id),
+      })),
+    },
+    { label: desktopPaused ? 'Resume Desktop' : 'Pause Desktop', click: toggleDesktop },
+    { type: 'separator' },
+    { label: 'Quit AEGIS', click: () => app.quit() },
+  ]);
+}
+
+function createTray() {
+  tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'resources', 'tray-icon.png')));
+  tray.setToolTip('AEGIS Engine');
+  tray.on('click', createManagerWindow);
+  tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
+}
+
 // Licence rule (voices.json): a voice without a verified licence is never
 // silently shipped. loadManifest never throws.
 function warnAboutUnauditedVoices() {
@@ -179,14 +237,11 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     warnAboutUnauditedVoices();
-    registerIpcHandlers(__dirname, userDataDir(), {
+    registerIpcHandlers(__dirname, USER_DIR, {
       openPanel: createPanelWindow,
-      onActivePack: (id) => {
-        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-          dashboardWindow.webContents.send('aegis:active:changed', { id });
-        }
-      },
+      onActivePack: notifyActivePack,
     });
+    if (!WANT_PANEL) createTray();
     openFirstWindows();
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openFirstWindows();
@@ -194,7 +249,9 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
   });
 
   app.on('window-all-closed', () => {
-    // macOS convention: app stays alive without windows.
-    if (process.platform !== 'darwin') app.quit();
+    // Engine mode lives in the tray — closing windows never kills the
+    // desktop persona; Quit is in the tray menu. Tool mode (panel/selftest)
+    // quits with its window, which the selftest relies on.
+    if (WANT_PANEL && process.platform !== 'darwin') app.quit();
   });
 }

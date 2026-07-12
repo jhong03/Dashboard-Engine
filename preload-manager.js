@@ -22,6 +22,11 @@ contextBridge.exposeInMainWorld('aegis', {
 
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
+  onActiveChanged: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('aegis:active:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:active:changed', handler);
+  },
 
   openPanel: () => ipcRenderer.invoke('aegis:open-panel'),
 });

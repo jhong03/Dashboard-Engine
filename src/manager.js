@@ -344,6 +344,14 @@ async function init() {
   const active = await aegis.activeGet();
   library.activeId = active.id || 'aegis-holo';
 
+  // The tray can switch packs too — keep the indicator and badges honest.
+  aegis.onActiveChanged((data) => {
+    library.activeId = data.id;
+    setActiveIndicator();
+    renderGallery();
+    renderDetail();
+  });
+
   $('btn-panel').addEventListener('click', () => aegis.openPanel());
   $('tab-installed').addEventListener('click', () => { library.tab = 'installed'; renderGallery(); });
   $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
