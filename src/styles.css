@@ -1,0 +1,80 @@
+/* AEGIS design language — dark, holographic, technical (see CLAUDE.md).
+   Stage 1 only styles the placeholder; the real panel ships in Stage 4.
+   Rajdhani / Share Tech Mono load as bundled fonts in Stage 4; until then the
+   stacks below fall back to system faces. */
+
+:root {
+  --void: #04080F;
+  --glass: rgba(10, 22, 35, 0.55);
+  --cyan: #3FD8FF;
+  --bright: #7FE9FF;
+  --steel: #5A7E93;
+  --amber: #FFB23E;
+  --gold: #E8C56A;
+  --font-display: 'Rajdhani', 'Segoe UI', sans-serif;
+  --font-mono: 'Share Tech Mono', Consolas, monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--void);
+  color: var(--bright);
+  font-family: var(--font-display);
+  min-height: 100vh;
+}
+
+.stage1 {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+}
+
+.panel {
+  position: relative;
+  background: var(--glass);
+  border: 1px solid rgba(63, 216, 255, 0.35);
+  box-shadow: 0 0 24px rgba(63, 216, 255, 0.08), inset 0 0 60px rgba(63, 216, 255, 0.03);
+  padding: 3rem 4rem;
+  text-align: center;
+}
+
+/* Corner notches — small cut marks, part of the panel vocabulary. */
+.notch {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--cyan);
+  border-style: solid;
+  border-width: 0;
+}
+.notch.top-left { top: -1px; left: -1px; border-top-width: 2px; border-left-width: 2px; }
+.notch.bottom-right { bottom: -1px; right: -1px; border-bottom-width: 2px; border-right-width: 2px; }
+
+h1 {
+  font-size: 2rem;
+  letter-spacing: 0.35em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  animation: breathe 4s ease-in-out infinite;
+}
+h1 span { color: var(--steel); }
+
+.mono {
+  font-family: var(--font-mono);
+  color: var(--steel);
+  margin-top: 0.75rem;
+  letter-spacing: 0.1em;
+}
+
+.hint { margin-top: 1.5rem; color: var(--steel); font-size: 0.95rem; }
+.hint .mono { color: var(--gold); }
+
+/* Motion is constant but subtle — and honours reduced-motion. */
+@keyframes breathe {
+  0%, 100% { text-shadow: 0 0 12px rgba(63, 216, 255, 0.35); }
+  50% { text-shadow: 0 0 22px rgba(63, 216, 255, 0.65); }
+}
+@media (prefers-reduced-motion: reduce) {
+  h1 { animation: none; }
+}

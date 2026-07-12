@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Strict CSP now so nothing sloppy creeps in before Stage 4. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'">
+  <title>AEGIS — Voice</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Stage 1 placeholder: the pipeline is CLI-proven (npm run smoke).
+       The tuning panel replaces this in Stage 4. -->
+  <main class="stage1">
+    <div class="panel">
+      <div class="notch top-left"></div>
+      <div class="notch bottom-right"></div>
+      <h1>AEGIS <span>VOICE</span></h1>
+      <p class="mono">M1 · STAGE 1 — PIPELINE ONLY</p>
+      <p class="hint">UI arrives in Stage 4. Run <span class="mono">npm run smoke</span> to exercise synthesis.</p>
+    </div>
+  </main>
+  <script src="renderer.js"></script>
+</body>
+</html>

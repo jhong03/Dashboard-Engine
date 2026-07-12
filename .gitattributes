@@ -1,0 +1,4 @@
+# Source stays LF everywhere so Windows/macOS/Linux diffs stay clean.
+* text=auto eol=lf
+*.onnx binary
+*.png binary

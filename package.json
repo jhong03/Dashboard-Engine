@@ -1,0 +1,14 @@
+{
+  "name": "aegis-voice",
+  "version": "0.1.0",
+  "description": "AEGIS M1 — standalone voice tuning panel. Profiles are parameters, never audio.",
+  "main": "main.js",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "smoke": "node scripts/smoke.js"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Piper models are large binaries fetched by the first-run downloader — never committed.
+# The manifest (voices.json) IS committed.
+voices/*
+!voices/voices.json
+
+# User-saved profiles are personal data, not source.
+profiles/*
+
+# Local tool binaries (piper.exe etc.) fetched per-machine.
+bin/
+
+# Build output
+dist/
+
+# Smoke-test output
+out/
+
+# Atomic-write leftovers (saveProfile, voice downloads)
+*.tmp

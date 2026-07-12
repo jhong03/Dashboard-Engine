@@ -1,0 +1,17 @@
+{
+  "comment": "Voice bank manifest. Stage 1 stub — only the smoke-test voice. The full 8-slot bank, the first-run downloader, and per-voice licence audit land in Stage 2. licence must NEVER be guessed: UNVERIFIED voices trigger a startup warning and are never silently shipped.",
+  "voices": [
+    {
+      "id": "alan",
+      "model": "en_GB-alan-medium.onnx",
+      "displayName": "Alan",
+      "sex": "M",
+      "accent": "RP British",
+      "descriptor": "measured, warm",
+      "licence": "UNVERIFIED",
+      "licenceUrl": "",
+      "attribution": "TODO: confirm via per-model licence audit (rhasspy/piper-voices)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/alan/medium/en_GB-alan-medium.onnx"
+    }
+  ]
+}
