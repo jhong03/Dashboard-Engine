@@ -1,4 +1,4 @@
-# Authoring Persona Pack Skins
+# Authoring Dashboard Engine Packs
 
 A pack is a folder: `packs/<your-pack-id>/pack.json` plus optional images in
 `packs/<your-pack-id>/assets/`. No code, no fonts, no build step — JSON in,
@@ -9,7 +9,7 @@ Quick loop:
 
 ```
 npm start                        # dashboard, pick your pack in the top bar
-AEGIS_PACK=my-pack npm start     # or open it directly
+DE_PACK=my-pack npm start     # or open it directly
 npm run packs -- validate        # preflight: see what got clamped and why
 ```
 
@@ -121,13 +121,13 @@ Give your manifest an `"id"` (lowercase letters/digits/hyphens — it names the
 install folder), then export:
 
 ```
-npm run packs -- export my-pack        # writes my-pack.aegispack
+npm run packs -- export my-pack        # writes my-pack.dpack
 ```
 
-(or LIBRARY → EXPORT in the app). An `.aegispack` is a plain zip of
-`pack.json` + `assets/` — share the file anywhere. Users install it via
-LIBRARY → INSTALL FROM FILE, and it lands in their user-data folder, never in
-the engine.
+(or Export pack in the app). A `.dpack` is a plain zip of `pack.json` +
+`assets/` — share the file anywhere. Users install it via Install from file,
+and it lands in their user-data folder, never in the engine. Legacy
+`.aegispack` files install fine too.
 
 ### Hosting a registry
 
@@ -144,8 +144,8 @@ your own site:
       "author": "you",
       "description": "one line for the browse list",
       "version": "1.0.0",
-      "download": "https://your.host/my-pack-1.0.0.aegispack",
-      "sha256": "<sha256 of the .aegispack file>",
+      "download": "https://your.host/my-pack-1.0.0.dpack",
+      "sha256": "<sha256 of the .dpack file>",
       "sizeBytes": 123456
     }
   ]

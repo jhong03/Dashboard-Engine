@@ -30,8 +30,8 @@ const TEST_SENTENCE = 'Good evening. All systems are online, and every diagnosti
 const { profile: BUTLER, warnings: presetWarnings } = loadProfile(BUTLER_PRESET);
 
 async function main() {
-  console.log('AEGIS voice pipeline smoke test');
-  console.log('================================');
+  console.log('Dashboard Engine voice pipeline smoke test');
+  console.log('=========================================');
   for (const w of presetWarnings) console.warn(`  ! ${w}`);
   console.log(`profile   : ${BUTLER.name} (${path.relative(APP_ROOT, BUTLER_PRESET)})`);
   console.log(`text      : "${TEST_SENTENCE}"`);

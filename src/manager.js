@@ -254,7 +254,7 @@ async function renderDetail() {
       }, 'primary'));
     }
     detail.appendChild(libButton('Open in editor', () => aegis.openEditor(item.id)));
-    detail.appendChild(libButton('Export as .aegispack…', async () => {
+    detail.appendChild(libButton('Export pack…', async () => {
       const out = await aegis.exportPack(item.id);
       libStatus(out.ok ? `Exported to ${out.file}` : out.error || '', !out.ok && out.error);
     }));

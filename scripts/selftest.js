@@ -19,7 +19,7 @@ const TIMEOUT_MS = 60000;
 // Under plain Node, require('electron') resolves to the binary's path.
 const electronPath = require('electron');
 
-const env = { ...process.env, AEGIS_SELFTEST: '1' };
+const env = { ...process.env, DE_SELFTEST: '1' };
 // Inherited from Electron-based shells (VS Code); with it set, the child
 // would run as bare Node and never open a window.
 delete env.ELECTRON_RUN_AS_NODE;

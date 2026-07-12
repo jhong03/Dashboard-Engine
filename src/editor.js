@@ -602,7 +602,7 @@ async function init() {
   state.assets = { ...(all.ok ? all.assets : {}), ...loaded.assets };
   $('ed-name').value = state.pack.name;
   $('ed-base').textContent = `Editing ${packId} (${loaded.origin === 'builtin' ? 'built-in — saving makes your own copy' : loaded.origin})`;
-  document.title = `AEGIS Editor — ${state.pack.name}`;
+  document.title = `Editor — ${state.pack.name}`;
 
   // Palette
   const palette = $('palette');

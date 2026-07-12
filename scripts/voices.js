@@ -23,8 +23,8 @@ function printWarnings(warnings) {
 }
 
 function list(manifest) {
-  console.log('AEGIS voice bank');
-  console.log('================');
+  console.log('Voice bank');
+  console.log('==========');
   for (const voice of manifest.voices) {
     const installed = bank.isInstalled(APP_ROOT, voice) ? 'INSTALLED' : '         ';
     const isDefault = voice.id === manifest.defaultVoice ? ' (default)' : '';

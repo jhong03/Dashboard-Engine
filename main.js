@@ -20,12 +20,14 @@ const { userDataDir } = require('./lib/paths');
 const USER_DIR = userDataDir();
 
 // `npm run panel` / the selftest open only the tuning panel.
-const WANT_PANEL = process.env.AEGIS_SELFTEST === '1' || process.argv.includes('--panel');
+// DE_* env vars are canonical since the rebrand; legacy AEGIS_* still work.
+const envFlag = (name) => process.env[`DE_${name}`] ?? process.env[`AEGIS_${name}`];
+const WANT_PANEL = envFlag('SELFTEST') === '1' || process.argv.includes('--panel');
 if (WANT_PANEL) {
   // Tool modes run alongside a live engine instance; give Chromium its own
   // profile dir so the two don't fight over cache/profile locks. (Pack and
   // settings storage is unaffected — that lives in lib/paths userDataDir.)
-  app.setPath('userData', path.join(app.getPath('temp'), 'aegis-voice-tool'));
+  app.setPath('userData', path.join(app.getPath('temp'), 'dashboard-engine-tool'));
 }
 // `--no-desktop` keeps the dashboard in a normal window (useful over RDP or
 // for debugging the desktop layer itself).
@@ -61,7 +63,7 @@ function createPanelWindow() {
     },
   });
   panelWindow.loadFile(path.join(__dirname, 'src', 'index.html'), {
-    query: { selftest: process.env.AEGIS_SELFTEST === '1' ? '1' : '0' },
+    query: { selftest: envFlag('SELFTEST') === '1' ? '1' : '0' },
   });
   panelWindow.on('closed', () => { panelWindow = null; });
 }
@@ -83,7 +85,7 @@ function createManagerWindow() {
     },
   });
   managerWindow.loadFile(path.join(__dirname, 'src', 'manager.html'), {
-    query: { view: process.env.AEGIS_VIEW || '' },
+    query: { view: envFlag('VIEW') || '' },
   });
   managerWindow.on('closed', () => { managerWindow = null; });
 }
@@ -155,7 +157,7 @@ async function createDashboardWindow() {
     },
   });
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
-    query: { pack: process.env.AEGIS_PACK || '' },
+    query: { pack: envFlag('PACK') || '' },
   });
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
 
@@ -199,7 +201,7 @@ function toggleDesktop() {
 
 // ── Tray: the engine's home. Menu is rebuilt on every right-click so the
 // pack list and the active radio are always current — Wallpaper Engine
-// habits, AEGIS contents.
+// habits, Dashboard Engine contents.
 function buildTrayMenu() {
   const listed = packs.listPacks(__dirname, USER_DIR);
   const active = settings.getActivePack(USER_DIR) || 'aegis-holo';
@@ -218,13 +220,13 @@ function buildTrayMenu() {
     },
     { label: desktopPaused ? 'Resume Desktop' : 'Pause Desktop', click: toggleDesktop },
     { type: 'separator' },
-    { label: 'Quit AEGIS', click: () => app.quit() },
+    { label: 'Quit Dashboard Engine', click: () => app.quit() },
   ]);
 }
 
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'resources', 'tray-icon.png')));
-  tray.setToolTip('AEGIS Engine');
+  tray.setToolTip('Dashboard Engine');
   tray.on('click', createManagerWindow);
   tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
 }
@@ -238,7 +240,7 @@ function warnAboutUnauditedVoices() {
   }
 }
 
-// AEGIS_SHOT=<dir>: dev utility — after the windows settle, capture each
+// DE_SHOT=<dir>: dev utility — after the windows settle, capture each
 // window's page to <dir>/<name>.png via Electron's own compositor (works
 // while occluded, steals no focus), then quit. Used by tooling/tests only.
 function scheduleDevShots(dir) {
@@ -288,7 +290,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
 } else {
   app.on('second-instance', (event, argv) => {
     if (WANT_PANEL) return;
-    // `aegis --edit <id>` from a second launch opens the editor here.
+    // `dashboard-engine --edit <id>` from a second launch opens the editor here.
     const editAt = argv.indexOf('--edit');
     if (editAt !== -1) createEditorWindow(argv[editAt + 1] || 'aegis-holo');
     else createManagerWindow();
@@ -303,7 +305,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     });
     if (!WANT_PANEL) createTray();
     openFirstWindows();
-    if (process.env.AEGIS_SHOT) scheduleDevShots(process.env.AEGIS_SHOT);
+    if (envFlag('SHOT')) scheduleDevShots(envFlag('SHOT'));
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openFirstWindows();
     });

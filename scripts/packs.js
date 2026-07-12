@@ -5,8 +5,8 @@
 //
 //   npm run packs                          list built-in + installed packs
 //   npm run packs -- validate              sanitizer preflight on every pack
-//   npm run packs -- export <id> [file]    write <id>.aegispack
-//   npm run packs -- install <file>        install an .aegispack
+//   npm run packs -- export <id> [file]    write <id>.dpack
+//   npm run packs -- install <file>        install a .dpack
 //   npm run packs -- uninstall <id>        remove an installed pack
 //
 // Validation never fails a pack outright (the sanitizer always yields a
@@ -63,14 +63,14 @@ function main() {
     if (resolved.origin === 'missing') throw new Error(`No pack named "${arg}".`);
     const exported = packstore.exportPack(resolved.dir);
     if (!exported.ok) throw new Error(exported.error);
-    const out = arg2 || `${arg}.aegispack`;
+    const out = arg2 || `${arg}.dpack`;
     fs.writeFileSync(out, exported.buffer);
     console.log(`  exported ${arg} -> ${out} (${exported.buffer.length} bytes)`);
     return;
   }
 
   if (command === 'install') {
-    if (!arg) throw new Error('Usage: npm run packs -- install <file.aegispack>');
+    if (!arg) throw new Error('Usage: npm run packs -- install <file.dpack>');
     const result = packstore.installFromBuffer(APP_ROOT, USER_DIR, fs.readFileSync(arg), { source: 'file' });
     if (!result.ok) throw new Error(result.error);
     for (const w of result.warnings) console.warn(`  ! ${w}`);
