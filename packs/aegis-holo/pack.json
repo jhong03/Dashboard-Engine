@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "name": "AEGIS Holo",
+  "author": "AEGIS",
+  "persona": {
+    "name": "AEGIS",
+    "tagline": "DESKTOP INTELLIGENCE SHELL",
+    "lines": [
+      "ALL SYSTEMS NOMINAL",
+      "MONITORING TELEMETRY",
+      "VOICE CHANNEL READY",
+      "AWAITING DIRECTIVE"
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#04080F",
+      "glass": "#0A16238C",
+      "accent": "#3FD8FF",
+      "accentBright": "#7FE9FF",
+      "muted": "#5A7E93",
+      "warn": "#FFB23E",
+      "gold": "#E8C56A"
+    },
+    "typography": { "display": "rajdhani", "uppercase": true, "letterSpacing": 0.22 },
+    "texture": { "scanlines": 0.35, "grid": 0.25, "glow": 0.5, "vignette": 0.4 },
+    "shape": { "cornerNotches": true, "borderOpacity": 0.28, "panelOpacity": 0.55, "radius": 0 }
+  },
+  "layout": {
+    "gap": 14,
+    "widgets": [
+      { "type": "status", "area": [1, 1, 12, 2] },
+      { "type": "clock", "area": [1, 3, 5, 4], "options": { "format": "24h", "seconds": true, "showDate": true } },
+      { "type": "stats", "area": [6, 3, 7, 4], "options": { "cpu": true, "mem": true } }
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "name": "Ember Archive",
+  "author": "AEGIS",
+  "persona": {
+    "name": "Ember",
+    "tagline": "hearthside archivist",
+    "lines": [
+      "the stacks are quiet tonight",
+      "cataloguing… slowly, as it should be",
+      "ask me anything, in your own time",
+      "the kettle is nearly ready"
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#140C07",
+      "glass": "#2A19108C",
+      "accent": "#FFB23E",
+      "accentBright": "#FFD27A",
+      "muted": "#8A6F58",
+      "warn": "#FF6B4A",
+      "gold": "#E8C56A"
+    },
+    "typography": { "display": "system-serif", "uppercase": false, "letterSpacing": 0.03 },
+    "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.3, "vignette": 0.55 },
+    "shape": { "cornerNotches": false, "borderOpacity": 0.2, "panelOpacity": 0.6, "radius": 8 }
+  },
+  "layout": {
+    "gap": 18,
+    "widgets": [
+      { "type": "clock", "area": [1, 1, 7, 4], "options": { "format": "12h", "seconds": false, "showDate": true } },
+      { "type": "status", "area": [8, 1, 5, 4] },
+      { "type": "stats", "area": [1, 5, 12, 2], "options": { "cpu": true, "mem": true } }
+    ]
+  }
+}

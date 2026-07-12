@@ -10,7 +10,9 @@
     "voices": "node scripts/voices.js",
     "calibrate": "node scripts/calibrate.js",
     "audition": "node scripts/audition.js",
-    "selftest": "node scripts/selftest.js"
+    "selftest": "node scripts/selftest.js",
+    "packs": "node scripts/packs.js",
+    "panel": "electron . --panel"
   },
   "devDependencies": {
     "electron": "^33.0.0"
