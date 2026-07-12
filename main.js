@@ -281,6 +281,12 @@ function openFirstWindows() {
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'aegis-holo');
 }
 
+// Fail soft (CLAUDE.md): a stray error in main must never crash the engine
+// with a raw stack dialog. Log it; the desktop persona stays up.
+process.on('uncaughtException', (err) => {
+  console.error(`[engine] uncaught exception (survived): ${err.stack || err.message}`);
+});
+
 // One engine instance owns the desktop; a second launch just re-opens the
 // manager (so closing the manager doesn't strand the desktop persona).
 // Panel/selftest launches are tools, not the engine — they skip the lock so
@@ -306,6 +312,12 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         // Calendars/agendas repaint everywhere reminders show.
         for (const win of [dashboardWindow, editorWindow, managerWindow]) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:reminders:changed');
+        }
+      },
+      onPackSaved: (id) => {
+        // Editor saved a pack — the desktop repaints if it's showing it.
+        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+          dashboardWindow.webContents.send('aegis:packs:changed', { id });
         }
       },
     });
