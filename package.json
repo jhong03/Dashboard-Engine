@@ -9,7 +9,8 @@
     "smoke": "node scripts/smoke.js",
     "voices": "node scripts/voices.js",
     "calibrate": "node scripts/calibrate.js",
-    "audition": "node scripts/audition.js"
+    "audition": "node scripts/audition.js",
+    "selftest": "node scripts/selftest.js"
   },
   "devDependencies": {
     "electron": "^33.0.0"

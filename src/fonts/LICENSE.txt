@@ -1,0 +1,8 @@
+Bundled fonts, both under the SIL Open Font License 1.1:
+
+- Rajdhani (500/600/700) — Copyright Indian Type Foundry
+  https://fonts.google.com/specimen/Rajdhani/license
+- Share Tech Mono (400) — Copyright Carrois Type Design, Ralph du Carrois
+  https://fonts.google.com/specimen/Share+Tech+Mono/license
+
+Latin subsets only, fetched from Google Fonts (fonts.gstatic.com).

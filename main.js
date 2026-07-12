@@ -9,6 +9,7 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const voicebank = require('./lib/voicebank');
+const { registerIpcHandlers } = require('./lib/ipc');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -24,7 +25,11 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
-  win.loadFile(path.join(__dirname, 'src', 'index.html'));
+  // AEGIS_SELFTEST=1 makes the renderer run a scripted synth pass and quit —
+  // the automated end-to-end check behind `npm run selftest`.
+  win.loadFile(path.join(__dirname, 'src', 'index.html'), {
+    query: { selftest: process.env.AEGIS_SELFTEST === '1' ? '1' : '0' },
+  });
 }
 
 // Licence rule (voices.json): a voice without a verified licence is never
@@ -39,6 +44,7 @@ function warnAboutUnauditedVoices() {
 
 app.whenReady().then(() => {
   warnAboutUnauditedVoices();
+  registerIpcHandlers(__dirname);
   createWindow();
   app.on('activate', () => {
     // macOS convention: re-create the window on dock click.
