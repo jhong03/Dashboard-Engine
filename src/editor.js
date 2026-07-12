@@ -72,7 +72,7 @@ const state = {
 const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
   weather: (opts) => aegis.weather(opts),
-  reminders: () => aegis.remindersList(),
+  reminders: (window) => aegis.remindersList(window),
 });
 
 function setStatus(text, warn) {

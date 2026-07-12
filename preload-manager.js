@@ -32,8 +32,27 @@ contextBridge.exposeInMainWorld('aegis', {
   openEditor: (id) => ipcRenderer.invoke('aegis:open-editor', String(id)),
 
   // Daily planner — the manager is where reminders are managed.
-  remindersList: () => ipcRenderer.invoke('aegis:reminders:list'),
-  reminderAdd: (r) => ipcRenderer.invoke('aegis:reminders:add', { date: String(r.date), time: r.time ? String(r.time) : null, text: String(r.text) }),
+  remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',
+    window && window.from && window.to ? { from: String(window.from), to: String(window.to) } : undefined),
+  reminderAdd: (r) => ipcRenderer.invoke('aegis:reminders:add', {
+    date: String(r.date),
+    time: r.time ? String(r.time) : null,
+    text: String(r.text),
+    repeat: r.repeat ? String(r.repeat) : 'none',
+    lead: Number(r.lead) || 0,
+  }),
+  reminderUpdate: (id, patch) => ipcRenderer.invoke('aegis:reminders:update', { id: String(id), patch }),
   reminderRemove: (id) => ipcRenderer.invoke('aegis:reminders:remove', String(id)),
   reminderToggle: (id) => ipcRenderer.invoke('aegis:reminders:toggle', String(id)),
+  onRemindersChanged: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('aegis:reminders:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:reminders:changed', handler);
+  },
+  // Main asks the window to show a view (e.g. planner, from a notification click).
+  onShowView: (callback) => {
+    const handler = (_event, view) => callback(String(view));
+    ipcRenderer.on('aegis:show-view', handler);
+    return () => ipcRenderer.removeListener('aegis:show-view', handler);
+  },
 });

@@ -45,16 +45,22 @@
           <button class="btn" id="btn-reg-add">Subscribe</button>
         </div>
         <div class="planner hidden" id="planner">
-          <form class="planner-add" id="planner-form">
-            <label class="visually-hidden" for="rem-date">Date</label>
-            <input type="date" id="rem-date" required>
-            <label class="visually-hidden" for="rem-time">Time (optional)</label>
-            <input type="time" id="rem-time">
-            <label class="visually-hidden" for="rem-text">Reminder</label>
-            <input type="text" id="rem-text" placeholder="What's happening?" maxlength="120" required>
-            <button class="btn primary" type="submit">Add</button>
-          </form>
-          <div id="planner-list"></div>
+          <div class="planner-cal">
+            <header class="cal-toolbar">
+              <div class="cal-nav">
+                <button class="btn tiny" id="cal-prev" aria-label="Previous month">‹</button>
+                <button class="btn tiny" id="cal-today">Today</button>
+                <button class="btn tiny" id="cal-next" aria-label="Next month">›</button>
+              </div>
+              <h2 class="cal-title" id="cal-title">—</h2>
+              <button class="btn primary" id="cal-add">Add event</button>
+            </header>
+            <div class="cal-month" id="cal-month"></div>
+          </div>
+          <aside class="planner-side">
+            <h3 class="planner-side-title">Upcoming</h3>
+            <div id="planner-list"></div>
+          </aside>
         </div>
         <div class="gallery" id="gallery"></div>
       </div>
@@ -63,6 +69,51 @@
       </aside>
     </div>
   </section>
+
+  <!-- Event editor: opens from a day cell (quick-add) or an event chip (edit). -->
+  <div class="modal-scrim hidden" id="event-scrim">
+    <form class="event-card" id="event-form">
+      <h3 id="event-heading">New event</h3>
+      <label class="visually-hidden" for="ev-text">Event</label>
+      <input type="text" id="ev-text" maxlength="120" placeholder="What's happening?" required>
+      <div class="event-row">
+        <label class="event-field">Date
+          <input type="date" id="ev-date" required>
+        </label>
+        <label class="event-field">Time
+          <input type="time" id="ev-time">
+        </label>
+      </div>
+      <div class="event-row">
+        <label class="event-field">Repeats
+          <select id="ev-repeat">
+            <option value="none">Does not repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </label>
+        <label class="event-field">Alert
+          <select id="ev-lead">
+            <option value="0">At event time</option>
+            <option value="5">5 min before</option>
+            <option value="10">10 min before</option>
+            <option value="30">30 min before</option>
+            <option value="60">1 hour before</option>
+            <option value="1440">1 day before</option>
+          </select>
+        </label>
+      </div>
+      <p class="hint" id="ev-hint"></p>
+      <div class="event-actions">
+        <button type="button" class="btn danger hidden" id="ev-delete">Delete</button>
+        <span class="event-spacer"></span>
+        <button type="button" class="btn" id="ev-cancel">Cancel</button>
+        <button type="submit" class="btn primary">Save</button>
+      </div>
+    </form>
+  </div>
 
   <script src="manager.js"></script>
 </body>

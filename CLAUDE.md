@@ -21,7 +21,7 @@ Dashboard Engine is a working Wallpaper-Engine-class product: designers publish 
 
 **Windows & surfaces**
 - **Desktop surface** (`src/dashboard.*`) — chromeless window reparented under the shell's wallpaper layer (`scripts/desktop-attach.ps1`, handles classic WorkerW and 24H2 Progman; `--no-desktop` or non-Windows falls back to a normal window). Narrowest preload in the app.
-- **Manager** (`src/manager.*`) — THE app window: library gallery (auto-generated blueprint thumbnails, detail sidebar), Browse tab (registry feeds: subscribe / install / update, sha256+size-pinned downloads), Planner tab (reminders CRUD).
+- **Manager** (`src/manager.*`) — THE app window: library gallery (auto-generated blueprint thumbnails, detail sidebar), Browse tab (registry feeds: subscribe / install / update, sha256+size-pinned downloads), Planner tab (Google-Calendar-style month grid: click-a-day quick-add, event chips, edit modal, repeats daily/weekly/monthly/yearly, per-event alert lead time).
 - **Editor** (`src/editor.*`) — WYSIWYG pack editor: palette drag&drop, move/resize/z/duplicate, three-tab inspector (component options, skin tokens, persona), image import (dialog + staging in MAIN only), fork-on-save (editing built-in/registry packs copies them; `packstore.saveEdited`). Stage uses the real display aspect ratio.
 - **Voice panel** (`src/index.html` + `renderer.js`) — the M1 tuning panel as a tool window (`npm run panel`; isolated Chromium profile so it runs beside the engine).
 - **Tray** — the engine lives here: Open Manager / Voice Tuning / Switch Pack (radio) / Pause-Resume Desktop / Quit. Closing windows never quits engine mode.
@@ -30,7 +30,7 @@ Dashboard Engine is a working Wallpaper-Engine-class product: designers publish 
 - `src/components.js` — ONE renderer for desktop + editor (that's what makes the editor exact). 13 component types: status, clock, analog-clock, stats, meter, sparkline, text, image, divider, calendar, countdown, weather (Open-Meteo via main, keyless), agenda. Telemetry binds: cpu, mem, disk, battery.
 - `lib/packs.js` (schema-2 sanitizer, dual roots: built-in repo packs + user-data installs) · `lib/packstore.js` (install/export/uninstall/fork, .aegis-meta.json) · `lib/zip.js` (dependency-free, zip-slip/bomb-proof) · `lib/registry.js` (index feeds, update checks, tamper refusal) — pack format is `.dpack`, legacy `.aegispack` accepted.
 - Voice: `lib/piper.js` / `dsp.js` / `analyze.js` / `voicebank.js` (8 licence-audited voices, sha256-pinned downloads, per-voice wpm calibration) + `presets/` + `lib/profiles.js`.
-- Personal data in `%APPDATA%/dashboard-engine` (auto-migrates from the old `aegis-voice` dir): `settings.json` (active pack), `reminders.json` (`lib/reminders.js`), installed packs, registries. **Personal data never enters a pack, export, or registry download.**
+- Personal data in `%APPDATA%/dashboard-engine` (auto-migrates from the old `aegis-voice` dir): `settings.json` (active pack), `reminders.json` (`lib/reminders.js` — repeat rules expanded to occurrences in main; `lib/alerts.js` fires desktop notifications for timed events with lead time + 12 h missed-alert catch-up, click opens the planner), installed packs, registries. **Personal data never enters a pack, export, or registry download.**
 
 **Dev surface**
 - `npm start` engine · `npm run panel` · `electron . --edit <id>` editor (works against a running engine via single-instance) · `--no-desktop`.
@@ -47,7 +47,8 @@ Dashboard Engine is a working Wallpaper-Engine-class product: designers publish 
 **Next milestone candidates (undecided — ask the user before starting)**
 - LLM bridge + service-backed widgets (user explicitly wants: chatbot section with free tier default + personal API key option, Spotify/YouTube media, audio visualizer, Bluetooth nearby — each needs real infra: token storage, audio loopback, etc.)
 - Official pack registry (format is static-hosting-only; just needs a home + default URL)
-- Shell polish: auto-start with Windows, multi-monitor "choose display", editor stage zoom, per-pack user-adjustable properties (WE-style), desktop notifications for timed reminders
+- Shell polish: auto-start with Windows, multi-monitor "choose display", editor stage zoom, per-pack user-adjustable properties (WE-style)
+- App launcher on the wallpaper (user idea 2026-07-12: the desktop surface covers icons on 24H2 — lean in with a customizable launcher component: recently used apps, user-chosen pins/layout; needs input on the desktop window + main-side app enumeration/launch allowlisting)
 - Module SDK (sandboxed HTML packs) and the hosted marketplace (accounts/payments/moderation) remain out of scope until deliberately chosen.
 
 ## Stack

@@ -724,14 +724,17 @@ function createRenderer(services) {
     el.append(label, grid);
 
     // Reminder markers: dot the days that still have something planned.
+    // Repeating events land on every occurrence (expanded in main).
     const decorate = async () => {
       if (!services.reminders || component.options.showReminders === false) return;
-      const res = await services.reminders();
-      if (!res.ok) return;
       const now = new Date();
       const prefix = localIso(now).slice(0, 8);
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+      const res = await services.reminders({ from: `${prefix}01`, to: `${prefix}${String(last).padStart(2, '0')}` });
+      if (!res.ok) return;
+      const entries = res.occurrences || res.reminders;
       const marked = new Set(
-        res.reminders.filter((r) => r.date.startsWith(prefix) && !r.done).map((r) => Number(r.date.slice(8))),
+        entries.filter((r) => r.date.startsWith(prefix) && !r.done).map((r) => Number(r.date.slice(8))),
       );
       for (const cell of grid.querySelectorAll('.cal-day')) {
         cell.classList.toggle('has-rem', marked.has(Number(cell.textContent)));
@@ -784,15 +787,17 @@ function createRenderer(services) {
 
     const paint = async () => {
       if (!services.reminders) return;
-      const res = await services.reminders();
-      if (!res.ok) return;
-      listEl.textContent = '';
-
       const today = new Date();
       const todayIso = localIso(today);
       const tomorrowIso = localIso(new Date(today.getTime() + 86400000));
       const horizonIso = localIso(new Date(today.getTime() + (component.options.days - 1) * 86400000));
-      const upcoming = res.reminders.filter((r) => r.date >= todayIso && r.date <= horizonIso);
+      const res = await services.reminders({ from: todayIso, to: horizonIso });
+      if (!res.ok) return;
+      listEl.textContent = '';
+
+      // Expanded occurrences put repeating events on each of their days.
+      const entries = res.occurrences || res.reminders;
+      const upcoming = entries.filter((r) => r.date >= todayIso && r.date <= horizonIso);
 
       if (upcoming.length === 0) {
         const empty = document.createElement('div');
@@ -817,7 +822,8 @@ function createRenderer(services) {
         item.className = `agenda-item${reminder.done ? ' done' : ''}`;
         const time = document.createElement('span');
         time.className = 'agenda-time';
-        time.textContent = reminder.time || '·';
+        // Untimed repeating events show their repeat mark where the time goes.
+        time.textContent = reminder.time || (reminder.repeat && reminder.repeat !== 'none' ? '↻' : '·');
         const text = document.createElement('span');
         text.className = 'agenda-text';
         text.textContent = reminder.text;

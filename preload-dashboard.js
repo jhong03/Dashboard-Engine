@@ -23,6 +23,7 @@ contextBridge.exposeInMainWorld('aegis', {
   onActiveChanged: subscription('aegis:active:changed'),   // manager picked a pack
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
-  remindersList: () => ipcRenderer.invoke('aegis:reminders:list'),   // read-only here
+  remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',   // read-only here
+    window && window.from && window.to ? { from: String(window.from), to: String(window.to) } : undefined),
   onRemindersChanged: subscription('aegis:reminders:changed'),
 });

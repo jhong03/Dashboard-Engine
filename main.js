@@ -8,16 +8,21 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const voicebank = require('./lib/voicebank');
 const packs = require('./lib/packs');
 const settings = require('./lib/settings');
 const { registerIpcHandlers } = require('./lib/ipc');
+const { createAlertScheduler } = require('./lib/alerts');
 const { userDataDir } = require('./lib/paths');
 
 const USER_DIR = userDataDir();
+
+// Windows routes toast notifications by AppUserModelID; without one set,
+// planner alerts never reach the Action Center.
+app.setAppUserModelId('com.dashboardengine.app');
 
 // `npm run panel` / the selftest open only the tuning panel.
 // DE_* env vars are canonical since the rebrand; legacy AEGIS_* still work.
@@ -39,6 +44,7 @@ let dashboardWindow = null;
 let editorWindow = null;
 let tray = null;
 let desktopPaused = false;
+let alertScheduler = null;
 
 const COMMON_WEB_PREFERENCES = {
   // Non-negotiable (CLAUDE.md): the renderer never touches Node.
@@ -302,14 +308,47 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     else createManagerWindow();
   });
 
+  // Notification click lands the user on the planner.
+  function openManagerView(view) {
+    createManagerWindow();
+    const send = () => {
+      if (managerWindow && !managerWindow.isDestroyed()) {
+        managerWindow.webContents.send('aegis:show-view', view);
+        managerWindow.focus();
+      }
+    };
+    if (managerWindow.webContents.isLoading()) managerWindow.webContents.once('did-finish-load', send);
+    else send();
+  }
+
+  function notifyReminder(occurrence, minutesLate) {
+    if (!Notification.isSupported()) {
+      console.warn('[alerts] desktop notifications are not supported on this system');
+      return;
+    }
+    const today = new Date();
+    const todayIso = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const when = occurrence.date === todayIso ? `at ${occurrence.time}` : `${occurrence.date} at ${occurrence.time}`;
+    const body = minutesLate > 0 ? `Was due ${when} (${minutesLate} min ago)` : `Due ${when}`;
+    const notification = new Notification({ title: occurrence.text, body });
+    notification.on('click', () => openManagerView('planner'));
+    notification.show();
+  }
+
   app.whenReady().then(() => {
     warnAboutUnauditedVoices();
+    if (!WANT_PANEL) {
+      alertScheduler = createAlertScheduler({ userDir: USER_DIR, notify: notifyReminder });
+      alertScheduler.rearm();
+    }
     registerIpcHandlers(__dirname, USER_DIR, {
       openPanel: createPanelWindow,
       openEditor: createEditorWindow,
       onActivePack: notifyActivePack,
       onRemindersChanged: () => {
-        // Calendars/agendas repaint everywhere reminders show.
+        // Calendars/agendas repaint everywhere reminders show, and the alert
+        // timer re-arms against the edited schedule.
+        if (alertScheduler) alertScheduler.rearm();
         for (const win of [dashboardWindow, editorWindow, managerWindow]) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:reminders:changed');
         }

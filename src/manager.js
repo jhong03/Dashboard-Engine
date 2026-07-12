@@ -201,39 +201,160 @@ function renderGallery() {
   }
 }
 
-// ── Planner (reminders live in user data; components display them) ─────────
+// ── Planner: Google-Calendar-style month grid + upcoming list ───────────────
+// Reminders live in user data; the wallpaper components display them. Here
+// they're managed: click a day to add, click an event chip to edit. Repeating
+// events are expanded into occurrences by the main process (lib/reminders).
+
+const MAX_CHIPS_PER_DAY = 3;
+const UPCOMING_DAYS = 30;
+
+const planner = {
+  month: null,       // { year, month1 } currently displayed; null = current month
+  reminders: [],     // raw entries (for editing)
+  editing: null,     // id being edited in the modal, or null for a new event
+};
 
 function localIso(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function shiftIso(iso, days) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return localIso(new Date(y, m - 1, d + days));
+}
+
 function plannerDayTitle(iso) {
   const todayIso = localIso(new Date());
-  const tomorrowIso = localIso(new Date(Date.now() + 86400000));
-  if (iso < todayIso) return 'Earlier';
   if (iso === todayIso) return 'Today';
-  if (iso === tomorrowIso) return 'Tomorrow';
+  if (iso === shiftIso(todayIso, 1)) return 'Tomorrow';
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
+function currentMonth() {
+  if (!planner.month) {
+    const now = new Date();
+    planner.month = { year: now.getFullYear(), month1: now.getMonth() + 1 };
+  }
+  return planner.month;
+}
+
+// The visible grid: Monday-led weeks covering the whole month, padded with
+// adjacent-month days like Google Calendar.
+function gridRange() {
+  const { year, month1 } = currentMonth();
+  const first = new Date(year, month1 - 1, 1);
+  const start = new Date(first);
+  start.setDate(start.getDate() - ((first.getDay() + 6) % 7));
+  const last = new Date(year, month1, 0);
+  const end = new Date(last);
+  end.setDate(end.getDate() + (6 - ((last.getDay() + 6) % 7)));
+  return { start, end };
+}
+
 async function renderPlanner() {
+  const { year, month1 } = currentMonth();
+  const { start, end } = gridRange();
+  const todayIso = localIso(new Date());
+  const from = localIso(start) < todayIso ? localIso(start) : todayIso;
+  const to = shiftIso(todayIso, UPCOMING_DAYS) > localIso(end) ? shiftIso(todayIso, UPCOMING_DAYS) : localIso(end);
+
+  const res = await aegis.remindersList({ from, to });
+  if (!res.ok) return libStatus(res.error, true);
+  planner.reminders = res.reminders;
+  const occurrences = res.occurrences || [];
+
+  $('cal-title').textContent = new Date(year, month1 - 1, 1)
+    .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  renderMonthGrid(occurrences, todayIso);
+  renderUpcoming(occurrences, todayIso);
+}
+
+function renderMonthGrid(occurrences, todayIso) {
+  const grid = $('cal-month');
+  grid.textContent = '';
+  const { month1 } = currentMonth();
+  const { start, end } = gridRange();
+
+  for (const name of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) {
+    const head = document.createElement('div');
+    head.className = 'cal-m-head';
+    head.textContent = name;
+    grid.appendChild(head);
+  }
+
+  const byDate = new Map();
+  for (const o of occurrences) {
+    if (!byDate.has(o.date)) byDate.set(o.date, []);
+    byDate.get(o.date).push(o);
+  }
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const iso = localIso(d);
+    const cell = document.createElement('div');
+    cell.className = 'cal-m-day';
+    if (d.getMonth() + 1 !== month1) cell.classList.add('outside');
+    cell.tabIndex = 0;
+    cell.setAttribute('role', 'button');
+    cell.setAttribute('aria-label', `Add event on ${iso}`);
+
+    const num = document.createElement('span');
+    num.className = `cal-m-num${iso === todayIso ? ' today' : ''}`;
+    num.textContent = String(d.getDate());
+    cell.appendChild(num);
+
+    const dayEvents = byDate.get(iso) || [];
+    for (const o of dayEvents.slice(0, MAX_CHIPS_PER_DAY)) {
+      cell.appendChild(eventChip(o));
+    }
+    if (dayEvents.length > MAX_CHIPS_PER_DAY) {
+      const more = document.createElement('span');
+      more.className = 'cal-m-more';
+      more.textContent = `+${dayEvents.length - MAX_CHIPS_PER_DAY} more`;
+      cell.appendChild(more);
+    }
+
+    const addHere = () => openEventEditor({ date: iso });
+    cell.addEventListener('click', addHere);
+    cell.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); addHere(); } });
+    grid.appendChild(cell);
+  }
+}
+
+function eventChip(occurrence) {
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = `ev-chip${occurrence.done ? ' done' : ''}`;
+  chip.title = `${occurrence.time ? `${occurrence.time} · ` : ''}${occurrence.text}${occurrence.repeat !== 'none' ? ` (repeats ${occurrence.repeat})` : ''}`;
+  const label = document.createElement('span');
+  label.className = 'ev-chip-text';
+  label.textContent = `${occurrence.time ? `${occurrence.time} ` : ''}${occurrence.repeat !== 'none' ? '↻ ' : ''}${occurrence.text}`;
+  chip.appendChild(label);
+  chip.addEventListener('click', (e) => {
+    e.stopPropagation(); // don't fall through to the day cell's quick-add
+    openEventEditor({ id: occurrence.id });
+  });
+  return chip;
+}
+
+function renderUpcoming(occurrences, todayIso) {
   const list = $('planner-list');
   list.textContent = '';
-  const res = await aegis.remindersList();
-  if (!res.ok) return libStatus(res.error, true);
+  const horizon = shiftIso(todayIso, UPCOMING_DAYS);
+  const upcoming = occurrences.filter((o) => o.date >= todayIso && o.date <= horizon);
 
-  if (res.reminders.length === 0) {
+  if (upcoming.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'hint';
-    empty.textContent = 'Nothing planned yet. Reminders show up on calendar and agenda components on your desktop.';
+    empty.textContent = 'Nothing planned. Click a day on the calendar to add an event — timed events raise a desktop notification.';
     list.appendChild(empty);
     return;
   }
 
   let currentTitle = null;
-  for (const reminder of res.reminders) {
-    const title = plannerDayTitle(reminder.date);
+  for (const occurrence of upcoming) {
+    const title = plannerDayTitle(occurrence.date);
     if (title !== currentTitle) {
       currentTitle = title;
       const head = document.createElement('div');
@@ -242,48 +363,141 @@ async function renderPlanner() {
       list.appendChild(head);
     }
     const row = document.createElement('div');
-    row.className = `rem-row${reminder.done ? ' done' : ''}`;
+    row.className = `rem-row${occurrence.done ? ' done' : ''}`;
 
-    const check = document.createElement('input');
-    check.type = 'checkbox';
-    check.checked = reminder.done;
-    check.title = 'Done';
-    check.addEventListener('change', async () => {
-      await aegis.reminderToggle(reminder.id);
-      renderPlanner();
-    });
+    if (occurrence.repeat === 'none') {
+      const check = document.createElement('input');
+      check.type = 'checkbox';
+      check.checked = occurrence.done;
+      check.title = 'Done';
+      check.addEventListener('change', async () => {
+        await aegis.reminderToggle(occurrence.id);
+        renderPlanner();
+      });
+      row.appendChild(check);
+    } else {
+      const repeatMark = document.createElement('span');
+      repeatMark.className = 'rem-repeat';
+      repeatMark.textContent = '↻';
+      repeatMark.title = `Repeats ${occurrence.repeat}`;
+      row.appendChild(repeatMark);
+    }
 
     const time = document.createElement('span');
     time.className = 'rem-time';
-    time.textContent = reminder.time || '—';
+    time.textContent = occurrence.time || '—';
 
-    const text = document.createElement('span');
+    const text = document.createElement('button');
+    text.type = 'button';
     text.className = 'rem-text';
-    text.textContent = reminder.text;
+    text.textContent = occurrence.text;
+    text.title = 'Edit';
+    text.addEventListener('click', () => openEventEditor({ id: occurrence.id }));
 
     const del = libButton('Delete', async () => {
-      await aegis.reminderRemove(reminder.id);
+      await aegis.reminderRemove(occurrence.id);
       renderPlanner();
     }, 'tiny danger');
 
-    row.append(check, time, text, del);
+    row.append(time, text, del);
     list.appendChild(row);
   }
 }
 
+// ── Event editor modal ──────────────────────────────────────────────────────
+
+function openEventEditor({ id, date }) {
+  const entry = id ? planner.reminders.find((r) => r.id === id) : null;
+  planner.editing = entry ? entry.id : null;
+  $('event-heading').textContent = entry ? 'Edit event' : 'New event';
+  $('ev-text').value = entry ? entry.text : '';
+  $('ev-date').value = entry ? entry.date : (date || localIso(new Date()));
+  $('ev-time').value = entry && entry.time ? entry.time : '';
+  $('ev-repeat').value = entry ? entry.repeat : 'none';
+  $('ev-lead').value = entry ? String(entry.lead) : '0';
+  $('ev-delete').classList.toggle('hidden', !entry);
+  syncEventHint();
+  $('event-scrim').classList.remove('hidden');
+  $('ev-text').focus();
+}
+
+function closeEventEditor() {
+  planner.editing = null;
+  $('event-scrim').classList.add('hidden');
+}
+
+function syncEventHint() {
+  const timed = $('ev-time').value !== '';
+  $('ev-lead').disabled = !timed;
+  const repeating = $('ev-repeat').value !== 'none';
+  const parts = [];
+  parts.push(timed
+    ? 'A desktop notification fires at the alert time (the engine runs in the tray).'
+    : 'Give the event a time to get a desktop notification.');
+  if (repeating) parts.push('Repeating events edit as a whole series.');
+  $('ev-hint').textContent = parts.join(' ');
+}
+
 function wirePlanner() {
-  $('rem-date').value = localIso(new Date());
-  $('planner-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const out = await aegis.reminderAdd({
-      date: $('rem-date').value,
-      time: $('rem-time').value || null,
-      text: $('rem-text').value,
-    });
-    if (!out.ok) return libStatus(out.error, true);
-    $('rem-text').value = '';
-    libStatus('Reminder added.');
+  $('cal-prev').addEventListener('click', () => {
+    const m = currentMonth();
+    m.month1 === 1 ? (m.year--, m.month1 = 12) : m.month1--;
     renderPlanner();
+  });
+  $('cal-next').addEventListener('click', () => {
+    const m = currentMonth();
+    m.month1 === 12 ? (m.year++, m.month1 = 1) : m.month1++;
+    renderPlanner();
+  });
+  $('cal-today').addEventListener('click', () => { planner.month = null; renderPlanner(); });
+  $('cal-add').addEventListener('click', () => openEventEditor({ date: localIso(new Date()) }));
+
+  $('ev-time').addEventListener('input', syncEventHint);
+  $('ev-repeat').addEventListener('change', syncEventHint);
+  $('ev-cancel').addEventListener('click', closeEventEditor);
+  $('event-scrim').addEventListener('click', (e) => { if (e.target === $('event-scrim')) closeEventEditor(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !$('event-scrim').classList.contains('hidden')) closeEventEditor();
+  });
+
+  $('event-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fields = {
+      date: $('ev-date').value,
+      time: $('ev-time').value || null,
+      text: $('ev-text').value,
+      repeat: $('ev-repeat').value,
+      lead: Number($('ev-lead').value) || 0,
+    };
+    const wasEditing = planner.editing !== null;
+    const out = wasEditing
+      ? await aegis.reminderUpdate(planner.editing, fields)
+      : await aegis.reminderAdd(fields);
+    if (!out.ok) return libStatus(out.error, true);
+    closeEventEditor();
+    libStatus(wasEditing ? 'Event updated.' : 'Event added.');
+    renderPlanner();
+  });
+
+  $('ev-delete').addEventListener('click', async () => {
+    if (!planner.editing) return;
+    const out = await aegis.reminderRemove(planner.editing);
+    if (!out.ok) return libStatus(out.error, true);
+    closeEventEditor();
+    libStatus('Event deleted.');
+    renderPlanner();
+  });
+
+  // Live updates: an alert firing or another window editing repaints us.
+  aegis.onRemindersChanged(() => {
+    if (library.tab === 'planner') renderPlanner();
+  });
+  // A notification click asks us to show the planner.
+  aegis.onShowView((view) => {
+    if (view === 'browse' || view === 'planner' || view === 'installed') {
+      library.tab = view;
+      renderGallery();
+    }
   });
 }
 
