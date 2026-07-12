@@ -10,8 +10,15 @@ We ship the engine. Users author the characters. We never ship or bundle a copyr
 
 ## Current milestone
 
-**M1 — Voice Tuning Panel (standalone).**
-Everything else in this file is background. Do not build the dashboard, the module system, the marketplace, or the LLM bridge yet. If a task seems to require them, stop and ask.
+**M2 — Dashboard Skin Engine.** (M1, the voice tuning panel, shipped 2026-07-12.)
+
+M2 renders the visual half of a Persona Pack: a dashboard window whose entire look — palette, typography choice, textures, layout — comes from pack data. Scope decisions, agreed and fixed:
+
+- **Normal app window.** No wallpaper-layer injection, no always-on-top overlay yet.
+- **Packs are design tokens + declarative layout only.** JSON plus image assets, sanitized and clamped exactly like voice profiles. No CSS, no JS, no font files in packs. A pack is untrusted third-party content from day one.
+- **Built-in widgets only:** clock, system stats, persona status. No module SDK.
+
+The module system, marketplace, and LLM bridge remain out of scope. If a task seems to require them, stop and ask.
 
 ## Stack
 
