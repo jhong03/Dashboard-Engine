@@ -54,6 +54,10 @@ as the default skin, never a crash. Save your file as UTF-8 (BOM is tolerated).
       "panelOpacity": 0.55,           // 0–1
       "radius": 0                     // px, 0–16
     },
+    "ambience": {                     // optional drifting-particle layer
+      "effect": "embers",             // none | embers | dust | snow
+      "density": 0.45                 // 0.05–1
+    },
     "wallpaper": "assets/bg.png"      // optional, ≤5 MB, png/jpg/webp
   },
 
@@ -73,16 +77,16 @@ art behind widgets.
 |---|---|---|
 | `status` | — | persona name, tagline, rotating ticker |
 | `clock` | `format` (`24h`/`12h`), `seconds`, `showDate` | digital clock |
-| `analog-clock` | `seconds` | drawn clock face in your palette |
-| `stats` | `cpu`, `mem`, `disk`, `battery` | labelled bars |
-| `meter` | `bind` (`cpu`/`mem`/`disk`/`battery`), `variant` (`ring`/`bar`), `label` | one live value |
-| `sparkline` | `bind`, `label` | 3-minute history graph |
+| `analog-clock` | `seconds`, `numerals` (`quarters`/`all`/`none`), `minuteTicks` | drawn clock face in your palette |
+| `stats` | `cpu`, `mem`, `disk`, `battery`, `history` | labelled bars with a faint history trace |
+| `meter` | `bind` (`cpu`/`mem`/`disk`/`battery`), `variant` (`ring`/`bar`), `label`, `readout`, `ticks` | one live value; the bar variant gets a big number + scale ticks |
+| `sparkline` | `bind`, `label`, `grid`, `readout` | 3-minute history graph with grid + live value |
 | `text` | `text` (≤200 chars, `\n` allowed) | free text block |
 | `image` | `src` (`assets/…`), `fit` (`contain`/`cover`) | your art, ≤5 MB each |
 | `divider` | `orientation` (`h`/`v`) | hairline rule |
 | `calendar` | `weekStart` (`mon`/`sun`), `showReminders` | month grid, today marked, reminder days dotted |
 | `countdown` | `target` (ISO date), `label` | days/hours to a date |
-| `weather` | `lat`, `lon`, `place` | current conditions (Open-Meteo, no key — the one component that goes online) |
+| `weather` | `lat`, `lon`, `place`, `details` | conditions with glyph, hi/lo + wind (Open-Meteo, no key — the one component that goes online) |
 | `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
 
 `calendar` and `agenda` display the **user's own planner** (managed in the
@@ -107,6 +111,8 @@ Any component takes an optional `style` — every field optional, omitted means
   "font": "mono",           // same allowlist as typography.display
   "fontScale": 1.5,         // 0.5–3, scales everything inside
   "align": "left|center|right",
+  "place": "top|center|bottom|spread", // vertical placement inside the box
+                            // ("spread" pushes content apart to fill it)
   "panel": false,           // no glass background — float on the wallpaper
   "border": false,
   "notches": false,

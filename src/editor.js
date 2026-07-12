@@ -41,22 +41,22 @@ function defaultOptions(type, assets) {
   const firstAsset = Object.keys(assets)[0] || null;
   return {
     'status': {}, 'clock': { format: '24h', seconds: true, showDate: true },
-    'analog-clock': { seconds: true },
-    'stats': { cpu: true, mem: true, disk: false, battery: false },
-    'meter': { bind: 'cpu', variant: 'ring', label: null },
-    'sparkline': { bind: 'cpu', label: null },
+    'analog-clock': { seconds: true, numerals: 'quarters', minuteTicks: true },
+    'stats': { cpu: true, mem: true, disk: false, battery: false, history: true },
+    'meter': { bind: 'cpu', variant: 'ring', label: null, ticks: true, readout: true },
+    'sparkline': { bind: 'cpu', label: null, grid: true, readout: true },
     'text': { text: 'New text' },
     'image': { src: firstAsset, fit: 'contain' },
     'divider': { orientation: 'h' },
     'calendar': { weekStart: 'mon', showReminders: true },
     'countdown': { target: in30days, label: 'Countdown' },
-    'weather': { lat: 0, lon: 0, place: null },
+    'weather': { lat: 0, lon: 0, place: null, details: true },
     'agenda': { days: 7, limit: 6, label: null },
   }[type];
 }
 
 const DEFAULT_STYLE = {
-  accent: null, textColor: null, font: null, fontScale: null, align: null,
+  accent: null, textColor: null, font: null, fontScale: null, align: null, place: null,
   panel: null, border: null, notches: null, opacity: null, glow: null, padding: null, rotate: null,
 };
 
@@ -374,12 +374,28 @@ function optionFields(component, panel) {
       checkControl('Show date', o.showDate, set('showDate')),
     );
   } else if (type === 'analog-clock') {
-    panel.append(checkControl('Second hand', o.seconds, set('seconds')));
+    panel.append(
+      field('Numerals', selectControl(o.numerals ?? 'quarters', [['quarters', '12 · 3 · 6 · 9'], ['all', 'All twelve'], ['none', 'None']], set('numerals'))),
+      checkControl('Minute ticks', o.minuteTicks !== false, set('minuteTicks')),
+      checkControl('Second hand', o.seconds, set('seconds')),
+    );
   } else if (type === 'stats') {
     for (const [bind, label] of BIND_CHOICES) panel.append(checkControl(label, o[bind], set(bind)));
+    panel.append(checkControl('History behind bars', o.history !== false, set('history')));
   } else if (type === 'meter' || type === 'sparkline') {
     panel.append(field('Source', selectControl(o.bind, BIND_CHOICES, set('bind'))));
-    if (type === 'meter') panel.append(field('Shape', selectControl(o.variant, [['ring', 'Ring'], ['bar', 'Bar']], set('variant'))));
+    if (type === 'meter') {
+      panel.append(
+        field('Shape', selectControl(o.variant, [['ring', 'Ring'], ['bar', 'Bar']], set('variant'))),
+        checkControl('Big readout', o.readout !== false, set('readout')),
+        checkControl('Scale ticks', o.ticks !== false, set('ticks')),
+      );
+    } else {
+      panel.append(
+        checkControl('Grid lines', o.grid !== false, set('grid')),
+        checkControl('Live readout', o.readout !== false, set('readout')),
+      );
+    }
     panel.append(field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'auto')));
   } else if (type === 'text') {
     const area = document.createElement('textarea');
@@ -428,6 +444,7 @@ function optionFields(component, panel) {
       field('Latitude', numberControl(o.lat, -90, 90, 0.0001, set('lat'))),
       field('Longitude', numberControl(o.lon, -180, 180, 0.0001, set('lon'))),
       field('Place label', textControl(o.place, (v) => { o.place = v || null; renderAll(); }, 'Weather')),
+      checkControl('Hi/lo + wind line', o.details !== false, set('details')),
     );
   }
 }
@@ -452,6 +469,7 @@ function styleFields(component, panel) {
     field('Font', selectControl(s.font || '', [['', 'inherit'], ...FONT_CHOICES], (v) => { s.font = v || null; renderAll(); })),
     field(`Scale (${s.fontScale ?? 'inherit'})`, rangeControl(s.fontScale ?? 1, 0.5, 3, 0.05, set('fontScale')), clear('fontScale')),
     field('Align', selectControl(s.align || '', [['', 'inherit'], ['left', 'Left'], ['center', 'Center'], ['right', 'Right']], (v) => { s.align = v || null; renderAll(); })),
+    field('Placement', selectControl(s.place || '', [['', 'inherit'], ['top', 'Top'], ['center', 'Middle'], ['bottom', 'Bottom'], ['spread', 'Spread out']], (v) => { s.place = v || null; renderAll(); })),
     field('Glass panel', selectControl(s.panel === null ? '' : String(s.panel), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })),
     field('Border', selectControl(s.border === null ? '' : String(s.border), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })),
     field(`Opacity (${s.opacity ?? 'inherit'})`, rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')),
@@ -539,6 +557,13 @@ function renderSkinTab(panel) {
     field('Panel opacity', rangeControl(skin.shape.panelOpacity, 0, 1, 0.01, (v) => { skin.shape.panelOpacity = v; renderAll(); })),
     field('Corner radius', rangeControl(skin.shape.radius, 0, 16, 1, (v) => { skin.shape.radius = v; renderAll(); })),
     field('Canvas padding', rangeControl(state.pack.canvas.padding, 0, 12, 0.5, (v) => { state.pack.canvas.padding = v; renderAll(); })),
+  );
+
+  panel.appendChild(sectionLabel('Ambience'));
+  if (!skin.ambience) skin.ambience = { effect: 'none', density: 0.5 };
+  panel.append(
+    field('Effect', selectControl(skin.ambience.effect, [['none', 'None'], ['embers', 'Embers'], ['dust', 'Dust'], ['snow', 'Snow']], (v) => { skin.ambience.effect = v; renderAll(); })),
+    field('Density', rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
   );
 
   panel.appendChild(sectionLabel('Wallpaper'));

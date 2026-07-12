@@ -25,6 +25,7 @@
     "typography": { "display": "system-serif", "uppercase": false, "letterSpacing": 0.03 },
     "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.3, "vignette": 0.55 },
     "shape": { "cornerNotches": false, "borderOpacity": 0.2, "panelOpacity": 0.6, "radius": 8 },
+    "ambience": { "effect": "embers", "density": 0.45 },
     "wallpaper": "assets/hearth.png"
   },
   "canvas": { "padding": 3 },

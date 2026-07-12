@@ -23,6 +23,32 @@ const HISTORY_LENGTH = 90;         // sparkline: 90 samples at 2 s = 3 minutes
 const TELEMETRY_INTERVAL_MS = 2000;
 const WEATHER_REFRESH_MS = 10 * 60 * 1000;
 
+// Weather condition glyphs — engine-drawn line icons (fixed strings, no pack
+// data ever goes through innerHTML). Keyed by Open-Meteo weather-code group.
+const GLYPH_ATTRS = 'viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"';
+const CLOUD_PATH = 'M7.5 15.5h9.3a3.6 3.6 0 0 0 .5-7.2 5.2 5.2 0 0 0-10-1.3 4 4 0 0 0 .2 8.5z';
+const WEATHER_GLYPHS = {
+  sun: `<svg ${GLYPH_ATTRS}><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.5M12 18.9v2.5M2.6 12h2.5M18.9 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></svg>`,
+  partly: `<svg ${GLYPH_ATTRS}><circle cx="8.2" cy="7.6" r="3"/><path d="M8.2 2.7v1.4M3.3 7.6h1.4M4.7 4.1l1 1M11.7 4.1l-1 1"/><path d="M10.4 19.4h6.8a3.1 3.1 0 0 0 .4-6.2 4.4 4.4 0 0 0-8.4-1.1 3.4 3.4 0 0 0 1.2 7.3z"/></svg>`,
+  cloud: `<svg ${GLYPH_ATTRS}><path d="${CLOUD_PATH}"/></svg>`,
+  fog: `<svg ${GLYPH_ATTRS}><path d="M4.5 9.5h13.5M6.5 13h13M4.5 16.5h10.5"/></svg>`,
+  rain: `<svg ${GLYPH_ATTRS}><path d="${CLOUD_PATH}"/><path d="M8.7 18l-1.1 2.8M12.7 18l-1.1 2.8M16.7 18l-1.1 2.8"/></svg>`,
+  snow: `<svg ${GLYPH_ATTRS}><path d="${CLOUD_PATH}"/><circle cx="8.3" cy="19.2" r="0.4" fill="currentColor"/><circle cx="12.3" cy="19.2" r="0.4" fill="currentColor"/><circle cx="16.3" cy="19.2" r="0.4" fill="currentColor"/></svg>`,
+  storm: `<svg ${GLYPH_ATTRS}><path d="${CLOUD_PATH}"/><path d="M13 16.5l-2.3 3.3h2.8l-1.8 2.7"/></svg>`,
+};
+
+// Open-Meteo weather code → glyph key.
+function weatherGlyphKey(code) {
+  if (code === 0 || code === 1) return 'sun';
+  if (code === 2) return 'partly';
+  if (code === 3) return 'cloud';
+  if (code === 45 || code === 48) return 'fog';
+  if (code >= 95) return 'storm';
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 'snow';
+  if (code >= 51) return 'rain';
+  return 'cloud';
+}
+
 // ── Colour helpers ──────────────────────────────────────────────────────────
 
 function hexToRgbParts(hex) {
@@ -70,6 +96,125 @@ function applySkin(root, pack, assets) {
   root.classList.toggle('notches', shape.cornerNotches);
   s.backgroundColor = palette.void;
   s.backgroundImage = pack.skin.wallpaper && assets[pack.skin.wallpaper] ? `url(${assets[pack.skin.wallpaper]})` : 'none';
+
+  applyAmbience(root, pack);
+}
+
+// ── Ambience ────────────────────────────────────────────────────────────────
+// A declarative particle layer behind the components (embers / dust / snow).
+// Packs pick an effect + density from tokens; the engine owns the animation —
+// packs never ship code. Reduced motion gets one static scatter, no loop.
+
+const AMBIENCE_COLOR_KEY = { embers: 'gold', dust: 'muted', snow: 'accentBright' };
+
+function applyAmbience(root, pack) {
+  const prev = root.__aegisAmbience;
+  if (prev) {
+    cancelAnimationFrame(prev.raf);
+    prev.observer.disconnect();
+    prev.canvas.remove();
+    root.__aegisAmbience = null;
+  }
+  const ambience = pack.skin.ambience || { effect: 'none', density: 0.5 };
+  const effect = ambience.effect;
+  if (!AMBIENCE_COLOR_KEY[effect]) return;
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'ambience-layer';
+  root.appendChild(canvas);
+  const [r, g, b] = hexToRgbParts(pack.skin.palette[AMBIENCE_COLOR_KEY[effect]]);
+  const count = Math.round(14 + ambience.density * 66);
+  const rand = (lo, hi) => lo + Math.random() * (hi - lo);
+  let particles = [];
+
+  // fresh=true spawns just off the entry edge; false scatters anywhere so the
+  // first frame is already populated. Velocities are fractions of the surface
+  // per second, so density of motion is resolution-independent.
+  const spawn = (fresh) => {
+    const w = canvas.width, h = canvas.height;
+    const p = {
+      x: rand(0, w),
+      y: rand(0, h),
+      vx: 0,
+      vy: 0,
+      size: rand(0.8, 2.6) * devicePixelRatio,
+      alpha: rand(0.2, 0.7),
+      phase: rand(0, Math.PI * 2),
+      sway: rand(0.2, 1),
+    };
+    if (effect === 'embers') {
+      p.vy = -rand(0.015, 0.05);
+      if (fresh) p.y = h + p.size * 4;
+    } else if (effect === 'snow') {
+      p.vy = rand(0.02, 0.06);
+      p.size = rand(1, 3) * devicePixelRatio;
+      if (fresh) p.y = -p.size * 4;
+    } else { // dust: slow omnidirectional drift, dimmer and smaller
+      p.vx = rand(-0.008, 0.008);
+      p.vy = rand(-0.008, 0.008);
+      p.size = rand(0.6, 1.8) * devicePixelRatio;
+      p.alpha = rand(0.12, 0.4);
+    }
+    return p;
+  };
+
+  const stepParticles = (dt, t) => {
+    const w = canvas.width, h = canvas.height;
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.y += p.vy * h * dt;
+      if (effect === 'dust') {
+        p.x += p.vx * w * dt;
+        if (p.x < -8) p.x = w + 8; else if (p.x > w + 8) p.x = -8;
+        if (p.y < -8) p.y = h + 8; else if (p.y > h + 8) p.y = -8;
+      } else {
+        p.x += Math.sin(t * 0.001 + p.phase) * p.sway * 20 * devicePixelRatio * dt;
+        if (effect === 'embers' && p.y < -p.size * 4) particles[i] = spawn(true);
+        if (effect === 'snow' && p.y > h + p.size * 4) particles[i] = spawn(true);
+      }
+    }
+  };
+
+  const draw = (t) => {
+    const ctx2 = canvas.getContext('2d');
+    ctx2.clearRect(0, 0, canvas.width, canvas.height);
+    for (const p of particles) {
+      let a = p.alpha;
+      if (effect === 'embers') {
+        a *= 0.65 + 0.35 * Math.sin(t * 0.004 + p.phase);         // flicker
+        a *= Math.min(1, Math.max(0, p.y / (canvas.height * 0.35))); // die out near the top
+      }
+      ctx2.fillStyle = `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, a)).toFixed(3)})`;
+      ctx2.beginPath();
+      ctx2.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx2.fill();
+    }
+  };
+
+  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const resize = () => {
+    canvas.width = Math.max(1, canvas.clientWidth * devicePixelRatio);
+    canvas.height = Math.max(1, canvas.clientHeight * devicePixelRatio);
+    particles = Array.from({ length: count }, () => spawn(false));
+    if (reduced) draw(0);
+  };
+
+  const state = { canvas, raf: 0, observer: new ResizeObserver(resize) };
+  state.observer.observe(canvas);
+  resize();
+  root.__aegisAmbience = state;
+  if (reduced) return; // static scatter only
+
+  let last = 0;
+  const loop = (t) => {
+    state.raf = requestAnimationFrame(loop);
+    if (t - last < 33) return; // ~30 fps is plenty for drift
+    const dt = Math.min(t - last, 100) / 1000;
+    last = t;
+    stepParticles(dt, t);
+    draw(t);
+  };
+  state.raf = requestAnimationFrame(loop);
 }
 
 function applyComponentStyle(el, style, pack) {
@@ -85,6 +230,9 @@ function applyComponentStyle(el, style, pack) {
   if (style.font) el.style.setProperty('--font-display', FONT_STACKS[style.font]);
   if (style.fontScale !== null) el.style.setProperty('--font-scale', String(style.fontScale));
   if (style.align) el.style.textAlign = style.align;
+  if (style.place) {
+    el.style.justifyContent = { top: 'flex-start', center: 'center', bottom: 'flex-end', spread: 'space-between' }[style.place];
+  }
   if (style.opacity !== null) el.style.opacity = String(style.opacity);
   // Padding token is documented in px at the 1920-wide design basis; render
   // it container-relative so it scales with the surface (1px ≈ 0.0521cqw).
@@ -236,12 +384,25 @@ function createRenderer(services) {
       const bright = cssVar(el, '--accent-bright');
       const hairline = cssVar(el, '--hairline');
       const gold = cssVar(el, '--gold');
+      const muted = cssVar(el, '--muted');
 
       ctx2.lineWidth = 1 * devicePixelRatio;
       ctx2.strokeStyle = hairline;
       ctx2.beginPath();
       ctx2.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx2.stroke();
+
+      if (component.options.minuteTicks !== false) {
+        ctx2.strokeStyle = hairline;
+        for (let i = 0; i < 60; i++) {
+          if (i % 5 === 0) continue;
+          const angle = (i / 60) * Math.PI * 2;
+          ctx2.beginPath();
+          ctx2.moveTo(cx + Math.sin(angle) * radius * 0.945, cy - Math.cos(angle) * radius * 0.945);
+          ctx2.lineTo(cx + Math.sin(angle) * radius * 0.97, cy - Math.cos(angle) * radius * 0.97);
+          ctx2.stroke();
+        }
+      }
 
       ctx2.strokeStyle = accent;
       for (let i = 0; i < 12; i++) {
@@ -253,27 +414,53 @@ function createRenderer(services) {
         ctx2.stroke();
       }
 
+      // Numerals in the pack's display font — quarters big and bright, the
+      // rest (in 'all' mode) small and muted so the dial keeps its hierarchy.
+      const numerals = component.options.numerals || 'quarters';
+      if (numerals !== 'none') {
+        const fontFamily = getComputedStyle(el).fontFamily;
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'middle';
+        for (let n = 1; n <= 12; n++) {
+          const quarter = n % 3 === 0;
+          if (numerals === 'quarters' && !quarter) continue;
+          const angle = (n / 12) * Math.PI * 2;
+          const size = radius * (quarter ? 0.17 : 0.115);
+          ctx2.font = `600 ${size}px ${fontFamily}`;
+          ctx2.fillStyle = quarter ? bright : muted;
+          ctx2.fillText(String(n), cx + Math.sin(angle) * radius * 0.74, cy - Math.cos(angle) * radius * 0.74);
+        }
+      }
+
       const now = new Date();
       const seconds = now.getSeconds() + now.getMilliseconds() / 1000;
       const minutes = now.getMinutes() + seconds / 60;
       const hours = (now.getHours() % 12) + minutes / 60;
 
+      // Hands get a short counterweight tail and a soft glow.
+      ctx2.shadowColor = cssVar(el, '--glow');
+      ctx2.shadowBlur = 6 * devicePixelRatio;
       const hand = (angle, length, width, colour) => {
         ctx2.strokeStyle = colour;
         ctx2.lineWidth = width * devicePixelRatio;
         ctx2.lineCap = 'round';
         ctx2.beginPath();
-        ctx2.moveTo(cx, cy);
+        ctx2.moveTo(cx - Math.sin(angle) * length * 0.16, cy + Math.cos(angle) * length * 0.16);
         ctx2.lineTo(cx + Math.sin(angle) * length, cy - Math.cos(angle) * length);
         ctx2.stroke();
       };
       hand((hours / 12) * Math.PI * 2, radius * 0.5, 3, bright);
       hand((minutes / 60) * Math.PI * 2, radius * 0.72, 2, accent);
       if (component.options.seconds) hand((seconds / 60) * Math.PI * 2, radius * 0.8, 1, gold);
+      ctx2.shadowBlur = 0;
 
       ctx2.fillStyle = accent;
       ctx2.beginPath();
-      ctx2.arc(cx, cy, 3 * devicePixelRatio, 0, Math.PI * 2);
+      ctx2.arc(cx, cy, 3.5 * devicePixelRatio, 0, Math.PI * 2);
+      ctx2.fill();
+      ctx2.fillStyle = cssVar(el, '--void');
+      ctx2.beginPath();
+      ctx2.arc(cx, cy, 1.4 * devicePixelRatio, 0, Math.PI * 2);
       ctx2.fill();
     };
 
@@ -281,7 +468,27 @@ function createRenderer(services) {
     live.timers.push(setInterval(draw, component.options.seconds ? 100 : 1000));
   }
 
-  function statRow(name) {
+  // Faint area-fill of a bind's history, drawn inside a bar's track so the
+  // bar reads as "now" on top of "the last three minutes".
+  function drawTrace(canvas, el, bind) {
+    const ctx2 = canvas.getContext('2d');
+    const w = canvas.width, h = canvas.height;
+    ctx2.clearRect(0, 0, w, h);
+    const series = live.telemetry.history[bind];
+    if (!series || series.length < 2) return;
+    const step = w / Math.max(series.length - 1, 1);
+    ctx2.beginPath();
+    ctx2.moveTo(0, h);
+    series.forEach((v, i) => ctx2.lineTo(i * step, h - (v / 100) * h));
+    ctx2.lineTo((series.length - 1) * step, h);
+    ctx2.closePath();
+    ctx2.globalAlpha = 0.22;
+    ctx2.fillStyle = cssVar(el, '--accent');
+    ctx2.fill();
+    ctx2.globalAlpha = 1;
+  }
+
+  function statRow(name, traced, el, bind) {
     const row = document.createElement('div');
     row.className = 'stat-row';
     const label = document.createElement('span');
@@ -289,13 +496,20 @@ function createRenderer(services) {
     label.textContent = name;
     const bar = document.createElement('div');
     bar.className = 'stat-bar';
+    let trace = null;
+    if (traced) {
+      trace = document.createElement('canvas');
+      trace.className = 'stat-trace';
+      bar.appendChild(trace);
+      observeCanvas(trace, () => drawTrace(trace, el, bind));
+    }
     const fill = document.createElement('span');
     bar.appendChild(fill);
     const value = document.createElement('span');
     value.className = 'stat-value';
     value.textContent = '—';
     row.append(label, bar, value);
-    return { row, fill, value };
+    return { row, bar, fill, value, trace };
   }
 
   function buildStats(component, el) {
@@ -303,10 +517,11 @@ function createRenderer(services) {
     label.className = 'comp-label';
     label.textContent = 'System telemetry';
     el.appendChild(label);
+    const traced = component.options.history !== false;
     const rows = [];
     for (const bind of ['cpu', 'mem', 'disk', 'battery']) {
       if (!component.options[bind]) continue;
-      const r = statRow(bind.toUpperCase());
+      const r = statRow(bind.toUpperCase(), traced, el, bind);
       rows.push({ bind, ...r });
       el.appendChild(r.row);
     }
@@ -315,6 +530,7 @@ function createRenderer(services) {
         r.fill.style.width = `${values[r.bind]}%`;
         r.fill.classList.toggle('hot', values[r.bind] >= (r.bind === 'battery' ? 101 : 85));
         r.value.textContent = bindText(values, r.bind);
+        if (r.trace) drawTrace(r.trace, el, r.bind);
       }
     });
   }
@@ -326,14 +542,28 @@ function createRenderer(services) {
     label.textContent = component.options.label || bind.toUpperCase();
 
     if (component.options.variant === 'bar') {
-      const { row, fill, value } = statRow('');
-      row.querySelector('.stat-name').remove();
-      row.style.gridTemplateColumns = '1fr 3.96cqw';
-      el.append(label, row);
+      el.appendChild(label);
+      let big = null;
+      if (component.options.readout !== false) {
+        big = document.createElement('div');
+        big.className = 'meter-value';
+        big.textContent = '—';
+        el.appendChild(big);
+      }
+      const bar = document.createElement('div');
+      bar.className = `stat-bar meter-bar${component.options.ticks !== false ? ' ticked' : ''}`;
+      const trace = document.createElement('canvas');
+      trace.className = 'stat-trace';
+      bar.appendChild(trace);
+      observeCanvas(trace, () => drawTrace(trace, el, bind));
+      const fill = document.createElement('span');
+      bar.appendChild(fill);
+      el.appendChild(bar);
       live.telemetry.subscribers.push((values) => {
         fill.style.width = `${values[bind]}%`;
         fill.classList.toggle('hot', values[bind] >= 85);
-        value.textContent = bindText(values, bind);
+        if (big) big.textContent = bindText(values, bind);
+        drawTrace(trace, el, bind);
       });
       return;
     }
@@ -381,44 +611,80 @@ function createRenderer(services) {
 
   function buildSparkline(component, el) {
     const bind = component.options.bind;
+    const head = document.createElement('div');
+    head.className = 'spark-head';
     const label = document.createElement('span');
     label.className = 'comp-label';
     label.textContent = component.options.label || `${bind.toUpperCase()} HISTORY`;
+    head.appendChild(label);
+    let readout = null;
+    if (component.options.readout !== false) {
+      readout = document.createElement('span');
+      readout.className = 'spark-value';
+      readout.textContent = '—';
+      head.appendChild(readout);
+    }
     const canvas = document.createElement('canvas');
     canvas.className = 'fill-canvas spark';
-    el.append(label, canvas);
+    el.append(head, canvas);
 
     const draw = () => {
       const ctx2 = canvas.getContext('2d');
       const w = canvas.width, h = canvas.height;
       ctx2.clearRect(0, 0, w, h);
+
+      // Quarter grid first, so the chart looks composed even before the
+      // history has any samples in it.
+      if (component.options.grid !== false) {
+        ctx2.strokeStyle = cssVar(el, '--hairline-dim');
+        ctx2.lineWidth = 1 * devicePixelRatio;
+        for (const f of [0.25, 0.5, 0.75]) {
+          ctx2.beginPath();
+          ctx2.moveTo(0, h * f);
+          ctx2.lineTo(w, h * f);
+          ctx2.stroke();
+        }
+      }
+
       const series = live.telemetry.history[bind];
       if (series.length < 2) return;
-      const step = w / (HISTORY_LENGTH - 1);
+      // Stretch whatever history exists across the full width — a fresh boot
+      // fills the panel immediately and compresses toward final density.
+      const step = w / Math.max(series.length - 1, 1);
       const yFor = (v) => h - (v / 100) * (h - 4 * devicePixelRatio) - 2 * devicePixelRatio;
 
-      const startX = w - (series.length - 1) * step;
       ctx2.beginPath();
-      ctx2.moveTo(startX, h);
-      series.forEach((v, i) => ctx2.lineTo(startX + i * step, yFor(v)));
-      ctx2.lineTo(w, h);
+      ctx2.moveTo(0, h);
+      series.forEach((v, i) => ctx2.lineTo(i * step, yFor(v)));
+      ctx2.lineTo((series.length - 1) * step, h);
       ctx2.closePath();
       ctx2.fillStyle = cssVar(el, '--glow-wash');
       ctx2.fill();
 
+      ctx2.shadowColor = cssVar(el, '--glow');
+      ctx2.shadowBlur = 5 * devicePixelRatio;
       ctx2.beginPath();
       series.forEach((v, i) => {
-        const x = startX + i * step;
-        if (i === 0) ctx2.moveTo(x, yFor(v));
-        else ctx2.lineTo(x, yFor(v));
+        if (i === 0) ctx2.moveTo(0, yFor(v));
+        else ctx2.lineTo(i * step, yFor(v));
       });
       ctx2.strokeStyle = cssVar(el, '--accent');
       ctx2.lineWidth = 1.5 * devicePixelRatio;
       ctx2.stroke();
+
+      // "Now" dot on the newest sample.
+      ctx2.fillStyle = cssVar(el, '--accent-bright');
+      ctx2.beginPath();
+      ctx2.arc((series.length - 1) * step, yFor(series[series.length - 1]), 2.2 * devicePixelRatio, 0, Math.PI * 2);
+      ctx2.fill();
+      ctx2.shadowBlur = 0;
     };
 
     observeCanvas(canvas, draw);
-    live.telemetry.subscribers.push(() => draw());
+    live.telemetry.subscribers.push((values) => {
+      if (readout) readout.textContent = bindText(values, bind);
+      draw();
+    });
   }
 
   function buildText(component, el) {
@@ -607,12 +873,23 @@ function createRenderer(services) {
     const label = document.createElement('span');
     label.className = 'comp-label';
     label.textContent = component.options.place || 'Weather';
+    const main = document.createElement('div');
+    main.className = 'weather-main';
+    const glyph = document.createElement('span');
+    glyph.className = 'weather-glyph';
     const temp = document.createElement('div');
     temp.className = 'clock-time weather-temp';
     temp.textContent = '—';
+    main.append(glyph, temp);
     const desc = document.createElement('div');
     desc.className = 'clock-date display-case';
-    el.append(label, temp, desc);
+    el.append(label, main, desc);
+    let meta = null;
+    if (component.options.details !== false) {
+      meta = document.createElement('div');
+      meta.className = 'weather-meta';
+      el.appendChild(meta);
+    }
 
     const refresh = async () => {
       if (!services.weather) return;
@@ -622,7 +899,17 @@ function createRenderer(services) {
         return;
       }
       temp.textContent = `${Math.round(res.tempC)}°`;
-      desc.textContent = `${res.description} · wind ${Math.round(res.windKmh)} km/h`;
+      // Fixed engine-authored markup only — pack/service text never goes near innerHTML.
+      glyph.innerHTML = WEATHER_GLYPHS[weatherGlyphKey(res.code)] || WEATHER_GLYPHS.cloud;
+      desc.textContent = res.description;
+      if (meta) {
+        const parts = [];
+        if (typeof res.hiC === 'number' && typeof res.loC === 'number') {
+          parts.push(`H ${Math.round(res.hiC)}°  L ${Math.round(res.loC)}°`);
+        }
+        parts.push(`wind ${Math.round(res.windKmh)} km/h`);
+        meta.textContent = parts.join(' · ');
+      }
     };
     refresh();
     live.timers.push(setInterval(refresh, WEATHER_REFRESH_MS));

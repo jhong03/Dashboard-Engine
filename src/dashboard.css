@@ -167,12 +167,16 @@ body {
 .stat-row { display: grid; grid-template-columns: 2.7cqw 1fr 6.9cqw; gap: 0.62cqw; align-items: center; flex-shrink: 0; }
 .stat-name { font-size: 0.72em; letter-spacing: 0.2em; color: var(--muted); }
 .stat-bar {
-  height: 0.31cqw;
+  position: relative;
+  height: 0.52cqw;
   border: 1px solid var(--hairline-dim);
   border-radius: var(--radius);
   overflow: hidden;
 }
+/* faint 3-minute history area behind the live fill */
+.stat-trace { position: absolute; inset: 0; width: 100%; height: 100%; }
 .stat-bar > span {
+  position: relative;
   display: block;
   height: 100%;
   width: 0%;
@@ -182,6 +186,18 @@ body {
 }
 .stat-bar > span.hot { background: var(--warn); }
 .stat-value { font-family: var(--font-mono); font-size: 0.78em; color: var(--accent-bright); text-align: right; }
+
+/* single meter, bar variant: big readout over a thicker, tick-marked track */
+.meter-value {
+  font-family: var(--font-mono);
+  font-size: 1.7em;
+  line-height: 1.15;
+  color: var(--accent-bright);
+}
+.meter-bar { height: 0.68cqw; flex-shrink: 0; }
+.stat-bar.ticked {
+  background-image: repeating-linear-gradient(90deg, var(--hairline-dim) 0 1px, transparent 1px 25%);
+}
 
 /* ring meter */
 .ring-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
@@ -338,8 +354,37 @@ body {
 .agenda-item.done .agenda-text { text-decoration: line-through; }
 .agenda-empty { font-size: 0.78em; color: var(--muted); margin-top: 4px; }
 
+/* sparkline: label row carries a live readout on the right */
+.spark-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.52cqw;
+  flex-shrink: 0;
+}
+.spark-value { font-family: var(--font-mono); font-size: 1.05em; color: var(--accent-bright); }
+
 /* countdown + weather share the big-number look */
 .countdown-value, .weather-temp { font-size: 2.6em; }
+
+/* weather: condition glyph beside the temperature, hi/lo + wind beneath */
+.weather-main { display: flex; align-items: center; gap: 0.73cqw; }
+.weather-glyph { display: flex; color: var(--accent); flex-shrink: 0; }
+.weather-glyph svg { width: 3em; height: 3em; }
+.weather-meta {
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  letter-spacing: 0.06em;
+  color: var(--gold);
+}
+
+/* ambience: engine-drawn particle layer between the wallpaper and components */
+.ambience-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
 
 @media (prefers-reduced-motion: reduce) {
   .status-line::after { animation: none; }

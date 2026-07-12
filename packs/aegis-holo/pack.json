@@ -24,7 +24,8 @@
     },
     "typography": { "display": "rajdhani", "uppercase": true, "letterSpacing": 0.22 },
     "texture": { "scanlines": 0.35, "grid": 0.25, "glow": 0.5, "vignette": 0.4 },
-    "shape": { "cornerNotches": true, "borderOpacity": 0.28, "panelOpacity": 0.55, "radius": 0 }
+    "shape": { "cornerNotches": true, "borderOpacity": 0.28, "panelOpacity": 0.55, "radius": 0 },
+    "ambience": { "effect": "dust", "density": 0.3 }
   },
   "canvas": { "padding": 2 },
   "components": [
