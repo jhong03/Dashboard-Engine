@@ -21,4 +21,14 @@ contextBridge.exposeInMainWorld('aegis', {
 
   stats: () => ipcRenderer.invoke('aegis:stats'),
   openPanel: () => ipcRenderer.invoke('aegis:open-panel'),
+
+  // Library / ecosystem
+  libraryState: () => ipcRenderer.invoke('aegis:library:state'),
+  installFile: () => ipcRenderer.invoke('aegis:packs:installFile'),
+  exportPack: (id) => ipcRenderer.invoke('aegis:packs:export', String(id)),
+  uninstallPack: (id) => ipcRenderer.invoke('aegis:packs:uninstall', String(id)),
+  registryAdd: (url) => ipcRenderer.invoke('aegis:registry:add', String(url)),
+  registryRemove: (url) => ipcRenderer.invoke('aegis:registry:remove', String(url)),
+  registryBrowse: (url) => ipcRenderer.invoke('aegis:registry:browse', String(url)),
+  registryInstall: (url, id) => ipcRenderer.invoke('aegis:registry:install', { url: String(url), id: String(id) }),
 });

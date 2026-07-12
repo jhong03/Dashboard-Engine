@@ -103,6 +103,52 @@ Any component takes an optional `style` — every field optional, omitted means
 }
 ```
 
-The two factory packs are worked examples: `packs/aegis-holo/` (layered
+The two built-in packs are worked examples: `packs/aegis-holo/` (layered
 emblem, rings, sparkline) and `packs/ember-archive/` (wallpaper, analog
 clock, floating serif text). Copy one, rename the folder, and start editing.
+
+## Distributing your pack
+
+Give your manifest an `"id"` (lowercase letters/digits/hyphens — it names the
+install folder), then export:
+
+```
+npm run packs -- export my-pack        # writes my-pack.aegispack
+```
+
+(or LIBRARY → EXPORT in the app). An `.aegispack` is a plain zip of
+`pack.json` + `assets/` — share the file anywhere. Users install it via
+LIBRARY → INSTALL FROM FILE, and it lands in their user-data folder, never in
+the engine.
+
+### Hosting a registry
+
+A registry is one static JSON file on any https host — GitHub Pages, itch,
+your own site:
+
+```jsonc
+{
+  "name": "My Pack Registry",
+  "packs": [
+    {
+      "id": "my-pack",
+      "name": "My Pack",
+      "author": "you",
+      "description": "one line for the browse list",
+      "version": "1.0.0",
+      "download": "https://your.host/my-pack-1.0.0.aegispack",
+      "sha256": "<sha256 of the .aegispack file>",
+      "sizeBytes": 123456
+    }
+  ]
+}
+```
+
+Users subscribe to the index URL in LIBRARY → REGISTRIES. The app verifies
+every download against your pinned `sha256` + `sizeBytes` and refuses
+mismatches, and it flags an update whenever your `version` differs from what
+a subscriber has installed. Bump `version`, upload the new file, update the
+entry — that's a release.
+
+Caps the engine enforces on installs: ≤ 40 files per archive, ≤ 5 MB per
+asset, ≤ 25 MB unpacked, images only, built-in pack ids are reserved.

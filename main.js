@@ -64,10 +64,10 @@ function createDashboardWindow() {
       preload: path.join(__dirname, 'preload-dashboard.js'),
     },
   });
-  // AEGIS_PACK preselects a pack — the author preview loop
-  // (AEGIS_PACK=my-pack npm start while editing packs/my-pack/pack.json).
+  // AEGIS_PACK preselects a pack (the author preview loop); AEGIS_VIEW=library
+  // opens straight into the library.
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
-    query: { pack: process.env.AEGIS_PACK || '' },
+    query: { pack: process.env.AEGIS_PACK || '', view: process.env.AEGIS_VIEW || '' },
   });
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
 }

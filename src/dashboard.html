@@ -19,12 +19,44 @@
     <div class="controls">
       <label class="visually-hidden" for="pack-select">Persona pack</label>
       <select id="pack-select" class="mono"></select>
+      <button class="btn" id="btn-library">LIBRARY</button>
       <button class="btn" id="btn-panel">VOICE TUNING</button>
     </div>
   </header>
 
   <main class="canvas-outer" aria-label="Dashboard components">
     <div class="canvas" id="canvas"></div>
+
+    <section class="library hidden" id="library" aria-label="Pack library">
+      <header class="library-head">
+        <h2>PACK LIBRARY</h2>
+        <div class="btn-row">
+          <button class="btn" id="btn-install-file">INSTALL FROM FILE</button>
+          <button class="btn" id="btn-library-close">CLOSE</button>
+        </div>
+      </header>
+      <p class="mono library-status" id="library-status" role="status" aria-live="polite"></p>
+
+      <div class="library-body">
+        <section>
+          <h3>INSTALLED</h3>
+          <ul class="lib-list" id="lib-installed"></ul>
+        </section>
+        <section>
+          <h3>BUILT-IN</h3>
+          <ul class="lib-list" id="lib-builtin"></ul>
+        </section>
+        <section>
+          <h3>REGISTRIES</h3>
+          <div class="reg-add">
+            <label class="visually-hidden" for="reg-url">Registry URL</label>
+            <input id="reg-url" class="mono" placeholder="https://example.com/registry/index.json" spellcheck="false">
+            <button class="btn" id="btn-reg-add">SUBSCRIBE</button>
+          </div>
+          <div id="lib-registries"></div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <p class="mono foot" id="foot" role="status" aria-live="polite"></p>

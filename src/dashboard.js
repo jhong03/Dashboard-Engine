@@ -494,9 +494,170 @@ async function loadPack(id) {
     foot.textContent = `PACK WARNINGS: ${res.warnings.join(' · ')}`;
     foot.className = 'mono foot warn';
   } else {
-    foot.textContent = `PACK ${res.pack.id} · ${res.pack.components.length} COMPONENTS · EDIT packs/${res.pack.id}/pack.json TO RESKIN LIVE`;
+    const hint = res.origin === 'builtin'
+      ? `EDIT packs/${res.pack.id}/pack.json TO RESKIN LIVE`
+      : 'INSTALLED PACK · MANAGED IN THE LIBRARY · HOT-RELOADS IF EDITED';
+    foot.textContent = `PACK ${res.pack.id} · ${res.pack.components.length} COMPONENTS · ${hint}`;
     foot.className = 'mono foot';
   }
+}
+
+// ── Pack library (install / export / uninstall / registries) ───────────────
+
+function libStatus(text, warn) {
+  const el = $('library-status');
+  el.textContent = text || '';
+  el.className = `mono library-status${warn ? ' warn' : ''}`;
+}
+
+function libButton(label, onClick, danger) {
+  const btn = document.createElement('button');
+  btn.className = `btn${danger ? ' danger' : ''}`;
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function libRow(name, meta, buttons) {
+  const li = document.createElement('li');
+  li.className = 'lib-row';
+  const nameEl = document.createElement('span');
+  nameEl.className = 'lib-name';
+  nameEl.textContent = name;
+  const metaEl = document.createElement('span');
+  metaEl.className = 'lib-meta';
+  metaEl.textContent = meta;
+  li.append(nameEl, metaEl, ...buttons);
+  return li;
+}
+
+async function refreshPackSelect() {
+  const listed = await aegis.packsList();
+  const select = $('pack-select');
+  select.textContent = '';
+  for (const pack of listed.packs) {
+    const option = document.createElement('option');
+    option.value = pack.id;
+    option.textContent = pack.name;
+    select.appendChild(option);
+  }
+  if (state.packId) select.value = state.packId;
+}
+
+async function renderLibrary() {
+  const res = await aegis.libraryState();
+  if (!res.ok) return libStatus(res.error, true);
+
+  const installed = $('lib-installed');
+  const builtin = $('lib-builtin');
+  installed.textContent = '';
+  builtin.textContent = '';
+
+  for (const pack of res.packs) {
+    const use = libButton('USE', async () => { await loadPack(pack.id); libStatus(`NOW SHOWING ${pack.name.toUpperCase()}`); });
+    const exp = libButton('EXPORT', async () => {
+      const out = await aegis.exportPack(pack.id);
+      libStatus(out.ok ? `EXPORTED -> ${out.file}` : out.error || '', !out.ok && out.error);
+    });
+    if (pack.origin === 'installed') {
+      const meta = pack.meta || {};
+      const source = meta.source === 'file' ? 'installed from file' : meta.source || '';
+      const un = libButton('UNINSTALL', async () => {
+        const out = await aegis.uninstallPack(pack.id);
+        libStatus(out.ok ? `UNINSTALLED ${pack.id}` : out.error, !out.ok);
+        await renderLibrary();
+        await refreshPackSelect();
+      }, true);
+      installed.appendChild(libRow(pack.name, `${pack.id}${meta.version ? ' · v' + meta.version : ''} · ${source}`, [use, exp, un]));
+    } else {
+      builtin.appendChild(libRow(pack.name, `${pack.id} · reference pack`, [use, exp]));
+    }
+  }
+  if (installed.children.length === 0) {
+    const empty = document.createElement('li');
+    empty.className = 'lib-meta';
+    empty.textContent = 'Nothing installed yet — subscribe to a registry below or install a .aegispack file.';
+    installed.appendChild(empty);
+  }
+
+  const regs = $('lib-registries');
+  regs.textContent = '';
+  for (const url of res.registries) {
+    const block = document.createElement('div');
+    block.className = 'reg-block';
+    const head = document.createElement('div');
+    head.className = 'reg-head';
+    const meta = document.createElement('span');
+    meta.className = 'lib-meta';
+    meta.textContent = url;
+    const packsEl = document.createElement('ul');
+    packsEl.className = 'lib-list reg-packs';
+
+    const browseInto = async () => {
+      libStatus('FETCHING REGISTRY…');
+      const index = await aegis.registryBrowse(url);
+      packsEl.textContent = '';
+      if (!index.ok) return libStatus(index.error, true);
+      libStatus(`${index.name} — ${index.packs.length} PACK(S)${index.updates.length ? ` · ${index.updates.length} UPDATE(S) AVAILABLE` : ''}`);
+      for (const entry of index.packs) {
+        const update = index.updates.find((u) => u.id === entry.id);
+        const label = update ? `UPDATE → v${update.to}` : entry.installed ? 'REINSTALL' : 'INSTALL';
+        const install = libButton(label, async () => {
+          libStatus(`INSTALLING ${entry.name}…`);
+          const out = await aegis.registryInstall(url, entry.id);
+          libStatus(out.ok ? `INSTALLED ${entry.name} v${entry.version} — CHECKSUM VERIFIED` : out.error, !out.ok);
+          if (out.ok) {
+            await renderLibrary();
+            await refreshPackSelect();
+          }
+        });
+        packsEl.appendChild(libRow(entry.name, `${entry.id} · v${entry.version} · ${entry.author}${entry.description ? ' — ' + entry.description : ''}`, [install]));
+      }
+    };
+    const refresh = libButton('REFRESH', browseInto);
+    const remove = libButton('REMOVE', async () => {
+      await aegis.registryRemove(url);
+      await renderLibrary();
+    }, true);
+
+    head.append(meta, refresh, remove);
+    block.append(head, packsEl);
+    regs.appendChild(block);
+    browseInto(); // registries show their contents as soon as the library opens
+  }
+  if (res.registries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'lib-meta';
+    empty.textContent = 'No registries yet. Anyone can host one: a static index.json listing packs (see PACKS.md).';
+    regs.appendChild(empty);
+  }
+}
+
+function wireLibrary() {
+  $('btn-library').addEventListener('click', async () => {
+    $('library').classList.remove('hidden');
+    libStatus('');
+    await renderLibrary();
+  });
+  $('btn-library-close').addEventListener('click', () => $('library').classList.add('hidden'));
+  $('btn-install-file').addEventListener('click', async () => {
+    const out = await aegis.installFile();
+    if (out.error === null && !out.ok) return; // user cancelled the dialog
+    libStatus(out.ok ? `INSTALLED "${out.id}"` : out.error, !out.ok);
+    if (out.ok) {
+      await renderLibrary();
+      await refreshPackSelect();
+    }
+  });
+  $('btn-reg-add').addEventListener('click', async () => {
+    const input = $('reg-url');
+    const out = await aegis.registryAdd(input.value);
+    libStatus(out.ok ? 'REGISTRY SUBSCRIBED' : out.error, !out.ok);
+    if (out.ok) {
+      input.value = '';
+      await renderLibrary();
+    }
+  });
 }
 
 async function init() {
@@ -510,23 +671,32 @@ async function init() {
   }
   select.addEventListener('change', () => loadPack(select.value));
   $('btn-panel').addEventListener('click', () => aegis.openPanel());
+  wireLibrary();
 
   // Hot reload: main watches the active pack dir and pings on changes.
   state.unsubscribe = aegis.onPackChanged((data) => {
     if (data.id === state.packId) loadPack(state.packId);
   });
 
-  const requested = new URLSearchParams(location.search).get('pack');
+  const params = new URLSearchParams(location.search);
+  const requested = params.get('pack');
   const first =
     listed.packs.find((p) => p.id === requested) ||
     listed.packs.find((p) => p.id === 'aegis-holo') ||
     listed.packs[0];
   if (!first) {
-    $('foot').textContent = 'NO PACKS INSTALLED — add one under packs/<id>/pack.json';
+    $('foot').textContent = 'NO PACKS INSTALLED — open the LIBRARY to get some';
     $('foot').className = 'mono foot warn';
     return;
   }
   await loadPack(first.id);
+
+  // Deep link (also the screenshot/test hook): AEGIS_VIEW=library opens the
+  // library immediately.
+  if (params.get('view') === 'library') {
+    $('library').classList.remove('hidden');
+    await renderLibrary();
+  }
 }
 
 init().catch((err) => {
