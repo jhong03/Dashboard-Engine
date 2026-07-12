@@ -15,19 +15,40 @@ The product was born "AEGIS Voice" and rebranded once its scope outgrew voice. R
 - Internal names are FROZEN legacy and must not churn: the `window.aegis` bridge, `aegis:*` IPC channels, the `aegis-holo` reference pack id. AEGIS survives only as content (the reference pack's persona is a character named AEGIS).
 - `.dpack` is the pack extension; legacy `.aegispack` installs forever. `DE_*` env vars are canonical; legacy `AEGIS_*` still honoured. User data migrates from the old `aegis-voice` dir automatically (lib/paths.js).
 
-## Current milestone
+## Current state (as of 2026-07-12; M1–M3 shipped, plus the full app shell)
 
-**M3 — Pack Ecosystem.** (M1 voice panel and M2 skin engine shipped 2026-07-12.)
+Dashboard Engine is a working Wallpaper-Engine-class product: designers publish packs, users subscribe/install/edit them, the active pack renders straight onto the desktop. Git log tells the full story milestone by milestone.
 
-Dashboard Engine is an ENGINE, not a personal dashboard app: designers anywhere publish packs, users subscribe and install them, the engine renders whatever arrives. M3 builds that loop. Scope decisions, agreed and fixed:
+**Windows & surfaces**
+- **Desktop surface** (`src/dashboard.*`) — chromeless window reparented under the shell's wallpaper layer (`scripts/desktop-attach.ps1`, handles classic WorkerW and 24H2 Progman; `--no-desktop` or non-Windows falls back to a normal window). Narrowest preload in the app.
+- **Manager** (`src/manager.*`) — THE app window: library gallery (auto-generated blueprint thumbnails, detail sidebar), Browse tab (registry feeds: subscribe / install / update, sha256+size-pinned downloads), Planner tab (reminders CRUD).
+- **Editor** (`src/editor.*`) — WYSIWYG pack editor: palette drag&drop, move/resize/z/duplicate, three-tab inspector (component options, skin tokens, persona), image import (dialog + staging in MAIN only), fork-on-save (editing built-in/registry packs copies them; `packstore.saveEdited`). Stage uses the real display aspect ratio.
+- **Voice panel** (`src/index.html` + `renderer.js`) — the M1 tuning panel as a tool window (`npm run panel`; isolated Chromium profile so it runs beside the engine).
+- **Tray** — the engine lives here: Open Manager / Voice Tuning / Switch Pack (radio) / Pause-Resume Desktop / Quit. Closing windows never quits engine mode.
 
-- **Engine/content split.** The repo ships the engine plus exactly two built-in reference packs (aegis-holo, ember-archive). Installed packs live in the user-data directory, never in the repo.
-- **Wallpaper Engine window model.** On launch the active pack renders straight onto the desktop (frameless window reparented under the shell's wallpaper layer on Windows via scripts/desktop-attach.ps1; plain-window fallback elsewhere). The app window is the MANAGER — content navigation and selection only. `--panel` / selftest open the voice panel as a standalone tool.
-- **Portable pack format:** `.dpack` (zip of pack.json + assets; legacy `.aegispack` accepted), imported/exported in-app. Zip contents are validated with the same hostility as everything else (entry-name allowlist, size caps, no zip-slip).
-- **Registry feeds:** users subscribe to https index URLs (anyone can host one — it's a static JSON listing packs with version, download URL, sha256). In-app browse / install / update / uninstall. Integrity comes from the index-pinned sha256; authenticity is trust in the registry you added, like any package feed.
-- Packs remain pure data — the schema-2 declarative canvas, no code, no fonts.
+**Shared foundations**
+- `src/components.js` — ONE renderer for desktop + editor (that's what makes the editor exact). 13 component types: status, clock, analog-clock, stats, meter, sparkline, text, image, divider, calendar, countdown, weather (Open-Meteo via main, keyless), agenda. Telemetry binds: cpu, mem, disk, battery.
+- `lib/packs.js` (schema-2 sanitizer, dual roots: built-in repo packs + user-data installs) · `lib/packstore.js` (install/export/uninstall/fork, .aegis-meta.json) · `lib/zip.js` (dependency-free, zip-slip/bomb-proof) · `lib/registry.js` (index feeds, update checks, tamper refusal) — pack format is `.dpack`, legacy `.aegispack` accepted.
+- Voice: `lib/piper.js` / `dsp.js` / `analyze.js` / `voicebank.js` (8 licence-audited voices, sha256-pinned downloads, per-voice wpm calibration) + `presets/` + `lib/profiles.js`.
+- Personal data in `%APPDATA%/dashboard-engine` (auto-migrates from the old `aegis-voice` dir): `settings.json` (active pack), `reminders.json` (`lib/reminders.js`), installed packs, registries. **Personal data never enters a pack, export, or registry download.**
 
-Still out of scope: hosted marketplace service (accounts, payments, moderation), the module SDK (packs defining new component types), and the LLM bridge. If a task seems to require them, stop and ask.
+**Dev surface**
+- `npm start` engine · `npm run panel` · `electron . --edit <id>` editor (works against a running engine via single-instance) · `--no-desktop`.
+- Tests: `npm run selftest` (boots real app, synthesizes over live IPC) · `smoke` · `packs -- validate/export/install/uninstall` · `voices -- download/verify` · `calibrate` · `audition`.
+- Env (legacy `AEGIS_*` still honoured): `DE_PACK`, `DE_VIEW=library|browse|planner`, `DE_SELFTEST`, `DE_PIPER_PATH`, `DE_FFMPEG_PATH`, and `DE_SHOT=<dir>` — captures every window via the Electron compositor (occlusion-proof; the ONLY reliable way to screenshot these windows).
+- `PACKS.md` is the designer-facing doc: authoring, components, styles, `.dpack` export, registry hosting format.
+
+**Hard-won rules (do not relearn these)**
+- Every `fs.watch` gets an error handler — deleting a watched dir is an EPERM crash on Windows — and repaints are broadcast directly, never dependent on a watcher surviving. Main has a log-only `uncaughtException` guard (fail-soft).
+- Component styling uses cqw container units only (design basis 1920px wide; 1px ≈ 0.0521cqw). A px size inside `.comp` styles breaks editor WYSIWYG and pack portability.
+- Two Electron instances must never share a Chromium profile dir (deadlock); tool modes use an isolated one.
+- Shells spawned from VS Code inherit `ELECTRON_RUN_AS_NODE=1` — clear it before launching Electron.
+
+**Next milestone candidates (undecided — ask the user before starting)**
+- LLM bridge + service-backed widgets (user explicitly wants: chatbot section with free tier default + personal API key option, Spotify/YouTube media, audio visualizer, Bluetooth nearby — each needs real infra: token storage, audio loopback, etc.)
+- Official pack registry (format is static-hosting-only; just needs a home + default URL)
+- Shell polish: auto-start with Windows, multi-monitor "choose display", editor stage zoom, per-pack user-adjustable properties (WE-style), desktop notifications for timed reminders
+- Module SDK (sandboxed HTML packs) and the hosted marketplace (accounts/payments/moderation) remain out of scope until deliberately chosen.
 
 ## Stack
 
