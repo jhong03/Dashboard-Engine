@@ -8,7 +8,8 @@
     "start": "electron .",
     "smoke": "node scripts/smoke.js",
     "voices": "node scripts/voices.js",
-    "calibrate": "node scripts/calibrate.js"
+    "calibrate": "node scripts/calibrate.js",
+    "audition": "node scripts/audition.js"
   },
   "devDependencies": {
     "electron": "^33.0.0"

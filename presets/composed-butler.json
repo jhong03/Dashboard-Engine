@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "id": "preset-composed-butler",
+  "name": "Composed Butler",
+  "author": "AEGIS",
+  "created": "2026-07-12T00:00:00.000Z",
+  "base": {
+    "engine": "piper",
+    "voice": "northern_english_male",
+    "fallback": { "engine": "system", "match": "United Kingdom" }
+  },
+  "prosody": {
+    "pitchShift": -2.0,
+    "rate": 180,
+    "expressiveness": 0.45,
+    "steadiness": 0.6,
+    "pauseSentence": 250,
+    "pauseComma": 90
+  },
+  "timbre": {
+    "warmth": 2.5,
+    "brightness": -4.0,
+    "presence": 0.0,
+    "sibilance": -2.0,
+    "breath": 0.0
+  },
+  "character": {
+    "compression": 0.5,
+    "radioFilter": 0.0,
+    "reverb": { "mix": 0.08, "size": 0.3 },
+    "bitcrush": 0.0,
+    "chorus": 0.0
+  }
+}

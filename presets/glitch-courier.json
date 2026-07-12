@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "id": "preset-glitch-courier",
+  "name": "Glitch Courier",
+  "author": "AEGIS",
+  "created": "2026-07-12T00:00:00.000Z",
+  "base": {
+    "engine": "piper",
+    "voice": "jenny_dioco",
+    "fallback": { "engine": "system", "match": "English" }
+  },
+  "prosody": {
+    "pitchShift": 1.0,
+    "rate": 210,
+    "expressiveness": 1.3,
+    "steadiness": 0.35,
+    "pauseSentence": 200,
+    "pauseComma": 70
+  },
+  "timbre": {
+    "warmth": 0.0,
+    "brightness": 2.0,
+    "presence": 1.0,
+    "sibilance": -1.0,
+    "breath": 0.0
+  },
+  "character": {
+    "compression": 0.35,
+    "radioFilter": 0.0,
+    "reverb": { "mix": 0.0, "size": 0.3 },
+    "bitcrush": 0.25,
+    "chorus": 0.3
+  }
+}

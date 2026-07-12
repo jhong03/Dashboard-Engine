@@ -1,6 +1,6 @@
 'use strict';
 
-// Stage 1 smoke test — prove the whole pipeline with zero UI:
+// Pipeline smoke test — prove the whole chain with zero UI:
 //
 //   text → piper (raw PCM) → ffmpeg DSP chain → wav on disk → analyzer
 //
@@ -15,68 +15,25 @@ const piper = require('../lib/piper');
 const dsp = require('../lib/dsp');
 const analyze = require('../lib/analyze');
 const bank = require('../lib/voicebank');
-const { sanitizeProfile } = require('../lib/profiles');
+const { loadProfile } = require('../lib/profiles');
+const { writeWav } = require('../lib/wav');
 
 const APP_ROOT = path.join(__dirname, '..');
 const OUT_DIR = path.join(APP_ROOT, 'out');
 const OUT_WAV = path.join(OUT_DIR, 'smoke.wav');
+const BUTLER_PRESET = path.join(APP_ROOT, 'presets', 'composed-butler.json');
 
 const TEST_SENTENCE = 'Good evening. All systems are online, and every diagnostic reports nominal performance across the board.';
 
-// The Butler factory preset (Stage 3), hardcoded here as the smoke fixture:
-// low, composed, brisk, warm, British.
-const BUTLER = sanitizeProfile({
-  schema: 1,
-  name: 'Composed Butler',
-  base: { engine: 'piper', voice: 'northern_english_male' },
-  prosody: {
-    pitchShift: -2.0,
-    rate: 180,
-    expressiveness: 0.45,
-    steadiness: 0.6,
-    pauseSentence: 250,
-    pauseComma: 90,
-  },
-  timbre: {
-    warmth: 2.5,
-    brightness: -4.0,
-    presence: 0.0,
-    sibilance: -2.0,
-    breath: 0.15,
-  },
-  character: {
-    compression: 0.5,
-    radioFilter: 0.0,
-    reverb: { mix: 0.08, size: 0.3 },
-    bitcrush: 0.0,
-    chorus: 0.0,
-  },
-});
-
-// Minimal RIFF/WAVE writer for s16le mono. Inline because the app itself
-// plays PCM straight from memory; only the smoke test needs a file.
-function writeWav(filePath, pcm, sampleRate) {
-  const header = Buffer.alloc(44);
-  header.write('RIFF', 0);
-  header.writeUInt32LE(36 + pcm.length, 4);
-  header.write('WAVE', 8);
-  header.write('fmt ', 12);
-  header.writeUInt32LE(16, 16);            // fmt chunk size
-  header.writeUInt16LE(1, 20);             // PCM
-  header.writeUInt16LE(1, 22);             // mono
-  header.writeUInt32LE(sampleRate, 24);
-  header.writeUInt32LE(sampleRate * 2, 28); // byte rate (16-bit mono)
-  header.writeUInt16LE(2, 32);             // block align
-  header.writeUInt16LE(16, 34);            // bits per sample
-  header.write('data', 36);
-  header.writeUInt32LE(pcm.length, 40);
-  fs.writeFileSync(filePath, Buffer.concat([header, pcm]));
-}
+// The Butler factory preset is the smoke fixture — loaded through the real
+// sanitizing loader so the smoke test also proves the preset path.
+const { profile: BUTLER, warnings: presetWarnings } = loadProfile(BUTLER_PRESET);
 
 async function main() {
   console.log('AEGIS voice pipeline smoke test');
   console.log('================================');
-  console.log(`profile   : ${BUTLER.name}`);
+  for (const w of presetWarnings) console.warn(`  ! ${w}`);
+  console.log(`profile   : ${BUTLER.name} (${path.relative(APP_ROOT, BUTLER_PRESET)})`);
   console.log(`text      : "${TEST_SENTENCE}"`);
 
   // Resolve the profile's base voice through the bank so the smoke test

@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "id": "preset-ship-intelligence",
+  "name": "Ship Intelligence",
+  "author": "AEGIS",
+  "created": "2026-07-12T00:00:00.000Z",
+  "base": {
+    "engine": "piper",
+    "voice": "sam",
+    "fallback": { "engine": "system", "match": "United States" }
+  },
+  "prosody": {
+    "pitchShift": -1.0,
+    "rate": 170,
+    "expressiveness": 0.5,
+    "steadiness": 0.75,
+    "pauseSentence": 350,
+    "pauseComma": 110
+  },
+  "timbre": {
+    "warmth": 0.0,
+    "brightness": 0.0,
+    "presence": 1.0,
+    "sibilance": -1.0,
+    "breath": 0.0
+  },
+  "character": {
+    "compression": 0.4,
+    "radioFilter": 0.25,
+    "reverb": { "mix": 0.1, "size": 0.8 },
+    "bitcrush": 0.08,
+    "chorus": 0.45
+  }
+}

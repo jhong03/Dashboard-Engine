@@ -20,7 +20,7 @@
       "sha256": "57a219ae8e638873db7d18893304be5069c42868f392bb95c3ff17f0690d0689",
       "sizeBytes": 63201294,
       "sampleRate": 22050,
-      "wpmAtScale1": 212
+      "wpmAtScale1": 215
     },
     {
       "id": "alba",
@@ -38,7 +38,7 @@
       "sha256": "401369c4a81d09fdd86c32c5c864440811dbdcc66466cde2d64f7133a66ad03b",
       "sizeBytes": 63201294,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 184
     },
     {
       "id": "cori",
@@ -56,7 +56,7 @@
       "sha256": "1899f98e5fb8310154f3c2973f4b8a929ba7245e722b3d3a85680b833d95f10d",
       "sizeBytes": 63531379,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 193
     },
     {
       "id": "jenny_dioco",
@@ -74,7 +74,7 @@
       "sha256": "469c630d209e139dd392a66bf4abde4ab86390a0269c1e47b4e5d7ce81526b01",
       "sizeBytes": 63201294,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 180
     },
     {
       "id": "bryce",
@@ -92,7 +92,7 @@
       "sha256": "dc9caa6c313199ffb5ac698b6e542fa6cba388aeaf2731e25262e33b9810aef1",
       "sizeBytes": 63531379,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 150
     },
     {
       "id": "kristin",
@@ -110,7 +110,7 @@
       "sha256": "5849957f929cbf720c258f8458692d6103fff2f0e3d3b19c8259474bb06a18d4",
       "sizeBytes": 63531379,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 169
     },
     {
       "id": "norman",
@@ -128,7 +128,7 @@
       "sha256": "b9739443232a80a59c7d18810dd856899bf16a7964725f5ab81ea49b1351cb71",
       "sizeBytes": 63531379,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 180
     },
     {
       "id": "sam",
@@ -146,7 +146,7 @@
       "sha256": "56417b3b4afe8ec6bb4cabf06e17d67261fdd5bf334592abcfc80052fba11163",
       "sizeBytes": 62950044,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 161
     }
   ],
   "excluded": [
