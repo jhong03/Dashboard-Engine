@@ -238,6 +238,36 @@ function warnAboutUnauditedVoices() {
   }
 }
 
+// AEGIS_SHOT=<dir>: dev utility — after the windows settle, capture each
+// window's page to <dir>/<name>.png via Electron's own compositor (works
+// while occluded, steals no focus), then quit. Used by tooling/tests only.
+function scheduleDevShots(dir) {
+  setTimeout(async () => {
+    const fs = require('fs');
+    fs.mkdirSync(dir, { recursive: true });
+    const targets = [
+      ['manager', managerWindow], ['editor', editorWindow],
+      ['panel', panelWindow], ['dashboard', dashboardWindow],
+    ];
+    for (const [name, win] of targets) {
+      if (!win || win.isDestroyed()) continue;
+      try {
+        // Occluded windows are compositor-throttled and capture empty —
+        // wake them without stealing the user's focus.
+        win.webContents.setBackgroundThrottling(false);
+        win.showInactive();
+        win.moveTop();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        const image = await win.webContents.capturePage();
+        fs.writeFileSync(path.join(dir, `${name}.png`), image.toPNG());
+      } catch (err) {
+        console.warn(`[devshot] ${name}: ${err.message}`);
+      }
+    }
+    app.quit();
+  }, 6000);
+}
+
 function openFirstWindows() {
   if (WANT_PANEL) {
     createPanelWindow();
@@ -273,6 +303,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     });
     if (!WANT_PANEL) createTray();
     openFirstWindows();
+    if (process.env.AEGIS_SHOT) scheduleDevShots(process.env.AEGIS_SHOT);
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openFirstWindows();
     });

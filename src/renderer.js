@@ -17,33 +17,33 @@ const GROUPS = [
   {
     container: 'group-prosody',
     params: [
-      { path: 'prosody.pitchShift', label: 'PITCH SHIFT', hint: 'semitones', step: 0.5, fmt: (v) => `${signed(v, 1)} st` },
-      { path: 'prosody.rate', label: 'RATE', hint: 'words / min', step: 5, fmt: (v) => `${v.toFixed(0)} wpm` },
-      { path: 'prosody.expressiveness', label: 'EXPRESSIVENESS', hint: 'pitch variance', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'prosody.steadiness', label: 'STEADINESS', hint: 'timing variance', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'prosody.pauseSentence', label: 'SENTENCE PAUSE', hint: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms` },
-      { path: 'prosody.pauseComma', label: 'COMMA PAUSE', hint: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms`, reserved: 'NOT WIRED' },
+      { path: 'prosody.pitchShift', label: 'Pitch shift', hint: 'semitones', step: 0.5, fmt: (v) => `${signed(v, 1)} st` },
+      { path: 'prosody.rate', label: 'Rate', hint: 'words / min', step: 5, fmt: (v) => `${v.toFixed(0)} wpm` },
+      { path: 'prosody.expressiveness', label: 'Expressiveness', hint: 'pitch variance', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'prosody.steadiness', label: 'Steadiness', hint: 'timing variance', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'prosody.pauseSentence', label: 'Sentence pause', hint: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms` },
+      { path: 'prosody.pauseComma', label: 'Comma pause', hint: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms`, reserved: 'Not wired' },
     ],
   },
   {
     container: 'group-timbre',
     params: [
-      { path: 'timbre.warmth', label: 'WARMTH', hint: 'low shelf · 180 Hz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.brightness', label: 'BRIGHTNESS', hint: 'high shelf · 5.5 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.presence', label: 'PRESENCE', hint: 'bell · 2.8 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.sibilance', label: 'SIBILANCE', hint: 'cut · 7 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.breath', label: 'BREATH', hint: 'noise mix', step: 0.05, fmt: (v) => v.toFixed(2), reserved: 'RESERVED' },
+      { path: 'timbre.warmth', label: 'Warmth', hint: 'low shelf · 180 Hz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.brightness', label: 'Brightness', hint: 'high shelf · 5.5 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.presence', label: 'Presence', hint: 'bell · 2.8 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.sibilance', label: 'Sibilance', hint: 'cut · 7 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.breath', label: 'Breath', hint: 'noise mix', step: 0.05, fmt: (v) => v.toFixed(2), reserved: 'Reserved' },
     ],
   },
   {
     container: 'group-character',
     params: [
-      { path: 'character.compression', label: 'COMPRESSION', hint: 'broadcast squash', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.radioFilter', label: 'RADIO FILTER', hint: 'comms band', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.reverb.mix', label: 'REVERB MIX', hint: 'room level', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.reverb.size', label: 'REVERB SIZE', hint: 'room size', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.bitcrush', label: 'BITCRUSH', hint: 'digital decimation', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.chorus', label: 'CHORUS', hint: 'detuned ensemble', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.compression', label: 'Compression', hint: 'broadcast squash', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.radioFilter', label: 'Radio filter', hint: 'comms band', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.reverb.mix', label: 'Reverb mix', hint: 'room level', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.reverb.size', label: 'Reverb size', hint: 'room size', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.bitcrush', label: 'Bitcrush', hint: 'digital decimation', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.chorus', label: 'Chorus', hint: 'detuned ensemble', step: 0.05, fmt: (v) => v.toFixed(2) },
     ],
   },
 ];
@@ -81,7 +81,7 @@ function setByPath(obj, dotted, value) {
 function setStatus(text, kind) {
   const el = $('status');
   el.textContent = text;
-  el.className = `status mono${kind ? ` ${kind}` : ''}`;
+  el.className = `status-line-app${kind === 'error' ? ' warn' : kind === 'live' ? ' live' : ''}`;
 }
 
 // ── Sliders ────────────────────────────────────────────────────────────────
@@ -166,7 +166,7 @@ function renderVoices() {
 
     const meta = document.createElement('span');
     meta.className = `row-meta${voice.installed ? '' : ' warn'}`;
-    meta.textContent = voice.installed ? `${voice.sex} · ${voice.accent}` : 'NOT INSTALLED';
+    meta.textContent = voice.installed ? `${voice.sex} · ${voice.accent}` : 'Not installed';
 
     row.append(name, meta);
 
@@ -174,7 +174,7 @@ function renderVoices() {
       const dl = document.createElement('button');
       dl.type = 'button';
       dl.className = 'dl';
-      dl.textContent = 'GET';
+      dl.textContent = 'Get';
       dl.addEventListener('click', (e) => {
         e.stopPropagation();
         downloadVoice(voice, li, dl);
@@ -185,7 +185,7 @@ function renderVoices() {
     row.addEventListener('click', () => {
       state.profile.base.voice = voice.id;
       renderVoices();
-      setStatus(`BASE VOICE → ${voice.displayName.toUpperCase()}`, 'live');
+      setStatus(`Base voice: ${voice.displayName}`, 'live');
     });
 
     li.appendChild(row);
@@ -213,7 +213,7 @@ async function downloadVoice(voice, li, dlButton) {
     return;
   }
   await refreshBank();
-  setStatus(`${voice.displayName.toUpperCase()} INSTALLED — CHECKSUM VERIFIED`, 'live');
+  setStatus(`Installed ${voice.displayName} (checksum verified).`, 'live');
 }
 
 async function refreshBank() {
@@ -257,7 +257,7 @@ function renderPresets() {
 
     row.addEventListener('click', () => {
       applyProfile(preset.profile, preset.file);
-      setStatus(`PRESET LOADED — ${preset.profile.name.toUpperCase()}`, 'live');
+      setStatus(`Loaded preset: ${preset.profile.name}`, 'live');
     });
     li.appendChild(row);
     list.appendChild(li);
@@ -288,7 +288,7 @@ async function refreshSaved() {
         return;
       }
       applyProfile(loaded.profile, null);
-      setStatus(`PROFILE LOADED — ${loaded.profile.name.toUpperCase()}`, 'live');
+      setStatus(`Loaded profile: ${loaded.profile.name}`, 'live');
     });
     li.appendChild(row);
     list.appendChild(li);
@@ -303,7 +303,7 @@ function syncProfileMeta() {
 async function saveProfile() {
   syncProfileMeta();
   const res = await aegis.profileSave(state.profile);
-  $('profile-status').textContent = res.ok ? `SAVED → profiles/${res.file}` : res.error;
+  $('profile-status').textContent = res.ok ? `Saved to profiles/${res.file}` : res.error;
   if (res.ok) await refreshSaved();
 }
 
@@ -341,7 +341,7 @@ function drawWaveform(pcm) {
   const perColumn = Math.max(1, Math.floor(int16.length / width));
   const mid = height / 2;
 
-  ctx.strokeStyle = 'rgba(63, 216, 255, 0.85)';
+  ctx.strokeStyle = '#4c8dff';
   ctx.lineWidth = 1;
   ctx.beginPath();
   for (let x = 0; x < width; x++) {
@@ -372,7 +372,7 @@ async function synthesize({ play = true } = {}) {
   const btn = $('btn-synth');
   btn.disabled = true;
   btn.classList.add('busy');
-  setStatus('SYNTHESIZING…', 'live');
+  setStatus('Synthesizing…', 'live');
   $('btn-fallback').classList.add('hidden');
 
   const res = await aegis.synthesize(state.profile, $('test-text').value);
@@ -391,16 +391,16 @@ async function synthesize({ play = true } = {}) {
   $('btn-play').disabled = false;
   drawWaveform(res.pcm);
   updateReadouts(res.stats);
-  setStatus(res.warning || 'RENDER COMPLETE', res.warning ? 'error' : 'live');
+  setStatus(res.warning || 'Done.', res.warning ? 'error' : 'live');
   if (play) playPcm(res.pcm, res.sampleRate);
   return res;
 }
 
 async function speakFallback() {
-  setStatus('SPEAKING WITH SYSTEM VOICE…', 'live');
+  setStatus('Speaking with the system voice…', 'live');
   const hint = state.profile.base.fallback ? state.profile.base.fallback.match : '';
   const res = await aegis.speakFallback($('test-text').value, hint);
-  setStatus(res.ok ? 'SYSTEM VOICE DONE (untuned — install Piper for the full chain)' : res.error, res.ok ? undefined : 'error');
+  setStatus(res.ok ? 'Done (system voice — untuned; install Piper for the full chain).' : res.error, res.ok ? undefined : 'error');
 }
 
 // ── Environment chips ──────────────────────────────────────────────────────
@@ -409,9 +409,9 @@ function renderEnv(env) {
   $('chip-piper').dataset.state = env.piper ? 'on' : 'off';
   $('chip-ffmpeg').dataset.state = env.ffmpeg ? 'on' : 'off';
   if (!env.piper) {
-    setStatus('PIPER OFFLINE — synthesis will fall back to the system voice.', 'error');
+    setStatus('Piper isn’t installed — synthesis falls back to the system voice.', 'error');
   } else if (!env.ffmpeg) {
-    setStatus('FFMPEG OFFLINE — raw voice only; timbre and character stages bypassed.', 'error');
+    setStatus('FFmpeg isn’t installed — raw voice only; timbre and character are bypassed.', 'error');
   }
 }
 
@@ -449,7 +449,7 @@ async function init() {
   const first = state.presets.find((p) => p.file === 'composed-butler.json') || state.presets[0];
   state.profile = first ? structuredClone(first.profile) : null;
   if (!state.profile) {
-    setStatus('NO PRESETS FOUND — presets/ directory is missing.', 'error');
+    setStatus('No presets found — the presets folder is missing.', 'error');
     return;
   }
 
@@ -481,5 +481,5 @@ async function init() {
 
 init().catch((err) => {
   // Last-resort surface — the panel should degrade before ever reaching this.
-  setStatus(`PANEL FAILED TO INITIALISE: ${err.message}`, 'error');
+  setStatus(`The panel failed to start: ${err.message}`, 'error');
 });

@@ -74,7 +74,12 @@ const renderer = AegisComponents.createRenderer({
 function setStatus(text, warn) {
   const el = $('ed-status');
   el.textContent = text || '';
-  el.className = `mono ed-status${warn ? ' warn' : ''}`;
+  el.className = `status-line-app ed-status${warn ? ' warn' : ''}`;
+}
+
+function typeLabel(type) {
+  const entry = PALETTE.find((p) => p.type === type);
+  return entry ? entry.label : type;
 }
 
 function snap(v) {
@@ -233,7 +238,7 @@ function addComponent(type, atX, atY) {
   state.pack.components.push({ type, rect, z: 2, style: { ...DEFAULT_STYLE }, options });
   state.selected = state.pack.components.length - 1;
   renderAll();
-  setStatus(`ADDED ${type.toUpperCase()}`);
+  setStatus(`Added ${typeLabel(type).toLowerCase()}.`);
 }
 
 function removeSelected() {
@@ -252,7 +257,7 @@ async function importImage() {
     return null; // cancelled or refused
   }
   state.assets[res.rel] = res.uri;
-  setStatus(`IMPORTED ${res.rel} — written into the pack when you SAVE`);
+  setStatus(`Imported ${res.rel} — it becomes part of the pack when you save.`);
   return res.rel;
 }
 
@@ -360,7 +365,7 @@ function optionFields(component, panel) {
 
   if (type === 'clock') {
     panel.append(
-      field('FORMAT', selectControl(o.format, [['24h', '24-hour'], ['12h', '12-hour']], set('format'))),
+      field('Format', selectControl(o.format, [['24h', '24-hour'], ['12h', '12-hour']], set('format'))),
       checkControl('Show seconds', o.seconds, set('seconds')),
       checkControl('Show date', o.showDate, set('showDate')),
     );
@@ -369,47 +374,47 @@ function optionFields(component, panel) {
   } else if (type === 'stats') {
     for (const [bind, label] of BIND_CHOICES) panel.append(checkControl(label, o[bind], set(bind)));
   } else if (type === 'meter' || type === 'sparkline') {
-    panel.append(field('SOURCE', selectControl(o.bind, BIND_CHOICES, set('bind'))));
-    if (type === 'meter') panel.append(field('SHAPE', selectControl(o.variant, [['ring', 'Ring'], ['bar', 'Bar']], set('variant'))));
-    panel.append(field('LABEL', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'auto')));
+    panel.append(field('Source', selectControl(o.bind, BIND_CHOICES, set('bind'))));
+    if (type === 'meter') panel.append(field('Shape', selectControl(o.variant, [['ring', 'Ring'], ['bar', 'Bar']], set('variant'))));
+    panel.append(field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'auto')));
   } else if (type === 'text') {
     const area = document.createElement('textarea');
     area.rows = 4;
     area.maxLength = 200;
     area.value = o.text;
     area.addEventListener('change', () => { o.text = area.value; renderAll(); });
-    panel.append(field('TEXT', area));
+    panel.append(field('Text', area));
   } else if (type === 'image') {
     const choices = Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')]);
     if (choices.length > 0) {
       panel.append(
-        field('IMAGE', selectControl(o.src, choices, set('src'))),
-        field('FIT', selectControl(o.fit, [['contain', 'Contain'], ['cover', 'Cover']], set('fit'))),
+        field('Image', selectControl(o.src, choices, set('src'))),
+        field('Fit', selectControl(o.fit, [['contain', 'Contain'], ['cover', 'Cover']], set('fit'))),
       );
     }
     const importBtn = document.createElement('button');
     importBtn.className = 'btn tiny';
-    importBtn.textContent = 'IMPORT NEW IMAGE…';
+    importBtn.textContent = 'Import new image…';
     importBtn.addEventListener('click', async () => {
       const rel = await importImage();
       if (rel) { o.src = rel; renderAll(); }
     });
     panel.append(importBtn);
   } else if (type === 'divider') {
-    panel.append(field('DIRECTION', selectControl(o.orientation, [['h', 'Horizontal'], ['v', 'Vertical']], set('orientation'))));
+    panel.append(field('Direction', selectControl(o.orientation, [['h', 'Horizontal'], ['v', 'Vertical']], set('orientation'))));
   } else if (type === 'calendar') {
-    panel.append(field('WEEK STARTS', selectControl(o.weekStart, [['mon', 'Monday'], ['sun', 'Sunday']], set('weekStart'))));
+    panel.append(field('Week starts on', selectControl(o.weekStart, [['mon', 'Monday'], ['sun', 'Sunday']], set('weekStart'))));
   } else if (type === 'countdown') {
     const date = document.createElement('input');
     date.type = 'date';
     date.value = o.target ? o.target.slice(0, 10) : '';
     date.addEventListener('change', () => { o.target = date.value || null; renderAll(); });
-    panel.append(field('TARGET DATE', date), field('LABEL', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Countdown')));
+    panel.append(field('Target date', date), field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Countdown')));
   } else if (type === 'weather') {
     panel.append(
-      field('LATITUDE', numberControl(o.lat, -90, 90, 0.0001, set('lat'))),
-      field('LONGITUDE', numberControl(o.lon, -180, 180, 0.0001, set('lon'))),
-      field('PLACE LABEL', textControl(o.place, (v) => { o.place = v || null; renderAll(); }, 'Weather')),
+      field('Latitude', numberControl(o.lat, -90, 90, 0.0001, set('lat'))),
+      field('Longitude', numberControl(o.lon, -180, 180, 0.0001, set('lon'))),
+      field('Place label', textControl(o.place, (v) => { o.place = v || null; renderAll(); }, 'Weather')),
     );
   }
 }
@@ -428,17 +433,17 @@ function styleFields(component, panel) {
   };
 
   panel.append(
-    sectionLabel('STYLE'),
-    colorField('ACCENT', 'accent'),
-    colorField('TEXT COLOUR', 'textColor'),
-    field('FONT', selectControl(s.font || '', [['', 'inherit'], ...FONT_CHOICES], (v) => { s.font = v || null; renderAll(); })),
-    field(`SCALE ${s.fontScale ?? 'inherit'}`, rangeControl(s.fontScale ?? 1, 0.5, 3, 0.05, set('fontScale')), clear('fontScale')),
-    field('ALIGN', selectControl(s.align || '', [['', 'inherit'], ['left', 'Left'], ['center', 'Center'], ['right', 'Right']], (v) => { s.align = v || null; renderAll(); })),
-    field('GLASS PANEL', selectControl(s.panel === null ? '' : String(s.panel), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })),
-    field('BORDER', selectControl(s.border === null ? '' : String(s.border), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })),
-    field(`OPACITY ${s.opacity ?? 'inherit'}`, rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')),
-    field(`GLOW ${s.glow ?? 'inherit'}`, rangeControl(s.glow ?? 0.5, 0, 1, 0.05, set('glow')), clear('glow')),
-    field(`ROTATE ${s.rotate ?? 0}°`, rangeControl(s.rotate ?? 0, -20, 20, 0.5, set('rotate')), clear('rotate')),
+    sectionLabel('Style'),
+    colorField('Accent', 'accent'),
+    colorField('Text colour', 'textColor'),
+    field('Font', selectControl(s.font || '', [['', 'inherit'], ...FONT_CHOICES], (v) => { s.font = v || null; renderAll(); })),
+    field(`Scale (${s.fontScale ?? 'inherit'})`, rangeControl(s.fontScale ?? 1, 0.5, 3, 0.05, set('fontScale')), clear('fontScale')),
+    field('Align', selectControl(s.align || '', [['', 'inherit'], ['left', 'Left'], ['center', 'Center'], ['right', 'Right']], (v) => { s.align = v || null; renderAll(); })),
+    field('Glass panel', selectControl(s.panel === null ? '' : String(s.panel), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })),
+    field('Border', selectControl(s.border === null ? '' : String(s.border), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })),
+    field(`Opacity (${s.opacity ?? 'inherit'})`, rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')),
+    field(`Glow (${s.glow ?? 'inherit'})`, rangeControl(s.glow ?? 0.5, 0, 1, 0.05, set('glow')), clear('glow')),
+    field(`Rotate (${s.rotate ?? 0}°)`, rangeControl(s.rotate ?? 0, -20, 20, 0.5, set('rotate')), clear('rotate')),
   );
 }
 
@@ -453,7 +458,7 @@ function renderComponentTab(panel) {
   }
   const component = state.pack.components[state.selected];
 
-  const title = sectionLabel(component.type.toUpperCase());
+  const title = sectionLabel(typeLabel(component.type));
   panel.appendChild(title);
 
   const actions = document.createElement('div');
@@ -466,9 +471,9 @@ function renderComponentTab(panel) {
     return b;
   };
   actions.append(
-    mkBtn('Z+', () => { component.z = Math.min(20, component.z + 1); renderAll(); }),
-    mkBtn('Z−', () => { component.z = Math.max(0, component.z - 1); renderAll(); }),
-    mkBtn('DUPLICATE', () => {
+    mkBtn('Bring forward', () => { component.z = Math.min(20, component.z + 1); renderAll(); }),
+    mkBtn('Send back', () => { component.z = Math.max(0, component.z - 1); renderAll(); }),
+    mkBtn('Duplicate', () => {
       const copy = JSON.parse(JSON.stringify(component));
       copy.rect[0] = clamp(copy.rect[0] + 3, 0, 100 - copy.rect[2]);
       copy.rect[1] = clamp(copy.rect[1] + 3, 0, 100 - copy.rect[3]);
@@ -476,7 +481,7 @@ function renderComponentTab(panel) {
       state.selected = state.pack.components.length - 1;
       renderAll();
     }),
-    mkBtn('DELETE', removeSelected, 'danger'),
+    mkBtn('Delete', removeSelected, 'danger'),
   );
   panel.appendChild(actions);
 
@@ -484,45 +489,51 @@ function renderComponentTab(panel) {
   styleFields(component, panel);
 }
 
+// 'accentBright' → 'Accent bright' — palette keys as readable labels.
+function prettyKey(key) {
+  const spaced = key.replace(/([A-Z])/g, ' $1').toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 function renderSkinTab(panel) {
   const skin = state.pack.skin;
-  panel.appendChild(sectionLabel('PALETTE'));
+  panel.appendChild(sectionLabel('Palette'));
   for (const key of Object.keys(skin.palette)) {
     const input = document.createElement('input');
     input.type = 'color';
     // Colour inputs can't hold 8-digit hex; show the RGB part.
     input.value = skin.palette[key].slice(0, 7);
     input.addEventListener('input', () => { skin.palette[key] = input.value; renderAll(); });
-    panel.appendChild(field(key.toUpperCase(), input));
+    panel.appendChild(field(prettyKey(key), input));
   }
 
-  panel.appendChild(sectionLabel('TEXTURE'));
+  panel.appendChild(sectionLabel('Texture'));
   for (const key of Object.keys(skin.texture)) {
-    panel.appendChild(field(key.toUpperCase(), rangeControl(skin.texture[key], 0, 1, 0.05, (v) => { skin.texture[key] = v; renderAll(); })));
+    panel.appendChild(field(prettyKey(key), rangeControl(skin.texture[key], 0, 1, 0.05, (v) => { skin.texture[key] = v; renderAll(); })));
   }
 
-  panel.appendChild(sectionLabel('TYPOGRAPHY'));
+  panel.appendChild(sectionLabel('Typography'));
   panel.append(
-    field('DISPLAY FONT', selectControl(skin.typography.display, FONT_CHOICES, (v) => { skin.typography.display = v; renderAll(); })),
+    field('Display font', selectControl(skin.typography.display, FONT_CHOICES, (v) => { skin.typography.display = v; renderAll(); })),
     checkControl('Uppercase display text', skin.typography.uppercase, (v) => { skin.typography.uppercase = v; renderAll(); }),
-    field('LETTER SPACING', rangeControl(skin.typography.letterSpacing, 0, 0.4, 0.01, (v) => { skin.typography.letterSpacing = v; renderAll(); })),
+    field('Letter spacing', rangeControl(skin.typography.letterSpacing, 0, 0.4, 0.01, (v) => { skin.typography.letterSpacing = v; renderAll(); })),
   );
 
-  panel.appendChild(sectionLabel('SHAPE'));
+  panel.appendChild(sectionLabel('Shape'));
   panel.append(
     checkControl('Corner notches', skin.shape.cornerNotches, (v) => { skin.shape.cornerNotches = v; renderAll(); }),
-    field('BORDER OPACITY', rangeControl(skin.shape.borderOpacity, 0.05, 1, 0.01, (v) => { skin.shape.borderOpacity = v; renderAll(); })),
-    field('PANEL OPACITY', rangeControl(skin.shape.panelOpacity, 0, 1, 0.01, (v) => { skin.shape.panelOpacity = v; renderAll(); })),
-    field('CORNER RADIUS', rangeControl(skin.shape.radius, 0, 16, 1, (v) => { skin.shape.radius = v; renderAll(); })),
-    field('CANVAS PADDING', rangeControl(state.pack.canvas.padding, 0, 12, 0.5, (v) => { state.pack.canvas.padding = v; renderAll(); })),
+    field('Border opacity', rangeControl(skin.shape.borderOpacity, 0.05, 1, 0.01, (v) => { skin.shape.borderOpacity = v; renderAll(); })),
+    field('Panel opacity', rangeControl(skin.shape.panelOpacity, 0, 1, 0.01, (v) => { skin.shape.panelOpacity = v; renderAll(); })),
+    field('Corner radius', rangeControl(skin.shape.radius, 0, 16, 1, (v) => { skin.shape.radius = v; renderAll(); })),
+    field('Canvas padding', rangeControl(state.pack.canvas.padding, 0, 12, 0.5, (v) => { state.pack.canvas.padding = v; renderAll(); })),
   );
 
-  panel.appendChild(sectionLabel('WALLPAPER'));
-  const choices = [['', 'none'], ...Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')])];
-  panel.appendChild(field('IMAGE', selectControl(skin.wallpaper || '', choices, (v) => { skin.wallpaper = v || null; renderAll(); })));
+  panel.appendChild(sectionLabel('Wallpaper'));
+  const choices = [['', 'None'], ...Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')])];
+  panel.appendChild(field('Image', selectControl(skin.wallpaper || '', choices, (v) => { skin.wallpaper = v || null; renderAll(); })));
   const importBtn = document.createElement('button');
   importBtn.className = 'btn tiny';
-  importBtn.textContent = 'IMPORT WALLPAPER…';
+  importBtn.textContent = 'Import wallpaper…';
   importBtn.addEventListener('click', async () => {
     const rel = await importImage();
     if (rel) { skin.wallpaper = rel; renderAll(); }
@@ -533,9 +544,9 @@ function renderSkinTab(panel) {
 function renderPersonaTab(panel) {
   const persona = state.pack.persona;
   panel.append(
-    sectionLabel('PERSONA'),
-    field('NAME', textControl(persona.name, (v) => { persona.name = v.slice(0, 40) || 'AEGIS'; renderAll(); })),
-    field('TAGLINE', textControl(persona.tagline, (v) => { persona.tagline = v.slice(0, 80); renderAll(); })),
+    sectionLabel('Persona'),
+    field('Name', textControl(persona.name, (v) => { persona.name = v.slice(0, 40) || 'AEGIS'; renderAll(); })),
+    field('Tagline', textControl(persona.tagline, (v) => { persona.tagline = v.slice(0, 80); renderAll(); })),
   );
   const area = document.createElement('textarea');
   area.rows = 6;
@@ -544,7 +555,7 @@ function renderPersonaTab(panel) {
     persona.lines = area.value.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 8);
     renderAll();
   });
-  panel.appendChild(field('TICKER LINES (ONE PER LINE, MAX 8)', area));
+  panel.appendChild(field('Ticker lines (one per line, up to 8)', area));
 }
 
 function renderInspector() {
@@ -570,11 +581,11 @@ async function save(applyAfter) {
   const forked = res.forked;
   state.baseId = res.id;
   state.pack.id = res.id;
-  $('ed-base').textContent = `editing: ${res.id}${forked ? ' (forked copy — original untouched)' : ''}`;
-  setStatus(forked ? `SAVED AS NEW PACK "${res.id}"` : 'SAVED');
+  $('ed-base').textContent = `Editing ${res.id}${forked ? ' (your copy — the original is untouched)' : ''}`;
+  setStatus(forked ? `Saved as a new pack: “${res.id}”.` : 'Saved.');
   if (applyAfter) {
     const applied = await aegis.activeSet(res.id);
-    if (applied.ok) setStatus(`SAVED — "${res.id}" IS NOW ON YOUR DESKTOP`);
+    if (applied.ok) setStatus(`Saved — “${res.id}” is now on your desktop.`);
   }
 }
 
@@ -590,7 +601,7 @@ async function init() {
   state.pack = loaded.pack;
   state.assets = { ...(all.ok ? all.assets : {}), ...loaded.assets };
   $('ed-name').value = state.pack.name;
-  $('ed-base').textContent = `editing: ${packId} (${loaded.origin})`;
+  $('ed-base').textContent = `Editing ${packId} (${loaded.origin === 'builtin' ? 'built-in — saving makes your own copy' : loaded.origin})`;
   document.title = `AEGIS Editor — ${state.pack.name}`;
 
   // Palette
@@ -642,7 +653,7 @@ async function init() {
   $('btn-import-image').addEventListener('click', importImageAsComponent);
 
   renderAll();
-  setStatus('DRAG COMPONENTS FROM THE PALETTE · CLICK TO SELECT · ARROWS NUDGE · DEL REMOVES');
+  setStatus('Drag components from the palette. Click to select, arrow keys to nudge, Delete to remove.');
 }
 
-init().catch((err) => setStatus(`EDITOR FAILED TO INITIALISE: ${err.message}`, true));
+init().catch((err) => setStatus(`The editor failed to start: ${err.message}`, true));

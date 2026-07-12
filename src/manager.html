@@ -2,50 +2,51 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- Strict CSP; data: images are blueprint-free previews delivered as
-       sanitized data URIs by the main process. -->
+  <!-- Strict CSP; data: images are previews delivered as sanitized data URIs
+       by the main process. -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:">
   <title>AEGIS Engine</title>
+  <link rel="stylesheet" href="chrome.css">
   <link rel="stylesheet" href="manager.css">
 </head>
 <body>
 
-  <header class="hud">
+  <header class="topbar">
     <div class="brand">
-      <h1>AEGIS <span>ENGINE</span></h1>
-      <p class="mono sub">ACTIVE ON DESKTOP: <span id="active-name">—</span></p>
+      <h1>AEGIS Engine</h1>
+      <p class="sub">On your desktop: <span id="active-name">—</span></p>
     </div>
     <div class="controls">
-      <button class="btn" id="btn-panel">VOICE TUNING</button>
+      <button class="btn" id="btn-panel">Voice tuning</button>
     </div>
   </header>
 
   <section class="library" aria-label="Pack library">
     <header class="library-head">
       <div class="lib-tabs" role="tablist">
-        <button class="tab" id="tab-installed" role="tab" aria-selected="true">INSTALLED</button>
-        <button class="tab" id="tab-browse" role="tab" aria-selected="false">BROWSE</button>
+        <button class="tab" id="tab-installed" role="tab" aria-selected="true">Installed</button>
+        <button class="tab" id="tab-browse" role="tab" aria-selected="false">Browse</button>
       </div>
       <label class="visually-hidden" for="lib-search">Search packs</label>
-      <input id="lib-search" class="mono lib-search" placeholder="search…" spellcheck="false">
+      <input id="lib-search" type="search" class="lib-search" placeholder="Search packs" spellcheck="false">
       <div class="btn-row">
-        <button class="btn" id="btn-install-file">INSTALL FROM FILE</button>
+        <button class="btn" id="btn-install-file">Install from file…</button>
       </div>
     </header>
-    <p class="mono library-status" id="library-status" role="status" aria-live="polite"></p>
+    <p class="status-line-app" id="library-status" role="status" aria-live="polite"></p>
 
     <div class="library-main">
       <div class="library-gallery">
         <div class="reg-add hidden" id="reg-add">
           <label class="visually-hidden" for="reg-url">Registry URL</label>
-          <input id="reg-url" class="mono" placeholder="subscribe to a registry: https://…/index.json" spellcheck="false">
-          <button class="btn" id="btn-reg-add">SUBSCRIBE</button>
+          <input id="reg-url" placeholder="Registry URL (https://…/index.json)" spellcheck="false">
+          <button class="btn" id="btn-reg-add">Subscribe</button>
         </div>
         <div class="gallery" id="gallery"></div>
       </div>
       <aside class="library-detail" id="lib-detail" aria-label="Pack details">
-        <p class="lib-meta" id="detail-empty">Select a pack to see its details.</p>
+        <p class="hint" id="detail-empty">Select a pack to see its details.</p>
       </aside>
     </div>
   </section>

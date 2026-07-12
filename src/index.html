@@ -5,20 +5,21 @@
   <!-- Strict CSP: everything local, no inline script, no remote fetches. -->
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:">
-  <title>AEGIS — Voice</title>
+  <title>AEGIS — Voice tuning</title>
+  <link rel="stylesheet" href="chrome.css">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-  <header class="hud">
+  <header class="topbar">
     <div class="brand">
-      <h1>AEGIS <span>VOICE</span></h1>
-      <p class="mono sub">VOICE TUNING CONSOLE · M1</p>
+      <h1>Voice tuning</h1>
+      <p class="sub">Shape how a persona speaks — profiles store parameters, never audio.</p>
     </div>
-    <div class="hud-status" id="env-chips" aria-label="Engine status">
-      <span class="chip" id="chip-piper" data-state="wait">PIPER</span>
-      <span class="chip" id="chip-ffmpeg" data-state="wait">FFMPEG</span>
-      <span class="chip" id="chip-bank" data-state="wait">BANK</span>
+    <div class="chips" id="env-chips" aria-label="Engine status">
+      <span class="chip" id="chip-piper" data-state="wait">Piper</span>
+      <span class="chip" id="chip-ffmpeg" data-state="wait">FFmpeg</span>
+      <span class="chip" id="chip-bank" data-state="wait">Voices</span>
     </div>
   </header>
 
@@ -26,77 +27,77 @@
 
     <aside class="rail" aria-label="Voices and presets">
       <section class="panel">
-        <h2>VOICE BANK</h2>
+        <h2>Voice bank</h2>
         <ul class="list" id="voice-list"></ul>
       </section>
       <section class="panel">
-        <h2>FACTORY PRESETS</h2>
+        <h2>Presets</h2>
         <ul class="list" id="preset-list"></ul>
       </section>
     </aside>
 
     <main class="console" aria-label="Tuning parameters">
       <section class="panel group" id="group-prosody">
-        <h2>PROSODY</h2>
+        <h2>Prosody</h2>
       </section>
       <section class="panel group" id="group-timbre">
-        <h2>TIMBRE</h2>
+        <h2>Timbre</h2>
       </section>
       <section class="panel group" id="group-character">
-        <h2>CHARACTER</h2>
+        <h2>Character</h2>
       </section>
     </main>
 
-    <aside class="rail rail-right" aria-label="Test console and profile">
+    <aside class="rail rail-right" aria-label="Test and profile">
       <section class="panel test-console">
-        <h2>TEST CONSOLE</h2>
+        <h2>Test</h2>
         <label class="visually-hidden" for="test-text">Test text</label>
         <textarea id="test-text" rows="3" maxlength="500" spellcheck="false">Good evening. All systems are online, and every diagnostic reports nominal performance across the board.</textarea>
         <div class="btn-row">
-          <button class="btn primary" id="btn-synth">SYNTHESIZE</button>
-          <button class="btn" id="btn-play" disabled>REPLAY</button>
-          <button class="btn amber hidden" id="btn-fallback">SYSTEM VOICE</button>
+          <button class="btn primary" id="btn-synth">Synthesize</button>
+          <button class="btn" id="btn-play" disabled>Replay</button>
+          <button class="btn hidden" id="btn-fallback">Use system voice</button>
         </div>
-        <p class="status mono" id="status" role="status" aria-live="polite">STANDBY</p>
+        <p class="status-line-app" id="status" role="status" aria-live="polite">Ready.</p>
         <canvas id="waveform" width="560" height="96" aria-hidden="true"></canvas>
         <div class="readouts">
           <div class="tile">
-            <span class="tile-label">F0 MEASURED</span>
-            <span class="tile-value mono" id="ro-f0">—</span>
-            <span class="tile-sub mono" id="ro-f0-dry">dry —</span>
+            <span class="tile-label">Measured F0</span>
+            <span class="tile-value" id="ro-f0">—</span>
+            <span class="tile-sub" id="ro-f0-dry">dry —</span>
           </div>
           <div class="tile">
-            <span class="tile-label">RATE MEASURED</span>
-            <span class="tile-value mono" id="ro-rate">—</span>
-            <span class="tile-sub mono" id="ro-rate-target">target —</span>
+            <span class="tile-label">Measured rate</span>
+            <span class="tile-value" id="ro-rate">—</span>
+            <span class="tile-sub" id="ro-rate-target">target —</span>
           </div>
           <div class="tile">
-            <span class="tile-label">DURATION</span>
-            <span class="tile-value mono" id="ro-duration">—</span>
-            <span class="tile-sub mono" id="ro-speech">speech —</span>
+            <span class="tile-label">Duration</span>
+            <span class="tile-value" id="ro-duration">—</span>
+            <span class="tile-sub" id="ro-speech">speech —</span>
           </div>
           <div class="tile">
-            <span class="tile-label">VOICED</span>
-            <span class="tile-value mono" id="ro-voiced">—</span>
-            <span class="tile-sub mono">frames</span>
+            <span class="tile-label">Voiced</span>
+            <span class="tile-value" id="ro-voiced">—</span>
+            <span class="tile-sub">of frames</span>
           </div>
         </div>
       </section>
 
       <section class="panel">
-        <h2>PROFILE</h2>
+        <h2>Profile</h2>
         <div class="field">
-          <label for="profile-name">NAME</label>
-          <input id="profile-name" maxlength="80" spellcheck="false" value="Untitled">
+          <label for="profile-name">Name</label>
+          <input id="profile-name" type="text" maxlength="80" spellcheck="false" value="Untitled">
         </div>
         <div class="field">
-          <label for="profile-author">AUTHOR</label>
-          <input id="profile-author" maxlength="80" spellcheck="false">
+          <label for="profile-author">Author</label>
+          <input id="profile-author" type="text" maxlength="80" spellcheck="false">
         </div>
         <div class="btn-row">
-          <button class="btn" id="btn-save">SAVE PROFILE</button>
+          <button class="btn" id="btn-save">Save profile</button>
         </div>
-        <p class="status mono" id="profile-status" role="status" aria-live="polite"></p>
+        <p class="status-line-app" id="profile-status" role="status" aria-live="polite"></p>
         <ul class="list" id="saved-list"></ul>
       </section>
     </aside>

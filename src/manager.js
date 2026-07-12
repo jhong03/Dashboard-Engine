@@ -35,7 +35,7 @@ function rgba(hex, alpha) {
 function libStatus(text, warn) {
   const el = $('library-status');
   el.textContent = text || '';
-  el.className = `mono library-status${warn ? ' warn' : ''}`;
+  el.className = `status-line-app${warn ? ' warn' : ''}`;
 }
 
 function libButton(label, onClick, kind) {
@@ -85,7 +85,7 @@ function monogramInto(container, name) {
 
 // ── Gallery ─────────────────────────────────────────────────────────────────
 
-function makeCard({ name, badge, selected, buildThumb, onSelect }) {
+function makeCard({ name, badge, badgeClass, selected, buildThumb, onSelect }) {
   const card = document.createElement('button');
   card.type = 'button';
   card.className = 'card';
@@ -99,7 +99,7 @@ function makeCard({ name, badge, selected, buildThumb, onSelect }) {
   card.append(thumb, label);
   if (badge) {
     const badgeEl = document.createElement('span');
-    badgeEl.className = 'badge';
+    badgeEl.className = `badge${badgeClass ? ` ${badgeClass}` : ''}`;
     badgeEl.textContent = badge;
     card.appendChild(badgeEl);
   }
@@ -136,18 +136,18 @@ function renderGallery() {
   if (library.tab === 'installed') {
     for (const origin of ['installed', 'builtin']) {
       const items = library.localPacks.filter((p) => p.origin === origin && matchesSearch(p.name + p.id + (p.author || '')));
-      gallery.appendChild(sectionLabel(origin === 'installed' ? 'INSTALLED' : 'BUILT-IN REFERENCE'));
+      gallery.appendChild(sectionLabel(origin === 'installed' ? 'Installed' : 'Built-in'));
       if (items.length === 0 && origin === 'installed') {
         const empty = document.createElement('p');
-        empty.className = 'lib-meta';
-        empty.style.gridColumn = '1 / -1';
-        empty.textContent = 'Nothing installed yet — BROWSE a registry or INSTALL FROM FILE.';
+        empty.className = 'hint';
+        empty.textContent = 'Nothing installed yet. Browse a registry or install a pack from file.';
         gallery.appendChild(empty);
       }
       for (const item of items) {
         gallery.appendChild(makeCard({
           name: item.name,
-          badge: item.id === library.activeId ? 'ON DESKTOP' : (origin === 'builtin' ? 'BUILT-IN' : null),
+          badge: item.id === library.activeId ? 'On desktop' : (origin === 'builtin' ? 'Built-in' : null),
+          badgeClass: item.id === library.activeId ? 'badge-active' : null,
           selected: isSelected('local', item.id),
           buildThumb: (thumb) => blueprintInto(thumb, item.pack),
           onSelect: () => { library.selected = { kind: 'local', item }; renderGallery(); renderDetail(); },
@@ -159,25 +159,23 @@ function renderGallery() {
 
   if (library.registries.length === 0) {
     const empty = document.createElement('p');
-    empty.className = 'lib-meta';
-    empty.style.gridColumn = '1 / -1';
-    empty.textContent = 'No registries yet. Anyone can host one — a static index.json anywhere https (see PACKS.md).';
+    empty.className = 'hint';
+    empty.textContent = 'No registries yet. Anyone can host one — it’s a static index.json on any https server (see PACKS.md).';
     gallery.appendChild(empty);
   }
   for (const url of library.registries) {
     const index = library.indexes.get(url);
-    const refresh = libButton('REFRESH', () => browseRegistry(url));
-    const remove = libButton('REMOVE', async () => {
+    const refresh = libButton('Refresh', () => browseRegistry(url), 'tiny');
+    const remove = libButton('Remove', async () => {
       await aegis.registryRemove(url);
       await refreshLibrary();
-    }, 'danger');
+    }, 'tiny danger');
     gallery.appendChild(sectionLabel(index && index.ok ? `${index.name} — ${url}` : url, [refresh, remove]));
 
     if (!index) continue;
     if (!index.ok) {
       const err = document.createElement('p');
-      err.className = 'lib-meta';
-      err.style.gridColumn = '1 / -1';
+      err.className = 'hint';
       err.textContent = index.error;
       gallery.appendChild(err);
       continue;
@@ -186,7 +184,8 @@ function renderGallery() {
       const update = index.updates.find((u) => u.id === entry.id);
       gallery.appendChild(makeCard({
         name: entry.name,
-        badge: update ? 'UPDATE' : entry.installed ? 'INSTALLED' : null,
+        badge: update ? 'Update' : entry.installed ? 'Installed' : null,
+        badgeClass: update ? 'badge-active' : null,
         selected: isSelected('remote', `${url}|${entry.id}`),
         buildThumb: (thumb) => monogramInto(thumb, entry.name),
         onSelect: () => { library.selected = { kind: 'remote', url, entry, update }; renderGallery(); renderDetail(); },
@@ -210,7 +209,7 @@ async function renderDetail() {
   const s = library.selected;
   if (!s) {
     const empty = document.createElement('p');
-    empty.className = 'lib-meta';
+    empty.className = 'hint';
     empty.textContent = 'Select a pack to see its details.';
     detail.appendChild(empty);
     return;
@@ -242,27 +241,27 @@ async function renderDetail() {
     detail.appendChild(swatches);
 
     if (item.id === library.activeId) {
-      detail.appendChild(detailLine('CURRENTLY ON YOUR DESKTOP'));
+      detail.appendChild(detailLine('Currently on your desktop'));
     } else {
-      detail.appendChild(libButton('USE ON DESKTOP', async () => {
+      detail.appendChild(libButton('Use on desktop', async () => {
         const out = await aegis.activeSet(item.id);
         if (!out.ok) return libStatus(out.error, true);
         library.activeId = item.id;
         setActiveIndicator();
-        libStatus(`${item.name.toUpperCase()} IS NOW ON YOUR DESKTOP`);
+        libStatus(`${item.name} is now on your desktop.`);
         renderGallery();
         renderDetail();
       }, 'primary'));
     }
-    detail.appendChild(libButton('OPEN IN EDITOR', () => aegis.openEditor(item.id)));
-    detail.appendChild(libButton('EXPORT .AEGISPACK', async () => {
+    detail.appendChild(libButton('Open in editor', () => aegis.openEditor(item.id)));
+    detail.appendChild(libButton('Export as .aegispack…', async () => {
       const out = await aegis.exportPack(item.id);
-      libStatus(out.ok ? `EXPORTED -> ${out.file}` : out.error || '', !out.ok && out.error);
+      libStatus(out.ok ? `Exported to ${out.file}` : out.error || '', !out.ok && out.error);
     }));
     if (item.origin === 'installed') {
-      detail.appendChild(libButton('UNINSTALL', async () => {
+      detail.appendChild(libButton('Uninstall', async () => {
         const out = await aegis.uninstallPack(item.id);
-        libStatus(out.ok ? `UNINSTALLED ${item.id}` : out.error, !out.ok);
+        libStatus(out.ok ? `Uninstalled ${item.id}.` : out.error, !out.ok);
         library.selected = null;
         await refreshLibrary();
       }, 'danger'));
@@ -282,11 +281,11 @@ async function renderDetail() {
     desc.textContent = entry.description;
     detail.appendChild(desc);
   }
-  const label = update ? `UPDATE TO v${update.to}` : entry.installed ? 'REINSTALL' : 'INSTALL';
+  const label = update ? `Update to v${update.to}` : entry.installed ? 'Reinstall' : 'Install';
   detail.appendChild(libButton(label, async () => {
-    libStatus(`INSTALLING ${entry.name}…`);
+    libStatus(`Installing ${entry.name}…`);
     const out = await aegis.registryInstall(url, entry.id);
-    libStatus(out.ok ? `INSTALLED ${entry.name} v${entry.version} — CHECKSUM VERIFIED` : out.error, !out.ok);
+    libStatus(out.ok ? `Installed ${entry.name} v${entry.version} (checksum verified).` : out.error, !out.ok);
     if (out.ok) await refreshLibrary();
   }, 'primary'));
 
@@ -308,11 +307,12 @@ async function renderDetail() {
 // ── Data flow ───────────────────────────────────────────────────────────────
 
 async function browseRegistry(url) {
-  libStatus('FETCHING REGISTRY…');
+  libStatus('Fetching registry…');
   const index = await aegis.registryBrowse(url);
   library.indexes.set(url, index);
   if (index.ok) {
-    libStatus(`${index.name} — ${index.packs.length} PACK(S)${index.updates.length ? ` · ${index.updates.length} UPDATE(S) AVAILABLE` : ''}`);
+    const updates = index.updates.length ? `, ${index.updates.length} update${index.updates.length > 1 ? 's' : ''} available` : '';
+    libStatus(`${index.name}: ${index.packs.length} pack${index.packs.length === 1 ? '' : 's'}${updates}.`);
   } else {
     libStatus(index.error, true);
   }
@@ -360,13 +360,13 @@ async function init() {
   $('btn-install-file').addEventListener('click', async () => {
     const out = await aegis.installFile();
     if (out.error === null && !out.ok) return; // user cancelled the dialog
-    libStatus(out.ok ? `INSTALLED "${out.id}"` : out.error, !out.ok);
+    libStatus(out.ok ? `Installed “${out.id}”.` : out.error, !out.ok);
     if (out.ok) await refreshLibrary();
   });
   $('btn-reg-add').addEventListener('click', async () => {
     const input = $('reg-url');
     const out = await aegis.registryAdd(input.value);
-    libStatus(out.ok ? 'REGISTRY SUBSCRIBED' : out.error, !out.ok);
+    libStatus(out.ok ? 'Registry added.' : out.error, !out.ok);
     if (out.ok) {
       input.value = '';
       await refreshLibrary();
@@ -379,4 +379,4 @@ async function init() {
   await refreshLibrary();
 }
 
-init().catch((err) => libStatus(`MANAGER FAILED TO INITIALISE: ${err.message}`, true));
+init().catch((err) => libStatus(`The manager failed to start: ${err.message}`, true));

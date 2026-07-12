@@ -40,13 +40,19 @@ Still out of scope: hosted marketplace service (accounts, payments, moderation),
 
 ## Design language
 
-Dark, holographic, technical. Not a generic dark-mode admin panel.
+Two registers, never mixed:
 
-- Palette: void `#04080F` · glass `rgba(10,22,35,.55)` · cyan `#3FD8FF` · bright `#7FE9FF` · steel `#5A7E93` · amber `#FFB23E` (warnings) · gold `#E8C56A`
-- Type: Rajdhani for display/UI (uppercase, letter-spaced), Share Tech Mono for numeric readouts
-- Glass panels with hairline cyan borders, corner notches, subtle glow. Fine technical texture: tick marks, monospaced values, thin rules.
-- Motion is constant but subtle. Nothing static, nothing bouncy.
-- Quality floor, always: keyboard focus visible, `prefers-reduced-motion` respected, no layout that breaks under 1100px.
+**Pack content** — the desktop surface and anything a pack renders. Dark, holographic, technical; this is where the brand look lives (and packs may look like anything at all).
+- Palette (reference packs): void `#04080F` · glass `rgba(10,22,35,.55)` · cyan `#3FD8FF` · bright `#7FE9FF` · steel `#5A7E93` · amber `#FFB23E` (warnings) · gold `#E8C56A`
+- Type: Rajdhani for display (uppercase, letter-spaced), Share Tech Mono for readouts. These fonts belong to pack content ONLY.
+- Glass panels, hairline borders, corner notches, subtle glow, constant-but-subtle motion.
+
+**Engine chrome** — the manager, editor, and voice panel: a quiet, native-feeling dark utility that disappears next to the content it manages. Think well-made desktop tool, not sci-fi console.
+- Neutral darks (`#1b1d21` bg · `#242629` panels · `#35383e` borders), text `#e6e8eb` / `#9aa1aa`, one muted accent `#4c8dff`, amber `#e0a446` for warnings only.
+- System font stack, sentence case, normal letter-spacing. Monospace (Consolas) only for genuinely numeric/technical values.
+- 6px radii, 1px borders, restrained hover states. No glow, no scanlines, no notches, no ambient animation.
+
+Quality floor for both: keyboard focus visible, `prefers-reduced-motion` respected, no layout that breaks under the window minimums.
 
 ## Code conventions
 
