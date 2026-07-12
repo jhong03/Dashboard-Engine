@@ -10,6 +10,7 @@ const { app, BrowserWindow } = require('electron');
 const path = require('path');
 const voicebank = require('./lib/voicebank');
 const { registerIpcHandlers } = require('./lib/ipc');
+const { userDataDir } = require('./lib/paths');
 
 // `npm run panel` / the selftest open the tuning panel as the first window.
 const WANT_PANEL = process.env.AEGIS_SELFTEST === '1' || process.argv.includes('--panel');
@@ -88,7 +89,9 @@ function openFirstWindow() {
 
 app.whenReady().then(() => {
   warnAboutUnauditedVoices();
-  registerIpcHandlers(__dirname, { openPanel: createPanelWindow });
+  // lib/paths mirrors Electron's default userData; using it everywhere keeps
+  // the CLI tools and the app pointed at the same installed packs.
+  registerIpcHandlers(__dirname, userDataDir(), { openPanel: createPanelWindow });
   openFirstWindow();
   app.on('activate', () => {
     // macOS convention: re-create the window on dock click.
