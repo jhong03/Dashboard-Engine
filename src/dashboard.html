@@ -29,7 +29,12 @@
 
     <section class="library hidden" id="library" aria-label="Pack library">
       <header class="library-head">
-        <h2>PACK LIBRARY</h2>
+        <div class="lib-tabs" role="tablist">
+          <button class="tab" id="tab-installed" role="tab" aria-selected="true">INSTALLED</button>
+          <button class="tab" id="tab-browse" role="tab" aria-selected="false">BROWSE</button>
+        </div>
+        <label class="visually-hidden" for="lib-search">Search packs</label>
+        <input id="lib-search" class="mono lib-search" placeholder="search…" spellcheck="false">
         <div class="btn-row">
           <button class="btn" id="btn-install-file">INSTALL FROM FILE</button>
           <button class="btn" id="btn-library-close">CLOSE</button>
@@ -37,24 +42,18 @@
       </header>
       <p class="mono library-status" id="library-status" role="status" aria-live="polite"></p>
 
-      <div class="library-body">
-        <section>
-          <h3>INSTALLED</h3>
-          <ul class="lib-list" id="lib-installed"></ul>
-        </section>
-        <section>
-          <h3>BUILT-IN</h3>
-          <ul class="lib-list" id="lib-builtin"></ul>
-        </section>
-        <section>
-          <h3>REGISTRIES</h3>
-          <div class="reg-add">
+      <div class="library-main">
+        <div class="library-gallery">
+          <div class="reg-add hidden" id="reg-add">
             <label class="visually-hidden" for="reg-url">Registry URL</label>
-            <input id="reg-url" class="mono" placeholder="https://example.com/registry/index.json" spellcheck="false">
+            <input id="reg-url" class="mono" placeholder="subscribe to a registry: https://…/index.json" spellcheck="false">
             <button class="btn" id="btn-reg-add">SUBSCRIBE</button>
           </div>
-          <div id="lib-registries"></div>
-        </section>
+          <div class="gallery" id="gallery"></div>
+        </div>
+        <aside class="library-detail" id="lib-detail" aria-label="Pack details">
+          <p class="lib-meta" id="detail-empty">Select a pack to see its details.</p>
+        </aside>
       </div>
     </section>
   </main>

@@ -30,5 +30,6 @@ contextBridge.exposeInMainWorld('aegis', {
   registryAdd: (url) => ipcRenderer.invoke('aegis:registry:add', String(url)),
   registryRemove: (url) => ipcRenderer.invoke('aegis:registry:remove', String(url)),
   registryBrowse: (url) => ipcRenderer.invoke('aegis:registry:browse', String(url)),
+  registryPreview: (url) => ipcRenderer.invoke('aegis:registry:preview', String(url)),
   registryInstall: (url, id) => ipcRenderer.invoke('aegis:registry:install', { url: String(url), id: String(id) }),
 });
