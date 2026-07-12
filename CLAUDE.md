@@ -15,6 +15,7 @@ We ship the engine. Users author the characters. We never ship or bundle a copyr
 AEGIS is an ENGINE, not a personal dashboard app: designers anywhere publish packs, users subscribe and install them, the engine renders whatever arrives. M3 builds that loop. Scope decisions, agreed and fixed:
 
 - **Engine/content split.** The repo ships the engine plus exactly two built-in reference packs (aegis-holo, ember-archive). Installed packs live in the user-data directory, never in the repo.
+- **Wallpaper Engine window model.** On launch the active pack renders straight onto the desktop (frameless window reparented under the shell's wallpaper layer on Windows via scripts/desktop-attach.ps1; plain-window fallback elsewhere). The app window is the MANAGER — content navigation and selection only. `--panel` / selftest open the voice panel as a standalone tool.
 - **Portable pack format:** `.aegispack` (zip of pack.json + assets), imported/exported in-app. Zip contents are validated with the same hostility as everything else (entry-name allowlist, size caps, no zip-slip).
 - **Registry feeds:** users subscribe to https index URLs (anyone can host one — it's a static JSON listing packs with version, download URL, sha256). In-app browse / install / update / uninstall. Integrity comes from the index-pinned sha256; authenticity is trust in the registry you added, like any package feed.
 - Packs remain pure data — the schema-2 declarative canvas, no code, no fonts.

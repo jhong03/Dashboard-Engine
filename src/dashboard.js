@@ -1,10 +1,12 @@
 'use strict';
 
-// Dashboard renderer: turns a sanitized Persona Pack into CSS custom
-// properties and component DOM on a free-form percent canvas. Packs never
-// inject CSS or markup — every token arrives pre-clamped from lib/packs.js,
-// everything here is created with textContent (never innerHTML), and image
-// sources are data URIs prepared by the main process.
+// Desktop surface renderer: turns the ACTIVE Persona Pack into CSS custom
+// properties and component DOM on a free-form percent canvas. This window
+// has no chrome and takes no input — selection happens in the manager,
+// which flips the active pack over IPC. Packs never inject CSS or markup:
+// every token arrives pre-clamped from lib/packs.js, everything here is
+// created with textContent (never innerHTML), and images are data URIs
+// prepared by the main process.
 
 /* global aegis */
 
@@ -24,14 +26,12 @@ const TELEMETRY_INTERVAL_MS = 2000;
 
 const state = {
   packId: null,
-  pack: null,
   timers: [],
   observers: [],
   telemetry: {
-    subscribers: [],                 // update callbacks fed by one shared loop
-    history: { cpu: [], mem: [] },   // rolling 0–100 series
+    subscribers: [],
+    history: { cpu: [], mem: [] },
   },
-  unsubscribe: null,
 };
 
 // ── Colour helpers (tokens are validated hex; alpha comes from knobs) ──────
@@ -79,8 +79,7 @@ function applySkin(pack, assets) {
     pack.skin.wallpaper && assets[pack.skin.wallpaper] ? `url(${assets[pack.skin.wallpaper]})` : 'none';
 }
 
-// Per-component overrides become element-scoped CSS custom properties, so
-// the same stylesheet serves both the skin default and the local override.
+// Per-component overrides become element-scoped CSS custom properties.
 function applyComponentStyle(el, style, pack) {
   const accent = style.accent || pack.skin.palette.accent;
   if (style.accent) {
@@ -130,7 +129,6 @@ function startTelemetry() {
   state.timers.push(setInterval(tick, TELEMETRY_INTERVAL_MS));
 }
 
-// Canvas-backed components redraw on resize; one observer per canvas.
 function observeCanvas(canvas, draw) {
   const observer = new ResizeObserver(() => {
     canvas.width = Math.max(1, canvas.clientWidth * devicePixelRatio);
@@ -221,7 +219,6 @@ function buildAnalogClock(component, el) {
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Hour ticks
     ctx.strokeStyle = accent;
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2;
@@ -278,6 +275,10 @@ function statRow(name) {
 }
 
 function buildStats(component, el) {
+  const label = document.createElement('span');
+  label.className = 'comp-label';
+  label.textContent = 'System telemetry';
+  el.appendChild(label);
   const cpu = component.options.cpu ? statRow('CPU') : null;
   const mem = component.options.mem ? statRow('MEM') : null;
   if (cpu) el.appendChild(cpu.row);
@@ -316,7 +317,6 @@ function buildMeter(component, el) {
     return;
   }
 
-  // Ring: canvas arc + centred value.
   const wrap = document.createElement('div');
   wrap.className = 'ring-wrap';
   const canvas = document.createElement('canvas');
@@ -377,7 +377,6 @@ function buildSparkline(component, el) {
     const step = w / (HISTORY_LENGTH - 1);
     const yFor = (v) => h - (v / 100) * (h - 4 * devicePixelRatio) - 2 * devicePixelRatio;
 
-    // Filled area, then the line on top.
     const startX = w - (series.length - 1) * step;
     ctx.beginPath();
     ctx.moveTo(startX, h);
@@ -411,7 +410,7 @@ function buildText(component, el) {
 
 function buildImage(component, el, assets) {
   const uri = assets[component.options.src];
-  if (!uri) return; // asset missing — warning already surfaced by main
+  if (!uri) return;
   const img = document.createElement('img');
   img.className = `image-body fit-${component.options.fit}`;
   img.alt = '';
@@ -420,8 +419,6 @@ function buildImage(component, el, assets) {
 }
 
 function buildDivider(component, el) {
-  // The line is a real child, not a pseudo-element — the corner-notch
-  // decorations own ::before/::after on components.
   el.classList.add(`divider-${component.options.orientation}`);
   const line = document.createElement('span');
   line.className = 'divider-line';
@@ -475,419 +472,28 @@ function renderComponents(pack, assets) {
 async function loadPack(id) {
   const res = await aegis.packLoad(id);
   if (!res.ok) {
-    $('foot').textContent = res.error;
-    $('foot').className = 'mono foot warn';
+    console.warn(`[dashboard] ${res.error}`);
     return;
   }
   state.packId = res.pack.id;
-  state.pack = res.pack;
   applySkin(res.pack, res.assets);
   renderComponents(res.pack, res.assets);
-
-  $('persona-name').textContent = res.pack.persona.name;
-  $('persona-tagline').textContent = res.pack.persona.tagline;
   document.title = `${res.pack.persona.name} — ${res.pack.name}`;
-  $('pack-select').value = res.pack.id;
-
-  const foot = $('foot');
-  if (res.warnings.length > 0) {
-    foot.textContent = `PACK WARNINGS: ${res.warnings.join(' · ')}`;
-    foot.className = 'mono foot warn';
-  } else {
-    const hint = res.origin === 'builtin'
-      ? `EDIT packs/${res.pack.id}/pack.json TO RESKIN LIVE`
-      : 'INSTALLED PACK · MANAGED IN THE LIBRARY · HOT-RELOADS IF EDITED';
-    foot.textContent = `PACK ${res.pack.id} · ${res.pack.components.length} COMPONENTS · ${hint}`;
-    foot.className = 'mono foot';
-  }
-}
-
-// ── Pack library: gallery + detail sidebar (Wallpaper Engine-style) ─────────
-
-const library = {
-  tab: 'installed',
-  search: '',
-  localPacks: [],
-  registries: [],
-  indexes: new Map(),   // registry url → fetched index (or {ok:false})
-  selected: null,       // { kind: 'local', item } | { kind: 'remote', url, entry }
-};
-
-function libStatus(text, warn) {
-  const el = $('library-status');
-  el.textContent = text || '';
-  el.className = `mono library-status${warn ? ' warn' : ''}`;
-}
-
-function libButton(label, onClick, kind) {
-  const btn = document.createElement('button');
-  btn.className = `btn${kind ? ` ${kind}` : ''}`;
-  btn.textContent = label;
-  btn.addEventListener('click', onClick);
-  return btn;
-}
-
-async function refreshPackSelect() {
-  const listed = await aegis.packsList();
-  const select = $('pack-select');
-  select.textContent = '';
-  for (const pack of listed.packs) {
-    const option = document.createElement('option');
-    option.value = pack.id;
-    option.textContent = pack.name;
-    select.appendChild(option);
-  }
-  if (state.packId) select.value = state.packId;
-}
-
-// Blueprint thumbnail: the pack's palette + component rects drawn as glass
-// boxes. Cheap, needs no assets, and honestly previews the layout.
-function blueprintInto(container, pack) {
-  const palette = pack.skin.palette;
-  container.style.background =
-    `radial-gradient(120% 90% at 50% 0%, ${rgba(palette.accent, 0.12)}, transparent 60%), ${palette.void}`;
-  for (const component of pack.components) {
-    const box = document.createElement('div');
-    box.className = 'bp-comp';
-    const [x, y, w, h] = component.rect;
-    box.style.left = `${x}%`;
-    box.style.top = `${y}%`;
-    box.style.width = `${w}%`;
-    box.style.height = `${h}%`;
-    const accent = component.style.accent || palette.accent;
-    const panel = component.style.panel !== null ? component.style.panel : true;
-    box.style.borderColor = rgba(accent, 0.55);
-    box.style.background = panel ? rgba(palette.glass, 0.45) : 'transparent';
-    container.appendChild(box);
-  }
-}
-
-function monogramInto(container, name) {
-  container.style.background = 'radial-gradient(120% 90% at 50% 0%, rgba(255,255,255,0.05), transparent 60%), rgba(0,0,0,0.5)';
-  const letter = document.createElement('div');
-  letter.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;font-size:2.2rem;font-weight:700;opacity:0.35;';
-  letter.textContent = (name || '?').slice(0, 1).toUpperCase();
-  container.appendChild(letter);
-}
-
-function makeCard({ name, badge, selected, buildThumb, onSelect }) {
-  const card = document.createElement('button');
-  card.type = 'button';
-  card.className = 'card';
-  card.setAttribute('aria-pressed', String(selected));
-  const thumb = document.createElement('div');
-  thumb.className = 'thumb';
-  buildThumb(thumb);
-  const label = document.createElement('span');
-  label.className = 'card-name';
-  label.textContent = name;
-  card.append(thumb, label);
-  if (badge) {
-    const badgeEl = document.createElement('span');
-    badgeEl.className = 'badge';
-    badgeEl.textContent = badge;
-    card.appendChild(badgeEl);
-  }
-  card.addEventListener('click', onSelect);
-  return card;
-}
-
-function sectionLabel(text, buttons = []) {
-  const el = document.createElement('div');
-  el.className = 'section-label';
-  const span = document.createElement('span');
-  span.textContent = text;
-  el.append(span, ...buttons);
-  return el;
-}
-
-function matchesSearch(text) {
-  return text.toLowerCase().includes(library.search.toLowerCase());
-}
-
-function isSelected(kind, key) {
-  const s = library.selected;
-  if (!s || s.kind !== kind) return false;
-  return kind === 'local' ? s.item.id === key : `${s.url}|${s.entry.id}` === key;
-}
-
-function renderGallery() {
-  const gallery = $('gallery');
-  gallery.textContent = '';
-  $('reg-add').classList.toggle('hidden', library.tab !== 'browse');
-  $('tab-installed').setAttribute('aria-selected', String(library.tab === 'installed'));
-  $('tab-browse').setAttribute('aria-selected', String(library.tab === 'browse'));
-
-  if (library.tab === 'installed') {
-    for (const origin of ['installed', 'builtin']) {
-      const items = library.localPacks.filter((p) => p.origin === origin && matchesSearch(p.name + p.id + (p.author || '')));
-      gallery.appendChild(sectionLabel(origin === 'installed' ? 'INSTALLED' : 'BUILT-IN REFERENCE'));
-      if (items.length === 0 && origin === 'installed') {
-        const empty = document.createElement('p');
-        empty.className = 'lib-meta';
-        empty.style.gridColumn = '1 / -1';
-        empty.textContent = 'Nothing installed yet — BROWSE a registry or INSTALL FROM FILE.';
-        gallery.appendChild(empty);
-      }
-      for (const item of items) {
-        gallery.appendChild(makeCard({
-          name: item.name,
-          badge: item.id === state.packId ? 'ACTIVE' : (origin === 'builtin' ? 'BUILT-IN' : null),
-          selected: isSelected('local', item.id),
-          buildThumb: (thumb) => blueprintInto(thumb, item.pack),
-          onSelect: () => { library.selected = { kind: 'local', item }; renderGallery(); renderDetail(); },
-        }));
-      }
-    }
-    return;
-  }
-
-  // Browse tab: one section per subscribed registry.
-  if (library.registries.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'lib-meta';
-    empty.style.gridColumn = '1 / -1';
-    empty.textContent = 'No registries yet. Anyone can host one — a static index.json anywhere https (see PACKS.md).';
-    gallery.appendChild(empty);
-  }
-  for (const url of library.registries) {
-    const index = library.indexes.get(url);
-    const refresh = libButton('REFRESH', () => browseRegistry(url));
-    const remove = libButton('REMOVE', async () => {
-      await aegis.registryRemove(url);
-      await openLibrary();
-    }, 'danger');
-    gallery.appendChild(sectionLabel(index && index.ok ? `${index.name} — ${url}` : url, [refresh, remove]));
-
-    if (!index) continue; // still fetching
-    if (!index.ok) {
-      const err = document.createElement('p');
-      err.className = 'lib-meta';
-      err.style.gridColumn = '1 / -1';
-      err.textContent = index.error;
-      gallery.appendChild(err);
-      continue;
-    }
-    for (const entry of index.packs.filter((e) => matchesSearch(e.name + e.id + e.author + e.description))) {
-      const update = index.updates.find((u) => u.id === entry.id);
-      gallery.appendChild(makeCard({
-        name: entry.name,
-        badge: update ? 'UPDATE' : entry.installed ? 'INSTALLED' : null,
-        selected: isSelected('remote', `${url}|${entry.id}`),
-        buildThumb: (thumb) => monogramInto(thumb, entry.name),
-        onSelect: () => { library.selected = { kind: 'remote', url, entry, update }; renderGallery(); renderDetail(); },
-      }));
-    }
-  }
-}
-
-function detailLine(text) {
-  const el = document.createElement('p');
-  el.className = 'detail-line';
-  el.textContent = text;
-  return el;
-}
-
-async function renderDetail() {
-  const detail = $('lib-detail');
-  detail.textContent = '';
-  const s = library.selected;
-  if (!s) {
-    const empty = document.createElement('p');
-    empty.className = 'lib-meta';
-    empty.textContent = 'Select a pack to see its details.';
-    detail.appendChild(empty);
-    return;
-  }
-
-  const preview = document.createElement('div');
-  preview.className = 'detail-preview';
-  const name = document.createElement('h3');
-  name.className = 'detail-name';
-
-  if (s.kind === 'local') {
-    const { item } = s;
-    blueprintInto(preview, item.pack);
-    name.textContent = item.name;
-    detail.append(preview, name);
-    const meta = item.meta || {};
-    detail.appendChild(detailLine(`${item.id}${meta.version ? ' · v' + meta.version : ''} · ${item.origin === 'builtin' ? 'built-in reference' : meta.source === 'file' ? 'installed from file' : meta.source || 'installed'}`));
-    detail.appendChild(detailLine(`${item.pack.components.length} components · ${item.pack.persona.name}`));
-
-    const swatches = document.createElement('div');
-    swatches.className = 'swatches';
-    for (const key of ['void', 'glass', 'accent', 'accentBright', 'muted', 'gold']) {
-      const sw = document.createElement('span');
-      sw.className = 'swatch';
-      sw.style.background = item.pack.skin.palette[key];
-      sw.title = key;
-      swatches.appendChild(sw);
-    }
-    detail.appendChild(swatches);
-
-    detail.appendChild(libButton('USE THIS PACK', async () => {
-      await loadPack(item.id);
-      libStatus(`NOW SHOWING ${item.name.toUpperCase()}`);
-      renderGallery();
-    }, 'primary'));
-    detail.appendChild(libButton('EXPORT .AEGISPACK', async () => {
-      const out = await aegis.exportPack(item.id);
-      libStatus(out.ok ? `EXPORTED -> ${out.file}` : out.error || '', !out.ok && out.error);
-    }));
-    if (item.origin === 'installed') {
-      detail.appendChild(libButton('UNINSTALL', async () => {
-        const out = await aegis.uninstallPack(item.id);
-        libStatus(out.ok ? `UNINSTALLED ${item.id}` : out.error, !out.ok);
-        library.selected = null;
-        await openLibrary();
-        await refreshPackSelect();
-      }, 'danger'));
-    }
-    return;
-  }
-
-  // Remote entry
-  const { url, entry, update } = s;
-  monogramInto(preview, entry.name);
-  name.textContent = entry.name;
-  detail.append(preview, name);
-  detail.appendChild(detailLine(`${entry.id} · v${entry.version} · by ${entry.author || 'unknown'}`));
-  detail.appendChild(detailLine(`${(entry.sizeBytes / 1024).toFixed(0)} KB · ${url}`));
-  if (entry.description) {
-    const desc = document.createElement('p');
-    desc.className = 'detail-desc';
-    desc.textContent = entry.description;
-    detail.appendChild(desc);
-  }
-  const label = update ? `UPDATE TO v${update.to}` : entry.installed ? 'REINSTALL' : 'INSTALL';
-  detail.appendChild(libButton(label, async () => {
-    libStatus(`INSTALLING ${entry.name}…`);
-    const out = await aegis.registryInstall(url, entry.id);
-    libStatus(out.ok ? `INSTALLED ${entry.name} v${entry.version} — CHECKSUM VERIFIED` : out.error, !out.ok);
-    if (out.ok) {
-      await openLibrary();
-      await refreshPackSelect();
-    }
-  }, 'primary'));
-
-  // Designer-hosted preview image, fetched through main (CSP: renderer never
-  // touches remote hosts). Swaps in over the monogram when it arrives.
-  if (entry.preview) {
-    const res = await aegis.registryPreview(entry.preview);
-    if (res.ok && library.selected === s) {
-      preview.textContent = '';
-      preview.style.background = 'none';
-      const img = document.createElement('img');
-      img.alt = '';
-      img.src = res.uri;
-      preview.appendChild(img);
-    }
-  }
-}
-
-async function browseRegistry(url) {
-  libStatus('FETCHING REGISTRY…');
-  const index = await aegis.registryBrowse(url);
-  library.indexes.set(url, index);
-  if (index.ok) {
-    libStatus(`${index.name} — ${index.packs.length} PACK(S)${index.updates.length ? ` · ${index.updates.length} UPDATE(S) AVAILABLE` : ''}`);
-  } else {
-    libStatus(index.error, true);
-  }
-  // The sidebar never sits empty: first browse result selects itself.
-  if (index.ok && index.packs.length > 0 && library.tab === 'browse' && !library.selected) {
-    const entry = index.packs[0];
-    library.selected = { kind: 'remote', url, entry, update: index.updates.find((u) => u.id === entry.id) };
-    renderDetail();
-  }
-  renderGallery();
-}
-
-async function openLibrary() {
-  $('library').classList.remove('hidden');
-  const res = await aegis.libraryState();
-  if (!res.ok) return libStatus(res.error, true);
-  library.localPacks = res.packs;
-  library.registries = res.registries;
-  // The sidebar never sits empty: default to the first installed (or any) pack.
-  if (!library.selected && library.tab === 'installed' && library.localPacks.length > 0) {
-    const first = library.localPacks.find((p) => p.origin === 'installed') || library.localPacks[0];
-    library.selected = { kind: 'local', item: first };
-  }
-  renderGallery();
-  renderDetail();
-  for (const url of library.registries) {
-    if (!library.indexes.has(url)) browseRegistry(url);
-  }
-}
-
-function wireLibrary() {
-  $('btn-library').addEventListener('click', () => { libStatus(''); openLibrary(); });
-  $('btn-library-close').addEventListener('click', () => $('library').classList.add('hidden'));
-  $('tab-installed').addEventListener('click', () => { library.tab = 'installed'; renderGallery(); });
-  $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
-  $('lib-search').addEventListener('input', (e) => { library.search = e.target.value; renderGallery(); });
-  $('btn-install-file').addEventListener('click', async () => {
-    const out = await aegis.installFile();
-    if (out.error === null && !out.ok) return; // user cancelled the dialog
-    libStatus(out.ok ? `INSTALLED "${out.id}"` : out.error, !out.ok);
-    if (out.ok) {
-      await openLibrary();
-      await refreshPackSelect();
-    }
-  });
-  $('btn-reg-add').addEventListener('click', async () => {
-    const input = $('reg-url');
-    const out = await aegis.registryAdd(input.value);
-    libStatus(out.ok ? 'REGISTRY SUBSCRIBED' : out.error, !out.ok);
-    if (out.ok) {
-      input.value = '';
-      await openLibrary();
-    }
-  });
+  for (const w of res.warnings) console.warn(`[pack] ${w}`);
 }
 
 async function init() {
-  const listed = await aegis.packsList();
-  const select = $('pack-select');
-  for (const pack of listed.packs) {
-    const option = document.createElement('option');
-    option.value = pack.id;
-    option.textContent = pack.name;
-    select.appendChild(option);
-  }
-  select.addEventListener('change', () => loadPack(select.value));
-  $('btn-panel').addEventListener('click', () => aegis.openPanel());
-  wireLibrary();
+  // Precedence: dev override (AEGIS_PACK) → persisted active pack → default.
+  const requested = new URLSearchParams(location.search).get('pack');
+  const active = await aegis.activeGet();
+  await loadPack(requested || active.id || 'aegis-holo');
 
-  // Hot reload: main watches the active pack dir and pings on changes.
-  state.unsubscribe = aegis.onPackChanged((data) => {
+  // Hot reload: the active pack's directory changed on disk (author editing).
+  aegis.onPackChanged((data) => {
     if (data.id === state.packId) loadPack(state.packId);
   });
-
-  const params = new URLSearchParams(location.search);
-  const requested = params.get('pack');
-  const first =
-    listed.packs.find((p) => p.id === requested) ||
-    listed.packs.find((p) => p.id === 'aegis-holo') ||
-    listed.packs[0];
-  if (!first) {
-    $('foot').textContent = 'NO PACKS INSTALLED — open the LIBRARY to get some';
-    $('foot').className = 'mono foot warn';
-    return;
-  }
-  await loadPack(first.id);
-
-  // Deep link (also the screenshot/test hook): AEGIS_VIEW=library|browse
-  // opens the library (optionally straight onto the browse tab).
-  const view = params.get('view');
-  if (view === 'library' || view === 'browse') {
-    if (view === 'browse') library.tab = 'browse';
-    await openLibrary();
-  }
+  // The manager picked a different pack.
+  aegis.onActiveChanged((data) => loadPack(data.id));
 }
 
-init().catch((err) => {
-  $('foot').textContent = `DASHBOARD FAILED TO INITIALISE: ${err.message}`;
-  $('foot').className = 'mono foot warn';
-});
+init().catch((err) => console.error(`[dashboard] failed to initialise: ${err.message}`));

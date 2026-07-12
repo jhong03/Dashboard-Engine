@@ -1,21 +1,34 @@
 'use strict';
 
-// Electron main process. M2: the dashboard (persona pack renderer) is the
-// primary window; the M1 voice tuning panel opens on demand (its button in
-// the dashboard, `npm run panel`, or the selftest). All pipeline and pack
-// work happens behind the validated IPC handlers in lib/ipc.js — per
-// CLAUDE.md the renderers never touch Node.
+// Electron main process. Wallpaper Engine model (M3): on launch the active
+// persona pack renders straight onto the DESKTOP (a frameless window
+// reparented under the shell's wallpaper layer on Windows), and the app
+// window is the MANAGER — the library for browsing/installing/selecting
+// content. The M1 voice tuning panel opens from the manager or `npm run
+// panel`. All pipeline/pack work happens behind the validated IPC handlers
+// in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
 const path = require('path');
+const { spawn } = require('child_process');
 const voicebank = require('./lib/voicebank');
 const { registerIpcHandlers } = require('./lib/ipc');
 const { userDataDir } = require('./lib/paths');
 
-// `npm run panel` / the selftest open the tuning panel as the first window.
+// `npm run panel` / the selftest open only the tuning panel.
 const WANT_PANEL = process.env.AEGIS_SELFTEST === '1' || process.argv.includes('--panel');
+if (WANT_PANEL) {
+  // Tool modes run alongside a live engine instance; give Chromium its own
+  // profile dir so the two don't fight over cache/profile locks. (Pack and
+  // settings storage is unaffected — that lives in lib/paths userDataDir.)
+  app.setPath('userData', path.join(app.getPath('temp'), 'aegis-voice-tool'));
+}
+// `--no-desktop` keeps the dashboard in a normal window (useful over RDP or
+// for debugging the desktop layer itself).
+const NO_DESKTOP = process.argv.includes('--no-desktop');
 
 let panelWindow = null;
+let managerWindow = null;
 let dashboardWindow = null;
 
 const COMMON_WEB_PREFERENCES = {
@@ -40,41 +53,103 @@ function createPanelWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
   });
-  // AEGIS_SELFTEST=1 makes the renderer run a scripted synth pass and quit —
-  // the automated end-to-end check behind `npm run selftest`.
   panelWindow.loadFile(path.join(__dirname, 'src', 'index.html'), {
     query: { selftest: process.env.AEGIS_SELFTEST === '1' ? '1' : '0' },
   });
   panelWindow.on('closed', () => { panelWindow = null; });
 }
 
-function createDashboardWindow() {
-  if (dashboardWindow) {
-    dashboardWindow.focus();
+function createManagerWindow() {
+  if (managerWindow) {
+    managerWindow.focus();
     return;
   }
-  dashboardWindow = new BrowserWindow({
+  managerWindow = new BrowserWindow({
     width: 1180,
     height: 760,
-    minWidth: 820,  // the pack grid scales; this floor just keeps widgets legible
-    minHeight: 560,
+    minWidth: 940,
+    minHeight: 600,
+    backgroundColor: '#04080F',
+    webPreferences: {
+      ...COMMON_WEB_PREFERENCES,
+      preload: path.join(__dirname, 'preload-manager.js'),
+    },
+  });
+  managerWindow.loadFile(path.join(__dirname, 'src', 'manager.html'), {
+    query: { view: process.env.AEGIS_VIEW || '' },
+  });
+  managerWindow.on('closed', () => { managerWindow = null; });
+}
+
+// Reparent the dashboard under the shell's wallpaper layer. The hwnd is
+// program-generated; the PowerShell argv is fixed (CLAUDE.md shell rule).
+function attachToDesktop(win) {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') {
+      resolve(false);
+      return;
+    }
+    const handle = win.getNativeWindowHandle();
+    const hwnd = handle.length >= 8 ? handle.readBigUInt64LE(0) : BigInt(handle.readUInt32LE(0));
+    const child = spawn('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+      '-File', path.join(__dirname, 'scripts', 'desktop-attach.ps1'),
+      hwnd.toString(),
+    ], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
+
+    let out = '';
+    child.stdout.on('data', (chunk) => { out += chunk.toString('utf8'); });
+    child.on('error', () => resolve(false));
+    child.on('close', (code) => resolve(code === 0 && out.includes('attached:')));
+  });
+}
+
+async function createDashboardWindow() {
+  if (dashboardWindow) return;
+  const display = screen.getPrimaryDisplay();
+
+  dashboardWindow = new BrowserWindow({
+    x: display.bounds.x,
+    y: display.bounds.y,
+    width: display.bounds.width,
+    height: display.bounds.height,
+    frame: false,
+    resizable: false,
+    movable: false,
+    skipTaskbar: true,
+    focusable: false,
+    show: false,
     backgroundColor: '#04080F',
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
       preload: path.join(__dirname, 'preload-dashboard.js'),
     },
   });
-  // AEGIS_PACK preselects a pack (the author preview loop); AEGIS_VIEW=library
-  // opens straight into the library.
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
-    query: { pack: process.env.AEGIS_PACK || '', view: process.env.AEGIS_VIEW || '' },
+    query: { pack: process.env.AEGIS_PACK || '' },
   });
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
+
+  await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
+  dashboardWindow.show();
+
+  if (!NO_DESKTOP) {
+    const attached = await attachToDesktop(dashboardWindow);
+    if (attached) return;
+    console.warn('[desktop] could not attach to the wallpaper layer; falling back to a normal window.');
+  }
+  // Fallback (non-Windows, RDP, or a shell change): a normal resizable
+  // window instead of a hidden fullscreen one lurking behind everything.
+  if (dashboardWindow) {
+    dashboardWindow.setFocusable(true);
+    dashboardWindow.setSkipTaskbar(false);
+    dashboardWindow.setResizable(true);
+    dashboardWindow.setBounds({ width: 1180, height: 760, x: display.bounds.x + 60, y: display.bounds.y + 60 });
+  }
 }
 
 // Licence rule (voices.json): a voice without a verified licence is never
-// silently shipped. loadManifest never throws, so this cannot take the
-// window down.
+// silently shipped. loadManifest never throws.
 function warnAboutUnauditedVoices() {
   const manifest = voicebank.loadManifest(__dirname);
   for (const w of [...manifest.warnings, ...voicebank.auditWarnings(manifest)]) {
@@ -82,24 +157,44 @@ function warnAboutUnauditedVoices() {
   }
 }
 
-function openFirstWindow() {
-  if (WANT_PANEL) createPanelWindow();
-  else createDashboardWindow();
+function openFirstWindows() {
+  if (WANT_PANEL) {
+    createPanelWindow();
+    return;
+  }
+  createDashboardWindow(); // the desktop persona, immediately
+  createManagerWindow();   // the engine app: content navigation + selection
 }
 
-app.whenReady().then(() => {
-  warnAboutUnauditedVoices();
-  // lib/paths mirrors Electron's default userData; using it everywhere keeps
-  // the CLI tools and the app pointed at the same installed packs.
-  registerIpcHandlers(__dirname, userDataDir(), { openPanel: createPanelWindow });
-  openFirstWindow();
-  app.on('activate', () => {
-    // macOS convention: re-create the window on dock click.
-    if (BrowserWindow.getAllWindows().length === 0) openFirstWindow();
+// One engine instance owns the desktop; a second launch just re-opens the
+// manager (so closing the manager doesn't strand the desktop persona).
+// Panel/selftest launches are tools, not the engine — they skip the lock so
+// they can run alongside a live desktop.
+if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (!WANT_PANEL) createManagerWindow();
   });
-});
 
-app.on('window-all-closed', () => {
-  // macOS convention: app stays alive without windows.
-  if (process.platform !== 'darwin') app.quit();
-});
+  app.whenReady().then(() => {
+    warnAboutUnauditedVoices();
+    registerIpcHandlers(__dirname, userDataDir(), {
+      openPanel: createPanelWindow,
+      onActivePack: (id) => {
+        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+          dashboardWindow.webContents.send('aegis:active:changed', { id });
+        }
+      },
+    });
+    openFirstWindows();
+    app.on('activate', () => {
+      if (BrowserWindow.getAllWindows().length === 0) openFirstWindows();
+    });
+  });
+
+  app.on('window-all-closed', () => {
+    // macOS convention: app stays alive without windows.
+    if (process.platform !== 'darwin') app.quit();
+  });
+}

@@ -1,35 +1,25 @@
 'use strict';
 
-// Dashboard preload: the explicit allowlist for the pack-rendering window.
-// Deliberately narrower than the panel bridge — the dashboard can read packs
-// and stats and ask for the tuning panel; it cannot touch voices, profiles,
-// or synthesis. A pack that somehow drove this window still couldn't reach
-// anything the skin engine doesn't need.
+// Desktop-surface preload: the NARROWEST bridge in the app. The desktop
+// window only renders the active pack — it can read packs, stats, and the
+// active-pack id, and hear about changes. No library, no installs, no
+// registries, no voice pipeline.
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+function subscription(channel) {
+  return (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on(channel, handler);
+    return () => ipcRenderer.removeListener(channel, handler);
+  };
+}
+
 contextBridge.exposeInMainWorld('aegis', {
   version: '0.4.0',
-
-  packsList: () => ipcRenderer.invoke('aegis:packs:list'),
   packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
-  onPackChanged: (callback) => {
-    const handler = (_event, data) => callback(data);
-    ipcRenderer.on('aegis:packs:changed', handler);
-    return () => ipcRenderer.removeListener('aegis:packs:changed', handler);
-  },
-
+  onPackChanged: subscription('aegis:packs:changed'),      // hot reload (file edits)
+  activeGet: () => ipcRenderer.invoke('aegis:active:get'),
+  onActiveChanged: subscription('aegis:active:changed'),   // manager picked a pack
   stats: () => ipcRenderer.invoke('aegis:stats'),
-  openPanel: () => ipcRenderer.invoke('aegis:open-panel'),
-
-  // Library / ecosystem
-  libraryState: () => ipcRenderer.invoke('aegis:library:state'),
-  installFile: () => ipcRenderer.invoke('aegis:packs:installFile'),
-  exportPack: (id) => ipcRenderer.invoke('aegis:packs:export', String(id)),
-  uninstallPack: (id) => ipcRenderer.invoke('aegis:packs:uninstall', String(id)),
-  registryAdd: (url) => ipcRenderer.invoke('aegis:registry:add', String(url)),
-  registryRemove: (url) => ipcRenderer.invoke('aegis:registry:remove', String(url)),
-  registryBrowse: (url) => ipcRenderer.invoke('aegis:registry:browse', String(url)),
-  registryPreview: (url) => ipcRenderer.invoke('aegis:registry:preview', String(url)),
-  registryInstall: (url, id) => ipcRenderer.invoke('aegis:registry:install', { url: String(url), id: String(id) }),
 });
