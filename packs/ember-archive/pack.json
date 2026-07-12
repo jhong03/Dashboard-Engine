@@ -58,6 +58,10 @@
       "options": { "bind": "mem", "variant": "bar", "label": "shelf space" },
       "style": { "panel": true, "border": false } },
 
+    { "type": "agenda", "rect": [66, 66, 30, 20], "z": 2,
+      "options": { "days": 5, "limit": 4, "label": "the ledger" },
+      "style": { "panel": true, "border": false } },
+
     { "type": "text", "rect": [70, 88, 26, 8], "z": 3,
       "options": { "text": "est. MMXXVI · open all night" },
       "style": { "panel": false, "font": "mono", "fontScale": 0.7, "align": "right", "textColor": "#8A6F58" } }

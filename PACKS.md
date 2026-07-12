@@ -80,9 +80,15 @@ art behind widgets.
 | `text` | `text` (≤200 chars, `\n` allowed) | free text block |
 | `image` | `src` (`assets/…`), `fit` (`contain`/`cover`) | your art, ≤5 MB each |
 | `divider` | `orientation` (`h`/`v`) | hairline rule |
-| `calendar` | `weekStart` (`mon`/`sun`) | month grid, today marked |
+| `calendar` | `weekStart` (`mon`/`sun`), `showReminders` | month grid, today marked, reminder days dotted |
 | `countdown` | `target` (ISO date), `label` | days/hours to a date |
 | `weather` | `lat`, `lon`, `place` | current conditions (Open-Meteo, no key — the one component that goes online) |
+| `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
+
+`calendar` and `agenda` display the **user's own planner** (managed in the
+engine's Planner tab, stored in their user data). A pack only places and
+styles these components — reminders are personal and are never part of a
+pack, an export, or a registry download.
 
 Rather not hand-write JSON? Open any pack in the **editor** (manager → pack
 → OPEN IN EDITOR, or `--edit <id>`): drag components from the palette, move/

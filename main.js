@@ -302,6 +302,12 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       openPanel: createPanelWindow,
       openEditor: createEditorWindow,
       onActivePack: notifyActivePack,
+      onRemindersChanged: () => {
+        // Calendars/agendas repaint everywhere reminders show.
+        for (const win of [dashboardWindow, editorWindow, managerWindow]) {
+          if (win && !win.isDestroyed()) win.webContents.send('aegis:reminders:changed');
+        }
+      },
     });
     if (!WANT_PANEL) createTray();
     openFirstWindows();

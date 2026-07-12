@@ -15,4 +15,5 @@ contextBridge.exposeInMainWorld('aegis', {
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
+  remindersList: () => ipcRenderer.invoke('aegis:reminders:list'),   // read-only here
 });

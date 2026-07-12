@@ -27,6 +27,7 @@
       <div class="lib-tabs" role="tablist">
         <button class="tab" id="tab-installed" role="tab" aria-selected="true">Installed</button>
         <button class="tab" id="tab-browse" role="tab" aria-selected="false">Browse</button>
+        <button class="tab" id="tab-planner" role="tab" aria-selected="false">Planner</button>
       </div>
       <label class="visually-hidden" for="lib-search">Search packs</label>
       <input id="lib-search" type="search" class="lib-search" placeholder="Search packs" spellcheck="false">
@@ -42,6 +43,18 @@
           <label class="visually-hidden" for="reg-url">Registry URL</label>
           <input id="reg-url" placeholder="Registry URL (https://…/index.json)" spellcheck="false">
           <button class="btn" id="btn-reg-add">Subscribe</button>
+        </div>
+        <div class="planner hidden" id="planner">
+          <form class="planner-add" id="planner-form">
+            <label class="visually-hidden" for="rem-date">Date</label>
+            <input type="date" id="rem-date" required>
+            <label class="visually-hidden" for="rem-time">Time (optional)</label>
+            <input type="time" id="rem-time">
+            <label class="visually-hidden" for="rem-text">Reminder</label>
+            <input type="text" id="rem-text" placeholder="What's happening?" maxlength="120" required>
+            <button class="btn primary" type="submit">Add</button>
+          </form>
+          <div id="planner-list"></div>
         </div>
         <div class="gallery" id="gallery"></div>
       </div>

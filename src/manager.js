@@ -130,8 +130,15 @@ function renderGallery() {
   const gallery = $('gallery');
   gallery.textContent = '';
   $('reg-add').classList.toggle('hidden', library.tab !== 'browse');
+  $('planner').classList.toggle('hidden', library.tab !== 'planner');
+  gallery.classList.toggle('hidden', library.tab === 'planner');
   $('tab-installed').setAttribute('aria-selected', String(library.tab === 'installed'));
   $('tab-browse').setAttribute('aria-selected', String(library.tab === 'browse'));
+  $('tab-planner').setAttribute('aria-selected', String(library.tab === 'planner'));
+  if (library.tab === 'planner') {
+    renderPlanner();
+    return;
+  }
 
   if (library.tab === 'installed') {
     for (const origin of ['installed', 'builtin']) {
@@ -192,6 +199,92 @@ function renderGallery() {
       }));
     }
   }
+}
+
+// ── Planner (reminders live in user data; components display them) ─────────
+
+function localIso(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function plannerDayTitle(iso) {
+  const todayIso = localIso(new Date());
+  const tomorrowIso = localIso(new Date(Date.now() + 86400000));
+  if (iso < todayIso) return 'Earlier';
+  if (iso === todayIso) return 'Today';
+  if (iso === tomorrowIso) return 'Tomorrow';
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+async function renderPlanner() {
+  const list = $('planner-list');
+  list.textContent = '';
+  const res = await aegis.remindersList();
+  if (!res.ok) return libStatus(res.error, true);
+
+  if (res.reminders.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'Nothing planned yet. Reminders show up on calendar and agenda components on your desktop.';
+    list.appendChild(empty);
+    return;
+  }
+
+  let currentTitle = null;
+  for (const reminder of res.reminders) {
+    const title = plannerDayTitle(reminder.date);
+    if (title !== currentTitle) {
+      currentTitle = title;
+      const head = document.createElement('div');
+      head.className = 'planner-day';
+      head.textContent = title;
+      list.appendChild(head);
+    }
+    const row = document.createElement('div');
+    row.className = `rem-row${reminder.done ? ' done' : ''}`;
+
+    const check = document.createElement('input');
+    check.type = 'checkbox';
+    check.checked = reminder.done;
+    check.title = 'Done';
+    check.addEventListener('change', async () => {
+      await aegis.reminderToggle(reminder.id);
+      renderPlanner();
+    });
+
+    const time = document.createElement('span');
+    time.className = 'rem-time';
+    time.textContent = reminder.time || '—';
+
+    const text = document.createElement('span');
+    text.className = 'rem-text';
+    text.textContent = reminder.text;
+
+    const del = libButton('Delete', async () => {
+      await aegis.reminderRemove(reminder.id);
+      renderPlanner();
+    }, 'tiny danger');
+
+    row.append(check, time, text, del);
+    list.appendChild(row);
+  }
+}
+
+function wirePlanner() {
+  $('rem-date').value = localIso(new Date());
+  $('planner-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const out = await aegis.reminderAdd({
+      date: $('rem-date').value,
+      time: $('rem-time').value || null,
+      text: $('rem-text').value,
+    });
+    if (!out.ok) return libStatus(out.error, true);
+    $('rem-text').value = '';
+    libStatus('Reminder added.');
+    renderPlanner();
+  });
 }
 
 // ── Detail sidebar ──────────────────────────────────────────────────────────
@@ -356,6 +449,8 @@ async function init() {
   $('btn-panel').addEventListener('click', () => aegis.openPanel());
   $('tab-installed').addEventListener('click', () => { library.tab = 'installed'; renderGallery(); });
   $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
+  $('tab-planner').addEventListener('click', () => { library.tab = 'planner'; renderGallery(); });
+  wirePlanner();
   $('lib-search').addEventListener('input', (e) => { library.search = e.target.value; renderGallery(); });
   $('btn-install-file').addEventListener('click', async () => {
     const out = await aegis.installFile();
@@ -373,9 +468,8 @@ async function init() {
     }
   });
 
-  if (new URLSearchParams(location.search).get('view') === 'browse') {
-    library.tab = 'browse';
-  }
+  const view = new URLSearchParams(location.search).get('view');
+  if (view === 'browse' || view === 'planner') library.tab = view;
   await refreshLibrary();
 }
 

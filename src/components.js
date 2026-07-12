@@ -443,12 +443,32 @@ function createRenderer(services) {
     el.appendChild(line);
   }
 
+  // Local (not UTC) YYYY-MM-DD — reminder dates are the user's wall dates.
+  function localIso(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  }
+
   function buildCalendar(component, el) {
     const label = document.createElement('span');
     label.className = 'comp-label';
     const grid = document.createElement('div');
     grid.className = 'cal-grid';
     el.append(label, grid);
+
+    // Reminder markers: dot the days that still have something planned.
+    const decorate = async () => {
+      if (!services.reminders || component.options.showReminders === false) return;
+      const res = await services.reminders();
+      if (!res.ok) return;
+      const now = new Date();
+      const prefix = localIso(now).slice(0, 8);
+      const marked = new Set(
+        res.reminders.filter((r) => r.date.startsWith(prefix) && !r.done).map((r) => Number(r.date.slice(8))),
+      );
+      for (const cell of grid.querySelectorAll('.cal-day')) {
+        cell.classList.toggle('has-rem', marked.has(Number(cell.textContent)));
+      }
+    };
 
     const render = () => {
       const now = new Date();
@@ -473,9 +493,80 @@ function createRenderer(services) {
         cell.textContent = String(day);
         grid.appendChild(cell);
       }
+      decorate();
     };
     render();
     live.timers.push(setInterval(render, 60 * 1000));
+  }
+
+  function buildAgenda(component, el) {
+    const label = document.createElement('span');
+    label.className = 'comp-label';
+    label.textContent = component.options.label || 'Planner';
+    const listEl = document.createElement('div');
+    listEl.className = 'agenda';
+    el.append(label, listEl);
+
+    const dayTitle = (iso, todayIso, tomorrowIso) => {
+      if (iso === todayIso) return 'Today';
+      if (iso === tomorrowIso) return 'Tomorrow';
+      const [y, m, d] = iso.split('-').map(Number);
+      return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    };
+
+    const paint = async () => {
+      if (!services.reminders) return;
+      const res = await services.reminders();
+      if (!res.ok) return;
+      listEl.textContent = '';
+
+      const today = new Date();
+      const todayIso = localIso(today);
+      const tomorrowIso = localIso(new Date(today.getTime() + 86400000));
+      const horizonIso = localIso(new Date(today.getTime() + (component.options.days - 1) * 86400000));
+      const upcoming = res.reminders.filter((r) => r.date >= todayIso && r.date <= horizonIso);
+
+      if (upcoming.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'agenda-empty';
+        empty.textContent = 'Nothing planned — add reminders in the manager.';
+        listEl.appendChild(empty);
+        return;
+      }
+
+      let shown = 0;
+      let currentDay = null;
+      for (const reminder of upcoming) {
+        if (shown >= component.options.limit) break;
+        if (reminder.date !== currentDay) {
+          currentDay = reminder.date;
+          const head = document.createElement('div');
+          head.className = 'agenda-day display-case';
+          head.textContent = dayTitle(reminder.date, todayIso, tomorrowIso);
+          listEl.appendChild(head);
+        }
+        const item = document.createElement('div');
+        item.className = `agenda-item${reminder.done ? ' done' : ''}`;
+        const time = document.createElement('span');
+        time.className = 'agenda-time';
+        time.textContent = reminder.time || '·';
+        const text = document.createElement('span');
+        text.className = 'agenda-text';
+        text.textContent = reminder.text;
+        item.append(time, text);
+        listEl.appendChild(item);
+        shown++;
+      }
+      const remaining = upcoming.length - shown;
+      if (remaining > 0) {
+        const more = document.createElement('div');
+        more.className = 'agenda-empty';
+        more.textContent = `+ ${remaining} more`;
+        listEl.appendChild(more);
+      }
+    };
+    paint();
+    live.timers.push(setInterval(paint, 60 * 1000));
   }
 
   function buildCountdown(component, el) {
@@ -548,6 +639,7 @@ function createRenderer(services) {
     calendar: buildCalendar,
     countdown: buildCountdown,
     weather: buildWeather,
+    agenda: buildAgenda,
   };
 
   function cleanup() {

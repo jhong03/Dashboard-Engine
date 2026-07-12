@@ -151,3 +151,34 @@ body {
 .reg-add { display: flex; gap: 8px; margin-bottom: 10px; }
 .reg-add input { flex: 1; }
 .gallery .section-label .btn { margin-left: 0; }
+
+/* ── Planner ────────────────────────────────────────────────────────────── */
+
+.planner-add { display: flex; gap: 8px; margin-bottom: 14px; }
+.planner-add #rem-text { flex: 1; }
+.planner-day {
+  font-size: 11.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+  margin: 12px 0 6px;
+}
+.rem-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 6px;
+  background: var(--bg-raised);
+}
+.rem-time {
+  font-family: var(--font-code);
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 44px;
+}
+.rem-text { flex: 1; font-size: 13px; }
+.rem-row.done .rem-text { text-decoration: line-through; color: var(--text-dim); }

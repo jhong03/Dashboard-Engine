@@ -30,4 +30,10 @@ contextBridge.exposeInMainWorld('aegis', {
 
   openPanel: () => ipcRenderer.invoke('aegis:open-panel'),
   openEditor: (id) => ipcRenderer.invoke('aegis:open-editor', String(id)),
+
+  // Daily planner — the manager is where reminders are managed.
+  remindersList: () => ipcRenderer.invoke('aegis:reminders:list'),
+  reminderAdd: (r) => ipcRenderer.invoke('aegis:reminders:add', { date: String(r.date), time: r.time ? String(r.time) : null, text: String(r.text) }),
+  reminderRemove: (id) => ipcRenderer.invoke('aegis:reminders:remove', String(id)),
+  reminderToggle: (id) => ipcRenderer.invoke('aegis:reminders:toggle', String(id)),
 });

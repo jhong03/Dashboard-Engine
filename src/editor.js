@@ -25,6 +25,7 @@ const PALETTE = [
   { type: 'calendar', label: 'Calendar', hint: 'month grid, today marked' },
   { type: 'countdown', label: 'Countdown', hint: 'days/hours to a date' },
   { type: 'weather', label: 'Weather', hint: 'Open-Meteo, needs lat/lon' },
+  { type: 'agenda', label: 'Agenda', hint: 'your upcoming reminders' },
 ];
 
 const DEFAULT_RECTS = {
@@ -32,6 +33,7 @@ const DEFAULT_RECTS = {
   'stats': [10, 10, 34, 22], 'meter': [10, 10, 14, 22], 'sparkline': [10, 10, 26, 16],
   'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
+  'agenda': [10, 10, 24, 32],
 };
 
 function defaultOptions(type, assets) {
@@ -46,9 +48,10 @@ function defaultOptions(type, assets) {
     'text': { text: 'New text' },
     'image': { src: firstAsset, fit: 'contain' },
     'divider': { orientation: 'h' },
-    'calendar': { weekStart: 'mon' },
+    'calendar': { weekStart: 'mon', showReminders: true },
     'countdown': { target: in30days, label: 'Countdown' },
     'weather': { lat: 0, lon: 0, place: null },
+    'agenda': { days: 7, limit: 6, label: null },
   }[type];
 }
 
@@ -69,6 +72,7 @@ const state = {
 const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
   weather: (opts) => aegis.weather(opts),
+  reminders: () => aegis.remindersList(),
 });
 
 function setStatus(text, warn) {
@@ -403,7 +407,16 @@ function optionFields(component, panel) {
   } else if (type === 'divider') {
     panel.append(field('Direction', selectControl(o.orientation, [['h', 'Horizontal'], ['v', 'Vertical']], set('orientation'))));
   } else if (type === 'calendar') {
-    panel.append(field('Week starts on', selectControl(o.weekStart, [['mon', 'Monday'], ['sun', 'Sunday']], set('weekStart'))));
+    panel.append(
+      field('Week starts on', selectControl(o.weekStart, [['mon', 'Monday'], ['sun', 'Sunday']], set('weekStart'))),
+      checkControl('Mark days with reminders', o.showReminders, set('showReminders')),
+    );
+  } else if (type === 'agenda') {
+    panel.append(
+      field('Days ahead', numberControl(o.days, 1, 14, 1, set('days'))),
+      field('Max items', numberControl(o.limit, 1, 12, 1, set('limit'))),
+      field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Planner')),
+    );
   } else if (type === 'countdown') {
     const date = document.createElement('input');
     date.type = 'date';
