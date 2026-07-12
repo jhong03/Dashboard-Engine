@@ -98,6 +98,10 @@ body {
   inset: 0;
   z-index: 3;
 }
+/* Container-relative sizing: 1cqw = 1% of the surface width, so a pack lays
+   out IDENTICALLY on a 4K desktop, a laptop, and the editor's scaled canvas.
+   (Design basis: 1920px wide — 1px of the original design ≈ 0.052cqw.) */
+.canvas-outer, .ed-skin { container-type: size; }
 .canvas {
   position: absolute;
   inset: 0; /* the renderer sets inset:<padding>% from the pack */
@@ -109,11 +113,11 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
-  padding: 14px 18px;
+  gap: 0.31cqw;
+  padding: 0.73cqw 0.94cqw;
   overflow: hidden;
   border-radius: var(--radius);
-  font-size: calc(15px * var(--font-scale, 1));
+  font-size: calc(0.78cqw * var(--font-scale, 1));
 }
 .comp.panel {
   background: var(--panel-bg);
@@ -126,7 +130,7 @@ body {
 .skin-root.notches .comp.panel:not(.no-notches)::after {
   content: '';
   position: absolute;
-  width: 12px; height: 12px;
+  width: 0.63cqw; height: 0.63cqw;
   border: 0 solid var(--accent);
   opacity: 0.8;
   pointer-events: none;
@@ -160,10 +164,10 @@ body {
 }
 
 /* stats + bar meters */
-.stat-row { display: grid; grid-template-columns: 52px 1fr 132px; gap: 12px; align-items: center; flex-shrink: 0; }
+.stat-row { display: grid; grid-template-columns: 2.7cqw 1fr 6.9cqw; gap: 0.62cqw; align-items: center; flex-shrink: 0; }
 .stat-name { font-size: 0.72em; letter-spacing: 0.2em; color: var(--muted); }
 .stat-bar {
-  height: 6px;
+  height: 0.31cqw;
   border: 1px solid var(--hairline-dim);
   border-radius: var(--radius);
   overflow: hidden;
@@ -259,7 +263,7 @@ body {
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px 4px;
+  gap: 0.1cqw 0.21cqw;
   flex: 1 1 auto;
   min-height: 0;
   align-content: start;

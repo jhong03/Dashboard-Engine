@@ -86,7 +86,9 @@ function applyComponentStyle(el, style, pack) {
   if (style.fontScale !== null) el.style.setProperty('--font-scale', String(style.fontScale));
   if (style.align) el.style.textAlign = style.align;
   if (style.opacity !== null) el.style.opacity = String(style.opacity);
-  if (style.padding !== null) el.style.padding = `${style.padding}px`;
+  // Padding token is documented in px at the 1920-wide design basis; render
+  // it container-relative so it scales with the surface (1px ≈ 0.0521cqw).
+  if (style.padding !== null) el.style.padding = `${(style.padding * 0.0521).toFixed(3)}cqw`;
   if (style.rotate !== null) el.style.transform = `rotate(${style.rotate}deg)`;
 
   const panel = style.panel !== null ? style.panel : true;
@@ -326,7 +328,7 @@ function createRenderer(services) {
     if (component.options.variant === 'bar') {
       const { row, fill, value } = statRow('');
       row.querySelector('.stat-name').remove();
-      row.style.gridTemplateColumns = '1fr 76px';
+      row.style.gridTemplateColumns = '1fr 3.96cqw';
       el.append(label, row);
       live.telemetry.subscribers.push((values) => {
         fill.style.width = `${values[bind]}%`;

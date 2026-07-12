@@ -610,6 +610,15 @@ async function init() {
   if (!loaded.ok) return setStatus(loaded.error, true);
   const all = await aegis.assetsAll(packId);
 
+  // WYSIWYG: the stage takes the primary display's real aspect ratio, so
+  // what you arrange here is exactly what the desktop renders.
+  const display = await aegis.display();
+  if (display.ok) {
+    const stage = $('stage');
+    stage.style.aspectRatio = `${display.width} / ${display.height}`;
+    stage.style.width = `min(100%, calc((100vh - 140px) * ${(display.width / display.height).toFixed(4)}))`;
+  }
+
   state.baseId = packId;
   state.pack = loaded.pack;
   state.assets = { ...(all.ok ? all.assets : {}), ...loaded.assets };
