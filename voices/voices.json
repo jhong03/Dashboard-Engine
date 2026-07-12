@@ -1,17 +1,182 @@
 {
-  "comment": "Voice bank manifest. Stage 1 stub — only the smoke-test voice. The full 8-slot bank, the first-run downloader, and per-voice licence audit land in Stage 2. licence must NEVER be guessed: UNVERIFIED voices trigger a startup warning and are never silently shipped.",
+  "comment": "Voice bank manifest — the 8-slot bank plus an audit trail of rejected voices. Every licence below was verified by reading the MODEL_CARD in rhasspy/piper-voices (and the dataset licence it points to) on the audit date. licence is NEVER guessed: anything unverifiable goes in `excluded`, and voices the loader flags trigger a startup warning and are never silently shipped. sha256/size come from the Hugging Face LFS metadata and are enforced by the downloader. wpmAtScale1 is measured per-voice by `npm run calibrate` (null = not yet calibrated on this machine's model).",
+  "audited": "2026-07-12",
+  "auditSource": "https://huggingface.co/rhasspy/piper-voices/tree/v1.0.0",
+  "defaultVoice": "northern_english_male",
   "voices": [
     {
-      "id": "alan",
-      "model": "en_GB-alan-medium.onnx",
-      "displayName": "Alan",
+      "id": "northern_english_male",
+      "model": "en_GB-northern_english_male-medium.onnx",
+      "displayName": "Northern English Male",
       "sex": "M",
-      "accent": "RP British",
-      "descriptor": "measured, warm",
-      "licence": "UNVERIFIED",
-      "licenceUrl": "",
-      "attribution": "TODO: confirm via per-model licence audit (rhasspy/piper-voices)",
-      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/alan/medium/en_GB-alan-medium.onnx"
+      "accent": "Northern English",
+      "descriptor": "grounded, plainspoken",
+      "licence": "CC-BY-SA-4.0",
+      "licenceUrl": "http://www.openslr.org/83/",
+      "attribution": "Google Crowdsourced UK/Ireland dialect speech (OpenSLR 83), CC BY-SA 4.0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/northern_english_male/medium/en_GB-northern_english_male-medium.onnx.json",
+      "sha256": "57a219ae8e638873db7d18893304be5069c42868f392bb95c3ff17f0690d0689",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": 212
+    },
+    {
+      "id": "alba",
+      "model": "en_GB-alba-medium.onnx",
+      "displayName": "Alba",
+      "sex": "F",
+      "accent": "Scottish",
+      "descriptor": "clear, bright",
+      "licence": "CC-BY-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Edinburgh DataShare dataset 10283/3270, CC BY 4.0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/alba/medium/en_GB-alba-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/alba/medium/en_GB-alba-medium.onnx.json",
+      "sha256": "401369c4a81d09fdd86c32c5c864440811dbdcc66466cde2d64f7133a66ad03b",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "cori",
+      "model": "en_GB-cori-medium.onnx",
+      "displayName": "Cori",
+      "sex": "F",
+      "accent": "British",
+      "descriptor": "warm, storytelling",
+      "licence": "public-domain",
+      "licenceUrl": "https://librivox.org",
+      "attribution": "Dataset by Bryce Beattie from LibriVox public-domain recordings",
+      "provenance": "trained from scratch",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/cori/medium/en_GB-cori-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/cori/medium/en_GB-cori-medium.onnx.json",
+      "sha256": "1899f98e5fb8310154f3c2973f4b8a929ba7245e722b3d3a85680b833d95f10d",
+      "sizeBytes": 63531379,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "jenny_dioco",
+      "model": "en_GB-jenny_dioco-medium.onnx",
+      "displayName": "Jenny (Dioco)",
+      "sex": "F",
+      "accent": "Irish",
+      "descriptor": "lively, conversational",
+      "licence": "Jenny-custom (commercial OK, attribution required)",
+      "licenceUrl": "https://github.com/dioco-group/jenny-tts-dataset",
+      "attribution": "REQUIRED by licence: voice must be referred to as \"Jenny\", where practical \"Jenny (Dioco)\"",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_GB/jenny_dioco/medium/en_GB-jenny_dioco-medium.onnx.json",
+      "sha256": "469c630d209e139dd392a66bf4abde4ab86390a0269c1e47b4e5d7ce81526b01",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "bryce",
+      "model": "en_US-bryce-medium.onnx",
+      "displayName": "Bryce",
+      "sex": "M",
+      "accent": "US General American",
+      "descriptor": "even, friendly",
+      "licence": "public-domain",
+      "licenceUrl": "https://brycebeattie.com/files/tts/",
+      "attribution": "Bryce Beattie's own voice, released public domain",
+      "provenance": "finetuned from author's earlier voice model",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/bryce/medium/en_US-bryce-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/bryce/medium/en_US-bryce-medium.onnx.json",
+      "sha256": "dc9caa6c313199ffb5ac698b6e542fa6cba388aeaf2731e25262e33b9810aef1",
+      "sizeBytes": 63531379,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "kristin",
+      "model": "en_US-kristin-medium.onnx",
+      "displayName": "Kristin",
+      "sex": "F",
+      "accent": "US General American",
+      "descriptor": "soft, measured",
+      "licence": "public-domain",
+      "licenceUrl": "https://librivox.org",
+      "attribution": "Dataset by Bryce Beattie from LibriVox public-domain recordings",
+      "provenance": "trained from scratch",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/kristin/medium/en_US-kristin-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/kristin/medium/en_US-kristin-medium.onnx.json",
+      "sha256": "5849957f929cbf720c258f8458692d6103fff2f0e3d3b19c8259474bb06a18d4",
+      "sizeBytes": 63531379,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "norman",
+      "model": "en_US-norman-medium.onnx",
+      "displayName": "Norman",
+      "sex": "M",
+      "accent": "US General American",
+      "descriptor": "steady narrator",
+      "licence": "public-domain",
+      "licenceUrl": "https://librivox.org",
+      "attribution": "Dataset by Bryce Beattie from LibriVox public-domain recordings",
+      "provenance": "trained from scratch",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/norman/medium/en_US-norman-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/norman/medium/en_US-norman-medium.onnx.json",
+      "sha256": "b9739443232a80a59c7d18810dd856899bf16a7964725f5ab81ea49b1351cb71",
+      "sizeBytes": 63531379,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "sam",
+      "model": "en_US-sam-medium.onnx",
+      "displayName": "Sam",
+      "sex": "NB",
+      "accent": "US General American",
+      "descriptor": "neutral, composed",
+      "licence": "Apache-2.0",
+      "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0.txt",
+      "attribution": "Sam (Accenture non-binary voice), Apache 2.0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/sam/medium/en_US-sam-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/en/en_US/sam/medium/en_US-sam-medium.onnx.json",
+      "sha256": "56417b3b4afe8ec6bb4cabf06e17d67261fdd5bf334592abcfc80052fba11163",
+      "sizeBytes": 62950044,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    }
+  ],
+  "excluded": [
+    {
+      "id": "alan",
+      "reason": "Dataset LICENSE is 'Copyright 2022 Mycroft AI, All Rights Reserved' (mimic3-voices/voices/en_UK/apope_low/LICENSE) — proprietary, cannot ship. Was the Stage 1 smoke-test voice; replaced by northern_english_male."
+    },
+    {
+      "id": "lessac",
+      "reason": "Blizzard 2013 dataset is under a manually-approved RESEARCH licence (cstr.ed.ac.uk) — not usable in a shipped product. NOTE: several bank voices were finetuned FROM the lessac model checkpoint (see provenance); dataset licences recorded here are those of each voice's own training data."
+    },
+    {
+      "id": "ryan",
+      "reason": "RyanSpeech dataset is CC BY-NC-SA 4.0 — non-commercial."
+    },
+    {
+      "id": "hfc_female",
+      "reason": "Hi-Fi-CAPTAIN dataset is CC BY-NC-SA 4.0 — non-commercial."
+    },
+    {
+      "id": "hfc_male",
+      "reason": "Hi-Fi-CAPTAIN dataset is CC BY-NC-SA 4.0 — non-commercial."
+    },
+    {
+      "id": "amy",
+      "reason": "MODEL_CARD says 'License: See URL' pointing at MycroftAI/mimic3-voices — same proprietary source as alan; unverifiable as freely licensed."
+    },
+    {
+      "id": "kusal",
+      "reason": "MODEL_CARD says 'License: See URL' pointing at MycroftAI/mimic2 — licence not stated anywhere verifiable."
     }
   ]
 }

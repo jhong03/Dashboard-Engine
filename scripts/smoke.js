@@ -14,21 +14,21 @@ const path = require('path');
 const piper = require('../lib/piper');
 const dsp = require('../lib/dsp');
 const analyze = require('../lib/analyze');
+const bank = require('../lib/voicebank');
 const { sanitizeProfile } = require('../lib/profiles');
 
 const APP_ROOT = path.join(__dirname, '..');
-const MODEL_PATH = path.join(APP_ROOT, 'voices', 'en_GB-alan-medium.onnx');
 const OUT_DIR = path.join(APP_ROOT, 'out');
 const OUT_WAV = path.join(OUT_DIR, 'smoke.wav');
 
 const TEST_SENTENCE = 'Good evening. All systems are online, and every diagnostic reports nominal performance across the board.';
 
 // The Butler factory preset (Stage 3), hardcoded here as the smoke fixture:
-// low, composed, brisk, warm, RP.
+// low, composed, brisk, warm, British.
 const BUTLER = sanitizeProfile({
   schema: 1,
   name: 'Composed Butler',
-  base: { engine: 'piper', voice: 'alan' },
+  base: { engine: 'piper', voice: 'northern_english_male' },
   prosody: {
     pitchShift: -2.0,
     rate: 180,
@@ -79,19 +79,34 @@ async function main() {
   console.log(`profile   : ${BUTLER.name}`);
   console.log(`text      : "${TEST_SENTENCE}"`);
 
+  // Resolve the profile's base voice through the bank so the smoke test
+  // exercises the same path the app will.
+  const manifest = bank.loadManifest(APP_ROOT);
+  for (const w of [...manifest.warnings, ...bank.auditWarnings(manifest)]) console.warn(`  ! ${w}`);
+  const voice = bank.voiceById(manifest, BUTLER.base.voice);
+  if (!voice) {
+    throw new Error(`Voice "${BUTLER.base.voice}" is not in the bank. Run "npm run voices" to see it.`);
+  }
+  if (!bank.isInstalled(APP_ROOT, voice)) {
+    throw new Error(`Voice "${voice.id}" is not installed. Run: npm run voices -- download ${voice.id}`);
+  }
+  const modelPath = bank.modelPathFor(APP_ROOT, voice);
+  // Calibrated per-voice rate baseline; null until `npm run calibrate --write`.
+  const baselineWpm = voice.wpmAtScale1 || undefined;
+
   const piperPath = piper.findPiper(APP_ROOT);
   const ffmpegPath = dsp.findFfmpeg();
   console.log(`piper     : ${piperPath}`);
   console.log(`ffmpeg    : ${ffmpegPath}`);
-  console.log(`model     : ${MODEL_PATH}`);
+  console.log(`voice     : ${voice.id} (${voice.licence}) baseline ${baselineWpm || 'uncalibrated'}`);
   console.log('');
 
   // 1. Synthesize
   const t0 = Date.now();
-  const { pcm: rawPcm, sampleRate } = await piper.synthesize(TEST_SENTENCE, BUTLER, MODEL_PATH, piperPath);
+  const { pcm: rawPcm, sampleRate } = await piper.synthesize(TEST_SENTENCE, BUTLER, modelPath, piperPath, { baselineWpm });
   const tSynth = Date.now() - t0;
   console.log(`[1/3] piper synthesis  : ${rawPcm.length} bytes PCM @ ${sampleRate} Hz (${tSynth} ms)`);
-  console.log(`      piper flags      : ${piper.piperArgsForProfile(BUTLER, '<model>').join(' ')}`);
+  console.log(`      piper flags      : ${piper.piperArgsForProfile(BUTLER, '<model>', baselineWpm).join(' ')}`);
 
   // 2. DSP
   const graph = dsp.buildFilterGraph(BUTLER, sampleRate);

@@ -1,12 +1,14 @@
 'use strict';
 
-// Electron main process. Stage 1: just a window shell — the synthesis
-// pipeline lives in lib/ and is exercised by `npm run smoke`. IPC handlers
-// that bridge the renderer to the pipeline arrive with the UI (Stage 4);
-// per CLAUDE.md every one of them must validate its input.
+// Electron main process. Stages 1–2: a window shell plus the voice-bank
+// licence check — the synthesis pipeline lives in lib/ and is exercised by
+// `npm run smoke`; the bank by `npm run voices`. IPC handlers that bridge
+// the renderer to the pipeline arrive with the UI (Stage 4); per CLAUDE.md
+// every one of them must validate its input.
 
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
+const voicebank = require('./lib/voicebank');
 
 function createWindow() {
   const win = new BrowserWindow({
@@ -25,7 +27,18 @@ function createWindow() {
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
 }
 
+// Licence rule (voices.json): a voice without a verified licence is never
+// silently shipped. Until the Stage 4 UI can surface this, log it loudly.
+// loadManifest never throws, so this cannot take the window down.
+function warnAboutUnauditedVoices() {
+  const manifest = voicebank.loadManifest(__dirname);
+  for (const w of [...manifest.warnings, ...voicebank.auditWarnings(manifest)]) {
+    console.warn(`[voicebank] ${w}`);
+  }
+}
+
 app.whenReady().then(() => {
+  warnAboutUnauditedVoices();
   createWindow();
   app.on('activate', () => {
     // macOS convention: re-create the window on dock click.

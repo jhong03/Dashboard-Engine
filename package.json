@@ -6,7 +6,9 @@
   "private": true,
   "scripts": {
     "start": "electron .",
-    "smoke": "node scripts/smoke.js"
+    "smoke": "node scripts/smoke.js",
+    "voices": "node scripts/voices.js",
+    "calibrate": "node scripts/calibrate.js"
   },
   "devDependencies": {
     "electron": "^33.0.0"
