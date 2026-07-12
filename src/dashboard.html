@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Strict CSP; data: images allowed for pack wallpapers (delivered as
+       sanitized data URIs by the main process, never raw paths). -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:">
+  <title>AEGIS</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+
+  <header class="bar">
+    <div class="brand">
+      <h1 id="persona-name">AEGIS</h1>
+      <p class="mono sub" id="persona-tagline"></p>
+    </div>
+    <div class="controls">
+      <label class="visually-hidden" for="pack-select">Persona pack</label>
+      <select id="pack-select" class="mono"></select>
+      <button class="btn" id="btn-panel">VOICE TUNING</button>
+    </div>
+  </header>
+
+  <main class="grid" id="grid" aria-label="Dashboard widgets"></main>
+
+  <p class="mono foot" id="foot" role="status" aria-live="polite"></p>
+
+  <script src="dashboard.js"></script>
+</body>
+</html>

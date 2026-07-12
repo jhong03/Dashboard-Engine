@@ -7,7 +7,7 @@
     "tagline": "hearthside archivist",
     "lines": [
       "the stacks are quiet tonight",
-      "cataloguing… slowly, as it should be",
+      "cataloguing... slowly, as it should be",
       "ask me anything, in your own time",
       "the kettle is nearly ready"
     ]
@@ -31,7 +31,7 @@
     "widgets": [
       { "type": "clock", "area": [1, 1, 7, 4], "options": { "format": "12h", "seconds": false, "showDate": true } },
       { "type": "status", "area": [8, 1, 5, 4] },
-      { "type": "stats", "area": [1, 5, 12, 2], "options": { "cpu": true, "mem": true } }
+      { "type": "stats", "area": [1, 5, 12, 4], "options": { "cpu": true, "mem": true } }
     ]
   }
 }
