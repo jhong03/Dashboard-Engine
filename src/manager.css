@@ -279,6 +279,22 @@ body {
 .rem-repeat { color: var(--text-dim); font-size: 13px; width: 13px; text-align: center; }
 .rem-row.done .rem-text { text-decoration: line-through; color: var(--text-dim); }
 
+/* ── Launcher pins ──────────────────────────────────────────────────────── */
+
+.launcher-cfg { max-width: 620px; }
+.pin-actions { display: flex; gap: 8px; margin: 12px 0 14px; flex-wrap: wrap; }
+.pin-actions select { flex: 1; min-width: 180px; }
+.pin-icon { width: 20px; height: 20px; object-fit: contain; flex-shrink: 0; }
+.pin-mono {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.pin-name { flex: 1; font-size: 13px; }
+
 /* ── Event editor modal ─────────────────────────────────────────────────── */
 
 .modal-scrim {

@@ -28,6 +28,7 @@
         <button class="tab" id="tab-installed" role="tab" aria-selected="true">Installed</button>
         <button class="tab" id="tab-browse" role="tab" aria-selected="false">Browse</button>
         <button class="tab" id="tab-planner" role="tab" aria-selected="false">Planner</button>
+        <button class="tab" id="tab-launcher" role="tab" aria-selected="false">Launcher</button>
       </div>
       <label class="visually-hidden" for="lib-search">Search packs</label>
       <input id="lib-search" type="search" class="lib-search" placeholder="Search packs" spellcheck="false">
@@ -61,6 +62,18 @@
             <h3 class="planner-side-title">Upcoming</h3>
             <div id="planner-list"></div>
           </aside>
+        </div>
+        <div class="launcher-cfg hidden" id="launcher-cfg">
+          <p class="hint">Pins appear on any pack with a launcher component (drop one in via the editor).
+            Your pins and recents are personal — they never leave this PC or enter a pack.</p>
+          <div class="pin-actions">
+            <label class="visually-hidden" for="pin-app-select">App to pin</label>
+            <select id="pin-app-select"></select>
+            <button class="btn" id="btn-pin-app">Pin app</button>
+            <button class="btn" id="btn-pin-file">Pin a file…</button>
+            <button class="btn" id="btn-pin-folder">Pin a folder…</button>
+          </div>
+          <div id="pin-list"></div>
         </div>
         <div class="gallery" id="gallery"></div>
       </div>

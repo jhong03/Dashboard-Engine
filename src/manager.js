@@ -131,12 +131,18 @@ function renderGallery() {
   gallery.textContent = '';
   $('reg-add').classList.toggle('hidden', library.tab !== 'browse');
   $('planner').classList.toggle('hidden', library.tab !== 'planner');
-  gallery.classList.toggle('hidden', library.tab === 'planner');
+  $('launcher-cfg').classList.toggle('hidden', library.tab !== 'launcher');
+  gallery.classList.toggle('hidden', library.tab === 'planner' || library.tab === 'launcher');
   $('tab-installed').setAttribute('aria-selected', String(library.tab === 'installed'));
   $('tab-browse').setAttribute('aria-selected', String(library.tab === 'browse'));
   $('tab-planner').setAttribute('aria-selected', String(library.tab === 'planner'));
+  $('tab-launcher').setAttribute('aria-selected', String(library.tab === 'launcher'));
   if (library.tab === 'planner') {
     renderPlanner();
+    return;
+  }
+  if (library.tab === 'launcher') {
+    renderLauncherCfg();
     return;
   }
 
@@ -404,6 +410,82 @@ function renderUpcoming(occurrences, todayIso) {
   }
 }
 
+// ── Launcher pins (personal data shown by launcher components) ─────────────
+
+async function renderLauncherCfg() {
+  const list = $('pin-list');
+  list.textContent = '';
+  const state = await aegis.launcherState();
+  if (!state.ok) return libStatus(state.error, true);
+
+  if (state.pins.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'hint';
+    empty.textContent = 'Nothing pinned yet. Pick an app above, or pin a file or folder.';
+    list.appendChild(empty);
+  }
+  state.pins.forEach((pin, index) => {
+    const row = document.createElement('div');
+    row.className = 'rem-row';
+
+    if (pin.icon) {
+      const img = document.createElement('img');
+      img.className = 'pin-icon';
+      img.alt = '';
+      img.src = pin.icon;
+      row.appendChild(img);
+    } else {
+      const mono = document.createElement('span');
+      mono.className = 'pin-icon pin-mono';
+      mono.textContent = pin.name.slice(0, 1).toUpperCase();
+      row.appendChild(mono);
+    }
+
+    const name = document.createElement('span');
+    name.className = 'pin-name';
+    name.textContent = pin.name;
+
+    const up = libButton('↑', async () => { await aegis.launcherPinMove(pin.id, -1); renderLauncherCfg(); }, 'tiny');
+    up.disabled = index === 0;
+    const down = libButton('↓', async () => { await aegis.launcherPinMove(pin.id, 1); renderLauncherCfg(); }, 'tiny');
+    down.disabled = index === state.pins.length - 1;
+    const del = libButton('Unpin', async () => { await aegis.launcherUnpin(pin.id); renderLauncherCfg(); }, 'tiny danger');
+
+    row.append(name, up, down, del);
+    list.appendChild(row);
+  });
+}
+
+async function wireLauncherCfg() {
+  const select = $('pin-app-select');
+  const apps = await aegis.launcherApps();
+  if (apps.ok) {
+    for (const appEntry of apps.apps) {
+      const option = document.createElement('option');
+      option.value = appEntry.id;
+      option.textContent = appEntry.name;
+      select.appendChild(option);
+    }
+  }
+  $('btn-pin-app').addEventListener('click', async () => {
+    if (!select.value) return;
+    const out = await aegis.launcherPinApp(select.value);
+    libStatus(out.ok ? 'Pinned.' : out.error, !out.ok);
+    renderLauncherCfg();
+  });
+  const pinPath = (kind) => async () => {
+    const out = await aegis.launcherPinPath(kind);
+    if (out.cancelled) return;
+    libStatus(out.ok ? 'Pinned.' : out.error, !out.ok);
+    renderLauncherCfg();
+  };
+  $('btn-pin-file').addEventListener('click', pinPath('file'));
+  $('btn-pin-folder').addEventListener('click', pinPath('folder'));
+  aegis.onLauncherChanged(() => {
+    if (library.tab === 'launcher') renderLauncherCfg();
+  });
+}
+
 // ── Event editor modal ──────────────────────────────────────────────────────
 
 function openEventEditor({ id, date }) {
@@ -494,7 +576,7 @@ function wirePlanner() {
   });
   // A notification click asks us to show the planner.
   aegis.onShowView((view) => {
-    if (view === 'browse' || view === 'planner' || view === 'installed') {
+    if (['browse', 'planner', 'installed', 'launcher'].includes(view)) {
       library.tab = view;
       renderGallery();
     }
@@ -664,7 +746,9 @@ async function init() {
   $('tab-installed').addEventListener('click', () => { library.tab = 'installed'; renderGallery(); });
   $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
   $('tab-planner').addEventListener('click', () => { library.tab = 'planner'; renderGallery(); });
+  $('tab-launcher').addEventListener('click', () => { library.tab = 'launcher'; renderGallery(); });
   wirePlanner();
+  await wireLauncherCfg();
   $('lib-search').addEventListener('input', (e) => { library.search = e.target.value; renderGallery(); });
   $('btn-install-file').addEventListener('click', async () => {
     const out = await aegis.installFile();
@@ -683,7 +767,7 @@ async function init() {
   });
 
   const view = new URLSearchParams(location.search).get('view');
-  if (view === 'browse' || view === 'planner') library.tab = view;
+  if (['browse', 'planner', 'launcher'].includes(view)) library.tab = view;
   await refreshLibrary();
 }
 

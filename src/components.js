@@ -921,6 +921,89 @@ function createRenderer(services) {
     live.timers.push(setInterval(refresh, WEATHER_REFRESH_MS));
   }
 
+  // Launcher: the user's pinned / recent / running apps as clickable tiles.
+  // Content comes from main over the launcher service (opaque ids only);
+  // in the editor the service has no launch(), so tiles render inert.
+  function buildLauncher(component, el) {
+    const o = component.options;
+    const label = document.createElement('span');
+    label.className = 'comp-label';
+    label.textContent = o.label || 'Launcher';
+    const wrap = document.createElement('div');
+    wrap.className = 'launch-wrap';
+    el.classList.add(`launch-${o.iconSize || 'm'}`);
+    if (o.labels === false) el.classList.add('launch-nolabels');
+    el.append(label, wrap);
+    if (!services.launcher) return;
+
+    const canAct = typeof services.launcher.launch === 'function';
+    const sectionsEnabled = [o.pinned, o.recent, o.running].filter(Boolean).length;
+
+    const tile = (name, fullTitle, icon, onAct) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `launch-tile${canAct ? '' : ' inert'}`;
+      button.title = fullTitle || name;
+      if (icon) {
+        const img = document.createElement('img');
+        img.className = 'launch-icon';
+        img.alt = '';
+        img.src = icon;
+        button.appendChild(img);
+      } else {
+        const mono = document.createElement('span');
+        mono.className = 'launch-mono';
+        mono.textContent = (name || '?').slice(0, 1).toUpperCase();
+        button.appendChild(mono);
+      }
+      const text = document.createElement('span');
+      text.className = 'launch-name';
+      text.textContent = name;
+      button.appendChild(text);
+      if (canAct) button.addEventListener('click', onAct);
+      return button;
+    };
+
+    const section = (title, tiles) => {
+      if (tiles.length === 0) return;
+      if (sectionsEnabled > 1) {
+        const head = document.createElement('div');
+        head.className = 'launch-sec display-case';
+        head.textContent = title;
+        wrap.appendChild(head);
+      }
+      const grid = document.createElement('div');
+      grid.className = 'launch-grid';
+      grid.append(...tiles);
+      wrap.appendChild(grid);
+    };
+
+    const paint = async () => {
+      const res = await services.launcher.state({ running: Boolean(o.running) });
+      if (!res.ok) return;
+      wrap.textContent = '';
+      if (o.pinned) {
+        section('Pinned', res.pins.map((p) => tile(p.name, p.name, p.icon, () => services.launcher.launch(p.id))));
+      }
+      if (o.recent) {
+        section('Recent', res.recent.map((r) => tile(r.name, r.name, r.icon, () => services.launcher.launch(r.id))));
+      }
+      if (o.running) {
+        section('Open now', res.running.map((w) => tile(w.name || w.title, w.title, w.icon, () => services.launcher.focus(w.hwnd))));
+      }
+      if (wrap.childElementCount === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'launch-empty';
+        empty.textContent = 'Pin apps in the manager (Launcher tab).';
+        wrap.appendChild(empty);
+      }
+    };
+    paint();
+    // Running windows change often; pins/recents also repaint on the
+    // launcher:changed broadcast the page subscribes to.
+    live.timers.push(setInterval(paint, o.running ? 15000 : 60000));
+  }
+
   const BUILDERS = {
     status: buildStatus,
     clock: buildClock,
@@ -935,6 +1018,7 @@ function createRenderer(services) {
     countdown: buildCountdown,
     weather: buildWeather,
     agenda: buildAgenda,
+    launcher: buildLauncher,
   };
 
   function cleanup() {

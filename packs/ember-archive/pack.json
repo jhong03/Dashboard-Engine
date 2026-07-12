@@ -30,9 +30,9 @@
   },
   "canvas": { "padding": 3 },
   "components": [
-    { "type": "image", "rect": [66, 6, 30, 40], "z": 0,
-      "options": { "src": "assets/seal.png", "fit": "contain" },
-      "style": { "panel": false, "opacity": 0.5, "rotate": -6 } },
+    { "type": "launcher", "rect": [66, 6, 30, 42], "z": 2,
+      "options": { "pinned": true, "recent": true, "running": true, "labels": true, "iconSize": "m", "label": "the reading desk" },
+      "style": { "panel": true, "border": false } },
 
     { "type": "analog-clock", "rect": [4, 8, 26, 44], "z": 2,
       "options": { "seconds": true },

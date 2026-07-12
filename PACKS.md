@@ -88,11 +88,13 @@ art behind widgets.
 | `countdown` | `target` (ISO date), `label` | days/hours to a date |
 | `weather` | `lat`, `lon`, `place`, `details` | conditions with glyph, hi/lo + wind (Open-Meteo, no key — the one component that goes online) |
 | `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
+| `launcher` | `pinned`, `recent`, `running`, `labels`, `iconSize` (`s`/`m`/`l`), `label` | the user's pinned/recent/open apps as clickable tiles |
 
-`calendar` and `agenda` display the **user's own planner** (managed in the
-engine's Planner tab, stored in their user data). A pack only places and
-styles these components — reminders are personal and are never part of a
-pack, an export, or a registry download.
+`calendar`, `agenda`, and `launcher` display the **user's own data** (planner
+events managed in the engine's Planner tab; app pins in its Launcher tab —
+all stored in user data). A pack only places and styles these components —
+reminders and pins are personal and are never part of a pack, an export, or
+a registry download.
 
 Rather not hand-write JSON? Open any pack in the **editor** (manager → pack
 → OPEN IN EDITOR, or `--edit <id>`): drag components from the palette, move/

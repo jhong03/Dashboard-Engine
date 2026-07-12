@@ -55,4 +55,17 @@ contextBridge.exposeInMainWorld('aegis', {
     ipcRenderer.on('aegis:show-view', handler);
     return () => ipcRenderer.removeListener('aegis:show-view', handler);
   },
+
+  // Launcher pins — managed here, displayed by the wallpaper component.
+  launcherState: () => ipcRenderer.invoke('aegis:launcher:state', { running: false }),
+  launcherApps: () => ipcRenderer.invoke('aegis:launcher:apps'),
+  launcherPinApp: (id) => ipcRenderer.invoke('aegis:launcher:pinApp', String(id)),
+  launcherPinPath: (kind) => ipcRenderer.invoke('aegis:launcher:pinPath', { kind: String(kind) }),
+  launcherUnpin: (id) => ipcRenderer.invoke('aegis:launcher:unpin', String(id)),
+  launcherPinMove: (id, delta) => ipcRenderer.invoke('aegis:launcher:pinMove', { id: String(id), delta: Number(delta) }),
+  onLauncherChanged: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('aegis:launcher:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:launcher:changed', handler);
+  },
 });

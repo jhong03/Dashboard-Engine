@@ -18,4 +18,11 @@ contextBridge.exposeInMainWorld('aegis', {
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
   remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',   // read-only here
     window && window.from && window.to ? { from: String(window.from), to: String(window.to) } : undefined),
+  // Preview only: the editor renders launcher tiles but cannot launch.
+  launcherState: (opts) => ipcRenderer.invoke('aegis:launcher:state', { running: Boolean(opts && opts.running) }),
+  onLauncherChanged: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('aegis:launcher:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:launcher:changed', handler);
+  },
 });

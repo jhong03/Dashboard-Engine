@@ -353,6 +353,12 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:reminders:changed');
         }
       },
+      onLauncherChanged: () => {
+        // Pins/recents changed — launcher tiles repaint everywhere they show.
+        for (const win of [dashboardWindow, editorWindow, managerWindow]) {
+          if (win && !win.isDestroyed()) win.webContents.send('aegis:launcher:changed');
+        }
+      },
       onPackSaved: (id) => {
         // Editor saved a pack — the desktop repaints if it's showing it.
         if (dashboardWindow && !dashboardWindow.isDestroyed()) {

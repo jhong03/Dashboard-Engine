@@ -26,6 +26,7 @@ const PALETTE = [
   { type: 'countdown', label: 'Countdown', hint: 'days/hours to a date' },
   { type: 'weather', label: 'Weather', hint: 'Open-Meteo, needs lat/lon' },
   { type: 'agenda', label: 'Agenda', hint: 'your upcoming reminders' },
+  { type: 'launcher', label: 'Launcher', hint: 'your pinned & recent apps' },
 ];
 
 const DEFAULT_RECTS = {
@@ -33,7 +34,7 @@ const DEFAULT_RECTS = {
   'stats': [10, 10, 34, 22], 'meter': [10, 10, 14, 22], 'sparkline': [10, 10, 26, 16],
   'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
-  'agenda': [10, 10, 24, 32],
+  'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30],
 };
 
 function defaultOptions(type, assets) {
@@ -52,6 +53,7 @@ function defaultOptions(type, assets) {
     'countdown': { target: in30days, label: 'Countdown' },
     'weather': { lat: 0, lon: 0, place: null, details: true },
     'agenda': { days: 7, limit: 6, label: null },
+    'launcher': { pinned: true, recent: true, running: false, labels: true, iconSize: 'm', label: null },
   }[type];
 }
 
@@ -73,6 +75,8 @@ const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
   weather: (opts) => aegis.weather(opts),
   reminders: (window) => aegis.remindersList(window),
+  // Preview only — no launch() means tiles render inert on the stage.
+  launcher: { state: (opts) => aegis.launcherState(opts) },
 });
 
 function setStatus(text, warn) {
@@ -446,6 +450,19 @@ function optionFields(component, panel) {
       field('Place label', textControl(o.place, (v) => { o.place = v || null; renderAll(); }, 'Weather')),
       checkControl('Hi/lo + wind line', o.details !== false, set('details')),
     );
+  } else if (type === 'launcher') {
+    panel.append(
+      checkControl('Pinned apps', o.pinned !== false, set('pinned')),
+      checkControl('Recently used', o.recent !== false, set('recent')),
+      checkControl('Open windows', o.running === true, set('running')),
+      checkControl('Show names', o.labels !== false, set('labels')),
+      field('Icon size', selectControl(o.iconSize || 'm', [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']], set('iconSize'))),
+      field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Launcher')),
+    );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = 'Tiles show the user’s own pins and recents (managed in the manager) — they are never saved into the pack.';
+    panel.appendChild(note);
   }
 }
 

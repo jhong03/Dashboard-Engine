@@ -26,4 +26,9 @@ contextBridge.exposeInMainWorld('aegis', {
   remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',   // read-only here
     window && window.from && window.to ? { from: String(window.from), to: String(window.to) } : undefined),
   onRemindersChanged: subscription('aegis:reminders:changed'),
+  // Launcher: tiles resolve to opaque ids; main holds the real paths.
+  launcherState: (opts) => ipcRenderer.invoke('aegis:launcher:state', { running: Boolean(opts && opts.running) }),
+  launcherLaunch: (id) => ipcRenderer.invoke('aegis:launcher:launch', String(id)),
+  launcherFocus: (hwnd) => ipcRenderer.invoke('aegis:launcher:focus', Number(hwnd)),
+  onLauncherChanged: subscription('aegis:launcher:changed'),
 });

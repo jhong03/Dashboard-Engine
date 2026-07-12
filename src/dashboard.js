@@ -11,6 +11,11 @@ const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
   weather: (opts) => aegis.weather(opts),
   reminders: (window) => aegis.remindersList(window),
+  launcher: {
+    state: (opts) => aegis.launcherState(opts),
+    launch: (id) => aegis.launcherLaunch(id),
+    focus: (hwnd) => aegis.launcherFocus(hwnd),
+  },
 });
 
 const state = { packId: null };
@@ -43,6 +48,8 @@ async function init() {
   aegis.onActiveChanged((data) => loadPack(data.id));
   // Planner changed — calendars and agendas repaint.
   aegis.onRemindersChanged(() => loadPack(state.packId));
+  // Pins/recents changed — launcher tiles repaint.
+  aegis.onLauncherChanged(() => loadPack(state.packId));
 }
 
 init().catch((err) => console.error(`[dashboard] failed to initialise: ${err.message}`));
