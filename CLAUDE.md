@@ -12,11 +12,12 @@ We ship the engine. Designers author the content. We never ship or bundle a copy
 
 The product was born "AEGIS Voice" and rebranded once its scope outgrew voice. Rules:
 - User-visible surfaces say **Dashboard Engine** (titles, tray, docs).
-- Internal names are FROZEN legacy and must not churn: the `window.aegis` bridge, `aegis:*` IPC channels, the `aegis-holo` reference pack id. AEGIS survives only as content (the reference pack's persona is a character named AEGIS).
-- The DEFAULT built-in pack is `jarvis` — the owner's port of their own standalone "JARVIS Dashboard" app (owner's explicit call 2026-07-13; the "no copyrighted characters" rule below is owner-waived for this one pack). `aegis-holo` and `ember-archive` remain built-in references.
+- Internal names are FROZEN legacy and must not churn: the `window.aegis` bridge, `aegis:*` IPC channels. The `aegis-holo` pack id stays reserved (legacy) even though the pack was removed.
+- `jarvis` is the ONLY built-in pack and the default — the owner's port of their own standalone "JARVIS Dashboard" app (owner's explicit call 2026-07-13; the "no copyrighted characters" rule below is owner-waived for this one pack). The old `aegis-holo`/`ember-archive` references were removed the same day (recoverable from git history).
+- **QUALITY FLOOR (owner directive 2026-07-13): the JARVIS pack is the bare minimum for design and component usability. Nothing ships — no component, no reference pack, no default — that looks or works worse than it.**
 - `.dpack` is the pack extension; legacy `.aegispack` installs forever. `DE_*` env vars are canonical; legacy `AEGIS_*` still honoured. User data migrates from the old `aegis-voice` dir automatically (lib/paths.js).
 
-## Current state (as of 2026-07-13; M1–M3 + app shell + component depth + planner + launcher)
+## Current state (as of 2026-07-13; M1–M3 + app shell + component depth + planner + launcher + JARVIS default)
 
 Dashboard Engine is a working Wallpaper-Engine-class product: designers publish packs, users subscribe/install/edit them, the active pack renders straight onto the desktop. Git log tells the full story milestone by milestone. Repo pushes to https://github.com/jhong03/Dashboard-Engine (origin/master) — push every commit.
 

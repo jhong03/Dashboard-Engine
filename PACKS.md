@@ -128,9 +128,10 @@ Any component takes an optional `style` — every field optional, omitted means
 }
 ```
 
-The two built-in packs are worked examples: `packs/aegis-holo/` (layered
-emblem, rings, sparkline) and `packs/ember-archive/` (wallpaper, analog
-clock, floating serif text). Copy one, rename the folder, and start editing.
+The built-in pack is the worked example: `packs/jarvis/` (HUD clock, ring
+meters, per-core bars, sysinfo readouts, compact weather strip, agenda +
+launcher rails, layered text panels). Copy it, rename the folder, and start
+editing — it is also the project's quality floor for pack design.
 
 ## Distributing your pack
 

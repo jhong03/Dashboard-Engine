@@ -114,7 +114,9 @@ body {
   flex-direction: column;
   justify-content: center;
   gap: 0.31cqw;
-  padding: 0.73cqw 0.94cqw;
+  /* Roomy enough that text clears panel borders AND corner notches (which
+     reach 0.63cqw into the panel). Packs override via style.padding. */
+  padding: 0.94cqw 1.25cqw;
   overflow: hidden;
   border-radius: var(--radius);
   font-size: calc(0.78cqw * var(--font-scale, 1));

@@ -507,6 +507,7 @@ function styleFields(component, panel) {
     field('Placement', selectControl(s.place || '', [['', 'inherit'], ['top', 'Top'], ['center', 'Middle'], ['bottom', 'Bottom'], ['spread', 'Spread out']], (v) => { s.place = v || null; renderAll(); })),
     field('Glass panel', selectControl(s.panel === null ? '' : String(s.panel), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })),
     field('Border', selectControl(s.border === null ? '' : String(s.border), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })),
+    field(`Padding (${s.padding ?? 'inherit'})`, rangeControl(s.padding ?? 18, 0, 48, 1, set('padding')), clear('padding')),
     field(`Opacity (${s.opacity ?? 'inherit'})`, rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')),
     field(`Glow (${s.glow ?? 'inherit'})`, rangeControl(s.glow ?? 0.5, 0, 1, 0.05, set('glow')), clear('glow')),
     field(`Rotate (${s.rotate ?? 0}°)`, rangeControl(s.rotate ?? 0, -20, 20, 0.5, set('rotate')), clear('rotate')),
