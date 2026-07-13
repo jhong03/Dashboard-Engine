@@ -19,7 +19,7 @@ The product was born "AEGIS Voice" and rebranded once its scope outgrew voice. R
 
 Dashboard Engine is a working Wallpaper-Engine-class product: designers publish packs, users subscribe/install/edit them, the active pack renders straight onto the desktop. Git log tells the full story milestone by milestone. Repo pushes to https://github.com/jhong03/Dashboard-Engine (origin/master) — push every commit.
 
-**Open verification:** whether clicks reach the wallpaper-layer window (launcher tiles) is UNCONFIRMED — the user was asked to click a tile; if launches don't fire, dig into input routing on the Progman child window.
+**Confirmed 2026-07-13:** clicks reach the wallpaper-layer window — launcher tiles launch apps/files and focus windows on the user's machine. Interactive wallpaper components are a proven pattern.
 
 **Windows & surfaces**
 - **Desktop surface** (`src/dashboard.*`) — chromeless window reparented under the shell's wallpaper layer (`scripts/desktop-attach.ps1`, handles classic WorkerW and 24H2 Progman; `--no-desktop` or non-Windows falls back to a normal window). Narrowest preload in the app.
