@@ -78,6 +78,9 @@ art behind widgets.
 | `status` | — | persona name, tagline, rotating ticker |
 | `clock` | `format` (`24h`/`12h`), `seconds`, `showDate` | digital clock |
 | `analog-clock` | `seconds`, `numerals` (`quarters`/`all`/`none`), `minuteTicks` | drawn clock face in your palette |
+| `hud-clock` | `format`, `seconds`, `showDate` | sci-fi reactor: counter-rotating rings around a digital readout |
+| `cores` | `label` | per-core CPU load bars |
+| `sysinfo` | `memory`, `disk`, `uptime`, `host`, `statusText` | key/value machine readouts |
 | `stats` | `cpu`, `mem`, `disk`, `battery`, `history` | labelled bars with a faint history trace |
 | `meter` | `bind` (`cpu`/`mem`/`disk`/`battery`), `variant` (`ring`/`bar`), `label`, `readout`, `ticks` | one live value; the bar variant gets a big number + scale ticks |
 | `sparkline` | `bind`, `label`, `grid`, `readout` | 3-minute history graph with grid + live value |
@@ -86,7 +89,7 @@ art behind widgets.
 | `divider` | `orientation` (`h`/`v`) | hairline rule |
 | `calendar` | `weekStart` (`mon`/`sun`), `showReminders` | month grid, today marked, reminder days dotted |
 | `countdown` | `target` (ISO date), `label` | days/hours to a date |
-| `weather` | `lat`, `lon`, `place`, `details` | conditions with glyph, hi/lo + wind (Open-Meteo, no key — the one component that goes online) |
+| `weather` | `lat`, `lon`, `place`, `details`, `compact` | conditions with glyph, hi/lo + wind, or a one-line strip (Open-Meteo, no key — the one component that goes online) |
 | `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
 | `launcher` | `pinned`, `recent`, `running`, `labels`, `iconSize` (`s`/`m`/`l`), `label` | the user's pinned/recent/open apps as clickable tiles |
 

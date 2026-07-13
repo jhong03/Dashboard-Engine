@@ -295,12 +295,20 @@ function createRenderer(services) {
       const res = await services.stats();
       if (!res.ok) return;
       const gb = (bytes) => (bytes / 2 ** 30).toFixed(1);
+      const uptime = (sec) => {
+        const d = Math.floor(sec / 86400), h = Math.floor((sec % 86400) / 3600), m = Math.floor((sec % 3600) / 60);
+        return d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`;
+      };
       const values = {
         cpu: res.cpuPercent,
+        cores: Array.isArray(res.coresPercent) ? res.coresPercent.slice(0, 32) : [],
         mem: Math.round((res.memUsedBytes / res.memTotalBytes) * 100),
         memText: `${gb(res.memUsedBytes)} / ${gb(res.memTotalBytes)} GB`,
         disk: res.diskTotalBytes > 0 ? Math.round((res.diskUsedBytes / res.diskTotalBytes) * 100) : 0,
         diskText: res.diskTotalBytes > 0 ? `${gb(res.diskUsedBytes)} / ${gb(res.diskTotalBytes)} GB` : '—',
+        diskFreeText: res.diskTotalBytes > 0 ? `${Math.round((res.diskTotalBytes - res.diskUsedBytes) / 2 ** 30)} GB` : '—',
+        uptimeText: typeof res.uptimeSec === 'number' ? uptime(res.uptimeSec) : '—',
+        hostname: typeof res.hostname === 'string' ? res.hostname.slice(0, 24).toUpperCase() : '—',
         battery: await batteryPercent(),
         batteryText: null,
       };
@@ -495,6 +503,167 @@ function createRenderer(services) {
     ctx2.fillStyle = cssVar(el, '--accent');
     ctx2.fill();
     ctx2.globalAlpha = 1;
+  }
+
+  // HUD clock — the "arc reactor": counter-rotating ring layers drawn from
+  // the original JARVIS geometry (400-unit viewBox, outer radius 186),
+  // digital time + date in the centre. Ring alphas are fixed to the original
+  // design so pack border settings don't wash the reactor out.
+  function buildHudClock(component, el) {
+    const wrap = document.createElement('div');
+    wrap.className = 'hud-wrap';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'fill-canvas';
+    const face = document.createElement('div');
+    face.className = 'hud-face';
+    const time = document.createElement('div');
+    time.className = 'hud-time';
+    const date = document.createElement('div');
+    date.className = 'hud-date display-case';
+    face.append(time);
+    if (component.options.showDate) face.append(date);
+    wrap.append(canvas, face);
+    el.appendChild(wrap);
+
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const start = performance.now();
+
+    const draw = () => {
+      const ctx2 = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      ctx2.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+      const R = Math.min(w, h) / 2 - 2 * devicePixelRatio;
+      if (R <= 0) return;
+      const u = R / 186; // original geometry unit
+      const accent = cssVar(el, '--accent');
+      const bright = cssVar(el, '--accent-bright');
+      const glow = cssVar(el, '--glow');
+      const t = reduced ? 0 : performance.now() - start;
+      // Layer rotations from the original: outer 90 s, mid −36 s, inner 18 s.
+      const outerA = (t / 90000) * Math.PI * 2;
+      const midA = -(t / 36000) * Math.PI * 2;
+      const innerA = (t / 18000) * Math.PI * 2;
+
+      const circle = (r, alpha, width, dash) => {
+        ctx2.beginPath();
+        ctx2.setLineDash(dash || []);
+        ctx2.globalAlpha = alpha;
+        ctx2.lineWidth = width * devicePixelRatio;
+        ctx2.strokeStyle = accent;
+        ctx2.arc(cx, cy, r * u, 0, Math.PI * 2);
+        ctx2.stroke();
+        ctx2.setLineDash([]);
+        ctx2.globalAlpha = 1;
+      };
+      const arc = (r, from, sweep, colour, width, alpha, useGlow) => {
+        ctx2.beginPath();
+        ctx2.globalAlpha = alpha;
+        ctx2.lineWidth = width * devicePixelRatio;
+        ctx2.strokeStyle = colour;
+        if (useGlow) { ctx2.shadowColor = glow; ctx2.shadowBlur = 7 * devicePixelRatio; }
+        ctx2.arc(cx, cy, r * u, from, from + sweep);
+        ctx2.stroke();
+        ctx2.shadowBlur = 0;
+        ctx2.globalAlpha = 1;
+      };
+
+      // outer: faint ring + 60 ticks (every 5th brighter), slow spin
+      circle(186, 0.45, 1);
+      for (let i = 0; i < 60; i++) {
+        const a = (i / 60) * Math.PI * 2 + outerA;
+        const major = i % 5 === 0;
+        const r2 = major ? 176 : 181;
+        ctx2.beginPath();
+        ctx2.globalAlpha = major ? 0.8 : 0.45;
+        ctx2.lineWidth = (major ? 1.5 : 1) * devicePixelRatio;
+        ctx2.strokeStyle = accent;
+        ctx2.moveTo(cx + Math.cos(a) * 186 * u, cy + Math.sin(a) * 186 * u);
+        ctx2.lineTo(cx + Math.cos(a) * r2 * u, cy + Math.sin(a) * r2 * u);
+        ctx2.stroke();
+        ctx2.globalAlpha = 1;
+      }
+      // mid: dashed ring + two opposed quarter arcs, counter-rotating
+      circle(150, 0.45, 1, [3 * u, 9 * u]);
+      arc(162, midA - Math.PI / 2, Math.PI / 2, accent, 2, 0.55, true);
+      arc(162, midA + Math.PI / 2, Math.PI / 2, accent, 2, 0.55, true);
+      // inner: faint ring + bright three-quarter arc + glow disc
+      circle(118, 0.45, 1);
+      arc(105, innerA - Math.PI / 2, Math.PI * 1.5, bright, 2.5, 1, true);
+      ctx2.beginPath();
+      ctx2.globalAlpha = 0.09;
+      ctx2.fillStyle = accent;
+      ctx2.arc(cx, cy, 92 * u, 0, Math.PI * 2);
+      ctx2.fill();
+      ctx2.globalAlpha = 0.45;
+      ctx2.lineWidth = 1 * devicePixelRatio;
+      ctx2.strokeStyle = accent;
+      ctx2.stroke();
+      ctx2.globalAlpha = 1;
+    };
+
+    const tick = () => {
+      const now = new Date();
+      let hours = now.getHours();
+      let suffix = '';
+      if (component.options.format === '12h') {
+        suffix = hours >= 12 ? ' PM' : ' AM';
+        hours = hours % 12 || 12;
+      }
+      const parts = [String(hours).padStart(2, '0'), String(now.getMinutes()).padStart(2, '0')];
+      if (component.options.seconds) parts.push(String(now.getSeconds()).padStart(2, '0'));
+      time.textContent = parts.join(':') + suffix;
+      if (component.options.showDate) {
+        date.textContent = now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      }
+    };
+
+    observeCanvas(canvas, draw);
+    tick();
+    live.timers.push(setInterval(tick, 250));
+    if (!reduced) live.timers.push(setInterval(draw, 50)); // 20 fps ring drift
+  }
+
+  // Per-core CPU load bars (the JARVIS "core load" strip).
+  function buildCores(component, el) {
+    const label = document.createElement('span');
+    label.className = 'comp-label';
+    label.textContent = component.options.label || 'Core load';
+    const strip = document.createElement('div');
+    strip.className = 'cores-strip';
+    el.append(label, strip);
+    live.telemetry.subscribers.push((values) => {
+      const cores = values.cores || [];
+      while (strip.childElementCount < cores.length) strip.appendChild(document.createElement('span'));
+      while (strip.childElementCount > cores.length) strip.removeChild(strip.lastChild);
+      [...strip.children].forEach((bar, i) => { bar.style.height = `${Math.max(4, cores[i])}%`; });
+    });
+  }
+
+  // Key/value machine readouts.
+  function buildSysinfo(component, el) {
+    const rows = [];
+    const addRow = (name, valueKey, fixed) => {
+      const row = document.createElement('div');
+      row.className = 'ds-row';
+      const key = document.createElement('span');
+      key.className = 'ds-key display-case';
+      key.textContent = name;
+      const value = document.createElement('span');
+      value.className = `ds-value${fixed ? ' ds-ok' : ''}`;
+      value.textContent = fixed || '—';
+      row.append(key, value);
+      el.appendChild(row);
+      if (!fixed) rows.push({ value, valueKey });
+    };
+    if (component.options.memory) addRow('Memory', 'memText');
+    if (component.options.disk) addRow('Disk free', 'diskFreeText');
+    if (component.options.uptime) addRow('Uptime', 'uptimeText');
+    if (component.options.host) addRow('Host', 'hostname');
+    if (component.options.statusText) addRow('Status', null, component.options.statusText);
+    live.telemetry.subscribers.push((values) => {
+      for (const row of rows) row.value.textContent = values[row.valueKey] ?? '—';
+    });
   }
 
   function statRow(name, traced, el, bind) {
@@ -885,6 +1054,33 @@ function createRenderer(services) {
   }
 
   function buildWeather(component, el) {
+    // Compact: one horizontal strip — place · temp · sky · wind.
+    if (component.options.compact) {
+      el.classList.add('weather-strip');
+      const place = document.createElement('span');
+      place.className = 'wx-place display-case';
+      place.textContent = component.options.place || 'Weather';
+      const temp = document.createElement('span');
+      temp.className = 'wx-temp';
+      temp.textContent = '—°';
+      const desc = document.createElement('span');
+      desc.className = 'wx-desc display-case';
+      const wind = document.createElement('span');
+      wind.className = 'wx-wind';
+      el.append(place, temp, desc, wind);
+      const refresh = async () => {
+        if (!services.weather) return;
+        const res = await services.weather({ lat: component.options.lat, lon: component.options.lon });
+        if (!res.ok) { desc.textContent = 'weather unavailable'; return; }
+        temp.textContent = `${Math.round(res.tempC)}°C`;
+        desc.textContent = res.description;
+        wind.textContent = `wind ${Math.round(res.windKmh)} km/h`;
+      };
+      refresh();
+      live.timers.push(setInterval(refresh, WEATHER_REFRESH_MS));
+      return;
+    }
+
     const label = document.createElement('span');
     label.className = 'comp-label';
     label.textContent = component.options.place || 'Weather';
@@ -1017,6 +1213,9 @@ function createRenderer(services) {
     status: buildStatus,
     clock: buildClock,
     'analog-clock': buildAnalogClock,
+    'hud-clock': buildHudClock,
+    cores: buildCores,
+    sysinfo: buildSysinfo,
     stats: buildStats,
     meter: buildMeter,
     sparkline: buildSparkline,

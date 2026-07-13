@@ -37,7 +37,7 @@ async function init() {
   // Precedence: dev override (AEGIS_PACK) → persisted active pack → default.
   const requested = new URLSearchParams(location.search).get('pack');
   const active = await aegis.activeGet();
-  await loadPack(requested || active.id || 'aegis-holo');
+  await loadPack(requested || active.id || 'jarvis');
 
   // Hot reload: the active pack's directory changed on disk (author editing,
   // or the editor saving).

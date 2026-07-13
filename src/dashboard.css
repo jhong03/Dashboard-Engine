@@ -354,6 +354,78 @@ body {
 .agenda-item.done .agenda-text { text-decoration: line-through; }
 .agenda-empty { font-size: 0.78em; color: var(--muted); margin-top: 4px; }
 
+/* hud-clock: ring canvas with the digital readout floating in the centre */
+.hud-wrap { position: relative; flex: 1 1 auto; min-height: 0; }
+.hud-wrap .fill-canvas { position: absolute; inset: 0; height: 100%; }
+.hud-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.31cqw;
+  pointer-events: none;
+}
+.hud-time {
+  font-family: var(--font-mono);
+  font-size: 2.7em;
+  letter-spacing: 0.08em;
+  color: var(--accent-bright);
+  text-shadow: 0 0 24px var(--glow);
+  line-height: 1;
+}
+.hud-date {
+  font-size: 0.72em;
+  letter-spacing: 0.34em;
+  color: var(--muted);
+}
+
+/* cores: per-core load bars, bottom-aligned */
+.cores-strip {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  gap: 0.21cqw;
+  align-items: flex-end;
+}
+.cores-strip > span {
+  flex: 1;
+  min-height: 4%;
+  background: linear-gradient(to top, var(--accent), var(--accent-bright));
+  border-radius: 1px;
+  opacity: 0.85;
+  transition: height 0.8s ease;
+}
+
+/* sysinfo: key/value machine readouts */
+.comp-sysinfo { justify-content: flex-start; gap: 0; }
+.ds-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.62cqw;
+  font-family: var(--font-mono);
+  font-size: 0.78em;
+  padding: 0.22cqw 0;
+  flex-shrink: 0;
+}
+.ds-key { color: var(--muted); letter-spacing: 0.08em; }
+.ds-value { color: var(--accent-bright); text-align: right; }
+.ds-value.ds-ok { color: var(--accent); }
+
+/* weather, compact variant: a single horizontal strip */
+.comp-weather.weather-strip {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1.35cqw;
+}
+.wx-place { font-size: 0.78em; letter-spacing: 0.18em; color: var(--muted); }
+.wx-temp { font-family: var(--font-mono); font-size: 1.35em; color: var(--accent-bright); }
+.wx-desc { font-size: 0.92em; letter-spacing: 0.18em; }
+.wx-wind { font-family: var(--font-mono); font-size: 0.78em; color: var(--muted); }
+
 /* sparkline: label row carries a live readout on the right */
 .spark-head {
   display: flex;

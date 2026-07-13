@@ -1,0 +1,101 @@
+{
+  "schema": 2,
+  "id": "jarvis",
+  "name": "J.A.R.V.I.S",
+  "author": "jhong03",
+  "persona": {
+    "name": "J.A.R.V.I.S",
+    "tagline": "PERSONAL INTERFACE · v1.0",
+    "lines": [
+      "Good evening, sir. All systems are online. How may I assist you?",
+      "All monitoring systems active.",
+      "Standing by, sir.",
+      "At your service.",
+      "Interface nominal. Awaiting your instruction."
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#050C16",
+      "glass": "#0D1E32",
+      "accent": "#4DDDFF",
+      "accentBright": "#A5F2FF",
+      "muted": "#8FB6CC",
+      "warn": "#FFB23E",
+      "gold": "#E8C56A"
+    },
+    "typography": { "display": "rajdhani", "uppercase": true, "letterSpacing": 0.26 },
+    "texture": { "scanlines": 0.12, "grid": 0.33, "glow": 0.55, "vignette": 0.3 },
+    "shape": { "cornerNotches": true, "borderOpacity": 0.2, "panelOpacity": 0.78, "radius": 6 },
+    "ambience": { "effect": "none", "density": 0.5 }
+  },
+  "canvas": { "padding": 0 },
+  "components": [
+    { "type": "text", "rect": [1.4, 0.9, 26, 3.2], "z": 3,
+      "options": { "text": "J.A.R.V.I.S · PERSONAL INTERFACE" },
+      "style": { "panel": false, "align": "left", "fontScale": 0.8, "textColor": "#A5F2FF" } },
+
+    { "type": "text", "rect": [30, 0.9, 40, 3.2], "z": 3,
+      "options": { "text": "ALL SYSTEMS ARE ONLINE" },
+      "style": { "panel": false, "align": "center", "fontScale": 0.75, "textColor": "#4DDDFF", "glow": 0.8 } },
+
+    { "type": "sysinfo", "rect": [89, 0.7, 9.6, 3.6], "z": 3,
+      "options": { "memory": false, "disk": false, "uptime": false, "host": true },
+      "style": { "panel": false, "fontScale": 0.95 } },
+
+    { "type": "divider", "rect": [0, 4.3, 100, 1.6], "z": 1, "options": { "orientation": "h" } },
+
+    { "type": "text", "rect": [1.4, 6.5, 18.7, 66.5], "z": 1,
+      "options": { "text": "SYSTEM VITALS" },
+      "style": { "panel": true, "place": "top", "align": "left", "fontScale": 0.7, "textColor": "#4DDDFF" } },
+
+    { "type": "meter", "rect": [2.6, 10.5, 7.6, 14.5], "z": 2,
+      "options": { "bind": "cpu", "variant": "ring", "label": "CPU" },
+      "style": { "panel": false } },
+    { "type": "meter", "rect": [11.2, 10.5, 7.6, 14.5], "z": 2,
+      "options": { "bind": "mem", "variant": "ring", "label": "MEMORY" },
+      "style": { "panel": false } },
+    { "type": "meter", "rect": [2.6, 26, 7.6, 14.5], "z": 2,
+      "options": { "bind": "disk", "variant": "ring", "label": "STORAGE" },
+      "style": { "panel": false } },
+    { "type": "meter", "rect": [11.2, 26, 7.6, 14.5], "z": 2,
+      "options": { "bind": "battery", "variant": "ring", "label": "POWER" },
+      "style": { "panel": false } },
+
+    { "type": "cores", "rect": [2.6, 42, 16.3, 10], "z": 2,
+      "options": { "label": "CORE LOAD" },
+      "style": { "panel": false } },
+
+    { "type": "sysinfo", "rect": [2.6, 53.5, 16.3, 16], "z": 2,
+      "options": { "memory": true, "disk": true, "uptime": true, "host": false, "statusText": "ALL SYSTEMS NOMINAL" },
+      "style": { "panel": false } },
+
+    { "type": "hud-clock", "rect": [23, 7.5, 40, 57], "z": 2,
+      "options": { "format": "24h", "seconds": true, "showDate": true },
+      "style": { "panel": false } },
+
+    { "type": "weather", "rect": [28.5, 66.5, 29, 6.2], "z": 2,
+      "options": { "lat": 5.4141, "lon": 100.3288, "place": "GEORGE TOWN, PENANG", "compact": true },
+      "style": { "panel": true } },
+
+    { "type": "agenda", "rect": [78.6, 6.5, 20, 32.5], "z": 2,
+      "options": { "days": 7, "limit": 5, "label": "NOTIFICATIONS" },
+      "style": { "panel": true } },
+
+    { "type": "launcher", "rect": [78.6, 40.5, 20, 32.5], "z": 2,
+      "options": { "pinned": true, "recent": false, "running": false, "labels": true, "iconSize": "s", "label": "QUICK ACCESS" },
+      "style": { "panel": true } },
+
+    { "type": "status", "rect": [1.4, 75, 97.2, 17], "z": 2,
+      "options": {},
+      "style": { "panel": true, "align": "left", "fontScale": 0.62, "place": "top" } },
+
+    { "type": "text", "rect": [1.4, 93.2, 84.2, 5.2], "z": 2,
+      "options": { "text": "❯  Ask anything, or give me a task on this machine…" },
+      "style": { "panel": true, "align": "left", "font": "mono", "fontScale": 0.72, "textColor": "#8FB6CC", "notches": false } },
+
+    { "type": "text", "rect": [86.6, 93.2, 12, 5.2], "z": 2,
+      "options": { "text": "EXECUTE" },
+      "style": { "panel": true, "align": "center", "fontScale": 0.72, "textColor": "#4DDDFF", "notches": false } }
+  ]
+}

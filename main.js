@@ -122,7 +122,7 @@ function createEditorWindow(packId) {
     },
   });
   editorWindow.loadFile(path.join(__dirname, 'src', 'editor.html'), {
-    query: { pack: packId || 'aegis-holo' },
+    query: { pack: packId || 'jarvis' },
   });
   editorWindow.on('closed', () => { editorWindow = null; });
 }
@@ -219,7 +219,7 @@ function toggleDesktop() {
 // habits, Dashboard Engine contents.
 function buildTrayMenu() {
   const listed = packs.listPacks(__dirname, USER_DIR);
-  const active = settings.getActivePack(USER_DIR) || 'aegis-holo';
+  const active = settings.getActivePack(USER_DIR) || 'jarvis';
   return Menu.buildFromTemplate([
     { label: 'Open Manager', click: createManagerWindow },
     { label: 'Voice Tuning', click: createPanelWindow },
@@ -294,7 +294,7 @@ function openFirstWindows() {
   createDashboardWindow(); // the desktop persona, immediately
   createManagerWindow();   // the engine app: content navigation + selection
   const editAt = process.argv.indexOf('--edit');
-  if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'aegis-holo');
+  if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'jarvis');
 }
 
 // Fail soft (CLAUDE.md): a stray error in main must never crash the engine
@@ -314,7 +314,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     if (WANT_PANEL) return;
     // `dashboard-engine --edit <id>` from a second launch opens the editor here.
     const editAt = argv.indexOf('--edit');
-    if (editAt !== -1) createEditorWindow(argv[editAt + 1] || 'aegis-holo');
+    if (editAt !== -1) createEditorWindow(argv[editAt + 1] || 'jarvis');
     else createManagerWindow();
   });
 

@@ -16,7 +16,10 @@ const PALETTE = [
   { type: 'status', label: 'Persona status', hint: 'name · tagline · ticker' },
   { type: 'clock', label: 'Clock', hint: 'digital time + date' },
   { type: 'analog-clock', label: 'Analog clock', hint: 'drawn clock face' },
+  { type: 'hud-clock', label: 'HUD clock', hint: 'rotating reactor rings' },
   { type: 'stats', label: 'Stats', hint: 'labelled telemetry bars' },
+  { type: 'cores', label: 'Core load', hint: 'per-core CPU bars' },
+  { type: 'sysinfo', label: 'System info', hint: 'memory / disk / uptime rows' },
   { type: 'meter', label: 'Meter', hint: 'one value, ring or bar' },
   { type: 'sparkline', label: 'Sparkline', hint: '3-minute history graph' },
   { type: 'text', label: 'Text', hint: 'free text block' },
@@ -35,6 +38,7 @@ const DEFAULT_RECTS = {
   'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30],
+  'hud-clock': [10, 10, 24, 42], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
 };
 
 function defaultOptions(type, assets) {
@@ -51,9 +55,12 @@ function defaultOptions(type, assets) {
     'divider': { orientation: 'h' },
     'calendar': { weekStart: 'mon', showReminders: true },
     'countdown': { target: in30days, label: 'Countdown' },
-    'weather': { lat: 0, lon: 0, place: null, details: true },
+    'weather': { lat: 0, lon: 0, place: null, details: true, compact: false },
     'agenda': { days: 7, limit: 6, label: null },
     'launcher': { pinned: true, recent: true, running: false, labels: true, iconSize: 'm', label: null },
+    'hud-clock': { format: '24h', seconds: true, showDate: true },
+    'cores': { label: null },
+    'sysinfo': { memory: true, disk: true, uptime: true, host: false, statusText: null },
   }[type];
 }
 
@@ -371,11 +378,21 @@ function optionFields(component, panel) {
   const set = (key) => (v) => { o[key] = v; renderAll(); };
   const type = component.type;
 
-  if (type === 'clock') {
+  if (type === 'clock' || type === 'hud-clock') {
     panel.append(
       field('Format', selectControl(o.format, [['24h', '24-hour'], ['12h', '12-hour']], set('format'))),
       checkControl('Show seconds', o.seconds, set('seconds')),
       checkControl('Show date', o.showDate, set('showDate')),
+    );
+  } else if (type === 'cores') {
+    panel.append(field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Core load')));
+  } else if (type === 'sysinfo') {
+    panel.append(
+      checkControl('Memory', o.memory !== false, set('memory')),
+      checkControl('Disk free', o.disk !== false, set('disk')),
+      checkControl('Uptime', o.uptime !== false, set('uptime')),
+      checkControl('Host name', o.host === true, set('host')),
+      field('Status line', textControl(o.statusText, (v) => { o.statusText = v || null; renderAll(); }, 'ALL SYSTEMS NOMINAL')),
     );
   } else if (type === 'analog-clock') {
     panel.append(
@@ -449,6 +466,7 @@ function optionFields(component, panel) {
       field('Longitude', numberControl(o.lon, -180, 180, 0.0001, set('lon'))),
       field('Place label', textControl(o.place, (v) => { o.place = v || null; renderAll(); }, 'Weather')),
       checkControl('Hi/lo + wind line', o.details !== false, set('details')),
+      checkControl('Compact strip (one line)', o.compact === true, set('compact')),
     );
   } else if (type === 'launcher') {
     panel.append(
@@ -647,7 +665,7 @@ async function save(applyAfter) {
 // ── Init ────────────────────────────────────────────────────────────────────
 
 async function init() {
-  const packId = new URLSearchParams(location.search).get('pack') || 'aegis-holo';
+  const packId = new URLSearchParams(location.search).get('pack') || 'jarvis';
   const loaded = await aegis.packLoad(packId);
   if (!loaded.ok) return setStatus(loaded.error, true);
   const all = await aegis.assetsAll(packId);

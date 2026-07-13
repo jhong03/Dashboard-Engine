@@ -837,7 +837,7 @@ async function refreshLibrary() {
 
 async function init() {
   const active = await aegis.activeGet();
-  library.activeId = active.id || 'aegis-holo';
+  library.activeId = active.id || 'jarvis';
 
   // The tray can switch packs too — keep the indicator and badges honest.
   aegis.onActiveChanged((data) => {
