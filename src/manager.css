@@ -97,6 +97,13 @@ body {
 .thumb-skin { position: absolute; inset: 0; overflow: hidden; }
 .thumb .comp, .thumb .comp *,
 .detail-preview .comp, .detail-preview .comp * { pointer-events: none; }
+
+/* Cards are STILLS: no ticker cursor blink, no bar transitions — only the
+   sidebar preview stays in motion. */
+.thumb .thumb-skin *, .thumb .thumb-skin *::before, .thumb .thumb-skin *::after {
+  animation: none !important;
+  transition: none !important;
+}
 .card .card-name {
   position: absolute;
   left: 0; right: 0; bottom: 0;

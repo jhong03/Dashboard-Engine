@@ -67,7 +67,7 @@ function rgba(hex, alpha) {
 // the editor's canvas div). Vars cascade from it; textures/wallpaper attach
 // to it via the .skin-root CSS hooks.
 
-function applySkin(root, pack, assets) {
+function applySkin(root, pack, assets, opts) {
   const { palette, typography, texture, shape } = pack.skin;
   const s = root.style;
 
@@ -97,7 +97,7 @@ function applySkin(root, pack, assets) {
   s.backgroundColor = palette.void;
   s.backgroundImage = pack.skin.wallpaper && assets[pack.skin.wallpaper] ? `url(${assets[pack.skin.wallpaper]})` : 'none';
 
-  applyAmbience(root, pack);
+  applyAmbience(root, pack, opts);
 }
 
 // ── Ambience ────────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ function applySkin(root, pack, assets) {
 
 const AMBIENCE_COLOR_KEY = { embers: 'gold', dust: 'muted', snow: 'accentBright' };
 
-function applyAmbience(root, pack) {
+function applyAmbience(root, pack, opts) {
   const prev = root.__aegisAmbience;
   if (prev) {
     cancelAnimationFrame(prev.raf);
@@ -191,7 +191,10 @@ function applyAmbience(root, pack) {
     }
   };
 
-  const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Static thumbnails (gallery cards) get one scattered frame, no loop —
+  // same rendering path the OS reduced-motion preference takes.
+  const reduced = (opts && opts.staticAmbience === true)
+    || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const resize = () => {
     canvas.width = Math.max(1, canvas.clientWidth * devicePixelRatio);
     canvas.height = Math.max(1, canvas.clientHeight * devicePixelRatio);

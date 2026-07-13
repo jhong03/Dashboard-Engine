@@ -84,8 +84,9 @@ async function loadPackFull(id) {
 }
 
 // Build the same skin-root / canvas-outer / canvas nesting the desktop uses,
-// inside any container, and render the pack into it.
-function renderPackInto(container, pack, assets, renderer) {
+// inside any container, and render the pack into it. Cards pass
+// staticAmbience so particles draw one frame instead of animating.
+function renderPackInto(container, pack, assets, renderer, opts) {
   container.textContent = '';
   const skin = document.createElement('div');
   skin.className = 'thumb-skin';
@@ -96,7 +97,7 @@ function renderPackInto(container, pack, assets, renderer) {
   outer.appendChild(canvas);
   skin.appendChild(outer);
   container.appendChild(skin);
-  AegisComponents.applySkin(skin, pack, assets);
+  AegisComponents.applySkin(skin, pack, assets, opts);
   renderer.render(canvas, pack, assets);
 }
 
@@ -126,7 +127,7 @@ async function realThumbInto(thumb, id, fallbackPack) {
     return;
   }
   const renderer = AegisComponents.createRenderer(previewServices());
-  renderPackInto(thumb, loaded.pack, loaded.assets, renderer);
+  renderPackInto(thumb, loaded.pack, loaded.assets, renderer, { staticAmbience: true });
   cardPreviews.push({ renderer, freezeTimer: setTimeout(() => renderer.destroy(), CARD_FREEZE_MS) });
 }
 
