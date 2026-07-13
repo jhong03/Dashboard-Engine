@@ -53,9 +53,18 @@ const COMMON_WEB_PREFERENCES = {
   sandbox: true,
 };
 
+// On Windows, focus() is a no-op for minimized OR hidden windows (a process
+// launched with a hide-window startup hint hides its first window) — always
+// restore + show first, or the tray click "does nothing".
+function bringToFront(win) {
+  if (win.isMinimized()) win.restore();
+  win.show();
+  win.focus();
+}
+
 function createPanelWindow() {
   if (panelWindow) {
-    panelWindow.focus();
+    bringToFront(panelWindow);
     return;
   }
   panelWindow = new BrowserWindow({
@@ -76,7 +85,7 @@ function createPanelWindow() {
 
 function createManagerWindow() {
   if (managerWindow) {
-    managerWindow.focus();
+    bringToFront(managerWindow);
     return;
   }
   managerWindow = new BrowserWindow({
@@ -98,7 +107,7 @@ function createManagerWindow() {
 
 function createEditorWindow(packId) {
   if (editorWindow) {
-    editorWindow.focus();
+    bringToFront(editorWindow);
     return;
   }
   editorWindow = new BrowserWindow({
@@ -233,7 +242,8 @@ function buildTrayMenu() {
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'resources', 'tray-icon.png')));
   tray.setToolTip('Dashboard Engine');
-  tray.on('click', createManagerWindow);
+  tray.on('click', () => createManagerWindow());
+  tray.on('double-click', () => createManagerWindow());
   tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
 }
 
