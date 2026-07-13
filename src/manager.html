@@ -7,6 +7,10 @@
   <meta http-equiv="Content-Security-Policy"
         content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:">
   <title>Dashboard Engine</title>
+  <!-- dashboard.css first: pack previews style themselves through it, and
+       chrome.css/manager.css loading later win any shared-token collisions
+       for the app UI (same pattern as the editor). -->
+  <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="chrome.css">
   <link rel="stylesheet" href="manager.css">
 </head>
@@ -128,6 +132,7 @@
     </form>
   </div>
 
+  <script src="components.js"></script>
   <script src="manager.js"></script>
 </body>
 </html>

@@ -10,6 +10,12 @@ contextBridge.exposeInMainWorld('aegis', {
   version: '0.4.0',
 
   libraryState: () => ipcRenderer.invoke('aegis:library:state'),
+  // Live previews render packs through the shared renderer, so the manager
+  // needs the same read-only data services the desktop surface has.
+  packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
+  stats: () => ipcRenderer.invoke('aegis:stats'),
+  weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
+  display: () => ipcRenderer.invoke('aegis:display'),
   installFile: () => ipcRenderer.invoke('aegis:packs:installFile'),
   exportPack: (id) => ipcRenderer.invoke('aegis:packs:export', String(id)),
   uninstallPack: (id) => ipcRenderer.invoke('aegis:packs:uninstall', String(id)),
@@ -57,7 +63,7 @@ contextBridge.exposeInMainWorld('aegis', {
   },
 
   // Launcher pins — managed here, displayed by the wallpaper component.
-  launcherState: () => ipcRenderer.invoke('aegis:launcher:state', { running: false }),
+  launcherState: (opts) => ipcRenderer.invoke('aegis:launcher:state', { running: Boolean(opts && opts.running) }),
   launcherApps: () => ipcRenderer.invoke('aegis:launcher:apps'),
   launcherPinApp: (id) => ipcRenderer.invoke('aegis:launcher:pinApp', String(id)),
   launcherPinPath: (kind) => ipcRenderer.invoke('aegis:launcher:pinPath', { kind: String(kind) }),

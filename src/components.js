@@ -207,6 +207,12 @@ function applyAmbience(root, pack) {
 
   let last = 0;
   const loop = (t) => {
+    // Self-terminate when the skin root is discarded (gallery re-renders,
+    // preview swaps) — nobody re-applies skins to detached DOM.
+    if (!canvas.isConnected) {
+      state.observer.disconnect();
+      return;
+    }
     state.raf = requestAnimationFrame(loop);
     if (t - last < 33) return; // ~30 fps is plenty for drift
     const dt = Math.min(t - last, 100) / 1000;

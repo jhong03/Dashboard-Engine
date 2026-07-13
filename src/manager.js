@@ -53,8 +53,103 @@ function setActiveIndicator() {
 
 // ── Thumbnails ──────────────────────────────────────────────────────────────
 
+// Real previews: local packs render through the SAME module as the desktop
+// (components.js), scaled down by cqw units. Card thumbs freeze after a few
+// telemetry ticks; the detail sidebar preview stays fully live (in motion).
+
+const packCache = new Map();      // id → { pack, assets } | null (load failed)
+const cardPreviews = [];          // frozen-card renderers awaiting cleanup
+let detailPreview = null;         // the one live sidebar renderer
+let displayAspect = null;         // "width / height" of the primary display
+const CARD_FREEZE_MS = 3500;      // enough ticks for bars/sparklines to fill
+
+function previewServices() {
+  return {
+    stats: () => aegis.stats(),
+    weather: (opts) => aegis.weather(opts),
+    reminders: (window) => aegis.remindersList(window),
+    launcher: { state: (opts) => aegis.launcherState(opts) }, // no launch() → tiles inert
+  };
+}
+
+async function loadPackFull(id) {
+  if (packCache.has(id)) return packCache.get(id);
+  let loaded = null;
+  try {
+    const res = await aegis.packLoad(id);
+    if (res.ok) loaded = { pack: res.pack, assets: res.assets };
+  } catch { /* fall back to the blueprint */ }
+  packCache.set(id, loaded);
+  return loaded;
+}
+
+// Build the same skin-root / canvas-outer / canvas nesting the desktop uses,
+// inside any container, and render the pack into it.
+function renderPackInto(container, pack, assets, renderer) {
+  container.textContent = '';
+  const skin = document.createElement('div');
+  skin.className = 'thumb-skin';
+  const outer = document.createElement('div');
+  outer.className = 'canvas-outer';
+  const canvas = document.createElement('div');
+  canvas.className = 'canvas';
+  outer.appendChild(canvas);
+  skin.appendChild(outer);
+  container.appendChild(skin);
+  AegisComponents.applySkin(skin, pack, assets);
+  renderer.render(canvas, pack, assets);
+}
+
+function destroyCardPreviews() {
+  for (const entry of cardPreviews) {
+    clearTimeout(entry.freezeTimer);
+    entry.renderer.destroy();
+  }
+  cardPreviews.length = 0;
+}
+
+function destroyDetailPreview() {
+  if (detailPreview) {
+    detailPreview.destroy();
+    detailPreview = null;
+  }
+}
+
+// Card thumb: real render, frozen shortly after so N cards don't each keep
+// polling telemetry forever. Ambience keeps drifting — it self-terminates
+// with the DOM. Falls back to the blueprint if the pack can't load.
+async function realThumbInto(thumb, id, fallbackPack) {
+  const loaded = await loadPackFull(id);
+  if (!thumb.isConnected) return; // gallery re-rendered while we loaded
+  if (!loaded) {
+    if (fallbackPack) blueprintInto(thumb, fallbackPack);
+    return;
+  }
+  const renderer = AegisComponents.createRenderer(previewServices());
+  renderPackInto(thumb, loaded.pack, loaded.assets, renderer);
+  cardPreviews.push({ renderer, freezeTimer: setTimeout(() => renderer.destroy(), CARD_FREEZE_MS) });
+}
+
+// Sidebar: the actual pack, actually running — clock ticking, history
+// filling, ambience drifting — at the real display's aspect ratio.
+async function livePreviewInto(preview, id) {
+  if (!displayAspect) {
+    try {
+      const display = await aegis.display();
+      if (display.ok) displayAspect = `${display.width} / ${display.height}`;
+    } catch { /* keep the CSS default aspect */ }
+  }
+  const loaded = await loadPackFull(id);
+  if (!preview.isConnected || !loaded) return false;
+  if (displayAspect) preview.style.aspectRatio = displayAspect;
+  destroyDetailPreview();
+  detailPreview = AegisComponents.createRenderer(previewServices());
+  renderPackInto(preview, loaded.pack, loaded.assets, detailPreview);
+  return true;
+}
+
 // Blueprint thumbnail: the pack's palette + component rects drawn as glass
-// boxes. Cheap, needs no assets, and honestly previews the layout.
+// boxes. Cheap, needs no assets — the fallback when a real render can't run.
 function blueprintInto(container, pack) {
   const palette = pack.skin.palette;
   container.style.background =
@@ -128,6 +223,7 @@ function isSelected(kind, key) {
 
 function renderGallery() {
   const gallery = $('gallery');
+  destroyCardPreviews(); // the DOM below is about to be discarded
   gallery.textContent = '';
   $('reg-add').classList.toggle('hidden', library.tab !== 'browse');
   $('planner').classList.toggle('hidden', library.tab !== 'planner');
@@ -162,7 +258,7 @@ function renderGallery() {
           badge: item.id === library.activeId ? 'On desktop' : (origin === 'builtin' ? 'Built-in' : null),
           badgeClass: item.id === library.activeId ? 'badge-active' : null,
           selected: isSelected('local', item.id),
-          buildThumb: (thumb) => blueprintInto(thumb, item.pack),
+          buildThumb: (thumb) => realThumbInto(thumb, item.id, item.pack),
           onSelect: () => { library.selected = { kind: 'local', item }; renderGallery(); renderDetail(); },
         }));
       }
@@ -200,7 +296,11 @@ function renderGallery() {
         badge: update ? 'Update' : entry.installed ? 'Installed' : null,
         badgeClass: update ? 'badge-active' : null,
         selected: isSelected('remote', `${url}|${entry.id}`),
-        buildThumb: (thumb) => monogramInto(thumb, entry.name),
+        buildThumb: (thumb) => {
+          // Installed registry packs exist locally — show the real thing.
+          if (entry.installed) realThumbInto(thumb, entry.id, null);
+          else monogramInto(thumb, entry.name);
+        },
         onSelect: () => { library.selected = { kind: 'remote', url, entry, update }; renderGallery(); renderDetail(); },
       }));
     }
@@ -594,6 +694,7 @@ function detailLine(text) {
 
 async function renderDetail() {
   const detail = $('lib-detail');
+  destroyDetailPreview();
   detail.textContent = '';
   const s = library.selected;
   if (!s) {
@@ -611,7 +712,8 @@ async function renderDetail() {
 
   if (s.kind === 'local') {
     const { item } = s;
-    blueprintInto(preview, item.pack);
+    blueprintInto(preview, item.pack); // instant placeholder…
+    livePreviewInto(preview, item.id); // …replaced by the live render
     name.textContent = item.name;
     detail.append(preview, name);
     const meta = item.meta || {};
@@ -660,6 +762,7 @@ async function renderDetail() {
 
   const { url, entry, update } = s;
   monogramInto(preview, entry.name);
+  if (entry.installed) livePreviewInto(preview, entry.id);
   name.textContent = entry.name;
   detail.append(preview, name);
   detail.appendChild(detailLine(`${entry.id} · v${entry.version} · by ${entry.author || 'unknown'}`));
@@ -716,6 +819,7 @@ async function browseRegistry(url) {
 async function refreshLibrary() {
   const res = await aegis.libraryState();
   if (!res.ok) return libStatus(res.error, true);
+  packCache.clear(); // packs may have been installed/edited/uninstalled
   library.localPacks = res.packs;
   library.registries = res.registries;
   if (!library.selected && library.tab === 'installed' && library.localPacks.length > 0) {

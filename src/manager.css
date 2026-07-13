@@ -2,6 +2,7 @@
    Blueprint thumbnails inside cards stay colourful: they preview CONTENT. */
 
 body {
+  font-weight: 400; /* dashboard.css's pack-content body weight must not leak */
   display: flex;
   flex-direction: column;
 }
@@ -90,6 +91,12 @@ body {
 .card .thumb { position: absolute; inset: 0; }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; }
 .card .thumb .bp-comp { position: absolute; border: 1px solid; border-radius: 2px; }
+
+/* Real pack renders inside thumbs/preview: the skin root fills its box and
+   components never take input (the card/preview is the click target). */
+.thumb-skin { position: absolute; inset: 0; overflow: hidden; }
+.thumb .comp, .thumb .comp *,
+.detail-preview .comp, .detail-preview .comp * { pointer-events: none; }
 .card .card-name {
   position: absolute;
   left: 0; right: 0; bottom: 0;
