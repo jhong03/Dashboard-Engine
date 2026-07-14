@@ -111,6 +111,64 @@ function clamp(v, min, max) {
   return Math.min(max, Math.max(min, v));
 }
 
+// Trim floating-point noise so snapped rects stay clean in the saved JSON
+// (e.g. 10.000000000000002 → 10).
+function tidy(v) {
+  return Math.round(v * 1e4) / 1e4;
+}
+
+// ── Smart alignment guides (PowerPoint-style) ──────────────────────────────
+// While dragging/resizing, snap the moving edges & centres to the canvas
+// edges/centre and to every OTHER component's left/centre/right and
+// top/middle/bottom, and draw a guide line where they meet. Hold Alt to
+// move freely (guides + snapping off).
+
+const SNAP_PX = 6;   // catch distance in screen pixels
+const GUIDE_EPS = 0.06; // % tolerance for "this anchor is on the line now"
+
+function alignmentTargets(excludeIndex) {
+  const xs = [0, 50, 100];
+  const ys = [0, 50, 100];
+  state.pack.components.forEach((c, i) => {
+    if (i === excludeIndex) return;
+    const [x, y, w, h] = c.rect;
+    xs.push(x, x + w / 2, x + w);
+    ys.push(y, y + h / 2, y + h);
+  });
+  return { xs, ys };
+}
+
+// Nearest target within threshold, or null.
+function nearestTarget(value, targets, threshold) {
+  let best = null;
+  for (const t of targets) {
+    const d = Math.abs(t - value);
+    if (d <= threshold && (best === null || d < best.d)) best = { t, d };
+  }
+  return best ? best.t : null;
+}
+
+function clearGuides() {
+  overlayEl().querySelectorAll('.guide').forEach((g) => g.remove());
+}
+
+function drawGuides(guidesX, guidesY) {
+  clearGuides();
+  const overlay = overlayEl();
+  for (const gx of guidesX) {
+    const line = document.createElement('div');
+    line.className = 'guide guide-v';
+    line.style.left = `${gx}%`;
+    overlay.appendChild(line);
+  }
+  for (const gy of guidesY) {
+    const line = document.createElement('div');
+    line.className = 'guide guide-h';
+    line.style.top = `${gy}%`;
+    overlay.appendChild(line);
+  }
+}
+
 // ── Rendering ───────────────────────────────────────────────────────────────
 
 function renderAll() {
@@ -178,11 +236,41 @@ function beginDrag(event, index, hit) {
   const startX = event.clientX, startY = event.clientY;
   hit.setPointerCapture(event.pointerId);
 
+  const w = orig[2], h = orig[3];
   const move = (e) => {
     const dx = ((e.clientX - startX) / bounds.width) * 100;
     const dy = ((e.clientY - startY) / bounds.height) * 100;
-    component.rect[0] = snap(clamp(orig[0] + dx, 0, 100 - orig[2]));
-    component.rect[1] = snap(clamp(orig[1] + dy, 0, 100 - orig[3]));
+    let x = clamp(orig[0] + dx, 0, 100 - w);
+    let y = clamp(orig[1] + dy, 0, 100 - h);
+
+    if (e.altKey) {
+      x = snap(x); y = snap(y);
+      clearGuides();
+    } else {
+      const thX = (SNAP_PX / bounds.width) * 100;
+      const thY = (SNAP_PX / bounds.height) * 100;
+      const targets = alignmentTargets(index);
+      // Best snap across left/centre/right (x) and top/middle/bottom (y).
+      let bestX = null, bestY = null;
+      for (const a of [x, x + w / 2, x + w]) {
+        const t = nearestTarget(a, targets.xs, thX);
+        if (t !== null && (bestX === null || Math.abs(t - a) < Math.abs(bestX))) bestX = t - a;
+      }
+      for (const a of [y, y + h / 2, y + h]) {
+        const t = nearestTarget(a, targets.ys, thY);
+        if (t !== null && (bestY === null || Math.abs(t - a) < Math.abs(bestY))) bestY = t - a;
+      }
+      x = bestX !== null ? clamp(x + bestX, 0, 100 - w) : snap(x);
+      y = bestY !== null ? clamp(y + bestY, 0, 100 - h) : snap(y);
+      // A guide for every edge/centre that now lands on a target.
+      const gX = [], gY = [];
+      for (const a of [x, x + w / 2, x + w]) { const t = nearestTarget(a, targets.xs, GUIDE_EPS); if (t !== null && !gX.includes(t)) gX.push(t); }
+      for (const a of [y, y + h / 2, y + h]) { const t = nearestTarget(a, targets.ys, GUIDE_EPS); if (t !== null && !gY.includes(t)) gY.push(t); }
+      drawGuides(gX, gY);
+    }
+
+    component.rect[0] = tidy(x);
+    component.rect[1] = tidy(y);
     // Live-move the rendered element + overlay boxes without a full re-render.
     positionByRect(state.renderedEls[index], component.rect);
     positionByRect(hit, component.rect);
@@ -192,6 +280,7 @@ function beginDrag(event, index, hit) {
   const up = () => {
     hit.removeEventListener('pointermove', move);
     hit.removeEventListener('pointerup', up);
+    clearGuides();
     renderAll(); // commit (some components re-measure canvases on size)
   };
   hit.addEventListener('pointermove', move);
@@ -225,7 +314,27 @@ function beginResize(event, index, dir) {
       h = h + (y - ny);
       y = ny;
     }
-    component.rect = [snap(x), snap(y), snap(w), snap(h)];
+
+    // Snap the edge(s) being dragged to alignment targets; grid-snap the rest.
+    let keepX = false, keepY = false, keepW = false, keepH = false;
+    if (e.altKey) {
+      clearGuides();
+    } else {
+      const thX = (SNAP_PX / bounds.width) * 100;
+      const thY = (SNAP_PX / bounds.height) * 100;
+      const targets = alignmentTargets(index);
+      const gX = [], gY = [];
+      if (dir.includes('e')) { const t = nearestTarget(x + w, targets.xs, thX); if (t !== null) { w = clamp(t - x, MIN_SIZE, 100 - x); keepW = true; gX.push(t); } }
+      if (dir.includes('w')) { const t = nearestTarget(x, targets.xs, thX); if (t !== null) { const nx = clamp(t, 0, x + w - MIN_SIZE); w = w + (x - nx); x = nx; keepX = keepW = true; gX.push(t); } }
+      if (dir.includes('s')) { const t = nearestTarget(y + h, targets.ys, thY); if (t !== null) { h = clamp(t - y, MIN_SIZE, 100 - y); keepH = true; gY.push(t); } }
+      if (dir.includes('n')) { const t = nearestTarget(y, targets.ys, thY); if (t !== null) { const ny = clamp(t, 0, y + h - MIN_SIZE); h = h + (y - ny); y = ny; keepY = keepH = true; gY.push(t); } }
+      drawGuides(gX, gY);
+    }
+
+    component.rect = [
+      tidy(keepX ? x : snap(x)), tidy(keepY ? y : snap(y)),
+      tidy(keepW ? w : snap(w)), tidy(keepH ? h : snap(h)),
+    ];
     positionByRect(state.renderedEls[index], component.rect);
     const sel = overlay.querySelector('.sel-box');
     if (sel) positionByRect(sel, component.rect);
@@ -233,6 +342,7 @@ function beginResize(event, index, dir) {
   const up = () => {
     handle.removeEventListener('pointermove', move);
     handle.removeEventListener('pointerup', up);
+    clearGuides();
     renderAll();
   };
   handle.addEventListener('pointermove', move);
@@ -761,7 +871,7 @@ async function init() {
   $('btn-import-image').addEventListener('click', importImageAsComponent);
 
   renderAll();
-  setStatus('Drag components from the palette. Click to select, arrow keys to nudge, Delete to remove.');
+  setStatus('Drag to move · guides snap to other components’ edges & centre · hold Alt to move freely · arrow keys nudge · Delete removes.');
 }
 
 init().catch((err) => setStatus(`The editor failed to start: ${err.message}`, true));

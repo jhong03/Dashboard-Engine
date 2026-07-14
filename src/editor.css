@@ -109,6 +109,12 @@ body.editor-body {
 .handle.w { left: -5px; top: calc(50% - 4px); cursor: ew-resize; }
 .handle.e { right: -5px; top: calc(50% - 4px); cursor: ew-resize; }
 
+/* Smart alignment guides while dragging/resizing (PowerPoint-style). A vivid
+   magenta so it reads over any pack's own colours. */
+.guide { position: absolute; pointer-events: none; z-index: 20; }
+.guide-v { top: 0; bottom: 0; border-left: 1px solid #ff3d87; box-shadow: 0 0 3px rgba(255, 61, 135, 0.7); }
+.guide-h { left: 0; right: 0; border-top: 1px solid #ff3d87; box-shadow: 0 0 3px rgba(255, 61, 135, 0.7); }
+
 /* ── Inspector ──────────────────────────────────────────────────────────── */
 
 .ed-inspector {
