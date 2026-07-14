@@ -188,6 +188,23 @@ function focusAssistant() {
   else assistantWindow.webContents.once('did-finish-load', () => assistantWindow.webContents.send('aegis:console:summon'));
 }
 
+// The console bar is OPT-IN per pack: it appears only when the active pack
+// includes an `assistant` component (visible/placeable in the editor). Packs
+// without one get no console. Called on startup and on every pack change.
+function syncConsole(packId) {
+  let hasConsole = false;
+  try {
+    const loaded = packs.loadPack(__dirname, USER_DIR, packId);
+    hasConsole = loaded.pack.components.some((c) => c.type === 'assistant');
+  } catch { /* unreadable pack → no console */ }
+  if (hasConsole) {
+    createAssistantWindow();
+    if (assistantWindow && !assistantWindow.isVisible()) assistantWindow.showInactive();
+  } else if (assistantWindow && !assistantWindow.isDestroyed()) {
+    assistantWindow.hide();
+  }
+}
+
 // Reparent the dashboard under the shell's wallpaper layer. The hwnd is
 // program-generated; the PowerShell argv is fixed (CLAUDE.md shell rule).
 function attachToDesktop(win) {
@@ -261,6 +278,7 @@ function notifyActivePack(id) {
   for (const win of [dashboardWindow, managerWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send('aegis:active:changed', { id });
   }
+  syncConsole(id); // show/hide the console bar to match the new pack
 }
 
 function setActivePackFromTray(id) {
@@ -372,7 +390,8 @@ function openFirstWindows() {
   }
   createDashboardWindow(); // the desktop persona, immediately
   createManagerWindow();   // the engine app: content navigation + selection
-  createAssistantWindow(); // the always-visible console bar
+  // Console matches whatever the desktop renders (DE_PACK override or active).
+  syncConsole(envFlag('PACK') || settings.getActivePack(USER_DIR) || 'jarvis');
   const editAt = process.argv.indexOf('--edit');
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'jarvis');
 }

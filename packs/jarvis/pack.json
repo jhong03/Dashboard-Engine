@@ -532,6 +532,27 @@
         "iconSize": "m",
         "label": null
       }
+    },
+    {
+      "type": "assistant",
+      "rect": [
+        1,
+        93.5,
+        98,
+        5.5
+      ],
+      "z": 2,
+      "style": {
+        "panel": true,
+        "font": "mono",
+        "fontScale": 0.72,
+        "notches": false,
+        "padding": 6
+      },
+      "options": {
+        "label": "Ask anything, or give me a task on this machine…",
+        "button": "EXECUTE"
+      }
     }
   ],
   "name": "J.A.R.V.I.S"
