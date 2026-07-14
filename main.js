@@ -128,30 +128,44 @@ function createEditorWindow(packId) {
   editorWindow.on('closed', () => { editorWindow = null; });
 }
 
-// The assistant chat: a focusable, frameless panel anchored along the bottom
-// of the primary display, over where the pack's console sits. The desktop
-// surface is focusable:false and can't take keyboard input, so the chat is
-// its own real window — summoned by clicking the desktop console.
-function createAssistantWindow() {
-  if (assistantWindow) {
-    if (assistantWindow.isMinimized()) assistantWindow.restore();
-    assistantWindow.show();
-    assistantWindow.focus();
-    return;
-  }
+// The assistant console: a persistent, always-visible docked bar along the
+// bottom of the primary display (like the original JARVIS console) — NOT a
+// popup. The desktop surface is focusable:false and can't take keyboard
+// input, so the console is its own real window. It starts as a slim bar and
+// expands upward to show the conversation; it never auto-hides.
+const CONSOLE_COLLAPSED_H = 58;
+const CONSOLE_EXPANDED_H = 440;
+
+// Full-width strip flush to the bottom of the work area (above the taskbar) —
+// covers the pack's own console footer, like the original JARVIS console.
+function consoleBounds(height) {
   const area = screen.getPrimaryDisplay().workArea;
-  const width = Math.min(1100, area.width - 80);
-  const height = 460;
-  assistantWindow = new BrowserWindow({
-    x: Math.round(area.x + (area.width - width) / 2),
-    y: Math.round(area.y + area.height - height - 24),
-    width,
+  return {
+    x: area.x,
+    y: area.y + area.height - height,
+    width: area.width,
     height,
+  };
+}
+
+// Grow/shrink the console in place, staying anchored to the bottom.
+function resizeConsole(expanded) {
+  if (!assistantWindow || assistantWindow.isDestroyed()) return;
+  assistantWindow.setBounds(consoleBounds(expanded ? CONSOLE_EXPANDED_H : CONSOLE_COLLAPSED_H));
+}
+
+function createAssistantWindow() {
+  if (assistantWindow) return;
+  assistantWindow = new BrowserWindow({
+    ...consoleBounds(CONSOLE_COLLAPSED_H),
     frame: false,
     transparent: true,
     resizable: false,
+    movable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
+    focusable: true,
+    show: false,
     backgroundColor: '#00000000',
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
@@ -159,17 +173,19 @@ function createAssistantWindow() {
     },
   });
   assistantWindow.loadFile(path.join(__dirname, 'src', 'assistant.html'));
-  assistantWindow.once('ready-to-show', () => {
-    assistantWindow.show();
-    assistantWindow.focus();
-  });
-  // A tool-style window: clicking away dismisses the chat, engine lives on.
-  // (Skip auto-hide during a DE_SHOT capture so it can be screenshotted.)
-  assistantWindow.on('blur', () => {
-    if (envFlag('SHOT')) return;
-    if (assistantWindow && !assistantWindow.webContents.isDevToolsOpened()) assistantWindow.hide();
-  });
+  // Visible from the start, but don't steal focus — the user clicks to type.
+  assistantWindow.once('ready-to-show', () => assistantWindow.showInactive());
   assistantWindow.on('closed', () => { assistantWindow = null; });
+}
+
+// Bring the console forward and focus its input (from a pack console click).
+function focusAssistant() {
+  createAssistantWindow();
+  resizeConsole(true);
+  assistantWindow.show();
+  assistantWindow.focus();
+  if (!assistantWindow.webContents.isLoading()) assistantWindow.webContents.send('aegis:console:summon');
+  else assistantWindow.webContents.once('did-finish-load', () => assistantWindow.webContents.send('aegis:console:summon'));
 }
 
 // Reparent the dashboard under the shell's wallpaper layer. The hwnd is
@@ -279,9 +295,20 @@ function buildTrayMenu() {
       })),
     },
     { label: desktopPaused ? 'Resume Desktop' : 'Pause Desktop', click: toggleDesktop },
+    {
+      label: assistantWindow && assistantWindow.isVisible() ? 'Hide Assistant Console' : 'Show Assistant Console',
+      click: toggleConsole,
+    },
     { type: 'separator' },
     { label: 'Quit Dashboard Engine', click: () => app.quit() },
   ]);
+}
+
+// Escape hatch: fully hide/show the always-on-top console bar.
+function toggleConsole() {
+  if (!assistantWindow || assistantWindow.isDestroyed()) { createAssistantWindow(); return; }
+  if (assistantWindow.isVisible()) assistantWindow.hide();
+  else assistantWindow.showInactive();
 }
 
 function createTray() {
@@ -308,7 +335,12 @@ function scheduleDevShots(dir) {
   setTimeout(async () => {
     const fs = require('fs');
     fs.mkdirSync(dir, { recursive: true });
-    if (envFlag('SHOTASSIST') === '1') createAssistantWindow();
+    // Capture the expanded console: drive it through the renderer so the
+    // layout (header + log + input) matches, not just the window size.
+    if (envFlag('SHOTASSIST') === '1' && assistantWindow && !assistantWindow.isDestroyed()) {
+      assistantWindow.webContents.send('aegis:console:summon');
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
     const targets = [
       ['manager', managerWindow], ['editor', editorWindow],
       ['panel', panelWindow], ['dashboard', dashboardWindow],
@@ -340,6 +372,7 @@ function openFirstWindows() {
   }
   createDashboardWindow(); // the desktop persona, immediately
   createManagerWindow();   // the engine app: content navigation + selection
+  createAssistantWindow(); // the always-visible console bar
   const editAt = process.argv.indexOf('--edit');
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'jarvis');
 }
@@ -416,7 +449,8 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:launcher:changed');
         }
       },
-      openAssistant: createAssistantWindow,
+      openAssistant: focusAssistant,
+      onConsoleResize: (expanded) => resizeConsole(expanded),
       openManager: (view) => openManagerView(view || 'installed'),
       onPackSaved: (id) => {
         // Editor saved a pack — the desktop repaints if it's showing it.

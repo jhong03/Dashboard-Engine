@@ -8,11 +8,20 @@
 
 const $ = (id) => document.getElementById(id);
 
-const state = { config: null, busy: false, audioCtx: null };
+const state = { config: null, busy: false, audioCtx: null, expanded: false };
 
 function scrollToEnd() {
   const log = $('log');
   log.scrollTop = log.scrollHeight;
+}
+
+// Grow to show the conversation, or shrink to the slim bar. Main owns the
+// actual window size; we just ask and flip the layout.
+function setExpanded(expanded) {
+  state.expanded = expanded;
+  document.body.classList.toggle('collapsed', !expanded);
+  aegis.resize(expanded);
+  if (expanded) scrollToEnd();
 }
 
 function addMessage(who, text, kind) {
@@ -78,6 +87,8 @@ async function send() {
   const text = input.value.trim();
   if (text === '' || state.busy) return;
 
+  if (!state.expanded) setExpanded(true); // sending always reveals the reply
+
   // First real message clears the greeting.
   const notice = $('log').querySelector('.notice');
   if (notice) $('log').textContent = '';
@@ -112,16 +123,19 @@ function init() {
   $('send').addEventListener('click', send);
   $('input').addEventListener('keydown', (e) => {
     if (e.key === 'Enter') { e.preventDefault(); send(); }
-    if (e.key === 'Escape') { $('input').value = ''; }
+    if (e.key === 'Escape') { if ($('input').value) $('input').value = ''; else setExpanded(false); }
   });
+  $('expand').addEventListener('click', () => { setExpanded(true); $('input').focus(); });
+  $('collapse').addEventListener('click', () => setExpanded(false));
   $('new-session').addEventListener('click', async () => {
     await aegis.reset();
     $('log').textContent = '';
     showGreeting();
     $('input').focus();
   });
+  // A click on the desktop console asks us to open + focus.
+  aegis.onSummon(() => { setExpanded(true); $('input').focus(); });
   refreshConfig();
-  $('input').focus();
 }
 
 init();

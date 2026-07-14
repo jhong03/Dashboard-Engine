@@ -33,8 +33,13 @@ body {
   font-family: var(--display);
   color: var(--text);
   display: flex;
-  padding: 8px;
 }
+
+/* Collapsed = a slim always-visible bar: hide the header and log, keep the
+   input row; the expand chevron appears. */
+body.collapsed #head, body.collapsed #log { display: none; }
+body.collapsed #expand { display: flex; }
+#expand { display: none; }
 
 #panel {
   flex: 1;
@@ -43,18 +48,19 @@ body {
   min-height: 0;
   background: var(--glass);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
   backdrop-filter: blur(10px);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(165, 242, 255, 0.08);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(165, 242, 255, 0.08);
   position: relative;
   overflow: hidden;
 }
-/* corner brackets */
+/* top corner brackets, like the pack panels */
 #panel::before, #panel::after {
-  content: ''; position: absolute; width: 22px; height: 22px; pointer-events: none;
+  content: ''; position: absolute; top: -1px; width: 22px; height: 22px; pointer-events: none;
 }
-#panel::before { top: -1px; left: -1px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); border-top-left-radius: 10px; }
-#panel::after { bottom: -1px; right: -1px; border-bottom: 2px solid var(--cyan); border-right: 2px solid var(--cyan); border-bottom-right-radius: 10px; opacity: 0.6; }
+#panel::before { left: -1px; border-top: 2px solid var(--cyan); border-left: 2px solid var(--cyan); border-top-left-radius: 10px; }
+#panel::after { right: -1px; border-top: 2px solid var(--cyan); border-right: 2px solid var(--cyan); border-top-right-radius: 10px; opacity: 0.7; }
 
 header {
   display: flex; align-items: center; gap: 10px;
@@ -76,6 +82,16 @@ header {
   padding: 3px 9px; cursor: pointer;
 }
 .hbtn:hover { color: var(--bright); border-color: var(--line); }
+.hbtn.icon { padding: 3px 8px; font-size: 12px; line-height: 1; }
+.chev {
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+  color: var(--steel); background: rgba(77, 221, 255, 0.06);
+  border: 1px solid var(--line-dim); border-radius: 4px;
+  width: 30px; align-self: stretch; cursor: pointer;
+  display: none; align-items: center; justify-content: center; font-size: 12px;
+}
+.chev:hover { color: var(--bright); border-color: var(--line); }
 
 #log {
   flex: 1; min-height: 0; overflow-y: auto;
@@ -111,8 +127,9 @@ header {
 
 footer {
   display: flex; align-items: center; gap: 10px;
-  padding: 11px 16px; border-top: 1px solid var(--line-dim);
+  padding: 9px 16px; border-top: 1px solid var(--line-dim);
 }
+body.collapsed footer { border-top: none; }
 .mark { color: var(--cyan); font-family: var(--mono); font-size: 16px; }
 #input {
   flex: 1; background: rgba(4, 10, 20, 0.6);

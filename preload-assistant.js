@@ -13,4 +13,8 @@ contextBridge.exposeInMainWorld('aegis', {
   speak: (text) => ipcRenderer.invoke('aegis:assistant:speak', String(text)),
   reset: () => ipcRenderer.invoke('aegis:assistant:reset'),
   openManager: () => ipcRenderer.invoke('aegis:open-manager'),
+  // Grow/shrink the docked console bar (main owns the actual window bounds).
+  resize: (expanded) => ipcRenderer.invoke('aegis:console:resize', Boolean(expanded)),
+  // Pack-console click asks us to expand + focus the input.
+  onSummon: (callback) => ipcRenderer.on('aegis:console:summon', () => callback()),
 });
