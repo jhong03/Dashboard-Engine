@@ -1,0 +1,55 @@
+{
+  "schema": 2,
+  "id": "sakura",
+  "name": "Sakura",
+  "author": "Dashboard Engine",
+  "persona": {
+    "name": "Sakura",
+    "tagline": "spring, unhurried",
+    "lines": [
+      "the petals fall in their own time",
+      "a gentle day to you",
+      "nothing blooms all year — rest a little",
+      "the wind carries something sweet"
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#E9C9D8",
+      "glass": "#FFFFFF",
+      "accent": "#E77FA8",
+      "accentBright": "#5A3A48",
+      "muted": "#9E7686",
+      "warn": "#D98A8A",
+      "gold": "#D79A6E"
+    },
+    "typography": { "display": "system-serif", "uppercase": false, "letterSpacing": 0.04 },
+    "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.2, "vignette": 0.12 },
+    "shape": { "cornerNotches": false, "borderOpacity": 0.14, "panelOpacity": 0.5, "radius": 16 },
+    "ambience": { "effect": "petals", "density": 0.5 },
+    "wallpaper": "assets/bg.png"
+  },
+  "canvas": { "padding": 3 },
+  "components": [
+    { "type": "status", "rect": [4, 6, 52, 15], "z": 2, "options": {},
+      "style": { "panel": false, "align": "left", "fontScale": 0.95, "glow": 0.1 } },
+    { "type": "analog-clock", "rect": [66, 7, 30, 40], "z": 2,
+      "options": { "seconds": true, "numerals": "all", "minuteTicks": true },
+      "style": { "panel": true, "border": false, "padding": 16 } },
+    { "type": "clock", "rect": [4, 24, 44, 14], "z": 2,
+      "options": { "format": "12h", "seconds": false, "showDate": true },
+      "style": { "panel": false, "align": "left", "fontScale": 1.2, "glow": 0.15 } },
+    { "type": "text", "rect": [4, 40, 50, 16], "z": 2,
+      "options": { "text": "a soft rain of petals —\nthe afternoon drifts by" },
+      "style": { "panel": true, "border": false, "align": "left", "fontScale": 1.05, "padding": 18 } },
+    { "type": "weather", "rect": [4, 58, 50, 8], "z": 2,
+      "options": { "lat": 35.0116, "lon": 135.7681, "place": "Kyoto", "compact": true },
+      "style": { "panel": true, "border": false, "padding": 16 } },
+    { "type": "agenda", "rect": [66, 50, 30, 32], "z": 2,
+      "options": { "days": 5, "limit": 4, "label": "today" },
+      "style": { "panel": true, "border": false, "padding": 18 } },
+    { "type": "launcher", "rect": [4, 70, 50, 18], "z": 2,
+      "options": { "pinned": true, "recent": false, "running": false, "labels": true, "iconSize": "m", "label": "favourites" },
+      "style": { "panel": false } }
+  ]
+}

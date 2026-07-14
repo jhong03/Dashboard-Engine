@@ -55,7 +55,7 @@ as the default skin, never a crash. Save your file as UTF-8 (BOM is tolerated).
       "radius": 0                     // px, 0–16
     },
     "ambience": {                     // optional drifting-particle layer
-      "effect": "embers",             // none | embers | dust | snow
+      "effect": "embers",             // none | embers | dust | snow | petals | rain | sparkle
       "density": 0.45                 // 0.05–1
     },
     "wallpaper": "assets/bg.png"      // optional, ≤5 MB, png/jpg/webp

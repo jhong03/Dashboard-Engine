@@ -105,7 +105,10 @@ function applySkin(root, pack, assets, opts) {
 // Packs pick an effect + density from tokens; the engine owns the animation —
 // packs never ship code. Reduced motion gets one static scatter, no loop.
 
-const AMBIENCE_COLOR_KEY = { embers: 'gold', dust: 'muted', snow: 'accentBright' };
+const AMBIENCE_COLOR_KEY = {
+  embers: 'gold', dust: 'muted', snow: 'accentBright',
+  petals: 'accent', rain: 'accent', sparkle: 'accent',
+};
 
 function applyAmbience(root, pack, opts) {
   const prev = root.__aegisAmbience;
@@ -149,6 +152,25 @@ function applyAmbience(root, pack, opts) {
       p.vy = rand(0.02, 0.06);
       p.size = rand(1, 3) * devicePixelRatio;
       if (fresh) p.y = -p.size * 4;
+    } else if (effect === 'petals') { // cherry-blossom: fall, sway, tumble
+      p.vy = rand(0.03, 0.07);
+      p.size = rand(2, 4.2) * devicePixelRatio;
+      p.alpha = rand(0.4, 0.85);
+      p.sway = rand(0.5, 1.4);
+      p.rot = rand(0, Math.PI * 2);
+      p.vrot = rand(-2.2, 2.2);
+      if (fresh) p.y = -p.size * 4;
+    } else if (effect === 'rain') { // fast thin streaks (neon city)
+      p.vy = rand(0.55, 0.95);
+      p.len = rand(8, 20) * devicePixelRatio;
+      p.size = rand(0.6, 1.2) * devicePixelRatio;
+      p.alpha = rand(0.2, 0.55);
+      if (fresh) p.y = -p.len;
+    } else if (effect === 'sparkle') { // fixed twinkling stars
+      p.vx = 0; p.vy = 0;
+      p.size = rand(1.2, 3) * devicePixelRatio;
+      p.alpha = rand(0.5, 1);
+      p.twSpeed = rand(0.002, 0.006);
     } else { // dust: slow omnidirectional drift, dimmer and smaller
       p.vx = rand(-0.008, 0.008);
       p.vy = rand(-0.008, 0.008);
@@ -162,11 +184,18 @@ function applyAmbience(root, pack, opts) {
     const w = canvas.width, h = canvas.height;
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
+      if (effect === 'sparkle') continue; // fixed points; only the twinkle animates
       p.y += p.vy * h * dt;
       if (effect === 'dust') {
         p.x += p.vx * w * dt;
         if (p.x < -8) p.x = w + 8; else if (p.x > w + 8) p.x = -8;
         if (p.y < -8) p.y = h + 8; else if (p.y > h + 8) p.y = -8;
+      } else if (effect === 'rain') {
+        if (p.y > h + p.len) particles[i] = spawn(true);
+      } else if (effect === 'petals') {
+        p.x += Math.sin(t * 0.0012 + p.phase) * p.sway * 30 * devicePixelRatio * dt;
+        p.rot += p.vrot * dt;
+        if (p.y > h + p.size * 4) particles[i] = spawn(true);
       } else {
         p.x += Math.sin(t * 0.001 + p.phase) * p.sway * 20 * devicePixelRatio * dt;
         if (effect === 'embers' && p.y < -p.size * 4) particles[i] = spawn(true);
@@ -183,11 +212,43 @@ function applyAmbience(root, pack, opts) {
       if (effect === 'embers') {
         a *= 0.65 + 0.35 * Math.sin(t * 0.004 + p.phase);         // flicker
         a *= Math.min(1, Math.max(0, p.y / (canvas.height * 0.35))); // die out near the top
+      } else if (effect === 'sparkle') {
+        a *= 0.3 + 0.7 * Math.abs(Math.sin(t * p.twSpeed + p.phase)); // twinkle
       }
-      ctx2.fillStyle = `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, a)).toFixed(3)})`;
-      ctx2.beginPath();
-      ctx2.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx2.fill();
+      const colour = `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, a)).toFixed(3)})`;
+      if (effect === 'rain') {
+        ctx2.strokeStyle = colour;
+        ctx2.lineWidth = p.size;
+        ctx2.beginPath();
+        ctx2.moveTo(p.x, p.y);
+        ctx2.lineTo(p.x, p.y + p.len);
+        ctx2.stroke();
+      } else if (effect === 'petals') {
+        ctx2.fillStyle = colour;
+        ctx2.save();
+        ctx2.translate(p.x, p.y);
+        ctx2.rotate(p.rot);
+        ctx2.beginPath();
+        ctx2.ellipse(0, 0, p.size, p.size * 0.58, 0, 0, Math.PI * 2);
+        ctx2.fill();
+        ctx2.restore();
+      } else if (effect === 'sparkle') {
+        // Four-point sparkle: points pulled toward the centre with curves.
+        ctx2.fillStyle = colour;
+        const s = p.size * (0.7 + 0.9 * a);
+        ctx2.beginPath();
+        ctx2.moveTo(p.x, p.y - s);
+        ctx2.quadraticCurveTo(p.x, p.y, p.x + s, p.y);
+        ctx2.quadraticCurveTo(p.x, p.y, p.x, p.y + s);
+        ctx2.quadraticCurveTo(p.x, p.y, p.x - s, p.y);
+        ctx2.quadraticCurveTo(p.x, p.y, p.x, p.y - s);
+        ctx2.fill();
+      } else {
+        ctx2.fillStyle = colour;
+        ctx2.beginPath();
+        ctx2.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx2.fill();
+      }
     }
   };
 

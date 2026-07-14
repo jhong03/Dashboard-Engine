@@ -1,0 +1,55 @@
+{
+  "schema": 2,
+  "id": "pastel-dream",
+  "name": "Pastel Dream",
+  "author": "Dashboard Engine",
+  "persona": {
+    "name": "Momo",
+    "tagline": "your desk buddy",
+    "lines": [
+      "you've got this today!",
+      "don't forget to drink water, okay?",
+      "sending you a little sparkle",
+      "let's do our best together"
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#F1E1FB",
+      "glass": "#FFFFFF",
+      "accent": "#FF8FC0",
+      "accentBright": "#6A4A6E",
+      "muted": "#A98FC0",
+      "warn": "#FF9AA2",
+      "gold": "#F5B94D"
+    },
+    "typography": { "display": "system-sans", "uppercase": false, "letterSpacing": 0.02 },
+    "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.28, "vignette": 0.08 },
+    "shape": { "cornerNotches": false, "borderOpacity": 0.14, "panelOpacity": 0.55, "radius": 16 },
+    "ambience": { "effect": "sparkle", "density": 0.6 },
+    "wallpaper": "assets/bg.png"
+  },
+  "canvas": { "padding": 3 },
+  "components": [
+    { "type": "status", "rect": [4, 6, 52, 15], "z": 2, "options": {},
+      "style": { "panel": false, "align": "left", "fontScale": 0.95, "glow": 0.15 } },
+    { "type": "clock", "rect": [4, 24, 44, 16], "z": 2,
+      "options": { "format": "12h", "seconds": false, "showDate": true },
+      "style": { "panel": false, "align": "left", "fontScale": 1.35, "glow": 0.2 } },
+    { "type": "text", "rect": [4, 44, 52, 14], "z": 2,
+      "options": { "text": "today is going to be a good one." },
+      "style": { "panel": true, "border": false, "align": "left", "fontScale": 1.05, "padding": 18 } },
+    { "type": "weather", "rect": [4, 60, 52, 8], "z": 2,
+      "options": { "lat": 37.5665, "lon": 126.978, "place": "Seoul", "compact": true },
+      "style": { "panel": true, "border": false, "padding": 16 } },
+    { "type": "agenda", "rect": [64, 6, 32, 34], "z": 2,
+      "options": { "days": 5, "limit": 5, "label": "to-do" },
+      "style": { "panel": true, "border": false, "padding": 18 } },
+    { "type": "launcher", "rect": [64, 44, 32, 24], "z": 2,
+      "options": { "pinned": true, "recent": true, "running": false, "labels": true, "iconSize": "m", "label": "faves" },
+      "style": { "panel": true, "border": false, "padding": 16 } },
+    { "type": "assistant", "rect": [1, 93.5, 98, 5.5], "z": 2,
+      "options": { "label": "talk to me about anything ♪", "button": "send" },
+      "style": { "panel": true, "border": false, "fontScale": 0.72, "padding": 8 } }
+  ]
+}

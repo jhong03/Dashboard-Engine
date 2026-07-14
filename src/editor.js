@@ -733,7 +733,7 @@ function renderSkinTab(panel) {
   panel.appendChild(sectionLabel('Ambience'));
   if (!skin.ambience) skin.ambience = { effect: 'none', density: 0.5 };
   panel.append(
-    field('Effect', selectControl(skin.ambience.effect, [['none', 'None'], ['embers', 'Embers'], ['dust', 'Dust'], ['snow', 'Snow']], (v) => { skin.ambience.effect = v; renderAll(); })),
+    field('Effect', selectControl(skin.ambience.effect, [['none', 'None'], ['embers', 'Embers'], ['dust', 'Dust'], ['snow', 'Snow'], ['petals', 'Petals'], ['rain', 'Rain'], ['sparkle', 'Sparkle']], (v) => { skin.ambience.effect = v; renderAll(); })),
     field('Density', rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
   );
 

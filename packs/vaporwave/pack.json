@@ -1,0 +1,55 @@
+{
+  "schema": 2,
+  "id": "vaporwave",
+  "name": "Vaporwave",
+  "author": "Dashboard Engine",
+  "persona": {
+    "name": "NEON",
+    "tagline": "A E S T H E T I C",
+    "lines": [
+      "welcome back to the endless summer",
+      "everything is fine in the mall of dreams",
+      "catch the last train to 1985",
+      "vibes: immaculate"
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#1B0B3A",
+      "glass": "#1A0B2E",
+      "accent": "#FF6AD5",
+      "accentBright": "#FFFFFF",
+      "muted": "#C4A5E0",
+      "warn": "#FF71CE",
+      "gold": "#FFE45F"
+    },
+    "typography": { "display": "rajdhani", "uppercase": true, "letterSpacing": 0.18 },
+    "texture": { "scanlines": 0.25, "grid": 0.0, "glow": 0.6, "vignette": 0.3 },
+    "shape": { "cornerNotches": false, "borderOpacity": 0.3, "panelOpacity": 0.62, "radius": 4 },
+    "ambience": { "effect": "none", "density": 0.5 },
+    "wallpaper": "assets/bg.png"
+  },
+  "canvas": { "padding": 2.5 },
+  "components": [
+    { "type": "status", "rect": [2, 4, 40, 14], "z": 2, "options": {},
+      "style": { "panel": true, "align": "left", "fontScale": 0.9, "padding": 14 } },
+    { "type": "clock", "rect": [2, 20, 34, 16], "z": 2,
+      "options": { "format": "12h", "seconds": true, "showDate": true },
+      "style": { "panel": true, "align": "left", "fontScale": 1.1, "padding": 14 } },
+    { "type": "weather", "rect": [2, 38, 40, 8], "z": 2,
+      "options": { "lat": 25.7617, "lon": -80.1918, "place": "Miami", "compact": true },
+      "style": { "panel": true, "padding": 14 } },
+    { "type": "sysinfo", "rect": [2, 48, 40, 14], "z": 2,
+      "options": { "memory": true, "disk": true, "uptime": true, "host": true, "statusText": "VIBES NOMINAL" },
+      "style": { "panel": true, "padding": 14 } },
+    { "type": "agenda", "rect": [72, 5, 25, 32], "z": 2,
+      "options": { "days": 5, "limit": 5, "label": "PLANS" },
+      "style": { "panel": true, "padding": 14 } },
+    { "type": "launcher", "rect": [72, 40, 25, 22], "z": 2,
+      "options": { "pinned": true, "recent": false, "running": false, "labels": true, "iconSize": "s", "label": "APPS" },
+      "style": { "panel": true, "padding": 12 } },
+    { "type": "assistant", "rect": [1, 93.5, 98, 5.5], "z": 2,
+      "options": { "label": "ENTER COMMAND…", "button": "RUN" },
+      "style": { "panel": true, "font": "mono", "fontScale": 0.72, "padding": 8 } }
+  ]
+}

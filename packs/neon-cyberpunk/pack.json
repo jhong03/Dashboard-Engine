@@ -1,0 +1,64 @@
+{
+  "schema": 2,
+  "id": "neon-cyberpunk",
+  "name": "Neon Cyberpunk",
+  "author": "Dashboard Engine",
+  "persona": {
+    "name": "GHOST",
+    "tagline": "jacked in",
+    "lines": [
+      "the city never sleeps, choom",
+      "signal clean, ICE cold",
+      "wake up — we've got a city to burn",
+      "running dark, running quiet"
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#05010E",
+      "glass": "#0A0618",
+      "accent": "#25E7FF",
+      "accentBright": "#EAFBFF",
+      "muted": "#6E8AA6",
+      "warn": "#FF3B6B",
+      "gold": "#FF2E97"
+    },
+    "typography": { "display": "rajdhani", "uppercase": true, "letterSpacing": 0.2 },
+    "texture": { "scanlines": 0.3, "grid": 0.12, "glow": 0.7, "vignette": 0.5 },
+    "shape": { "cornerNotches": true, "borderOpacity": 0.35, "panelOpacity": 0.55, "radius": 2 },
+    "ambience": { "effect": "rain", "density": 0.55 },
+    "wallpaper": "assets/bg.png"
+  },
+  "canvas": { "padding": 2.5 },
+  "components": [
+    { "type": "status", "rect": [2, 4, 44, 13], "z": 2, "options": {},
+      "style": { "panel": true, "align": "left", "fontScale": 0.85, "padding": 12 } },
+    { "type": "meter", "rect": [2, 19, 13, 20], "z": 2,
+      "options": { "bind": "cpu", "variant": "ring", "label": "CPU" },
+      "style": { "panel": true, "padding": 10 } },
+    { "type": "meter", "rect": [16.5, 19, 13, 20], "z": 2,
+      "options": { "bind": "mem", "variant": "ring", "label": "MEM" },
+      "style": { "panel": true, "padding": 10 } },
+    { "type": "meter", "rect": [31, 19, 13, 20], "z": 2,
+      "options": { "bind": "disk", "variant": "ring", "label": "DISK" },
+      "style": { "panel": true, "padding": 10 } },
+    { "type": "sparkline", "rect": [2, 41, 28, 18], "z": 2,
+      "options": { "bind": "cpu", "label": "SYS LOAD", "grid": true, "readout": true },
+      "style": { "panel": true, "padding": 12 } },
+    { "type": "sysinfo", "rect": [31, 41, 15, 18], "z": 2,
+      "options": { "memory": false, "disk": true, "uptime": true, "host": true, "statusText": "ICE COLD" },
+      "style": { "panel": true, "padding": 12 } },
+    { "type": "clock", "rect": [2, 61, 44, 14], "z": 2,
+      "options": { "format": "24h", "seconds": true, "showDate": true },
+      "style": { "panel": true, "align": "left", "fontScale": 1.15, "padding": 12 } },
+    { "type": "agenda", "rect": [72, 4, 26, 30], "z": 2,
+      "options": { "days": 5, "limit": 5, "label": "OPS" },
+      "style": { "panel": true, "padding": 12 } },
+    { "type": "notifications", "rect": [72, 36, 26, 30], "z": 2,
+      "options": { "limit": 4, "label": "FEED", "showApp": true },
+      "style": { "panel": true, "padding": 12 } },
+    { "type": "assistant", "rect": [1, 93.5, 98, 5.5], "z": 2,
+      "options": { "label": "jack in — enter a command…", "button": "EXEC" },
+      "style": { "panel": true, "font": "mono", "fontScale": 0.72, "padding": 8 } }
+  ]
+}

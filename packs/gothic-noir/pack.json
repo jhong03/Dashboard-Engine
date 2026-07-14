@@ -1,0 +1,55 @@
+{
+  "schema": 2,
+  "id": "gothic-noir",
+  "name": "Gothic Noir",
+  "author": "Dashboard Engine",
+  "persona": {
+    "name": "Nocturne",
+    "tagline": "the night is long",
+    "lines": [
+      "we are all in the gutter, but some of us are looking at the stars",
+      "the hours keep their own counsel",
+      "nothing gold can stay",
+      "speak, and I shall answer"
+    ]
+  },
+  "skin": {
+    "palette": {
+      "void": "#070406",
+      "glass": "#170A0E",
+      "accent": "#B4102E",
+      "accentBright": "#E6D6DA",
+      "muted": "#6E4A54",
+      "warn": "#D0304A",
+      "gold": "#9A6A72"
+    },
+    "typography": { "display": "system-serif", "uppercase": false, "letterSpacing": 0.06 },
+    "texture": { "scanlines": 0.05, "grid": 0.0, "glow": 0.4, "vignette": 0.85 },
+    "shape": { "cornerNotches": false, "borderOpacity": 0.28, "panelOpacity": 0.5, "radius": 2 },
+    "ambience": { "effect": "dust", "density": 0.22 }
+  },
+  "canvas": { "padding": 4 },
+  "components": [
+    { "type": "status", "rect": [4, 7, 54, 16], "z": 2, "options": {},
+      "style": { "panel": false, "align": "left", "fontScale": 1.0 } },
+    { "type": "analog-clock", "rect": [66, 8, 30, 42], "z": 2,
+      "options": { "seconds": true, "numerals": "quarters", "minuteTicks": true },
+      "style": { "panel": true, "border": true, "padding": 14 } },
+    { "type": "clock", "rect": [4, 27, 44, 14], "z": 2,
+      "options": { "format": "24h", "seconds": true, "showDate": true },
+      "style": { "panel": false, "align": "left", "fontScale": 1.15, "glow": 0.35 } },
+    { "type": "divider", "rect": [4, 43, 50, 2], "z": 2, "options": { "orientation": "h" } },
+    { "type": "text", "rect": [4, 46, 52, 18], "z": 2,
+      "options": { "text": "Some of us are looking\nat the stars." },
+      "style": { "panel": true, "border": false, "align": "left", "fontScale": 1.15, "padding": 20 } },
+    { "type": "agenda", "rect": [66, 52, 30, 30], "z": 2,
+      "options": { "days": 5, "limit": 4, "label": "the ledger" },
+      "style": { "panel": true, "border": false, "padding": 16 } },
+    { "type": "launcher", "rect": [4, 68, 52, 18], "z": 2,
+      "options": { "pinned": true, "recent": false, "running": false, "labels": true, "iconSize": "m", "label": "the shelf" },
+      "style": { "panel": false } },
+    { "type": "assistant", "rect": [1, 93.5, 98, 5.5], "z": 2,
+      "options": { "label": "speak, and I shall answer…", "button": "invoke" },
+      "style": { "panel": true, "border": true, "font": "mono", "fontScale": 0.72, "padding": 8 } }
+  ]
+}
