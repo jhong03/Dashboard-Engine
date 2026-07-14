@@ -81,27 +81,33 @@
           <div id="pin-list"></div>
         </div>
         <div class="assistant-cfg hidden" id="assistant-cfg">
-          <p class="hint">Connect your own AI so the assistant can answer and speak. Your key is stored
-            encrypted on this PC, never shown again, and never included in a pack or export.</p>
+          <p class="hint">The assistant runs on a free model out of the box — no account, no key, no charge.
+            Want a specific brand (Gemini, Qwen, Llama…)? Point it at any OpenAI-compatible endpoint below,
+            like a free OpenRouter key or a local Ollama. Any key you enter is optional, stored encrypted on
+            this PC, and never included in a pack or export.</p>
 
-          <label class="cfg-field"><span>Provider</span>
+          <label class="cfg-field"><span>Connection</span>
             <select id="ai-provider">
-              <option value="anthropic">Anthropic (Claude)</option>
-              <option value="openai">OpenAI-compatible</option>
+              <option value="free">Free — no key needed</option>
+              <option value="openai">Custom / OpenAI-compatible</option>
             </select>
           </label>
 
-          <label class="cfg-field" id="ai-baseurl-field"><span>Base URL (OpenAI-compatible)</span>
-            <input id="ai-baseurl" type="text" placeholder="https://api.openai.com/v1  ·  or http://localhost:11434/v1" spellcheck="false">
+          <!-- Free provider: pick from the live free-model list -->
+          <label class="cfg-field" id="ai-freemodel-field"><span>Model</span>
+            <select id="ai-freemodel"></select>
           </label>
 
-          <label class="cfg-field"><span>API key</span>
-            <input id="ai-key" type="password" placeholder="Paste your key — leave blank to keep the current one" spellcheck="false" autocomplete="off">
+          <!-- Custom provider: endpoint + optional key + model id -->
+          <label class="cfg-field hidden" id="ai-baseurl-field"><span>Base URL</span>
+            <input id="ai-baseurl" type="text" placeholder="https://openrouter.ai/api/v1  ·  or  http://localhost:11434/v1" spellcheck="false">
           </label>
-          <p class="hint hint-key" id="ai-key-state"></p>
-
-          <label class="cfg-field"><span>Model</span>
-            <input id="ai-model" type="text" placeholder="claude-sonnet-5" spellcheck="false">
+          <label class="cfg-field hidden" id="ai-key-field"><span>API key (optional — free tiers & local servers)</span>
+            <input id="ai-key" type="password" placeholder="Leave blank for keyless / local; paste to set or replace" spellcheck="false" autocomplete="off">
+            <span class="hint hint-key" id="ai-key-state"></span>
+          </label>
+          <label class="cfg-field hidden" id="ai-model-field"><span>Model id</span>
+            <input id="ai-model" type="text" placeholder="google/gemini-2.0-flash-exp:free  ·  qwen/qwen-2.5-72b-instruct:free  ·  llama3.1" spellcheck="false">
           </label>
 
           <label class="cfg-field"><span>Voice for spoken replies</span>

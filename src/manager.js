@@ -595,11 +595,38 @@ async function wireLauncherCfg() {
 
 // ── AI assistant settings (BYO key; key stays encrypted in main) ───────────
 
-const assistantCfg = { loaded: false };
+const assistantCfg = { loaded: false, freeModels: null };
 
 function syncProviderFields() {
   const openai = $('ai-provider').value === 'openai';
+  $('ai-freemodel-field').classList.toggle('hidden', openai);
   $('ai-baseurl-field').classList.toggle('hidden', !openai);
+  $('ai-key-field').classList.toggle('hidden', !openai);
+  $('ai-model-field').classList.toggle('hidden', !openai);
+}
+
+async function populateFreeModels(selected) {
+  const select = $('ai-freemodel');
+  if (!assistantCfg.freeModels) {
+    const res = await aegis.assistantModels();
+    assistantCfg.freeModels = res.ok ? res.models : [];
+  }
+  select.textContent = '';
+  const models = assistantCfg.freeModels.length ? assistantCfg.freeModels : [{ id: 'openai', label: 'Default free model' }];
+  for (const m of models) {
+    const opt = document.createElement('option');
+    opt.value = m.id;
+    opt.textContent = m.label || m.id;
+    select.appendChild(opt);
+  }
+  // Keep the saved model even if it isn't in the current live list.
+  if (selected && !models.some((m) => m.id === selected)) {
+    const opt = document.createElement('option');
+    opt.value = selected;
+    opt.textContent = selected;
+    select.appendChild(opt);
+  }
+  select.value = selected || (models[0] && models[0].id) || '';
 }
 
 async function renderAssistantCfg() {
@@ -608,12 +635,13 @@ async function renderAssistantCfg() {
   const c = res.config;
   $('ai-provider').value = c.provider;
   $('ai-baseurl').value = c.baseUrl || '';
-  $('ai-model').value = c.model || '';
+  $('ai-model').value = c.provider === 'openai' ? (c.model || '') : '';
   $('ai-persona').value = c.persona || '';
   $('ai-speak').checked = c.speak !== false;
   $('ai-key').value = '';
-  $('ai-key-state').textContent = c.hasKey ? 'A key is saved (encrypted). Leave the field blank to keep it, or paste a new one to replace it.' : 'No key saved yet.';
+  $('ai-key-state').textContent = c.hasKey ? 'A key is saved (encrypted). Blank keeps it; type to replace; clear + save to remove.' : 'No key — fine for the free model and local servers.';
   syncProviderFields();
+  await populateFreeModels(c.provider === 'free' ? (c.model || 'openai') : null);
 
   // Voice dropdown: the tuned profiles, plus the engine default.
   const select = $('ai-voice');
@@ -636,10 +664,11 @@ async function renderAssistantCfg() {
 }
 
 async function saveAssistant() {
+  const provider = $('ai-provider').value;
   const patch = {
-    provider: $('ai-provider').value,
+    provider,
     baseUrl: $('ai-baseurl').value,
-    model: $('ai-model').value,
+    model: provider === 'free' ? $('ai-freemodel').value : $('ai-model').value,
     persona: $('ai-persona').value,
     speak: $('ai-speak').checked,
     voiceProfile: $('ai-voice').value,
@@ -650,7 +679,10 @@ async function saveAssistant() {
 }
 
 function wireAssistantCfg() {
-  $('ai-provider').addEventListener('change', syncProviderFields);
+  $('ai-provider').addEventListener('change', async () => {
+    syncProviderFields();
+    if ($('ai-provider').value === 'free') await populateFreeModels($('ai-freemodel').value);
+  });
 
   $('ai-save').addEventListener('click', async () => {
     const out = await saveAssistant();

@@ -93,7 +93,7 @@ art behind widgets.
 | `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
 | `notifications` | `limit` (1–12), `label`, `showApp` | the user's live Windows notifications (needs notification access) |
 | `launcher` | `pinned`, `recent`, `running`, `labels`, `iconSize` (`s`/`m`/`l`), `label` | the user's pinned/recent/open apps as clickable tiles |
-| `assistant` | `label`, `button` | a console line that opens the AI chat when clicked on the desktop (needs an API key set in the manager) |
+| `assistant` | `label`, `button` | a console line that opens the AI chat when clicked on the desktop (runs on a free model by default; configure in the manager) |
 
 `calendar`, `agenda`, `notifications`, and `launcher` display the **user's own
 data** (planner events managed in the engine's Planner tab; app pins in its

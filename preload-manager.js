@@ -80,6 +80,7 @@ contextBridge.exposeInMainWorld('aegis', {
   // (config get returns hasKey only; the key stays encrypted in main).
   assistantConfigGet: () => ipcRenderer.invoke('aegis:assistant:config:get'),
   assistantConfigSet: (patch) => ipcRenderer.invoke('aegis:assistant:config:set', patch),
+  assistantModels: () => ipcRenderer.invoke('aegis:assistant:models'),
   assistantAsk: (prompt) => ipcRenderer.invoke('aegis:assistant:ask', String(prompt)),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
   voiceProfilesList: () => ipcRenderer.invoke('aegis:profiles:list'),

@@ -30,14 +30,14 @@ function addMessage(who, text, kind) {
   return body;
 }
 
-function showKeyNotice() {
+function showGreeting() {
   const log = $('log');
   log.textContent = '';
   const notice = document.createElement('div');
   notice.className = 'notice';
-  notice.textContent = 'No AI provider is connected yet. Add your API key in the manager to bring me online, sir.';
+  notice.textContent = 'Good evening, sir. Ask me anything — a free model is standing by. You can choose a different model in the manager under Assistant.';
   const btn = document.createElement('button');
-  btn.textContent = 'OPEN SETTINGS';
+  btn.textContent = 'ASSISTANT SETTINGS';
   btn.addEventListener('click', () => aegis.openManager());
   notice.appendChild(document.createElement('br'));
   notice.appendChild(btn);
@@ -66,8 +66,11 @@ function playPcm(pcm, sampleRate) {
 async function refreshConfig() {
   const res = await aegis.configGet();
   state.config = res.ok ? res.config : null;
-  $('status').textContent = state.config && state.config.hasKey ? 'ONLINE' : 'NO KEY';
-  if (!state.config || !state.config.hasKey) showKeyNotice();
+  const c = state.config;
+  // Free provider is always ready; custom is ready too (key optional).
+  const model = c ? (c.provider === 'free' ? (c.model || 'free') : (c.model || 'custom')) : '';
+  $('status').textContent = c ? `ONLINE · ${model}`.toUpperCase() : 'OFFLINE';
+  if (!$('log').children.length) showGreeting();
 }
 
 async function send() {
@@ -75,9 +78,7 @@ async function send() {
   const text = input.value.trim();
   if (text === '' || state.busy) return;
 
-  if (!state.config || !state.config.hasKey) { showKeyNotice(); return; }
-
-  // First real message clears the key/empty notice.
+  // First real message clears the greeting.
   const notice = $('log').querySelector('.notice');
   if (notice) $('log').textContent = '';
 
@@ -116,7 +117,7 @@ function init() {
   $('new-session').addEventListener('click', async () => {
     await aegis.reset();
     $('log').textContent = '';
-    if (!state.config || !state.config.hasKey) showKeyNotice();
+    showGreeting();
     $('input').focus();
   });
   refreshConfig();

@@ -477,7 +477,7 @@ function optionFields(component, panel) {
     );
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Clicking this on the desktop opens the AI chat. Connect an API key in the manager under Assistant.';
+    note.textContent = 'Clicking this on the desktop opens the AI chat. It runs on a free model by default — pick a different one in the manager under Assistant.';
     panel.appendChild(note);
   } else if (type === 'countdown') {
     const date = document.createElement('input');
