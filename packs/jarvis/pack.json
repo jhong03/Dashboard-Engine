@@ -44,7 +44,8 @@
     "ambience": {
       "effect": "none",
       "density": 0.5
-    }
+    },
+    "wallpaper": null
   },
   "canvas": {
     "padding": 0
@@ -59,14 +60,23 @@
         3.2
       ],
       "z": 3,
+      "style": {
+        "accent": null,
+        "textColor": "#A5F2FF",
+        "font": null,
+        "fontScale": 0.8,
+        "align": "left",
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "text": "J.A.R.V.I.S · PERSONAL INTERFACE"
-      },
-      "style": {
-        "panel": false,
-        "align": "left",
-        "fontScale": 0.8,
-        "textColor": "#A5F2FF"
       }
     },
     {
@@ -78,15 +88,23 @@
         3.2
       ],
       "z": 3,
+      "style": {
+        "accent": null,
+        "textColor": "#4DDDFF",
+        "font": null,
+        "fontScale": 0.75,
+        "align": "center",
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": 0.8,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "text": "ALL SYSTEMS ARE ONLINE"
-      },
-      "style": {
-        "panel": false,
-        "align": "center",
-        "fontScale": 0.75,
-        "textColor": "#4DDDFF",
-        "glow": 0.8
       }
     },
     {
@@ -98,15 +116,27 @@
         3.6
       ],
       "z": 3,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": 0.95,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "memory": false,
         "disk": false,
         "uptime": false,
-        "host": true
-      },
-      "style": {
-        "panel": false,
-        "fontScale": 0.95
+        "host": true,
+        "statusText": null
       }
     },
     {
@@ -118,6 +148,21 @@
         1.6
       ],
       "z": 1,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": null,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "orientation": "h"
       }
@@ -131,16 +176,23 @@
         66.5
       ],
       "z": 1,
+      "style": {
+        "accent": null,
+        "textColor": "#4DDDFF",
+        "font": null,
+        "fontScale": 0.7,
+        "align": "left",
+        "place": "top",
+        "panel": true,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 6,
+        "rotate": null
+      },
       "options": {
         "text": "SYSTEM VITALS"
-      },
-      "style": {
-        "panel": true,
-        "place": "top",
-        "align": "left",
-        "fontScale": 0.7,
-        "textColor": "#4DDDFF",
-        "padding": 22
       }
     },
     {
@@ -152,13 +204,27 @@
         14.5
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "bind": "cpu",
         "variant": "ring",
-        "label": "CPU"
-      },
-      "style": {
-        "panel": false
+        "label": "CPU",
+        "ticks": true,
+        "readout": true
       }
     },
     {
@@ -170,13 +236,27 @@
         14.5
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "bind": "mem",
         "variant": "ring",
-        "label": "MEMORY"
-      },
-      "style": {
-        "panel": false
+        "label": "MEMORY",
+        "ticks": true,
+        "readout": true
       }
     },
     {
@@ -188,13 +268,27 @@
         14.5
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "bind": "disk",
         "variant": "ring",
-        "label": "STORAGE"
-      },
-      "style": {
-        "panel": false
+        "label": "STORAGE",
+        "ticks": true,
+        "readout": true
       }
     },
     {
@@ -206,13 +300,27 @@
         14.5
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "bind": "battery",
         "variant": "ring",
-        "label": "POWER"
-      },
-      "style": {
-        "panel": false
+        "label": "POWER",
+        "ticks": true,
+        "readout": true
       }
     },
     {
@@ -224,11 +332,23 @@
         10
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "label": "CORE LOAD"
-      },
-      "style": {
-        "panel": false
       }
     },
     {
@@ -240,53 +360,89 @@
         16
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "memory": true,
         "disk": true,
         "uptime": true,
         "host": false,
         "statusText": "ALL SYSTEMS NOMINAL"
-      },
-      "style": {
-        "panel": false
       }
     },
     {
       "type": "hud-clock",
       "rect": [
-        23,
-        7.5,
+        30.5,
+        7,
         40,
         57
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": false,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "format": "24h",
         "seconds": true,
         "showDate": true
-      },
-      "style": {
-        "panel": false
       }
     },
     {
       "type": "weather",
       "rect": [
-        28.5,
+        35.5,
         66.5,
         29,
         6.2
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": true,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 16,
+        "rotate": null
+      },
       "options": {
         "lat": 5.4141,
         "lon": 100.3288,
         "place": "GEORGE TOWN, PENANG",
+        "details": true,
         "compact": true
-      },
-      "style": {
-        "panel": true,
-        "padding": 14
       }
     },
     {
@@ -298,36 +454,25 @@
         32.5
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": true,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 6,
+        "rotate": null
+      },
       "options": {
         "days": 7,
         "limit": 5,
         "label": "NOTIFICATIONS"
-      },
-      "style": {
-        "panel": true,
-        "padding": 22
-      }
-    },
-    {
-      "type": "launcher",
-      "rect": [
-        78.6,
-        40.5,
-        20,
-        32.5
-      ],
-      "z": 2,
-      "options": {
-        "pinned": true,
-        "recent": false,
-        "running": false,
-        "labels": true,
-        "iconSize": "s",
-        "label": "QUICK ACCESS"
-      },
-      "style": {
-        "panel": true,
-        "padding": 22
       }
     },
     {
@@ -339,14 +484,22 @@
         17
       ],
       "z": 2,
-      "options": {},
       "style": {
-        "panel": true,
-        "align": "left",
+        "accent": null,
+        "textColor": null,
+        "font": null,
         "fontScale": 0.62,
+        "align": "left",
         "place": "top",
-        "padding": 24
-      }
+        "panel": true,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 6,
+        "rotate": null
+      },
+      "options": {}
     },
     {
       "type": "text",
@@ -357,17 +510,23 @@
         5.2
       ],
       "z": 2,
-      "options": {
-        "text": "❯  Ask anything, or give me a task on this machine…"
-      },
       "style": {
-        "panel": true,
-        "align": "left",
+        "accent": null,
+        "textColor": "#8FB6CC",
         "font": "mono",
         "fontScale": 0.72,
-        "textColor": "#8FB6CC",
+        "align": "left",
+        "place": null,
+        "panel": true,
+        "border": null,
         "notches": false,
-        "padding": 16
+        "opacity": null,
+        "glow": null,
+        "padding": 2,
+        "rotate": null
+      },
+      "options": {
+        "text": "❯  Ask anything, or give me a task on this machine…"
       }
     },
     {
@@ -379,16 +538,56 @@
         5.2
       ],
       "z": 2,
+      "style": {
+        "accent": null,
+        "textColor": "#4DDDFF",
+        "font": null,
+        "fontScale": 0.72,
+        "align": "center",
+        "place": null,
+        "panel": true,
+        "border": null,
+        "notches": false,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
       "options": {
         "text": "EXECUTE"
-      },
+      }
+    },
+    {
+      "type": "launcher",
+      "rect": [
+        78.5,
+        41,
+        20,
+        30.5
+      ],
+      "z": 2,
       "style": {
-        "panel": true,
-        "align": "center",
-        "fontScale": 0.72,
-        "textColor": "#4DDDFF",
-        "notches": false,
-        "padding": 16
+        "accent": null,
+        "textColor": null,
+        "font": null,
+        "fontScale": null,
+        "align": null,
+        "place": null,
+        "panel": null,
+        "border": null,
+        "notches": null,
+        "opacity": null,
+        "glow": null,
+        "padding": 0,
+        "rotate": null
+      },
+      "options": {
+        "pinned": true,
+        "recent": true,
+        "running": false,
+        "labels": true,
+        "iconSize": "m",
+        "label": null
       }
     }
   ]

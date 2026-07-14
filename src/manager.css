@@ -90,8 +90,10 @@ body {
 .card:hover { border-color: var(--border-strong); }
 .card[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 /* Thumb keeps the display aspect; the name gets its own solid strip below so
-   a pack that draws text at its own bottom edge can never collide with it. */
-.card .thumb { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; }
+   a pack that draws text at its own bottom edge can never collide with it.
+   isolation:isolate contains the pack's own component z-indexes so they can't
+   paint over the badge, which lives in the card's stacking context. */
+.card .thumb { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; isolation: isolate; }
 .card .thumb img { width: 100%; height: 100%; object-fit: cover; }
 .card .thumb .bp-comp { position: absolute; border: 1px solid; border-radius: 2px; }
 
@@ -122,12 +124,14 @@ body {
 .card .badge {
   position: absolute;
   top: 6px; left: 6px;
+  z-index: 2;                    /* above the thumb's isolated render */
   font-size: 10.5px;
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 3px;
-  background: rgba(0, 0, 0, 0.7);
+  background: #14181e;           /* solid — no render bleed-through */
   color: #d9dde3;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 .card .badge.badge-active { background: var(--accent); color: #fff; }
 
