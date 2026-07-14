@@ -533,27 +533,6 @@
         "iconSize": "m",
         "label": null
       }
-    },
-    {
-      "type": "assistant",
-      "rect": [
-        1.4,
-        93.2,
-        97.2,
-        5.2
-      ],
-      "z": 2,
-      "style": {
-        "panel": true,
-        "font": "mono",
-        "fontScale": 0.72,
-        "notches": false,
-        "padding": 6
-      },
-      "options": {
-        "label": "Ask anything, or give me a task on this machine…",
-        "button": "EXECUTE"
-      }
     }
   ]
 }
