@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('aegis', {
     window && window.from && window.to ? { from: String(window.from), to: String(window.to) } : undefined),
   // Preview only: the editor renders launcher tiles but cannot launch.
   launcherState: (opts) => ipcRenderer.invoke('aegis:launcher:state', { running: Boolean(opts && opts.running) }),
+  notifications: () => ipcRenderer.invoke('aegis:notifications'),
   onLauncherChanged: (callback) => {
     const handler = () => callback();
     ipcRenderer.on('aegis:launcher:changed', handler);

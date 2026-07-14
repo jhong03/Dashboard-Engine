@@ -91,13 +91,16 @@ art behind widgets.
 | `countdown` | `target` (ISO date), `label` | days/hours to a date |
 | `weather` | `lat`, `lon`, `place`, `details`, `compact` | conditions with glyph, hi/lo + wind, or a one-line strip (Open-Meteo, no key — the one component that goes online) |
 | `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
+| `notifications` | `limit` (1–12), `label`, `showApp` | the user's live Windows notifications (needs notification access) |
 | `launcher` | `pinned`, `recent`, `running`, `labels`, `iconSize` (`s`/`m`/`l`), `label` | the user's pinned/recent/open apps as clickable tiles |
 
-`calendar`, `agenda`, and `launcher` display the **user's own data** (planner
-events managed in the engine's Planner tab; app pins in its Launcher tab —
-all stored in user data). A pack only places and styles these components —
-reminders and pins are personal and are never part of a pack, an export, or
-a registry download.
+`calendar`, `agenda`, `notifications`, and `launcher` display the **user's own
+data** (planner events managed in the engine's Planner tab; app pins in its
+Launcher tab; live Windows notifications from the system). A pack only places
+and styles these components — this data is personal and is never part of a
+pack, an export, or a registry download. The `notifications` component reads
+the system's notifications and needs access granted under Windows Settings ›
+Privacy › Notifications; without it, the component shows how to enable it.
 
 Rather not hand-write JSON? Open any pack in the **editor** (manager → pack
 → OPEN IN EDITOR, or `--edit <id>`): drag components from the palette, move/

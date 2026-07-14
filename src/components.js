@@ -1021,6 +1021,85 @@ function createRenderer(services) {
     live.timers.push(setInterval(paint, 60 * 1000));
   }
 
+  // Live Windows notifications (personal data; read in main). Fails soft:
+  // shows how to grant access if the user hasn't, or an unavailable note.
+  function buildNotifications(component, el) {
+    const label = document.createElement('span');
+    label.className = 'comp-label';
+    label.textContent = component.options.label || 'Notifications';
+    const listEl = document.createElement('div');
+    listEl.className = 'notif-feed';
+    el.append(label, listEl);
+
+    const relTime = (iso) => {
+      if (!iso) return '';
+      const then = Date.parse(iso);
+      if (Number.isNaN(then)) return '';
+      const s = Math.max(0, (Date.now() - then) / 1000);
+      if (s < 60) return 'just now';
+      const m = Math.floor(s / 60);
+      if (m < 60) return `${m}m ago`;
+      const h = Math.floor(m / 60);
+      if (h < 24) return `${h}h ago`;
+      return `${Math.floor(h / 24)}d ago`;
+    };
+
+    const message = (text) => {
+      listEl.textContent = '';
+      const msg = document.createElement('div');
+      msg.className = 'notif-empty';
+      msg.textContent = text;
+      listEl.appendChild(msg);
+    };
+
+    const paint = async () => {
+      if (!services.notifications) return;
+      const res = await services.notifications();
+      if (!res || !res.ok) return;
+      if (!res.granted) {
+        message(res.status === 'unsupported'
+          ? 'System notifications need Windows.'
+          : 'Allow notification access in Windows Settings › Privacy › Notifications.');
+        return;
+      }
+      const items = res.notifications.slice(0, component.options.limit);
+      if (items.length === 0) { message('No notifications.'); return; }
+
+      listEl.textContent = '';
+      for (const n of items) {
+        const item = document.createElement('div');
+        item.className = 'notif-item';
+
+        const head = document.createElement('div');
+        head.className = 'notif-head';
+        const app = document.createElement('span');
+        app.className = 'notif-app display-case';
+        app.textContent = component.options.showApp !== false && n.app ? n.app : '';
+        const time = document.createElement('span');
+        time.className = 'notif-time';
+        time.textContent = relTime(n.time);
+        head.append(app, time);
+        item.appendChild(head);
+
+        if (n.title) {
+          const title = document.createElement('div');
+          title.className = 'notif-title';
+          title.textContent = n.title;
+          item.appendChild(title);
+        }
+        if (n.body) {
+          const body = document.createElement('div');
+          body.className = 'notif-body';
+          body.textContent = n.body;
+          item.appendChild(body);
+        }
+        listEl.appendChild(item);
+      }
+    };
+    paint();
+    live.timers.push(setInterval(paint, 20000));
+  }
+
   function buildCountdown(component, el) {
     const label = document.createElement('span');
     label.className = 'comp-label';
@@ -1226,6 +1305,7 @@ function createRenderer(services) {
     countdown: buildCountdown,
     weather: buildWeather,
     agenda: buildAgenda,
+    notifications: buildNotifications,
     launcher: buildLauncher,
   };
 

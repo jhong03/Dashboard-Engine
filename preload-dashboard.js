@@ -31,4 +31,6 @@ contextBridge.exposeInMainWorld('aegis', {
   launcherLaunch: (id) => ipcRenderer.invoke('aegis:launcher:launch', String(id)),
   launcherFocus: (hwnd) => ipcRenderer.invoke('aegis:launcher:focus', Number(hwnd)),
   onLauncherChanged: subscription('aegis:launcher:changed'),
+  // Live Windows notifications (read-only; personal data).
+  notifications: () => ipcRenderer.invoke('aegis:notifications'),
 });

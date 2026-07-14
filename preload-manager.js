@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('aegis', {
   packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
+  notifications: () => ipcRenderer.invoke('aegis:notifications'),
   display: () => ipcRenderer.invoke('aegis:display'),
   installFile: () => ipcRenderer.invoke('aegis:packs:installFile'),
   exportPack: (id) => ipcRenderer.invoke('aegis:packs:export', String(id)),

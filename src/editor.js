@@ -29,6 +29,7 @@ const PALETTE = [
   { type: 'countdown', label: 'Countdown', hint: 'days/hours to a date' },
   { type: 'weather', label: 'Weather', hint: 'Open-Meteo, needs lat/lon' },
   { type: 'agenda', label: 'Agenda', hint: 'your upcoming reminders' },
+  { type: 'notifications', label: 'Notifications', hint: 'live Windows notifications' },
   { type: 'launcher', label: 'Launcher', hint: 'your pinned & recent apps' },
 ];
 
@@ -37,7 +38,7 @@ const DEFAULT_RECTS = {
   'stats': [10, 10, 34, 22], 'meter': [10, 10, 14, 22], 'sparkline': [10, 10, 26, 16],
   'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
-  'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30],
+  'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
   'hud-clock': [10, 10, 24, 42], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
 };
 
@@ -57,6 +58,7 @@ function defaultOptions(type, assets) {
     'countdown': { target: in30days, label: 'Countdown' },
     'weather': { lat: 0, lon: 0, place: null, details: true, compact: false },
     'agenda': { days: 7, limit: 6, label: null },
+    'notifications': { limit: 6, label: null, showApp: true },
     'launcher': { pinned: true, recent: true, running: false, labels: true, iconSize: 'm', label: null },
     'hud-clock': { format: '24h', seconds: true, showDate: true },
     'cores': { label: null },
@@ -84,6 +86,7 @@ const renderer = AegisComponents.createRenderer({
   reminders: (window) => aegis.remindersList(window),
   // Preview only — no launch() means tiles render inert on the stage.
   launcher: { state: (opts) => aegis.launcherState(opts) },
+  notifications: () => aegis.notifications(),
 });
 
 function setStatus(text, warn) {
@@ -454,6 +457,16 @@ function optionFields(component, panel) {
       field('Max items', numberControl(o.limit, 1, 12, 1, set('limit'))),
       field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Planner')),
     );
+  } else if (type === 'notifications') {
+    panel.append(
+      field('Max items', numberControl(o.limit, 1, 12, 1, set('limit'))),
+      checkControl('Show app name', o.showApp !== false, set('showApp')),
+      field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Notifications')),
+    );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = 'Shows the user’s own live Windows notifications — never saved into the pack. Needs notification access (Windows Settings › Privacy › Notifications).';
+    panel.appendChild(note);
   } else if (type === 'countdown') {
     const date = document.createElement('input');
     date.type = 'date';

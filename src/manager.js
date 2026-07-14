@@ -69,6 +69,7 @@ function previewServices() {
     weather: (opts) => aegis.weather(opts),
     reminders: (window) => aegis.remindersList(window),
     launcher: { state: (opts) => aegis.launcherState(opts) }, // no launch() → tiles inert
+    notifications: () => aegis.notifications(),
   };
 }
 
