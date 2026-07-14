@@ -33,6 +33,7 @@
         <button class="tab" id="tab-browse" role="tab" aria-selected="false">Browse</button>
         <button class="tab" id="tab-planner" role="tab" aria-selected="false">Planner</button>
         <button class="tab" id="tab-launcher" role="tab" aria-selected="false">Launcher</button>
+        <button class="tab" id="tab-assistant" role="tab" aria-selected="false">Assistant</button>
       </div>
       <label class="visually-hidden" for="lib-search">Search packs</label>
       <input id="lib-search" type="search" class="lib-search" placeholder="Search packs" spellcheck="false">
@@ -78,6 +79,45 @@
             <button class="btn" id="btn-pin-folder">Pin a folder…</button>
           </div>
           <div id="pin-list"></div>
+        </div>
+        <div class="assistant-cfg hidden" id="assistant-cfg">
+          <p class="hint">Connect your own AI so the assistant can answer and speak. Your key is stored
+            encrypted on this PC, never shown again, and never included in a pack or export.</p>
+
+          <label class="cfg-field"><span>Provider</span>
+            <select id="ai-provider">
+              <option value="anthropic">Anthropic (Claude)</option>
+              <option value="openai">OpenAI-compatible</option>
+            </select>
+          </label>
+
+          <label class="cfg-field" id="ai-baseurl-field"><span>Base URL (OpenAI-compatible)</span>
+            <input id="ai-baseurl" type="text" placeholder="https://api.openai.com/v1  ·  or http://localhost:11434/v1" spellcheck="false">
+          </label>
+
+          <label class="cfg-field"><span>API key</span>
+            <input id="ai-key" type="password" placeholder="Paste your key — leave blank to keep the current one" spellcheck="false" autocomplete="off">
+          </label>
+          <p class="hint hint-key" id="ai-key-state"></p>
+
+          <label class="cfg-field"><span>Model</span>
+            <input id="ai-model" type="text" placeholder="claude-sonnet-5" spellcheck="false">
+          </label>
+
+          <label class="cfg-field"><span>Voice for spoken replies</span>
+            <select id="ai-voice"></select>
+          </label>
+          <label class="cfg-check"><input id="ai-speak" type="checkbox"><span>Speak replies aloud (uses your tuned voice)</span></label>
+
+          <label class="cfg-field"><span>Persona (system prompt)</span>
+            <textarea id="ai-persona" rows="4"></textarea>
+          </label>
+
+          <div class="cfg-actions">
+            <button class="btn primary" id="ai-save">Save</button>
+            <button class="btn" id="ai-test">Test connection</button>
+            <span class="status-line-app" id="ai-status"></span>
+          </div>
         </div>
         <div class="gallery" id="gallery"></div>
       </div>

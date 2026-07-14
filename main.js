@@ -42,6 +42,7 @@ let panelWindow = null;
 let managerWindow = null;
 let dashboardWindow = null;
 let editorWindow = null;
+let assistantWindow = null;
 let tray = null;
 let desktopPaused = false;
 let alertScheduler = null;
@@ -125,6 +126,50 @@ function createEditorWindow(packId) {
     query: { pack: packId || 'jarvis' },
   });
   editorWindow.on('closed', () => { editorWindow = null; });
+}
+
+// The assistant chat: a focusable, frameless panel anchored along the bottom
+// of the primary display, over where the pack's console sits. The desktop
+// surface is focusable:false and can't take keyboard input, so the chat is
+// its own real window — summoned by clicking the desktop console.
+function createAssistantWindow() {
+  if (assistantWindow) {
+    if (assistantWindow.isMinimized()) assistantWindow.restore();
+    assistantWindow.show();
+    assistantWindow.focus();
+    return;
+  }
+  const area = screen.getPrimaryDisplay().workArea;
+  const width = Math.min(1100, area.width - 80);
+  const height = 460;
+  assistantWindow = new BrowserWindow({
+    x: Math.round(area.x + (area.width - width) / 2),
+    y: Math.round(area.y + area.height - height - 24),
+    width,
+    height,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    skipTaskbar: true,
+    alwaysOnTop: true,
+    backgroundColor: '#00000000',
+    webPreferences: {
+      ...COMMON_WEB_PREFERENCES,
+      preload: path.join(__dirname, 'preload-assistant.js'),
+    },
+  });
+  assistantWindow.loadFile(path.join(__dirname, 'src', 'assistant.html'));
+  assistantWindow.once('ready-to-show', () => {
+    assistantWindow.show();
+    assistantWindow.focus();
+  });
+  // A tool-style window: clicking away dismisses the chat, engine lives on.
+  // (Skip auto-hide during a DE_SHOT capture so it can be screenshotted.)
+  assistantWindow.on('blur', () => {
+    if (envFlag('SHOT')) return;
+    if (assistantWindow && !assistantWindow.webContents.isDevToolsOpened()) assistantWindow.hide();
+  });
+  assistantWindow.on('closed', () => { assistantWindow = null; });
 }
 
 // Reparent the dashboard under the shell's wallpaper layer. The hwnd is
@@ -263,9 +308,11 @@ function scheduleDevShots(dir) {
   setTimeout(async () => {
     const fs = require('fs');
     fs.mkdirSync(dir, { recursive: true });
+    if (envFlag('SHOTASSIST') === '1') createAssistantWindow();
     const targets = [
       ['manager', managerWindow], ['editor', editorWindow],
       ['panel', panelWindow], ['dashboard', dashboardWindow],
+      ['assistant', assistantWindow],
     ];
     for (const [name, win] of targets) {
       if (!win || win.isDestroyed()) continue;
@@ -369,6 +416,8 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:launcher:changed');
         }
       },
+      openAssistant: createAssistantWindow,
+      openManager: (view) => openManagerView(view || 'installed'),
       onPackSaved: (id) => {
         // Editor saved a pack — the desktop repaints if it's showing it.
         if (dashboardWindow && !dashboardWindow.isDestroyed()) {

@@ -1100,6 +1100,30 @@ function createRenderer(services) {
     live.timers.push(setInterval(paint, 20000));
   }
 
+  // Assistant console: the JARVIS prompt line. Clicking it summons the chat
+  // window (the desktop surface itself can't take keyboard input). In the
+  // editor/manager preview there is no opener, so it renders inert.
+  function buildAssistant(component, el) {
+    el.classList.add('assistant-console');
+    const row = document.createElement('div');
+    row.className = 'ac-row';
+    const mark = document.createElement('span');
+    mark.className = 'ac-mark';
+    mark.textContent = '❯';
+    const prompt = document.createElement('span');
+    prompt.className = 'ac-prompt';
+    prompt.textContent = component.options.label || 'Ask anything, or give me a task on this machine…';
+    const btn = document.createElement('span');
+    btn.className = 'ac-btn display-case';
+    btn.textContent = component.options.button || 'Execute';
+    row.append(mark, prompt, btn);
+    el.appendChild(row);
+    if (services.openAssistant) {
+      el.classList.add('ac-live');
+      el.addEventListener('click', () => services.openAssistant());
+    }
+  }
+
   function buildCountdown(component, el) {
     const label = document.createElement('span');
     label.className = 'comp-label';
@@ -1307,6 +1331,7 @@ function createRenderer(services) {
     agenda: buildAgenda,
     notifications: buildNotifications,
     launcher: buildLauncher,
+    assistant: buildAssistant,
   };
 
   function cleanup() {

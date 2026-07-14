@@ -502,62 +502,6 @@
       "options": {}
     },
     {
-      "type": "text",
-      "rect": [
-        1.4,
-        93.2,
-        84.2,
-        5.2
-      ],
-      "z": 2,
-      "style": {
-        "accent": null,
-        "textColor": "#8FB6CC",
-        "font": "mono",
-        "fontScale": 0.72,
-        "align": "left",
-        "place": null,
-        "panel": true,
-        "border": null,
-        "notches": false,
-        "opacity": null,
-        "glow": null,
-        "padding": 2,
-        "rotate": null
-      },
-      "options": {
-        "text": "❯  Ask anything, or give me a task on this machine…"
-      }
-    },
-    {
-      "type": "text",
-      "rect": [
-        86.6,
-        93.2,
-        12,
-        5.2
-      ],
-      "z": 2,
-      "style": {
-        "accent": null,
-        "textColor": "#4DDDFF",
-        "font": null,
-        "fontScale": 0.72,
-        "align": "center",
-        "place": null,
-        "panel": true,
-        "border": null,
-        "notches": false,
-        "opacity": null,
-        "glow": null,
-        "padding": 0,
-        "rotate": null
-      },
-      "options": {
-        "text": "EXECUTE"
-      }
-    },
-    {
       "type": "launcher",
       "rect": [
         78.5,
@@ -588,6 +532,27 @@
         "labels": true,
         "iconSize": "m",
         "label": null
+      }
+    },
+    {
+      "type": "assistant",
+      "rect": [
+        1.4,
+        93.2,
+        97.2,
+        5.2
+      ],
+      "z": 2,
+      "style": {
+        "panel": true,
+        "font": "mono",
+        "fontScale": 0.72,
+        "notches": false,
+        "padding": 6
+      },
+      "options": {
+        "label": "Ask anything, or give me a task on this machine…",
+        "button": "EXECUTE"
       }
     }
   ]

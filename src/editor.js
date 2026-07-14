@@ -31,6 +31,7 @@ const PALETTE = [
   { type: 'agenda', label: 'Agenda', hint: 'your upcoming reminders' },
   { type: 'notifications', label: 'Notifications', hint: 'live Windows notifications' },
   { type: 'launcher', label: 'Launcher', hint: 'your pinned & recent apps' },
+  { type: 'assistant', label: 'Assistant console', hint: 'opens the AI chat' },
 ];
 
 const DEFAULT_RECTS = {
@@ -40,6 +41,7 @@ const DEFAULT_RECTS = {
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
   'hud-clock': [10, 10, 24, 42], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
+  'assistant': [10, 10, 60, 6],
 };
 
 function defaultOptions(type, assets) {
@@ -63,6 +65,7 @@ function defaultOptions(type, assets) {
     'hud-clock': { format: '24h', seconds: true, showDate: true },
     'cores': { label: null },
     'sysinfo': { memory: true, disk: true, uptime: true, host: false, statusText: null },
+    'assistant': { label: null, button: null },
   }[type];
 }
 
@@ -466,6 +469,15 @@ function optionFields(component, panel) {
     const note = document.createElement('p');
     note.className = 'ed-empty';
     note.textContent = 'Shows the user’s own live Windows notifications — never saved into the pack. Needs notification access (Windows Settings › Privacy › Notifications).';
+    panel.appendChild(note);
+  } else if (type === 'assistant') {
+    panel.append(
+      field('Prompt text', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Ask anything…')),
+      field('Button text', textControl(o.button, (v) => { o.button = v || null; renderAll(); }, 'Execute')),
+    );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = 'Clicking this on the desktop opens the AI chat. Connect an API key in the manager under Assistant.';
     panel.appendChild(note);
   } else if (type === 'countdown') {
     const date = document.createElement('input');

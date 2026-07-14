@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; media-src 'self' data: blob:;" />
+  <title>JARVIS</title>
+  <link rel="stylesheet" href="assistant.css" />
+</head>
+<body>
+  <div id="panel">
+    <header>
+      <span class="dot"></span>
+      <span class="brand">J.A.R.V.I.S</span>
+      <span class="sub" id="status">ONLINE</span>
+      <button class="hbtn" id="new-session" title="Start a fresh conversation">NEW SESSION</button>
+    </header>
+    <div id="log" aria-live="polite"></div>
+    <footer>
+      <span class="mark">&#10095;</span>
+      <input id="input" type="text" autocomplete="off" spellcheck="false"
+             placeholder="Ask anything, or give me a task on this machine…" />
+      <button id="send">EXECUTE</button>
+    </footer>
+  </div>
+  <script src="assistant.js"></script>
+</body>
+</html>

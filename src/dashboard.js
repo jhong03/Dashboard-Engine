@@ -17,6 +17,7 @@ const renderer = AegisComponents.createRenderer({
     focus: (hwnd) => aegis.launcherFocus(hwnd),
   },
   notifications: () => aegis.notifications(),
+  openAssistant: () => aegis.openAssistant(),
 });
 
 const state = { packId: null };

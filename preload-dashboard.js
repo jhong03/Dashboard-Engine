@@ -33,4 +33,6 @@ contextBridge.exposeInMainWorld('aegis', {
   onLauncherChanged: subscription('aegis:launcher:changed'),
   // Live Windows notifications (read-only; personal data).
   notifications: () => ipcRenderer.invoke('aegis:notifications'),
+  // Summon the assistant chat (the desktop can't take keyboard input itself).
+  openAssistant: () => ipcRenderer.invoke('aegis:assistant:open'),
 });

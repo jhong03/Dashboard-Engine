@@ -230,17 +230,22 @@ function renderGallery() {
   $('reg-add').classList.toggle('hidden', library.tab !== 'browse');
   $('planner').classList.toggle('hidden', library.tab !== 'planner');
   $('launcher-cfg').classList.toggle('hidden', library.tab !== 'launcher');
-  gallery.classList.toggle('hidden', library.tab === 'planner' || library.tab === 'launcher');
-  $('tab-installed').setAttribute('aria-selected', String(library.tab === 'installed'));
-  $('tab-browse').setAttribute('aria-selected', String(library.tab === 'browse'));
-  $('tab-planner').setAttribute('aria-selected', String(library.tab === 'planner'));
-  $('tab-launcher').setAttribute('aria-selected', String(library.tab === 'launcher'));
+  $('assistant-cfg').classList.toggle('hidden', library.tab !== 'assistant');
+  const nonGallery = ['planner', 'launcher', 'assistant'].includes(library.tab);
+  gallery.classList.toggle('hidden', nonGallery);
+  for (const t of ['installed', 'browse', 'planner', 'launcher', 'assistant']) {
+    $(`tab-${t}`).setAttribute('aria-selected', String(library.tab === t));
+  }
   if (library.tab === 'planner') {
     renderPlanner();
     return;
   }
   if (library.tab === 'launcher') {
     renderLauncherCfg();
+    return;
+  }
+  if (library.tab === 'assistant') {
+    renderAssistantCfg();
     return;
   }
 
@@ -588,6 +593,83 @@ async function wireLauncherCfg() {
   });
 }
 
+// ── AI assistant settings (BYO key; key stays encrypted in main) ───────────
+
+const assistantCfg = { loaded: false };
+
+function syncProviderFields() {
+  const openai = $('ai-provider').value === 'openai';
+  $('ai-baseurl-field').classList.toggle('hidden', !openai);
+}
+
+async function renderAssistantCfg() {
+  const res = await aegis.assistantConfigGet();
+  if (!res.ok) return libStatus(res.error, true);
+  const c = res.config;
+  $('ai-provider').value = c.provider;
+  $('ai-baseurl').value = c.baseUrl || '';
+  $('ai-model').value = c.model || '';
+  $('ai-persona').value = c.persona || '';
+  $('ai-speak').checked = c.speak !== false;
+  $('ai-key').value = '';
+  $('ai-key-state').textContent = c.hasKey ? 'A key is saved (encrypted). Leave the field blank to keep it, or paste a new one to replace it.' : 'No key saved yet.';
+  syncProviderFields();
+
+  // Voice dropdown: the tuned profiles, plus the engine default.
+  const select = $('ai-voice');
+  select.textContent = '';
+  const def = document.createElement('option');
+  def.value = '';
+  def.textContent = 'Default voice';
+  select.appendChild(def);
+  const voices = await aegis.voiceProfilesList();
+  if (voices.ok) {
+    for (const p of voices.profiles) {
+      const opt = document.createElement('option');
+      opt.value = p.file;
+      opt.textContent = `${p.name} (${p.voice})`;
+      select.appendChild(opt);
+    }
+  }
+  select.value = c.voiceProfile || '';
+  assistantCfg.loaded = true;
+}
+
+async function saveAssistant() {
+  const patch = {
+    provider: $('ai-provider').value,
+    baseUrl: $('ai-baseurl').value,
+    model: $('ai-model').value,
+    persona: $('ai-persona').value,
+    speak: $('ai-speak').checked,
+    voiceProfile: $('ai-voice').value,
+  };
+  const key = $('ai-key').value;
+  if (key.trim() !== '') patch.apiKey = key; // only set when the user typed one
+  return aegis.assistantConfigSet(patch);
+}
+
+function wireAssistantCfg() {
+  $('ai-provider').addEventListener('change', syncProviderFields);
+
+  $('ai-save').addEventListener('click', async () => {
+    const out = await saveAssistant();
+    if (!out.ok) { $('ai-status').textContent = out.error; return; }
+    $('ai-status').textContent = 'Saved.';
+    renderAssistantCfg();
+  });
+
+  $('ai-test').addEventListener('click', async () => {
+    const saved = await saveAssistant(); // test uses the current fields
+    if (!saved.ok) { $('ai-status').textContent = saved.error; return; }
+    $('ai-status').textContent = 'Contacting the model…';
+    const out = await aegis.assistantAsk('Reply with one short sentence confirming you are online.');
+    $('ai-status').textContent = out.ok ? `✓ ${out.text}` : `✗ ${out.error}`;
+    await aegis.assistantReset(); // don't leave the test in the real conversation
+    renderAssistantCfg();
+  });
+}
+
 // ── Event editor modal ──────────────────────────────────────────────────────
 
 function openEventEditor({ id, date }) {
@@ -678,7 +760,7 @@ function wirePlanner() {
   });
   // A notification click asks us to show the planner.
   aegis.onShowView((view) => {
-    if (['browse', 'planner', 'installed', 'launcher'].includes(view)) {
+    if (['browse', 'planner', 'installed', 'launcher', 'assistant'].includes(view)) {
       library.tab = view;
       renderGallery();
     }
@@ -853,7 +935,9 @@ async function init() {
   $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
   $('tab-planner').addEventListener('click', () => { library.tab = 'planner'; renderGallery(); });
   $('tab-launcher').addEventListener('click', () => { library.tab = 'launcher'; renderGallery(); });
+  $('tab-assistant').addEventListener('click', () => { library.tab = 'assistant'; renderGallery(); });
   wirePlanner();
+  wireAssistantCfg();
   await wireLauncherCfg();
   $('lib-search').addEventListener('input', (e) => { library.search = e.target.value; renderGallery(); });
   $('btn-install-file').addEventListener('click', async () => {
@@ -873,7 +957,7 @@ async function init() {
   });
 
   const view = new URLSearchParams(location.search).get('view');
-  if (['browse', 'planner', 'launcher'].includes(view)) library.tab = view;
+  if (['browse', 'planner', 'launcher', 'assistant'].includes(view)) library.tab = view;
   await refreshLibrary();
 }
 

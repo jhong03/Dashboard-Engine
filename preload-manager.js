@@ -75,4 +75,12 @@ contextBridge.exposeInMainWorld('aegis', {
     ipcRenderer.on('aegis:launcher:changed', handler);
     return () => ipcRenderer.removeListener('aegis:launcher:changed', handler);
   },
+
+  // AI assistant settings — the API key is set here but never read back
+  // (config get returns hasKey only; the key stays encrypted in main).
+  assistantConfigGet: () => ipcRenderer.invoke('aegis:assistant:config:get'),
+  assistantConfigSet: (patch) => ipcRenderer.invoke('aegis:assistant:config:set', patch),
+  assistantAsk: (prompt) => ipcRenderer.invoke('aegis:assistant:ask', String(prompt)),
+  assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
+  voiceProfilesList: () => ipcRenderer.invoke('aegis:profiles:list'),
 });

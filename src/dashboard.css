@@ -438,6 +438,31 @@ body {
 }
 .spark-value { font-family: var(--font-mono); font-size: 1.05em; color: var(--accent-bright); }
 
+/* assistant console: the clickable JARVIS prompt line */
+.comp-assistant { justify-content: center; }
+.assistant-console.ac-live { cursor: pointer; }
+.ac-row { display: flex; align-items: center; gap: 0.94cqw; width: 100%; }
+.ac-mark { font-family: var(--font-mono); color: var(--accent); font-size: 1.1em; flex-shrink: 0; }
+.ac-prompt {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ac-btn {
+  flex-shrink: 0;
+  font-size: 0.72em;
+  letter-spacing: 0.16em;
+  color: var(--accent);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  padding: 0.31cqw 0.94cqw;
+}
+.assistant-console.ac-live:hover .ac-btn { background: var(--glow-wash); color: var(--accent-bright); }
+
 /* notifications feed (live Windows toasts) */
 .notif-feed {
   flex: 1 1 auto;
