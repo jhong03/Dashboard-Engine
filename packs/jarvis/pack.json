@@ -1,7 +1,6 @@
 {
   "schema": 2,
   "id": "jarvis",
-  "name": "J.A.R.V.I.S",
   "author": "jhong03",
   "persona": {
     "name": "J.A.R.V.I.S",
@@ -82,8 +81,8 @@
     {
       "type": "text",
       "rect": [
-        30,
-        0.9,
+        30.500000000000007,
+        1.0999999999999996,
         40,
         3.2
       ],
@@ -171,9 +170,9 @@
       "type": "text",
       "rect": [
         1.4,
-        6.5,
-        18.7,
-        66.5
+        5.9,
+        18.5,
+        66.8
       ],
       "z": 1,
       "style": {
@@ -387,7 +386,7 @@
       "type": "hud-clock",
       "rect": [
         30.5,
-        7,
+        6.5,
         40,
         57
       ],
@@ -478,8 +477,8 @@
     {
       "type": "status",
       "rect": [
-        1.4,
-        75,
+        1.899999999999996,
+        76.5,
         97.2,
         17
       ],
@@ -504,8 +503,8 @@
     {
       "type": "launcher",
       "rect": [
-        78.5,
-        41,
+        78.6,
+        42.2,
         20,
         30.5
       ],
@@ -522,7 +521,7 @@
         "notches": null,
         "opacity": null,
         "glow": null,
-        "padding": 0,
+        "padding": 6,
         "rotate": null
       },
       "options": {
@@ -534,5 +533,6 @@
         "label": null
       }
     }
-  ]
+  ],
+  "name": "J.A.R.V.I.S"
 }
