@@ -26,6 +26,18 @@ const bridge = {
   exportPack: (id) => ipcRenderer.invoke('aegis:packs:export', String(id)),
   uninstallPack: (id) => ipcRenderer.invoke('aegis:packs:uninstall', String(id)),
 
+  // Steam Workshop (prototype). All fail-soft when Steam isn't available.
+  workshopStatus: () => ipcRenderer.invoke('aegis:workshop:status'),
+  workshopPublish: (req) => ipcRenderer.invoke('aegis:workshop:publish', {
+    packId: String(req.packId),
+    title: String(req.title || ''),
+    description: String(req.description || ''),
+    tags: Array.isArray(req.tags) ? req.tags.map(String) : [],
+    visibility: String(req.visibility || 'unlisted'),
+  }),
+  workshopSubscribed: () => ipcRenderer.invoke('aegis:workshop:subscribed'),
+  workshopImport: (itemId) => ipcRenderer.invoke('aegis:workshop:import', String(itemId)),
+
   registryAdd: (url) => ipcRenderer.invoke('aegis:registry:add', String(url)),
   registryRemove: (url) => ipcRenderer.invoke('aegis:registry:remove', String(url)),
   registryBrowse: (url) => ipcRenderer.invoke('aegis:registry:browse', String(url)),

@@ -290,3 +290,17 @@ entry — that's a release.
 
 Caps the engine enforces on installs: ≤ 40 files per archive, ≤ 5 MB per
 asset, ≤ 25 MB unpacked, images only, built-in pack ids are reserved.
+
+### Steam Workshop (prototype)
+
+If the engine is running with Steam, a pack's detail sidebar has **Publish to
+Workshop…** — title, description, tags, and visibility, then it uploads
+`pack.json` + `assets/` straight to Steam Workshop (the same channel Wallpaper
+Engine uses). Personal data never rides along; only the shippable pack files do.
+
+This is an early prototype wired to Steam's public **Spacewar (480)** test app,
+so it works without a Steamworks partnership — items land in Spacewar's Workshop
+for testing. A real release needs Dashboard Engine shipped on Steam under its
+own AppID (and `steam_appid.txt`, the dev-only 480 override, removed). With no
+Steam client running, the button just reports Workshop unavailable — nothing
+breaks.

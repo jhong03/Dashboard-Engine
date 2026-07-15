@@ -799,6 +799,85 @@ function wirePlanner() {
   });
 }
 
+// ── Steam Workshop publish dialog (prototype) ────────────────────────────────
+
+function publishField(labelText, control) {
+  const wrap = document.createElement('label');
+  wrap.className = 'event-field';
+  const span = document.createElement('span');
+  span.textContent = labelText;
+  wrap.append(span, control);
+  return wrap;
+}
+
+function openPublishDialog(item) {
+  const scrim = document.createElement('div');
+  scrim.className = 'modal-scrim';
+  const card = document.createElement('div');
+  card.className = 'event-card';
+  scrim.appendChild(card);
+  const close = () => scrim.remove();
+
+  const heading = document.createElement('h3');
+  heading.textContent = `Publish “${item.name}” to Steam Workshop`;
+  card.appendChild(heading);
+
+  const title = document.createElement('input');
+  title.type = 'text'; title.maxLength = 128; title.value = item.name || '';
+  const desc = document.createElement('textarea');
+  desc.rows = 4; desc.maxLength = 2000;
+  desc.value = (item.pack && item.pack.persona && item.pack.persona.tagline) || '';
+  const tags = document.createElement('input');
+  tags.type = 'text'; tags.placeholder = 'comma, separated, tags';
+  const vis = document.createElement('select');
+  for (const [v, label] of [['unlisted', 'Unlisted (link only)'], ['public', 'Public'], ['friends', 'Friends only'], ['private', 'Private']]) {
+    const opt = document.createElement('option'); opt.value = v; opt.textContent = label; vis.appendChild(opt);
+  }
+  card.append(
+    publishField('Title', title),
+    publishField('Description', desc),
+    publishField('Tags', tags),
+    publishField('Visibility', vis),
+  );
+
+  const hint = document.createElement('p');
+  hint.className = 'detail-line';
+  hint.textContent = 'Prototype: uploads to Steam’s Spacewar (480) test app. Only pack.json + assets are published — never your reminders, launcher, or keys.';
+  card.appendChild(hint);
+
+  const actions = document.createElement('div');
+  actions.className = 'event-actions';
+  const spacer = document.createElement('div'); spacer.className = 'event-spacer';
+  const cancel = libButton('Cancel', close);
+  const submit = libButton('Publish', async () => {
+    submit.disabled = true;
+    libStatus(`Publishing “${title.value || item.name}” to Workshop…`);
+    const out = await aegis.workshopPublish({
+      packId: item.id,
+      title: title.value,
+      description: desc.value,
+      tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean),
+      visibility: vis.value,
+    });
+    submit.disabled = false;
+    if (!out.ok) return libStatus(out.error || 'Publish failed.', true);
+    close();
+    const note = out.needsToAcceptAgreement
+      ? ' — accept the Workshop Legal Agreement on the item’s Steam page to make it visible.'
+      : '';
+    libStatus(`Published! ${out.url}${note}`);
+  }, 'primary');
+  actions.append(cancel, spacer, submit);
+  card.appendChild(actions);
+
+  scrim.addEventListener('click', (e) => { if (e.target === scrim) close(); });
+  document.addEventListener('keydown', function esc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
+  });
+  document.body.appendChild(scrim);
+  title.focus();
+}
+
 // ── Detail sidebar ──────────────────────────────────────────────────────────
 
 function detailLine(text) {
@@ -864,6 +943,11 @@ async function renderDetail() {
     detail.appendChild(libButton('Export pack…', async () => {
       const out = await aegis.exportPack(item.id);
       libStatus(out.ok ? `Exported to ${out.file}` : out.error || '', !out.ok && out.error);
+    }));
+    detail.appendChild(libButton('Publish to Workshop…', async () => {
+      const st = await aegis.workshopStatus();
+      if (!st.available) return libStatus(st.reason || 'Steam Workshop isn’t available.', true);
+      openPublishDialog(item);
     }));
     if (item.origin === 'installed') {
       detail.appendChild(libButton('Uninstall', async () => {
