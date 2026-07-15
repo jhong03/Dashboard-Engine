@@ -10,6 +10,13 @@ const $ = (id) => document.getElementById(id);
 
 const state = { config: null, busy: false, audioCtx: null, expanded: false };
 
+function hexToRgba(hex, alpha) {
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  const r = parseInt(h.slice(0, 2), 16), g = parseInt(h.slice(2, 4), 16), b = parseInt(h.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 function scrollToEnd() {
   const log = $('log');
   log.scrollTop = log.scrollHeight;
@@ -135,6 +142,19 @@ function init() {
   });
   // A click on the desktop console asks us to open + focus.
   aegis.onSummon(() => { setExpanded(true); $('input').focus(); });
+  // Theme + labels for the active pack, so the bar matches the dashboard.
+  aegis.onConfig((cfg) => {
+    const root = document.documentElement.style;
+    if (cfg.accent) {
+      root.setProperty('--cyan', cfg.accent);
+      root.setProperty('--line', hexToRgba(cfg.accent, 0.4));
+      root.setProperty('--line-dim', hexToRgba(cfg.accent, 0.16));
+    }
+    if (cfg.bright) root.setProperty('--bright', cfg.bright);
+    if (cfg.label) $('input').placeholder = cfg.label;
+    if (cfg.button) $('send').textContent = cfg.button;
+    if (cfg.name) document.querySelector('.brand').textContent = cfg.name;
+  });
   refreshConfig();
 }
 

@@ -17,4 +17,6 @@ contextBridge.exposeInMainWorld('aegis', {
   resize: (expanded) => ipcRenderer.invoke('aegis:console:resize', Boolean(expanded)),
   // Pack-console click asks us to expand + focus the input.
   onSummon: (callback) => ipcRenderer.on('aegis:console:summon', () => callback()),
+  // Active pack's label/button/accent so the bar matches the dashboard.
+  onConfig: (callback) => ipcRenderer.on('aegis:console:config', (_e, cfg) => callback(cfg)),
 });

@@ -136,28 +136,52 @@ function createEditorWindow(packId) {
 const CONSOLE_COLLAPSED_H = 58;
 const CONSOLE_EXPANDED_H = 440;
 
-// Full-width strip flush to the bottom of the work area (above the taskbar) —
-// covers the pack's own console footer, like the original JARVIS console.
-function consoleBounds(height) {
-  const area = screen.getPrimaryDisplay().workArea;
-  return {
-    x: area.x,
-    y: area.y + area.height - height,
-    width: area.width,
-    height,
-  };
+// The console window is positioned OVER the active pack's `assistant`
+// component (its screen rect), so the one interactive bar sits exactly where
+// the pack draws its console — matching what the editor shows, no phantom
+// second bar. Null when the pack has no assistant component (→ no console).
+let consoleHome = null; // { x, y, w, h } in screen px, or null
+
+function computeConsoleHome(pack) {
+  const comp = pack.components.find((c) => c.type === 'assistant');
+  if (!comp) return null;
+  const disp = screen.getPrimaryDisplay();
+  const b = disp.bounds, wa = disp.workArea;
+  const pad = (pack.canvas && pack.canvas.padding) || 0;
+  const inner = (100 - 2 * pad) / 100; // components are % within the padded canvas
+  const [rx, ry, rw, rh] = comp.rect;
+  const x = Math.round(b.x + (pad + rx * inner) / 100 * b.width);
+  const w = Math.round(rw * inner / 100 * b.width);
+  let h = Math.max(CONSOLE_COLLAPSED_H, Math.round(rh * inner / 100 * b.height));
+  let y = Math.round(b.y + (pad + ry * inner) / 100 * b.height);
+  const waBottom = wa.y + wa.height; // keep the bar above the taskbar
+  if (y + h > waBottom) y = waBottom - h;
+  return { x, y, w, h };
 }
 
-// Grow/shrink the console in place, staying anchored to the bottom.
+// Collapsed = the component's own rect; expanded grows upward from its bottom.
+function consoleBounds(expanded) {
+  if (consoleHome) {
+    const h = expanded ? Math.max(consoleHome.h, CONSOLE_EXPANDED_H) : consoleHome.h;
+    let y = consoleHome.y + consoleHome.h - h;
+    const wa = screen.getPrimaryDisplay().workArea;
+    if (y < wa.y) y = wa.y;
+    return { x: consoleHome.x, y, width: consoleHome.w, height: h };
+  }
+  const area = screen.getPrimaryDisplay().workArea; // fallback: full-width bottom
+  const h = expanded ? CONSOLE_EXPANDED_H : CONSOLE_COLLAPSED_H;
+  return { x: area.x, y: area.y + area.height - h, width: area.width, height: h };
+}
+
 function resizeConsole(expanded) {
   if (!assistantWindow || assistantWindow.isDestroyed()) return;
-  assistantWindow.setBounds(consoleBounds(expanded ? CONSOLE_EXPANDED_H : CONSOLE_COLLAPSED_H));
+  assistantWindow.setBounds(consoleBounds(expanded));
 }
 
 function createAssistantWindow() {
   if (assistantWindow) return;
   assistantWindow = new BrowserWindow({
-    ...consoleBounds(CONSOLE_COLLAPSED_H),
+    ...consoleBounds(false),
     frame: false,
     transparent: true,
     resizable: false,
@@ -192,17 +216,29 @@ function focusAssistant() {
 // includes an `assistant` component (visible/placeable in the editor). Packs
 // without one get no console. Called on startup and on every pack change.
 function syncConsole(packId) {
-  let hasConsole = false;
-  try {
-    const loaded = packs.loadPack(__dirname, USER_DIR, packId);
-    hasConsole = loaded.pack.components.some((c) => c.type === 'assistant');
-  } catch { /* unreadable pack → no console */ }
-  if (hasConsole) {
-    createAssistantWindow();
-    if (assistantWindow && !assistantWindow.isVisible()) assistantWindow.showInactive();
-  } else if (assistantWindow && !assistantWindow.isDestroyed()) {
-    assistantWindow.hide();
+  let pack = null;
+  try { pack = packs.loadPack(__dirname, USER_DIR, packId).pack; } catch { /* no console */ }
+  consoleHome = pack ? computeConsoleHome(pack) : null;
+  if (!consoleHome) {
+    if (assistantWindow && !assistantWindow.isDestroyed()) assistantWindow.hide();
+    return;
   }
+  createAssistantWindow();
+  resizeConsole(false);              // move to the new pack's console position
+  if (!assistantWindow.isVisible()) assistantWindow.showInactive();
+  // Match the bar's placeholder, button, and accent to the pack so the one
+  // console reads as part of the active dashboard (crimson on gothic, etc.).
+  const comp = pack.components.find((c) => c.type === 'assistant');
+  const cfg = {
+    label: comp.options.label || '',
+    button: comp.options.button || '',
+    name: pack.persona.name || '',
+    accent: pack.skin.palette.accent,
+    bright: pack.skin.palette.accentBright,
+  };
+  const send = () => { if (assistantWindow && !assistantWindow.isDestroyed()) assistantWindow.webContents.send('aegis:console:config', cfg); };
+  if (assistantWindow.webContents.isLoading()) assistantWindow.webContents.once('did-finish-load', send);
+  else send();
 }
 
 // Reparent the dashboard under the shell's wallpaper layer. The hwnd is
