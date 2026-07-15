@@ -6,7 +6,11 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('aegis', {
+// SECURITY: preloads run in every frame, including a module component's
+// sandboxed <iframe> shown in the stage preview. Only the top frame (the real
+// editor UI) may reach this bridge — never a pack's untrusted module code, which
+// otherwise could call editorSave/importImage/activeSet. See preload-dashboard.js.
+const bridge = {
   version: '0.4.0',
   packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
   assetsAll: (id) => ipcRenderer.invoke('aegis:packs:assetsAll', String(id)),
@@ -26,4 +30,6 @@ contextBridge.exposeInMainWorld('aegis', {
     ipcRenderer.on('aegis:launcher:changed', handler);
     return () => ipcRenderer.removeListener('aegis:launcher:changed', handler);
   },
-});
+};
+
+if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

@@ -329,6 +329,144 @@ function applyComponentStyle(el, style, pack) {
   if (style.notches !== null) el.classList.toggle('no-notches', !style.notches);
 }
 
+// ── Sandboxed module components ──────────────────────────────────────────────
+// A `module` component runs designer-authored HTML/CSS/JS. It is UNTRUSTED, so
+// it renders inside an <iframe sandbox="allow-scripts"> (opaque origin: no
+// same-origin, no parent access, no top navigation, no forms/popups) wrapped in
+// a document whose CSP forbids the network entirely (default-src 'none'; the
+// only reachable resources are inline script/style and data: images). The frame
+// therefore cannot reach Node, the IPC bridge (also withheld from subframes in
+// every preload), the user's files, or the internet. The host and the module
+// talk ONLY over postMessage, and the host only ever *pushes* an allowlisted
+// feed — theme tokens and public system telemetry — so the module can never ask
+// the engine to do anything.
+
+const MODULE_CSP = [
+  "default-src 'none'",       // nothing is reachable unless named below — no network, no frames
+  "script-src 'unsafe-inline'", // the module's inline JS + our SDK shim (opaque origin, so scoped here)
+  "style-src 'unsafe-inline'",
+  "img-src data:",            // pack images arrive as data: URIs via DE.asset()
+  "font-src data:",
+  "media-src data:",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join('; ');
+
+const MODULE_BASE_CSS = [
+  '*{box-sizing:border-box}',
+  'html,body{margin:0;width:100%;height:100%}',
+  // Make cqw/cqh inside the module resolve against the frame (= the component
+  // box), so a module scales with its component just like native components do.
+  'html{container-type:size}',
+  'body{background:transparent;overflow:hidden;color:var(--de-accent-bright,#e6f6ff);',
+  "font-family:var(--de-font,'Segoe UI',system-ui,sans-serif);",
+  'letter-spacing:var(--de-ls,0);font-size:2.6cqw;line-height:1.35}',
+  'a{color:var(--de-accent,#3fd8ff)}',
+].join('');
+
+// Injected as the FIRST script in the frame, before the module's own code, so
+// window.DE exists when the module runs. It caches the last theme/data so late
+// listeners still get current values, and only trusts messages from the host.
+const MODULE_SDK = [
+  '(function(){"use strict";',
+  'var themeCache=null,dataCache=null,assetCache={},themeCbs=[],dataCbs=[];',
+  'function safe(fn,a){try{fn(a);}catch(e){}}',
+  'function applyVars(t){if(!t||!t.vars)return;var r=document.documentElement;',
+  'for(var k in t.vars){if(Object.prototype.hasOwnProperty.call(t.vars,k))r.style.setProperty(k,t.vars[k]);}}',
+  'window.addEventListener("message",function(e){',
+  'if(e.source!==window.parent)return;var m=e.data;if(!m||m.__de!==1)return;',
+  'if(m.type==="theme"){themeCache=m.theme;applyVars(m.theme);themeCbs.forEach(function(f){safe(f,m.theme);});}',
+  'else if(m.type==="assets"){assetCache=m.assets||{};}',
+  'else if(m.type==="data"){dataCache=m.data;dataCbs.forEach(function(f){safe(f,m.data);});}});',
+  'window.DE={',
+  'onTheme:function(cb){if(typeof cb==="function"){themeCbs.push(cb);if(themeCache)safe(cb,themeCache);}},',
+  'onData:function(cb){if(typeof cb==="function"){dataCbs.push(cb);if(dataCache)safe(cb,dataCache);}},',
+  'theme:function(){return themeCache;},data:function(){return dataCache;},',
+  'asset:function(n){return assetCache[n]||null;}};',
+  'try{window.parent.postMessage({__de:1,type:"ready"},"*");}catch(e){}',
+  '})();',
+].join('');
+
+// Wrap a designer's fragment in the locked-down document shell. The fragment is
+// authored like an Artifact: markup + inline <style>/<script>, no <html>/<head>/
+// <body> of its own. A stray tag can only corrupt the module's own frame.
+function moduleSrcdoc(fragment, o) {
+  const scrollCss = o && o.scroll ? 'body{overflow:auto}' : '';
+  return '<!doctype html><html><head><meta charset="utf-8">'
+    + '<meta http-equiv="Content-Security-Policy" content="' + MODULE_CSP + '">'
+    + '<style>' + MODULE_BASE_CSS + scrollCss + '</style>'
+    + '<script>' + MODULE_SDK + '</' + 'script>'
+    + '</head><body>' + fragment + '</body></html>';
+}
+
+// Load the module document from the custom `demodule://` scheme rather than
+// srcdoc/data: — a custom scheme does NOT inherit the embedding page's strict
+// CSP, so the module can run its own inline code under the network-less policy
+// main serves it with. The whole document rides in the URL as base64url (UTF-8
+// safe); main (see MODULE_SCHEME) decodes and echoes it back.
+function moduleDocUrl(doc) {
+  const bytes = new TextEncoder().encode(doc);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  const b64url = btoa(bin).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return 'demodule://m/' + b64url;
+}
+
+// Theme payload pushed to a module: pack skin tokens as both a structured object
+// and ready-to-use CSS custom properties (--de-*). Persona name/tagline is pack
+// content (not user data), so a module can greet in character.
+function moduleTheme(pack) {
+  const p = pack.skin.palette, t = pack.skin.typography, sh = pack.skin.shape;
+  const fonts = {
+    display: FONT_STACKS[t.display] || FONT_STACKS['system-sans'],
+    sans: FONT_STACKS['system-sans'],
+    serif: FONT_STACKS['system-serif'],
+    mono: FONT_STACKS['mono'],
+  };
+  return {
+    palette: {
+      void: p.void, glass: p.glass, accent: p.accent, accentBright: p.accentBright,
+      muted: p.muted, warn: p.warn, gold: p.gold,
+    },
+    fonts,
+    radius: sh.radius,
+    uppercase: !!t.uppercase,
+    letterSpacing: t.letterSpacing,
+    persona: { name: pack.persona.name, tagline: pack.persona.tagline || '' },
+    vars: {
+      '--de-void': p.void, '--de-glass': p.glass, '--de-accent': p.accent,
+      '--de-accent-bright': p.accentBright, '--de-muted': p.muted,
+      '--de-warn': p.warn, '--de-gold': p.gold,
+      '--de-font': fonts.display, '--de-font-mono': fonts.mono,
+      '--de-radius': sh.radius + 'px', '--de-ls': t.letterSpacing + 'em',
+    },
+  };
+}
+
+// The telemetry subset a module may see: system load, not identity. hostname is
+// deliberately withheld (least privilege — the module has no exfil path anyway,
+// but there's no reason to hand it over).
+function moduleSample(v) {
+  return {
+    cpu: v.cpu, mem: v.mem, disk: v.disk, battery: v.battery,
+    cores: Array.isArray(v.cores) ? v.cores.slice(0, 32) : [],
+    memText: v.memText, diskText: v.diskText, diskFreeText: v.diskFreeText,
+    uptimeText: v.uptimeText, batteryText: v.batteryText,
+    now: Date.now(),
+  };
+}
+
+// A plausible first frame so a preview (or the ~2 s before the first real tick)
+// isn't blank. Live telemetry overwrites it on the desktop.
+function moduleMockSample() {
+  return {
+    cpu: 24, mem: 58, disk: 46, battery: 80,
+    cores: [30, 22, 40, 18, 26, 34, 20, 28],
+    memText: '9.3 / 16.0 GB', diskText: '470 / 1000 GB', diskFreeText: '530 GB',
+    uptimeText: '3h 12m', batteryText: '80 %', now: Date.now(),
+  };
+}
+
 // ── Renderer instance ───────────────────────────────────────────────────────
 // createRenderer(services) → { render(canvasEl, pack, assets), destroy() }.
 // Every render() cleans up the previous one's timers/observers.
@@ -337,6 +475,7 @@ function createRenderer(services) {
   const live = {
     timers: [],
     observers: [],
+    disposers: [],  // teardown callbacks (e.g. module postMessage listeners)
     telemetry: { subscribers: [], history: { cpu: [], mem: [], disk: [], battery: [] } },
   };
 
@@ -1461,6 +1600,68 @@ function createRenderer(services) {
     live.timers.push(setInterval(paint, o.running ? 15000 : 60000));
   }
 
+  // Designer-authored sandboxed component. The untrusted fragment runs in an
+  // isolated <iframe> (see the MODULE_* block above); here we just mount it and
+  // wire the one-way theme/telemetry feed over postMessage.
+  function buildModule(component, el, ctx) {
+    const opts = component.options || {};
+    const html = typeof opts.html === 'string' ? opts.html : '';
+    el.classList.add('comp-module-host');
+    el.classList.toggle('module-scroll', opts.scroll === true);
+
+    if (!html.trim()) {
+      // Nothing authored yet — a hint so the editor shows where code goes.
+      const hint = document.createElement('div');
+      hint.className = 'module-empty';
+      hint.textContent = 'Empty module — add HTML in the inspector.';
+      el.appendChild(hint);
+      return;
+    }
+
+    const frame = document.createElement('iframe');
+    frame.className = 'module-frame';
+    // allow-scripts WITHOUT allow-same-origin ⇒ opaque origin, no parent/cookie
+    // access, no top navigation, no forms/popups. The served CSP kills network.
+    frame.setAttribute('sandbox', 'allow-scripts');
+    frame.setAttribute('referrerpolicy', 'no-referrer');
+    frame.setAttribute('title', 'pack module');
+    frame.src = moduleDocUrl(moduleSrcdoc(html, { scroll: opts.scroll === true }));
+    el.appendChild(frame);
+
+    const theme = moduleTheme(ctx.pack);
+    const assets = ctx.assets || {};
+    const post = (msg) => {
+      const win = frame.contentWindow;
+      if (win) { try { win.postMessage(msg, '*'); } catch (e) { /* frame gone */ } }
+    };
+    // First frame: theme + pack images + a plausible telemetry sample. The SDK
+    // caches these, so listeners the module registers later still receive them.
+    const pushInit = () => {
+      post({ __de: 1, type: 'theme', theme });
+      post({ __de: 1, type: 'assets', assets });
+      if (opts.telemetry !== false) post({ __de: 1, type: 'data', data: moduleMockSample() });
+    };
+
+    // The module posts {type:'ready'} once its SDK is live; answer with a fresh
+    // push. Accept messages ONLY from this frame, and never act on them beyond
+    // re-sending the same allowlisted feed.
+    const onMessage = (event) => {
+      if (event.source !== frame.contentWindow) return;
+      const m = event.data;
+      if (!m || m.__de !== 1) return;
+      if (m.type === 'ready') pushInit();
+    };
+    window.addEventListener('message', onMessage);
+    live.disposers.push(() => window.removeEventListener('message', onMessage));
+    frame.addEventListener('load', pushInit); // belt-and-braces if 'ready' is missed
+
+    // Live system telemetry (desktop, and the editor preview which also has a
+    // stats service). Silent if the pack opted out.
+    if (opts.telemetry !== false) {
+      live.telemetry.subscribers.push((values) => post({ __de: 1, type: 'data', data: moduleSample(values) }));
+    }
+  }
+
   const BUILDERS = {
     status: buildStatus,
     clock: buildClock,
@@ -1481,13 +1682,16 @@ function createRenderer(services) {
     notifications: buildNotifications,
     launcher: buildLauncher,
     assistant: buildAssistant,
+    module: buildModule,
   };
 
   function cleanup() {
     for (const timer of live.timers) clearInterval(timer);
     for (const observer of live.observers) observer.disconnect();
+    for (const dispose of live.disposers) { try { dispose(); } catch (e) { /* fail soft */ } }
     live.timers = [];
     live.observers = [];
+    live.disposers = [];
     live.telemetry.subscribers = [];
   }
 

@@ -8,7 +8,7 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const voicebank = require('./lib/voicebank');
@@ -23,6 +23,31 @@ const USER_DIR = userDataDir();
 // Windows routes toast notifications by AppUserModelID; without one set,
 // planner alerts never reach the Action Center.
 app.setAppUserModelId('com.dashboardengine.app');
+
+// Sandboxed module components render from `demodule://` (registered below).
+// A custom scheme is NOT a "local scheme" (unlike data:/srcdoc), so its
+// document does NOT inherit the strict CSP of the page that embeds it —
+// letting a module run its own inline code under its OWN permissive-but-
+// network-less policy, while the trusted desktop/editor pages keep their
+// locked-down `script-src 'self'`. Must be declared before app is ready.
+const MODULE_SCHEME = 'demodule';
+// The policy served with every module document: inline script/style for the
+// designer's own code, images/fonts/media only as data: URIs, and — critically —
+// NO network of any kind (no default-src, so no connect/fetch/websocket).
+const MODULE_DOC_CSP = [
+  "default-src 'none'",
+  "script-src 'unsafe-inline'",
+  "style-src 'unsafe-inline'",
+  "img-src data:",
+  "font-src data:",
+  "media-src data:",
+  "base-uri 'none'",
+  "form-action 'none'",
+].join('; ');
+protocol.registerSchemesAsPrivileged([{
+  scheme: MODULE_SCHEME,
+  privileges: { standard: true, secure: true, supportFetchAPI: false, corsEnabled: false, stream: false },
+}]);
 
 // `npm run panel` / the selftest open only the tuning panel.
 // DE_* env vars are canonical since the rebrand; legacy AEGIS_* still work.
@@ -356,6 +381,27 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     warnAboutUnauditedVoices();
+
+    // Serve sandboxed module documents. The renderer (components.js
+    // buildModule) base64url-encodes the whole wrapped HTML into the request
+    // path; we decode and hand it back under the network-less MODULE_DOC_CSP.
+    // Main only echoes the bytes — it never parses or runs them.
+    protocol.handle(MODULE_SCHEME, (request) => {
+      try {
+        let b64 = new URL(request.url).pathname.replace(/^\/+/, '').replace(/-/g, '+').replace(/_/g, '/');
+        while (b64.length % 4) b64 += '=';
+        const html = Buffer.from(b64, 'base64').toString('utf8');
+        return new Response(html, {
+          headers: {
+            'content-type': 'text/html; charset=utf-8',
+            'content-security-policy': MODULE_DOC_CSP,
+            'x-content-type-options': 'nosniff',
+          },
+        });
+      } catch (err) {
+        return new Response('', { status: 400 });
+      }
+    });
     if (!WANT_PANEL) {
       alertScheduler = createAlertScheduler({ userDir: USER_DIR, notify: notifyReminder });
       alertScheduler.rearm();

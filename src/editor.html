@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <!-- frame-src demodule: lets the stage render sandboxed `module` components. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:">
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; frame-src demodule:">
   <title>Editor — Dashboard Engine</title>
   <!-- Order matters: dashboard.css styles pack content (the canvas), then
        chrome.css wins the shared :root tokens for the app chrome around it.

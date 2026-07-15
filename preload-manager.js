@@ -6,7 +6,12 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
-contextBridge.exposeInMainWorld('aegis', {
+// SECURITY: preloads run in every frame, including the sandboxed <iframe> a
+// module component renders inside the manager's live pack preview. This bridge
+// is the most powerful in the app (installs, registries, reminder CRUD,
+// assistant config) — expose it to the top frame ONLY, never to a pack's
+// untrusted module code. See preload-dashboard.js for the full rationale.
+const bridge = {
   version: '0.4.0',
 
   libraryState: () => ipcRenderer.invoke('aegis:library:state'),
@@ -84,4 +89,6 @@ contextBridge.exposeInMainWorld('aegis', {
   assistantAsk: (prompt) => ipcRenderer.invoke('aegis:assistant:ask', String(prompt)),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
   voiceProfilesList: () => ipcRenderer.invoke('aegis:profiles:list'),
-});
+};
+
+if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

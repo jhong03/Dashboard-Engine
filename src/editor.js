@@ -32,7 +32,38 @@ const PALETTE = [
   { type: 'notifications', label: 'Notifications', hint: 'live Windows notifications' },
   { type: 'launcher', label: 'Launcher', hint: 'your pinned & recent apps' },
   { type: 'assistant', label: 'Assistant console', hint: 'opens the AI chat' },
+  { type: 'module', label: 'Custom module', hint: 'your own sandboxed HTML/JS' },
 ];
+
+// Starter fragment for a new module — demonstrates the two things every module
+// needs: theme tokens (--de-* CSS vars + DE.onTheme) and live stats (DE.onData).
+// Kept small and neutral so it clears the quality floor in any pack skin.
+const MODULE_STARTER = [
+  '<div class="wrap">',
+  '  <div class="hi">hello, <span id="who">friend</span></div>',
+  '  <div class="row"><span>CPU</span><b id="cpu">—</b></div>',
+  '  <div class="bar"><i id="cpuBar"></i></div>',
+  '  <div class="row"><span>MEM</span><b id="mem">—</b></div>',
+  '  <div class="bar"><i id="memBar"></i></div>',
+  '</div>',
+  '<style>',
+  '  .wrap{height:100%;padding:5cqw;display:flex;flex-direction:column;justify-content:center;gap:2cqw}',
+  '  .hi{font-size:4cqw;color:var(--de-accent);letter-spacing:var(--de-ls)}',
+  '  .row{display:flex;justify-content:space-between;font-size:2.6cqw;color:var(--de-muted)}',
+  '  .row b{color:var(--de-accent-bright)}',
+  '  .bar{height:1.4cqw;background:rgba(127,127,127,.18);border-radius:var(--de-radius)}',
+  '  .bar i{display:block;height:100%;width:0;background:var(--de-accent);border-radius:inherit;transition:width .6s}',
+  '</style>',
+  '<script>',
+  '  DE.onTheme(function(t){ document.getElementById("who").textContent = (t.persona && t.persona.name) || "friend"; });',
+  '  DE.onData(function(d){',
+  '    document.getElementById("cpu").textContent = d.cpu + "%";',
+  '    document.getElementById("mem").textContent = d.mem + "%";',
+  '    document.getElementById("cpuBar").style.width = d.cpu + "%";',
+  '    document.getElementById("memBar").style.width = d.mem + "%";',
+  '  });',
+  '<\/script>',
+].join('\n');
 
 const DEFAULT_RECTS = {
   'status': [10, 10, 40, 18], 'clock': [10, 10, 26, 20], 'analog-clock': [10, 10, 18, 28],
@@ -41,7 +72,7 @@ const DEFAULT_RECTS = {
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
   'hud-clock': [10, 10, 24, 42], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
-  'assistant': [10, 10, 60, 6],
+  'assistant': [10, 10, 60, 6], 'module': [10, 10, 26, 26],
 };
 
 function defaultOptions(type, assets) {
@@ -66,6 +97,7 @@ function defaultOptions(type, assets) {
     'cores': { label: null },
     'sysinfo': { memory: true, disk: true, uptime: true, host: false, statusText: null },
     'assistant': { label: null, button: null },
+    'module': { html: MODULE_STARTER, scroll: false, telemetry: true },
   }[type];
 }
 
@@ -615,6 +647,24 @@ function optionFields(component, panel) {
     const note = document.createElement('p');
     note.className = 'ed-empty';
     note.textContent = 'Tiles show the user’s own pins and recents (managed in the manager) — they are never saved into the pack.';
+    panel.appendChild(note);
+  } else if (type === 'module') {
+    const area = document.createElement('textarea');
+    area.className = 'ed-code';
+    area.rows = 16;
+    area.spellcheck = false;
+    area.maxLength = 24 * 1024;
+    area.placeholder = '<div>…</div>\n<style>…</style>\n<script>DE.onData(d => …)<\/script>';
+    area.value = o.html || '';
+    area.addEventListener('change', () => { o.html = area.value; renderAll(); });
+    panel.append(
+      field('Component code (HTML · CSS · JS)', area),
+      checkControl('Scroll if content overflows', o.scroll === true, set('scroll')),
+      checkControl('Feed live system stats (DE.onData)', o.telemetry !== false, set('telemetry')),
+    );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = 'Runs in a locked-down sandbox — no network, no file access, no control over the engine. It receives the pack theme (--de-* CSS variables + DE.onTheme) and, if enabled, live stats via DE.onData. Full reference in PACKS.md → Module SDK.';
     panel.appendChild(note);
   }
 }

@@ -128,6 +128,35 @@ body {
 }
 .comp.panel.borderless { border-color: transparent; }
 
+/* Sandboxed module component: the designer's <iframe> fills the panel body and
+   is clipped to its rounded corners. Transparent so it composites over the pack
+   wallpaper/panel; the frame owns everything inside it. */
+.comp-module-host { overflow: hidden; padding: 0; }
+.comp-module-host.panel { padding: 0; }
+.module-frame {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: inherit;
+}
+.module-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 4cqw;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 2.2cqw;
+  letter-spacing: var(--ls);
+  text-align: center;
+  opacity: 0.65;
+}
+
 .skin-root.notches .comp.panel:not(.no-notches)::before,
 .skin-root.notches .comp.panel:not(.no-notches)::after {
   content: '';

@@ -15,7 +15,14 @@ function subscription(channel) {
   };
 }
 
-contextBridge.exposeInMainWorld('aegis', {
+// SECURITY: preload scripts execute in EVERY frame of a webContents, including
+// the sandboxed <iframe> that renders a pack's `module` component. That frame
+// runs untrusted, designer-authored code. Only the top frame is the trusted
+// desktop surface, so the IPC bridge is exposed there and NOWHERE else — a
+// module's frame must never be able to reach packLoad, stats, the launcher, or
+// anything else on this object. (The iframe is also sandboxed to an opaque
+// origin with no network, so this is defence in depth, not the only wall.)
+const bridge = {
   version: '0.4.0',
   packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
   onPackChanged: subscription('aegis:packs:changed'),      // hot reload (file edits)
@@ -38,4 +45,6 @@ contextBridge.exposeInMainWorld('aegis', {
   assistantSpeak: (text) => ipcRenderer.invoke('aegis:assistant:speak', String(text)),
   assistantConfig: () => ipcRenderer.invoke('aegis:assistant:config:get'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
-});
+};
+
+if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

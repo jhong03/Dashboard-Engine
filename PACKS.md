@@ -94,6 +94,7 @@ art behind widgets.
 | `notifications` | `limit` (1–12), `label`, `showApp` | the user's live Windows notifications (needs notification access) |
 | `launcher` | `pinned`, `recent`, `running`, `labels`, `iconSize` (`s`/`m`/`l`), `label` | the user's pinned/recent/open apps as clickable tiles |
 | `assistant` | `label`, `button` | a console line that opens the AI chat when clicked on the desktop (runs on a free model by default; configure in the manager) |
+| `module` | `html`, `scroll`, `telemetry` | **your own component** — sandboxed HTML/CSS/JS you write. See [Module SDK](#module-sdk) below |
 
 `calendar`, `agenda`, `notifications`, and `launcher` display the **user's own
 data** (planner events managed in the engine's Planner tab; app pins in its
@@ -136,6 +137,113 @@ The built-in pack is the worked example: `packs/jarvis/` (HUD clock, ring
 meters, per-core bars, sysinfo readouts, compact weather strip, agenda +
 launcher rails, layered text panels). Copy it, rename the folder, and start
 editing — it is also the project's quality floor for pack design.
+
+## Module SDK
+
+The 19 built-in components cover the common dashboard vocabulary. When you need
+something they don't do — a bespoke gauge, an animated crest, a layout only your
+pack has — author it yourself with a **module** component.
+
+A module is a self-contained fragment of HTML + CSS + JS that you write. It runs
+inside a **locked-down sandbox**, so it can look like anything while staying
+safe for the people who install your pack:
+
+- an isolated `<iframe>` with an opaque origin — no access to the page around
+  it, the engine, the user's files, cookies, or storage;
+- a strict Content-Security-Policy that **blocks the network entirely** — no
+  `fetch`, no `XMLHttpRequest`, no WebSocket, no external scripts/styles/images;
+- no Node, no `require`, no `eval`.
+
+The engine talks to your module over one channel only, and only ever *hands it*
+data — your module can't ask the engine to do anything. That's the deal that
+lets untrusted packs run designer code safely.
+
+### Authoring
+
+Write the fragment like a web-page body — markup plus inline `<style>` and
+`<script>`. **No `<html>`, `<head>`, or `<body>` tags**; the engine wraps your
+fragment in the sandbox shell. Store it in the component's `html` option (≤24 KB):
+
+```jsonc
+{ "type": "module", "rect": [4, 60, 30, 30], "z": 2,
+  "options": {
+    "scroll": false,        // let the module scroll if its content overflows
+    "telemetry": true,      // receive the live system-stats feed (default true)
+    "html": "<div class=\"card\">…</div><style>…</style><script>…</script>"
+  },
+  "style": { "panel": true, "border": false }
+}
+```
+
+Easier: in the **editor**, drop a *Custom module* from the palette. You get a
+working, theme-aware starter in the inspector's code box, editing live on the
+stage. (Escaping a whole HTML document into one JSON string by hand is no fun —
+let the editor do it.)
+
+### The `DE` API
+
+A tiny global, `window.DE`, is available before your code runs:
+
+```js
+DE.onTheme(theme => { … });  // pack skin — called immediately + whenever it changes
+DE.onData(data  => { … });   // live system stats — called ~every 2s (if telemetry on)
+DE.theme();                  // the latest theme object (or null)
+DE.data();                   // the latest stats object (or null)
+DE.asset('assets/x.png');    // a pack image as a data: URI, or null
+```
+
+**Theme** mirrors your pack skin and is also injected as CSS custom properties on
+`:root`, so the easiest path is to just use the variables:
+
+```
+--de-void  --de-glass  --de-accent  --de-accent-bright  --de-muted
+--de-warn   --de-gold   --de-font    --de-font-mono   --de-radius   --de-ls
+```
+
+`theme` (the object) also carries `palette`, `fonts`, `radius`, `uppercase`,
+`letterSpacing`, and `persona` (`{ name, tagline }`) so your module can greet in
+character.
+
+**Data** (when `telemetry` is on) is the same system feed the built-in widgets
+use: `cpu`, `mem`, `disk`, `battery` (0–100), a `cores` array, the pre-formatted
+`memText` / `diskText` / `diskFreeText` / `uptimeText` / `batteryText`, and
+`now` (ms). No personal data — no hostname, files, notifications, or reminders.
+
+Sizes: length units resolve against the component box, so `cqw`/`cqh` (or `%`)
+scale your module with its rectangle — the same way native components scale.
+
+### Example
+
+```html
+<div class="wrap">
+  <div class="hi">hello, <span id="who">friend</span></div>
+  <div class="row"><span>CPU</span><b id="cpu">—</b></div>
+  <div class="bar"><i id="cpuBar"></i></div>
+</div>
+<style>
+  .wrap{height:100%;padding:5cqw;display:flex;flex-direction:column;justify-content:center;gap:2cqw}
+  .hi{font-size:4cqw;color:var(--de-accent)}
+  .row{display:flex;justify-content:space-between;font-size:2.6cqw;color:var(--de-muted)}
+  .row b{color:var(--de-accent-bright)}
+  .bar{height:1.4cqw;background:rgba(127,127,127,.18);border-radius:var(--de-radius)}
+  .bar i{display:block;height:100%;width:0;background:var(--de-accent);transition:width .6s}
+</style>
+<script>
+  DE.onTheme(t => who.textContent = t.persona.name || 'friend');
+  DE.onData(d => { cpu.textContent = d.cpu + '%'; cpuBar.style.width = d.cpu + '%'; });
+</script>
+```
+
+### Limits & etiquette
+
+- **No network, ever.** Bundle what you need; reference pack art via
+  `DE.asset()` (data URIs) rather than inlining giant base64 blobs.
+- Keep it light — it runs on the desktop behind everything else. Respect
+  `@media (prefers-reduced-motion: reduce)`.
+- A broken module fails soft: an empty or throwing fragment just renders blank,
+  it never takes down the dashboard.
+- The quality floor still applies — a module should look at least as considered
+  as the built-in components beside it.
 
 ## Distributing your pack
 
