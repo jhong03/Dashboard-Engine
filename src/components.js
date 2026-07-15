@@ -1161,28 +1161,102 @@ function createRenderer(services) {
     live.timers.push(setInterval(paint, 20000));
   }
 
-  // Assistant console: the JARVIS prompt line. Clicking it summons the chat
-  // window (the desktop surface itself can't take keyboard input). In the
-  // editor/manager preview there is no opener, so it renders inert.
+  // Assistant console: an in-pack, self-contained AI chat. On the desktop it's
+  // a real typeable input with an inline reply log that expands upward; the
+  // reply is spoken through the tuned voice. In the editor/manager preview
+  // there's no `services.assistant`, so it renders as a static prompt line.
   function buildAssistant(component, el) {
     el.classList.add('assistant-console');
+    const interactive = !!(services.assistant && services.assistant.ask);
+
+    const log = document.createElement('div');
+    log.className = 'ac-log';
     const row = document.createElement('div');
     row.className = 'ac-row';
     const mark = document.createElement('span');
     mark.className = 'ac-mark';
     mark.textContent = '❯';
-    const prompt = document.createElement('span');
-    prompt.className = 'ac-prompt';
-    prompt.textContent = component.options.label || 'Ask anything, or give me a task on this machine…';
-    const btn = document.createElement('span');
+
+    let field;
+    if (interactive) {
+      field = document.createElement('input');
+      field.className = 'ac-input';
+      field.type = 'text';
+      field.autocomplete = 'off';
+      field.spellcheck = false;
+      field.placeholder = component.options.label || 'Ask anything, or give me a task on this machine…';
+    } else {
+      field = document.createElement('span');
+      field.className = 'ac-prompt';
+      field.textContent = component.options.label || 'Ask anything, or give me a task on this machine…';
+    }
+    const btn = document.createElement('button');
+    btn.type = 'button';
     btn.className = 'ac-btn display-case';
     btn.textContent = component.options.button || 'Execute';
-    row.append(mark, prompt, btn);
-    el.appendChild(row);
-    if (services.openAssistant) {
-      el.classList.add('ac-live');
-      el.addEventListener('click', () => services.openAssistant());
-    }
+    row.append(mark, field, btn);
+    el.append(log, row);
+
+    if (!interactive) { el.classList.add('ac-inert'); return; }
+
+    let busy = false;
+    let audioCtx = null;
+    const playPcm = (pcm, sampleRate) => {
+      try {
+        if (!audioCtx) audioCtx = new AudioContext();
+        const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength >> 1);
+        const floats = new Float32Array(int16.length);
+        for (let i = 0; i < int16.length; i++) floats[i] = int16[i] / 32768;
+        const buffer = audioCtx.createBuffer(1, floats.length, sampleRate);
+        buffer.copyToChannel(floats, 0);
+        const src = audioCtx.createBufferSource();
+        src.buffer = buffer;
+        src.connect(audioCtx.destination);
+        src.start();
+      } catch (err) { console.warn(`[assistant] playback: ${err.message}`); }
+    };
+
+    const addMsg = (who, text) => {
+      const m = document.createElement('div');
+      m.className = `ac-msg ac-${who}`;
+      m.textContent = text;
+      log.appendChild(m);
+      el.classList.add('ac-open');
+      log.scrollTop = log.scrollHeight;
+      return m;
+    };
+
+    const send = async () => {
+      const text = field.value.trim();
+      if (text === '' || busy) return;
+      field.value = '';
+      busy = true;
+      btn.disabled = true;
+      addMsg('you', text);
+      const reply = addMsg('bot', '…');
+      const res = await services.assistant.ask(text);
+      if (!res || !res.ok) {
+        reply.textContent = (res && res.error) || 'Something went wrong.';
+        reply.classList.add('ac-err');
+      } else {
+        reply.textContent = res.text;
+        log.scrollTop = log.scrollHeight;
+        const cfg = await services.assistant.config();
+        if (cfg && cfg.ok && cfg.config.speak) {
+          const spoken = await services.assistant.speak(res.text);
+          if (spoken && spoken.ok) playPcm(spoken.pcm, spoken.sampleRate);
+        }
+      }
+      busy = false;
+      btn.disabled = false;
+      field.focus();
+    };
+
+    field.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); send(); }
+      if (e.key === 'Escape') { field.value = ''; el.classList.remove('ac-open'); }
+    });
+    btn.addEventListener('click', send);
   }
 
   function buildCountdown(component, el) {

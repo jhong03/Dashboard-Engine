@@ -438,9 +438,8 @@ body {
 }
 .spark-value { font-family: var(--font-mono); font-size: 1.05em; color: var(--accent-bright); }
 
-/* assistant console: the clickable JARVIS prompt line */
-.comp-assistant { justify-content: center; }
-.assistant-console.ac-live { cursor: pointer; }
+/* assistant console: an in-pack typeable chat (the reply log expands upward) */
+.comp-assistant { justify-content: center; overflow: visible; }
 .ac-row { display: flex; align-items: center; gap: 0.94cqw; width: 100%; }
 .ac-mark { font-family: var(--font-mono); color: var(--accent); font-size: 1.1em; flex-shrink: 0; }
 .ac-prompt {
@@ -452,16 +451,54 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.ac-input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  letter-spacing: 0.04em;
+  color: var(--accent-bright);
+}
+.ac-input::placeholder { color: var(--muted); }
 .ac-btn {
   flex-shrink: 0;
   font-size: 0.72em;
   letter-spacing: 0.16em;
   color: var(--accent);
+  background: none;
   border: 1px solid var(--hairline);
   border-radius: var(--radius);
   padding: 0.31cqw 0.94cqw;
+  cursor: pointer;
+  font-family: inherit;
 }
-.assistant-console.ac-live:hover .ac-btn { background: var(--glow-wash); color: var(--accent-bright); }
+.ac-btn:hover { background: var(--glow-wash); color: var(--accent-bright); }
+.ac-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* the reply log floats above the input, over the wallpaper */
+.ac-log {
+  position: absolute;
+  left: 0; right: 0; bottom: 100%;
+  margin-bottom: 0.52cqw;
+  max-height: 34vh;
+  overflow-y: auto;
+  display: none;
+  flex-direction: column;
+  gap: 0.52cqw;
+  padding: 0.94cqw 1.05cqw;
+  background: var(--panel-bg);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  backdrop-filter: blur(6px);
+}
+.assistant-console.ac-open .ac-log { display: flex; }
+.ac-msg { font-size: 0.82em; line-height: 1.42; white-space: pre-wrap; }
+.ac-msg.ac-you { color: var(--accent-bright); text-align: right; opacity: 0.85; }
+.ac-msg.ac-bot { color: var(--accent-bright); }
+.ac-msg.ac-err { color: var(--warn); }
 
 /* notifications feed (live Windows toasts) */
 .notif-feed {

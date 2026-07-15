@@ -42,7 +42,6 @@ let panelWindow = null;
 let managerWindow = null;
 let dashboardWindow = null;
 let editorWindow = null;
-let assistantWindow = null;
 let tray = null;
 let desktopPaused = false;
 let alertScheduler = null;
@@ -128,118 +127,11 @@ function createEditorWindow(packId) {
   editorWindow.on('closed', () => { editorWindow = null; });
 }
 
-// The assistant console: a persistent, always-visible docked bar along the
-// bottom of the primary display (like the original JARVIS console) — NOT a
-// popup. The desktop surface is focusable:false and can't take keyboard
-// input, so the console is its own real window. It starts as a slim bar and
-// expands upward to show the conversation; it never auto-hides.
-const CONSOLE_COLLAPSED_H = 58;
-const CONSOLE_EXPANDED_H = 440;
-
-// The console window is positioned OVER the active pack's `assistant`
-// component (its screen rect), so the one interactive bar sits exactly where
-// the pack draws its console — matching what the editor shows, no phantom
-// second bar. Null when the pack has no assistant component (→ no console).
-let consoleHome = null; // { x, y, w, h } in screen px, or null
-
-function computeConsoleHome(pack) {
-  const comp = pack.components.find((c) => c.type === 'assistant');
-  if (!comp) return null;
-  const disp = screen.getPrimaryDisplay();
-  const b = disp.bounds, wa = disp.workArea;
-  const pad = (pack.canvas && pack.canvas.padding) || 0;
-  const inner = (100 - 2 * pad) / 100; // components are % within the padded canvas
-  const [rx, ry, rw, rh] = comp.rect;
-  const x = Math.round(b.x + (pad + rx * inner) / 100 * b.width);
-  const w = Math.round(rw * inner / 100 * b.width);
-  let h = Math.max(CONSOLE_COLLAPSED_H, Math.round(rh * inner / 100 * b.height));
-  let y = Math.round(b.y + (pad + ry * inner) / 100 * b.height);
-  const waBottom = wa.y + wa.height; // keep the bar above the taskbar
-  if (y + h > waBottom) y = waBottom - h;
-  return { x, y, w, h };
-}
-
-// Collapsed = the component's own rect; expanded grows upward from its bottom.
-function consoleBounds(expanded) {
-  if (consoleHome) {
-    const h = expanded ? Math.max(consoleHome.h, CONSOLE_EXPANDED_H) : consoleHome.h;
-    let y = consoleHome.y + consoleHome.h - h;
-    const wa = screen.getPrimaryDisplay().workArea;
-    if (y < wa.y) y = wa.y;
-    return { x: consoleHome.x, y, width: consoleHome.w, height: h };
-  }
-  const area = screen.getPrimaryDisplay().workArea; // fallback: full-width bottom
-  const h = expanded ? CONSOLE_EXPANDED_H : CONSOLE_COLLAPSED_H;
-  return { x: area.x, y: area.y + area.height - h, width: area.width, height: h };
-}
-
-function resizeConsole(expanded) {
-  if (!assistantWindow || assistantWindow.isDestroyed()) return;
-  assistantWindow.setBounds(consoleBounds(expanded));
-}
-
-function createAssistantWindow() {
-  if (assistantWindow) return;
-  assistantWindow = new BrowserWindow({
-    ...consoleBounds(false),
-    frame: false,
-    transparent: true,
-    resizable: false,
-    movable: false,
-    skipTaskbar: true,
-    alwaysOnTop: true,
-    focusable: true,
-    show: false,
-    backgroundColor: '#00000000',
-    webPreferences: {
-      ...COMMON_WEB_PREFERENCES,
-      preload: path.join(__dirname, 'preload-assistant.js'),
-    },
-  });
-  assistantWindow.loadFile(path.join(__dirname, 'src', 'assistant.html'));
-  // Visible from the start, but don't steal focus — the user clicks to type.
-  assistantWindow.once('ready-to-show', () => assistantWindow.showInactive());
-  assistantWindow.on('closed', () => { assistantWindow = null; });
-}
-
-// Bring the console forward and focus its input (from a pack console click).
-function focusAssistant() {
-  createAssistantWindow();
-  resizeConsole(true);
-  assistantWindow.show();
-  assistantWindow.focus();
-  if (!assistantWindow.webContents.isLoading()) assistantWindow.webContents.send('aegis:console:summon');
-  else assistantWindow.webContents.once('did-finish-load', () => assistantWindow.webContents.send('aegis:console:summon'));
-}
-
-// The console bar is OPT-IN per pack: it appears only when the active pack
-// includes an `assistant` component (visible/placeable in the editor). Packs
-// without one get no console. Called on startup and on every pack change.
-function syncConsole(packId) {
-  let pack = null;
-  try { pack = packs.loadPack(__dirname, USER_DIR, packId).pack; } catch { /* no console */ }
-  consoleHome = pack ? computeConsoleHome(pack) : null;
-  if (!consoleHome) {
-    if (assistantWindow && !assistantWindow.isDestroyed()) assistantWindow.hide();
-    return;
-  }
-  createAssistantWindow();
-  resizeConsole(false);              // move to the new pack's console position
-  if (!assistantWindow.isVisible()) assistantWindow.showInactive();
-  // Match the bar's placeholder, button, and accent to the pack so the one
-  // console reads as part of the active dashboard (crimson on gothic, etc.).
-  const comp = pack.components.find((c) => c.type === 'assistant');
-  const cfg = {
-    label: comp.options.label || '',
-    button: comp.options.button || '',
-    name: pack.persona.name || '',
-    accent: pack.skin.palette.accent,
-    bright: pack.skin.palette.accentBright,
-  };
-  const send = () => { if (assistantWindow && !assistantWindow.isDestroyed()) assistantWindow.webContents.send('aegis:console:config', cfg); };
-  if (assistantWindow.webContents.isLoading()) assistantWindow.webContents.once('did-finish-load', send);
-  else send();
-}
+// The assistant console is an in-pack COMPONENT now, not a separate window:
+// each pack's `assistant` component IS the real, typeable console (see
+// buildAssistant in components.js). The desktop window is made focusable so
+// its input can take keyboard focus directly on the wallpaper — no docked
+// bar, no overlap, one dialog per dashboard.
 
 // Reparent the dashboard under the shell's wallpaper layer. The hwnd is
 // program-generated; the PowerShell argv is fixed (CLAUDE.md shell rule).
@@ -277,7 +169,10 @@ async function createDashboardWindow() {
     resizable: false,
     movable: false,
     skipTaskbar: true,
-    focusable: false,
+    // Focusable so the pack's assistant console input can take keyboard focus
+    // on the wallpaper. It's shown inactive and never called to focus itself,
+    // so it doesn't steal focus from the user's apps.
+    focusable: true,
     show: false,
     backgroundColor: '#04080F',
     webPreferences: {
@@ -291,7 +186,7 @@ async function createDashboardWindow() {
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
 
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
-  dashboardWindow.show();
+  dashboardWindow.showInactive(); // visible, but don't grab focus on launch
 
   if (!NO_DESKTOP) {
     const attached = await attachToDesktop(dashboardWindow);
@@ -314,7 +209,6 @@ function notifyActivePack(id) {
   for (const win of [dashboardWindow, managerWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send('aegis:active:changed', { id });
   }
-  syncConsole(id); // show/hide the console bar to match the new pack
 }
 
 function setActivePackFromTray(id) {
@@ -349,20 +243,9 @@ function buildTrayMenu() {
       })),
     },
     { label: desktopPaused ? 'Resume Desktop' : 'Pause Desktop', click: toggleDesktop },
-    {
-      label: assistantWindow && assistantWindow.isVisible() ? 'Hide Assistant Console' : 'Show Assistant Console',
-      click: toggleConsole,
-    },
     { type: 'separator' },
     { label: 'Quit Dashboard Engine', click: () => app.quit() },
   ]);
-}
-
-// Escape hatch: fully hide/show the always-on-top console bar.
-function toggleConsole() {
-  if (!assistantWindow || assistantWindow.isDestroyed()) { createAssistantWindow(); return; }
-  if (assistantWindow.isVisible()) assistantWindow.hide();
-  else assistantWindow.showInactive();
 }
 
 function createTray() {
@@ -389,16 +272,9 @@ function scheduleDevShots(dir) {
   setTimeout(async () => {
     const fs = require('fs');
     fs.mkdirSync(dir, { recursive: true });
-    // Capture the expanded console: drive it through the renderer so the
-    // layout (header + log + input) matches, not just the window size.
-    if (envFlag('SHOTASSIST') === '1' && assistantWindow && !assistantWindow.isDestroyed()) {
-      assistantWindow.webContents.send('aegis:console:summon');
-      await new Promise((resolve) => setTimeout(resolve, 400));
-    }
     const targets = [
       ['manager', managerWindow], ['editor', editorWindow],
       ['panel', panelWindow], ['dashboard', dashboardWindow],
-      ['assistant', assistantWindow],
     ];
     for (const [name, win] of targets) {
       if (!win || win.isDestroyed()) continue;
@@ -426,8 +302,6 @@ function openFirstWindows() {
   }
   createDashboardWindow(); // the desktop persona, immediately
   createManagerWindow();   // the engine app: content navigation + selection
-  // Console matches whatever the desktop renders (DE_PACK override or active).
-  syncConsole(envFlag('PACK') || settings.getActivePack(USER_DIR) || 'jarvis');
   const editAt = process.argv.indexOf('--edit');
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'jarvis');
 }
@@ -504,8 +378,6 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:launcher:changed');
         }
       },
-      openAssistant: focusAssistant,
-      onConsoleResize: (expanded) => resizeConsole(expanded),
       openManager: (view) => openManagerView(view || 'installed'),
       onPackSaved: (id) => {
         // Editor saved a pack — the desktop repaints if it's showing it.
