@@ -27,6 +27,41 @@ const renderer = AegisComponents.createRenderer({
 
 const state = { packId: null };
 
+// Performance citizenship: main drives this over aegis:desktop:power. `active`
+// false freezes the wallpaper (a full-screen app is up / on battery); `maxFps`
+// caps the ambience frame rate. We cache the last pack so resuming re-renders
+// without another IPC round-trip.
+const power = { active: true, maxFps: 30 };
+const applied = { active: true, maxFps: 30 };
+let cache = { pack: null, assets: null };
+
+// Render the active pack at the current frame cap, then freeze if we're paused.
+function renderActive() {
+  if (!cache.pack) return;
+  AegisComponents.applySkin(document.body, cache.pack, cache.assets, { maxFps: power.maxFps });
+  renderer.render(document.getElementById('canvas'), cache.pack, cache.assets);
+  applied.active = true;
+  applied.maxFps = power.maxFps;
+  if (!power.active) freezeNow();
+}
+
+// Stop the animation loops and telemetry; the last frame stays on screen.
+function freezeNow() {
+  renderer.destroy();
+  AegisComponents.freezeAmbience(document.body);
+  applied.active = false;
+}
+
+function applyPower() {
+  if (!cache.pack) return;
+  if (power.active) {
+    // Resume from a freeze, or re-render if the fps cap changed.
+    if (!applied.active || applied.maxFps !== power.maxFps) renderActive();
+  } else if (applied.active) {
+    freezeNow();
+  }
+}
+
 async function loadPack(id) {
   const res = await aegis.packLoad(id);
   if (!res.ok) {
@@ -34,8 +69,8 @@ async function loadPack(id) {
     return;
   }
   state.packId = res.pack.id;
-  AegisComponents.applySkin(document.body, res.pack, res.assets);
-  renderer.render(document.getElementById('canvas'), res.pack, res.assets);
+  cache = { pack: res.pack, assets: res.assets };
+  renderActive();
   document.title = `${res.pack.persona.name} — ${res.pack.name}`;
   for (const w of res.warnings) console.warn(`[pack] ${w}`);
 }
@@ -58,5 +93,14 @@ async function init() {
   // Pins/recents changed — launcher tiles repaint.
   aegis.onLauncherChanged(() => loadPack(state.packId));
 }
+
+// Power signals stream from main. Register synchronously (before init()'s first
+// await) so an early push — a game already running at launch — isn't missed.
+// applyPower() no-ops until a pack is cached; the first render then honours it.
+aegis.onPower((p) => {
+  power.active = p.active !== false;
+  power.maxFps = Number(p.maxFps) > 0 ? Number(p.maxFps) : 30;
+  applyPower();
+});
 
 init().catch((err) => console.error(`[dashboard] failed to initialise: ${err.message}`));

@@ -283,8 +283,16 @@ function applyAmbience(root, pack, opts) {
   root.__aegisAmbience = state;
   if (reduced) return; // static scatter only
 
+  // Frame budget: the pack/engine can cap the wallpaper's frame rate to be a
+  // good 24/7 citizen (30 fps default — plenty for particle drift).
+  const maxFps = opts && opts.maxFps ? Math.max(1, opts.maxFps) : 30;
+  const frameInterval = 1000 / maxFps;
   let last = 0;
   const loop = (t) => {
+    // Frozen by the engine (a full-screen app is up / on battery): stop cold —
+    // resume re-applies the skin and starts a fresh loop. freezeAmbience() also
+    // cancels the pending frame, so this is belt-and-braces.
+    if (state.paused) return;
     // Self-terminate when the skin root is discarded (gallery re-renders,
     // preview swaps) — nobody re-applies skins to detached DOM.
     if (!canvas.isConnected) {
@@ -292,13 +300,21 @@ function applyAmbience(root, pack, opts) {
       return;
     }
     state.raf = requestAnimationFrame(loop);
-    if (t - last < 33) return; // ~30 fps is plenty for drift
+    if (t - last < frameInterval) return;
     const dt = Math.min(t - last, 100) / 1000;
     last = t;
     stepParticles(dt, t);
     draw(t);
   };
   state.raf = requestAnimationFrame(loop);
+}
+
+// Stop the ambience animation without tearing down the DOM — the last frame
+// stays on screen (a frozen wallpaper) at near-zero cost. Resuming re-applies
+// the skin, which builds a fresh ambience loop.
+function freezeAmbience(root) {
+  const s = root && root.__aegisAmbience;
+  if (s) { s.paused = true; cancelAnimationFrame(s.raf); }
 }
 
 function applyComponentStyle(el, style, pack) {
@@ -1725,6 +1741,6 @@ function createRenderer(services) {
   return { render, destroy: cleanup };
 }
 
-window.AegisComponents = { FONT_STACKS, rgba, applySkin, createRenderer };
+window.AegisComponents = { FONT_STACKS, rgba, applySkin, createRenderer, freezeAmbience };
 
 })();

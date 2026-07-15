@@ -28,6 +28,7 @@ const bridge = {
   onPackChanged: subscription('aegis:packs:changed'),      // hot reload (file edits)
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   onActiveChanged: subscription('aegis:active:changed'),   // manager picked a pack
+  onPower: subscription('aegis:desktop:power'),            // fps cap / freeze (perf citizenship)
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
   remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',   // read-only here

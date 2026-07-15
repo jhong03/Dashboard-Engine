@@ -8,9 +8,10 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
+const { createPresenceMonitor } = require('./lib/presence');
 const voicebank = require('./lib/voicebank');
 const packs = require('./lib/packs');
 const settings = require('./lib/settings');
@@ -70,6 +71,12 @@ let editorWindow = null;
 let tray = null;
 let desktopPaused = false;
 let alertScheduler = null;
+
+// Performance citizenship: pause/throttle the animated wallpaper when a
+// full-screen app is up or the machine is on battery (both user-configurable).
+let presenceMonitor = null;
+let isFullscreen = false;
+let onBattery = false;
 
 const COMMON_WEB_PREFERENCES = {
   // Non-negotiable (CLAUDE.md): the renderer never touches Node.
@@ -209,6 +216,9 @@ async function createDashboardWindow() {
     query: { pack: envFlag('PACK') || '' },
   });
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
+  // Push the current power state on first load and every reload/hot-reload, so
+  // the renderer starts at the right fps / frozen if a game is already up.
+  dashboardWindow.webContents.on('did-finish-load', () => sendDesktopPower());
 
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
   dashboardWindow.showInactive(); // visible, but don't grab focus on launch
@@ -245,7 +255,30 @@ function toggleDesktop() {
   if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
   desktopPaused = !desktopPaused;
   if (desktopPaused) dashboardWindow.hide();
-  else dashboardWindow.show();
+  else { dashboardWindow.show(); sendDesktopPower(); }
+}
+
+// Performance citizenship: fold the user's prefs together with the live
+// full-screen / battery signals and tell the desktop renderer to run at the
+// chosen fps or freeze entirely. Freezing stops the wallpaper's animation
+// loops (near-zero CPU/GPU) while a game or video owns the screen. No-ops
+// without a desktop window.
+function sendDesktopPower() {
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
+  const perf = settings.getPerformance(USER_DIR);
+  const shouldPause = (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery);
+  dashboardWindow.webContents.send('aegis:desktop:power', { active: !shouldPause, maxFps: perf.maxFps });
+}
+
+// Start the full-screen watcher + battery listeners once, on ready.
+function startPresenceMonitoring() {
+  try { onBattery = powerMonitor.isOnBatteryPower(); } catch (err) { onBattery = false; }
+  powerMonitor.on('on-battery', () => { onBattery = true; sendDesktopPower(); });
+  powerMonitor.on('on-ac', () => { onBattery = false; sendDesktopPower(); });
+  presenceMonitor = createPresenceMonitor(__dirname, (fullscreen) => {
+    isFullscreen = fullscreen;
+    sendDesktopPower();
+  });
 }
 
 // ── Tray: the engine's home. Menu is rebuilt on every right-click so the
@@ -268,9 +301,30 @@ function buildTrayMenu() {
       })),
     },
     { label: desktopPaused ? 'Resume Desktop' : 'Pause Desktop', click: toggleDesktop },
+    { label: 'Performance', submenu: buildPerformanceMenu() },
     { type: 'separator' },
     { label: 'Quit Dashboard Engine', click: () => app.quit() },
   ]);
+}
+
+// Wallpaper-Engine-style performance controls: pause on full-screen apps,
+// reduce on battery, and a frame-rate cap. Persisted, applied live.
+function buildPerformanceMenu() {
+  const perf = settings.getPerformance(USER_DIR);
+  const setPerf = (patch) => { settings.setPerformance(USER_DIR, patch); sendDesktopPower(); };
+  return [
+    { label: 'Pause on full-screen apps', type: 'checkbox', checked: perf.pauseOnFullscreen,
+      click: (item) => setPerf({ pauseOnFullscreen: item.checked }) },
+    { label: 'Pause on battery', type: 'checkbox', checked: perf.pauseOnBattery,
+      click: (item) => setPerf({ pauseOnBattery: item.checked }) },
+    { type: 'separator' },
+    ...settings.FPS_CHOICES.map((fps) => ({
+      label: `${fps} fps${fps === 30 ? ' (recommended)' : ''}`,
+      type: 'radio',
+      checked: perf.maxFps === fps,
+      click: () => setPerf({ maxFps: fps }),
+    })),
+  ];
 }
 
 function createTray() {
@@ -433,6 +487,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       },
     });
     if (!WANT_PANEL) createTray();
+    if (!WANT_PANEL) startPresenceMonitoring();
     openFirstWindows();
     if (envFlag('SHOT')) scheduleDevShots(envFlag('SHOT'));
     app.on('activate', () => {
@@ -446,4 +501,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     // quits with its window, which the selftest relies on.
     if (WANT_PANEL && process.platform !== 'darwin') app.quit();
   });
+
+  // Don't leave the full-screen watcher process behind on quit.
+  app.on('before-quit', () => { if (presenceMonitor) presenceMonitor.stop(); });
 }
