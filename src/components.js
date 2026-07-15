@@ -129,18 +129,23 @@ function applyAmbience(root, pack, opts) {
   const count = Math.round(14 + ambience.density * 66);
   const rand = (lo, hi) => lo + Math.random() * (hi - lo);
   let particles = [];
+  // Particles live in CSS-pixel space (0..cssW, 0..cssH). The backing store is
+  // scaled up by dpr and the draw context is scaled to match, so coverage fills
+  // the whole surface no matter the display scaling or how the canvas is sized.
+  const dpr = window.devicePixelRatio || 1;
+  let cssW = 0, cssH = 0;
 
   // fresh=true spawns just off the entry edge; false scatters anywhere so the
   // first frame is already populated. Velocities are fractions of the surface
   // per second, so density of motion is resolution-independent.
   const spawn = (fresh) => {
-    const w = canvas.width, h = canvas.height;
+    const w = cssW, h = cssH;
     const p = {
       x: rand(0, w),
       y: rand(0, h),
       vx: 0,
       vy: 0,
-      size: rand(0.8, 2.6) * devicePixelRatio,
+      size: rand(0.8, 2.6),
       alpha: rand(0.2, 0.7),
       phase: rand(0, Math.PI * 2),
       sway: rand(0.2, 1),
@@ -150,11 +155,11 @@ function applyAmbience(root, pack, opts) {
       if (fresh) p.y = h + p.size * 4;
     } else if (effect === 'snow') {
       p.vy = rand(0.02, 0.06);
-      p.size = rand(1, 3) * devicePixelRatio;
+      p.size = rand(1, 3);
       if (fresh) p.y = -p.size * 4;
     } else if (effect === 'petals') { // cherry-blossom: fall, sway, tumble
       p.vy = rand(0.03, 0.07);
-      p.size = rand(2, 4.2) * devicePixelRatio;
+      p.size = rand(2, 4.2);
       p.alpha = rand(0.4, 0.85);
       p.sway = rand(0.5, 1.4);
       p.rot = rand(0, Math.PI * 2);
@@ -162,26 +167,26 @@ function applyAmbience(root, pack, opts) {
       if (fresh) p.y = -p.size * 4;
     } else if (effect === 'rain') { // fast thin streaks (neon city)
       p.vy = rand(0.55, 0.95);
-      p.len = rand(8, 20) * devicePixelRatio;
-      p.size = rand(0.6, 1.2) * devicePixelRatio;
+      p.len = rand(8, 20);
+      p.size = rand(0.6, 1.2);
       p.alpha = rand(0.2, 0.55);
       if (fresh) p.y = -p.len;
     } else if (effect === 'sparkle') { // fixed twinkling stars
       p.vx = 0; p.vy = 0;
-      p.size = rand(1.2, 3) * devicePixelRatio;
+      p.size = rand(1.2, 3);
       p.alpha = rand(0.5, 1);
       p.twSpeed = rand(0.002, 0.006);
     } else { // dust: slow omnidirectional drift, dimmer and smaller
       p.vx = rand(-0.008, 0.008);
       p.vy = rand(-0.008, 0.008);
-      p.size = rand(0.6, 1.8) * devicePixelRatio;
+      p.size = rand(0.6, 1.8);
       p.alpha = rand(0.12, 0.4);
     }
     return p;
   };
 
   const stepParticles = (dt, t) => {
-    const w = canvas.width, h = canvas.height;
+    const w = cssW, h = cssH;
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       if (effect === 'sparkle') continue; // fixed points; only the twinkle animates
@@ -193,11 +198,11 @@ function applyAmbience(root, pack, opts) {
       } else if (effect === 'rain') {
         if (p.y > h + p.len) particles[i] = spawn(true);
       } else if (effect === 'petals') {
-        p.x += Math.sin(t * 0.0012 + p.phase) * p.sway * 30 * devicePixelRatio * dt;
+        p.x += Math.sin(t * 0.0012 + p.phase) * p.sway * 30 * dt;
         p.rot += p.vrot * dt;
         if (p.y > h + p.size * 4) particles[i] = spawn(true);
       } else {
-        p.x += Math.sin(t * 0.001 + p.phase) * p.sway * 20 * devicePixelRatio * dt;
+        p.x += Math.sin(t * 0.001 + p.phase) * p.sway * 20 * dt;
         if (effect === 'embers' && p.y < -p.size * 4) particles[i] = spawn(true);
         if (effect === 'snow' && p.y > h + p.size * 4) particles[i] = spawn(true);
       }
@@ -206,12 +211,14 @@ function applyAmbience(root, pack, opts) {
 
   const draw = (t) => {
     const ctx2 = canvas.getContext('2d');
-    ctx2.clearRect(0, 0, canvas.width, canvas.height);
+    // Draw in CSS pixels; the dpr transform maps them onto the backing store.
+    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx2.clearRect(0, 0, cssW, cssH);
     for (const p of particles) {
       let a = p.alpha;
       if (effect === 'embers') {
-        a *= 0.65 + 0.35 * Math.sin(t * 0.004 + p.phase);         // flicker
-        a *= Math.min(1, Math.max(0, p.y / (canvas.height * 0.35))); // die out near the top
+        a *= 0.65 + 0.35 * Math.sin(t * 0.004 + p.phase);      // flicker
+        a *= Math.min(1, Math.max(0, p.y / (cssH * 0.35)));    // die out near the top
       } else if (effect === 'sparkle') {
         a *= 0.3 + 0.7 * Math.abs(Math.sin(t * p.twSpeed + p.phase)); // twinkle
       }
@@ -257,8 +264,15 @@ function applyAmbience(root, pack, opts) {
   const reduced = (opts && opts.staticAmbience === true)
     || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const resize = () => {
-    canvas.width = Math.max(1, canvas.clientWidth * devicePixelRatio);
-    canvas.height = Math.max(1, canvas.clientHeight * devicePixelRatio);
+    const rect = canvas.getBoundingClientRect();
+    // Before layout the canvas can measure 0×0 — bail and let the observer
+    // re-fire once it has real dimensions, so particles never spawn into a
+    // collapsed top-left corner.
+    if (rect.width < 1 || rect.height < 1) return;
+    cssW = rect.width;
+    cssH = rect.height;
+    canvas.width = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssH * dpr));
     particles = Array.from({ length: count }, () => spawn(false));
     if (reduced) draw(0);
   };
