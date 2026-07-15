@@ -15,13 +15,13 @@
   },
   "skin": {
     "palette": {
-      "void": "#F1E1FB",
+      "void": "#EDE4FF",
       "glass": "#FFFFFF",
-      "accent": "#FF8FC0",
-      "accentBright": "#6A4A6E",
-      "muted": "#A98FC0",
-      "warn": "#FF9AA2",
-      "gold": "#F5B94D"
+      "accent": "#9B7EF0",
+      "accentBright": "#443F6E",
+      "muted": "#8A83B5",
+      "warn": "#F58FB0",
+      "gold": "#6FCBB0"
     },
     "typography": { "display": "system-sans", "uppercase": false, "letterSpacing": 0.02 },
     "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.28, "vignette": 0.08 },
