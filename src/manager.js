@@ -801,6 +801,33 @@ function wirePlanner() {
 
 // ── Steam Workshop publish dialog (prototype) ────────────────────────────────
 
+// Human names for the component types, for the auto-written description.
+const COMPONENT_LABELS = {
+  status: 'persona status', clock: 'clock', 'analog-clock': 'analog clock',
+  'hud-clock': 'HUD clock', stats: 'system stats', cores: 'core load',
+  sysinfo: 'system info', meter: 'meter', sparkline: 'sparkline', text: 'text',
+  image: 'image', divider: 'divider', calendar: 'calendar', countdown: 'countdown',
+  weather: 'weather', agenda: 'agenda', notifications: 'notifications',
+  launcher: 'app launcher', assistant: 'AI assistant', module: 'custom module',
+};
+
+// A ready-to-post Workshop description (Steam BBCode) built from the pack —
+// gives the item real context instead of a bare tagline. The user can edit it.
+function describePack(item) {
+  const pack = item.pack || {};
+  const persona = pack.persona || {};
+  const types = [...new Set((pack.components || []).map((c) => c.type))];
+  const includes = types.map((t) => COMPONENT_LABELS[t] || t);
+  const lines = [`[h1]${item.name}[/h1]`];
+  if (persona.tagline) lines.push(`[i]${persona.tagline}[/i]`);
+  lines.push('', 'A dashboard pack for [b]Dashboard Engine[/b] — a living wallpaper that shows your system at a glance, keeps your day in view, and talks back.', '');
+  if (persona.name) lines.push(`[b]Persona:[/b] ${persona.name}`);
+  if (includes.length) lines.push(`[b]Includes:[/b] ${includes.join(', ')}`);
+  if (pack.author) lines.push(`[b]Author:[/b] ${pack.author}`);
+  lines.push('', '[i]Subscribe, then open Dashboard Engine and pick this pack to put it on your desktop.[/i]');
+  return lines.join('\n');
+}
+
 function publishField(labelText, control) {
   const wrap = document.createElement('label');
   wrap.className = 'event-field';
@@ -825,8 +852,8 @@ function openPublishDialog(item) {
   const title = document.createElement('input');
   title.type = 'text'; title.maxLength = 128; title.value = item.name || '';
   const desc = document.createElement('textarea');
-  desc.rows = 4; desc.maxLength = 2000;
-  desc.value = (item.pack && item.pack.persona && item.pack.persona.tagline) || '';
+  desc.rows = 8; desc.maxLength = 8000;
+  desc.value = describePack(item);
   const tags = document.createElement('input');
   tags.type = 'text'; tags.placeholder = 'comma, separated, tags';
   const vis = document.createElement('select');
@@ -842,7 +869,7 @@ function openPublishDialog(item) {
 
   const hint = document.createElement('p');
   hint.className = 'detail-line';
-  hint.textContent = 'Prototype: uploads to Steam’s Spacewar (480) test app. Only pack.json + assets are published — never your reminders, launcher, or keys.';
+  hint.textContent = 'A preview image is rendered from the dashboard automatically (demo data — no personal info). Description supports Steam formatting ([b], [h1], [i]). Prototype: uploads to Steam’s Spacewar (480) test app; only pack.json + assets are published.';
   card.appendChild(hint);
 
   const actions = document.createElement('div');

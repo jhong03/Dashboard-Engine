@@ -374,6 +374,61 @@ function scheduleDevShots(dir) {
   }, 6000);
 }
 
+// Render a pack to a Workshop preview image, off-screen, using DEMO data only
+// (src/shot.* never touches the user's real stats/apps/notifications). Returns
+// a temp file path (png, or jpg if the png exceeds Steam's ~1 MB cap) or null
+// on any failure — publish then falls back to the pack's wallpaper. Fail-soft.
+function renderPackPreview(packId) {
+  return new Promise((resolve) => {
+    const fs = require('fs');
+    const os = require('os');
+    let win = new BrowserWindow({
+      width: 1280, height: 720, show: false, frame: false, skipTaskbar: true,
+      backgroundColor: '#04080F',
+      webPreferences: {
+        ...COMMON_WEB_PREFERENCES,
+        preload: path.join(__dirname, 'preload-dashboard.js'),
+        offscreen: true,            // renders to a bitmap, never shown on screen
+        backgroundThrottling: false,
+      },
+    });
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (win && !win.isDestroyed()) win.destroy();
+      win = null;
+      resolve(result);
+    };
+    const guard = setTimeout(() => finish(null), 9000); // never hang a publish
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        // Wait for the render to signal it has settled (fonts + a few frames).
+        const start = Date.now();
+        while (Date.now() - start < 4000) {
+          const ready = await win.webContents.executeJavaScript('window.__shotReady === true').catch(() => false);
+          if (ready) break;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+        await new Promise((r) => setTimeout(r, 300));
+        const image = await win.webContents.capturePage();
+        const png = image.toPNG();
+        const useJpeg = png.length > 1024 * 1024;
+        const buffer = useJpeg ? image.toJPEG(85) : png;
+        const file = path.join(os.tmpdir(), `de-preview-${Date.now()}.${useJpeg ? 'jpg' : 'png'}`);
+        fs.writeFileSync(file, buffer);
+        clearTimeout(guard);
+        finish(file);
+      } catch (err) {
+        clearTimeout(guard);
+        finish(null);
+      }
+    });
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(null); });
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId) } });
+  });
+}
+
 function openFirstWindows() {
   if (WANT_PANEL) {
     createPanelWindow();
@@ -485,11 +540,26 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           dashboardWindow.webContents.send('aegis:packs:changed', { id });
         }
       },
+      // Workshop publish asks for a rendered preview image of the pack.
+      renderPreview: (id) => renderPackPreview(id),
     });
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();
     openFirstWindows();
     if (envFlag('SHOT')) scheduleDevShots(envFlag('SHOT'));
+    // DE_SHOTPREVIEW=<dir>: dev utility — render DE_PACK's Workshop preview to
+    // <dir>/preview.png and quit, to eyeball what publish will upload.
+    if (envFlag('SHOTPREVIEW')) {
+      renderPackPreview(envFlag('PACK') || 'jarvis').then((file) => {
+        const fs = require('fs');
+        try {
+          fs.mkdirSync(envFlag('SHOTPREVIEW'), { recursive: true });
+          if (file) fs.copyFileSync(file, path.join(envFlag('SHOTPREVIEW'), 'preview.png'));
+          console.log(`[preview] ${file || 'render failed'}`);
+        } catch (err) { console.warn(`[preview] ${err.message}`); }
+        app.quit();
+      });
+    }
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openFirstWindows();
     });

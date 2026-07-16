@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Same strict CSP as the desktop; frame-src demodule: lets module
+       components render in the preview. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; frame-src demodule:">
+  <title>Dashboard Engine — preview</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <!-- Off-screen render used only to produce a Workshop preview image. It uses
+       demo data, never the user's real stats/apps/notifications/reminders. -->
+  <main class="canvas-outer" aria-label="Pack preview">
+    <div class="canvas" id="canvas"></div>
+  </main>
+  <script src="components.js"></script>
+  <script src="shot.js"></script>
+</body>
+</html>
