@@ -521,9 +521,12 @@ function renderUpcoming(occurrences, todayIso) {
 
 async function renderLauncherCfg() {
   const list = $('pin-list');
-  list.textContent = '';
   const state = await aegis.launcherState();
   if (!state.ok) return libStatus(state.error, true);
+  // Clear AFTER the await, not before: pinning triggers this render both
+  // directly and via the launcher:changed broadcast, so two calls can overlap.
+  // Clearing pre-await let both append onto an empty list → duplicated rows.
+  list.textContent = '';
 
   if (state.pins.length === 0) {
     const empty = document.createElement('p');
