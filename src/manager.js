@@ -892,7 +892,7 @@ function openPublishDialog(item) {
     const note = out.needsToAcceptAgreement
       ? ' — accept the Workshop Legal Agreement on the item’s Steam page to make it visible.'
       : '';
-    libStatus(`Published! ${out.url}${note}`);
+    libStatus(`${out.updated ? 'Updated' : 'Published'}! ${out.url}${note}`);
   }, 'primary');
   actions.append(cancel, spacer, submit);
   card.appendChild(actions);
