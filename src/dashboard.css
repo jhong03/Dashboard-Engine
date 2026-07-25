@@ -593,8 +593,20 @@ body {
   display: flex;
   flex-direction: column;
   gap: 0.42cqw;
-  overflow: hidden;
+  /* Scroll when there are more tiles than fit — otherwise the ones past the
+     component's height are clipped and unreachable. Thin translucent bar so it
+     reads as part of the holographic surface, not a chrome scrollbar. */
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--hairline-dim) transparent;
 }
+.launch-wrap::-webkit-scrollbar { width: 0.42cqw; }
+.launch-wrap::-webkit-scrollbar-thumb {
+  background: var(--hairline-dim);
+  border-radius: 999px;
+}
+.launch-wrap::-webkit-scrollbar-thumb:hover { background: var(--hairline); }
 .launch-sec { font-size: 0.62em; letter-spacing: 0.22em; color: var(--muted); flex-shrink: 0; }
 .launch-grid { display: flex; flex-wrap: wrap; gap: 0.31cqw; align-content: flex-start; }
 .launch-tile {
