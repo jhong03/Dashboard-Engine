@@ -52,6 +52,13 @@ const bridge = {
   performanceSet: (patch) => ipcRenderer.invoke('aegis:settings:performance:set', patch),
   autoStartGet: () => ipcRenderer.invoke('aegis:settings:autostart:get'),
   autoStartSet: (enabled) => ipcRenderer.invoke('aegis:settings:autostart:set', Boolean(enabled)),
+  displayGet: () => ipcRenderer.invoke('aegis:settings:display:get'),
+  displaySet: (id) => ipcRenderer.invoke('aegis:settings:display:set', id === null ? null : Number(id)),
+  onDisplaysChanged: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('aegis:displays:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:displays:changed', handler);
+  },
   onActiveChanged: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('aegis:active:changed', handler);

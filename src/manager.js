@@ -678,6 +678,29 @@ function wireAssistantCfg() {
 let settingsFpsBuilt = false;
 
 async function renderSettingsCfg() {
+  // Display picker: only meaningful with more than one monitor. Rebuilt each
+  // render so hot-plugged displays show up.
+  const disp = await aegis.displayGet();
+  const group = $('set-display-group');
+  if (disp.ok && disp.displays.length > 1) {
+    group.classList.remove('hidden');
+    const sel = $('set-display');
+    sel.textContent = '';
+    const auto = document.createElement('option');
+    auto.value = 'auto';
+    auto.textContent = 'Primary display (default)';
+    sel.appendChild(auto);
+    for (const d of disp.displays) {
+      const opt = document.createElement('option');
+      opt.value = String(d.id);
+      opt.textContent = `${d.label} — ${d.width}×${d.height}${d.primary ? ' · primary' : ''}`;
+      sel.appendChild(opt);
+    }
+    sel.value = disp.selectedId == null ? 'auto' : String(disp.selectedId);
+  } else {
+    group.classList.add('hidden');
+  }
+
   // Auto-start: the login item is the source of truth. Where the OS has no
   // login-item support the toggle disables itself rather than lying.
   const auto = await aegis.autoStartGet();
@@ -718,6 +741,18 @@ function settingsSaved() {
 }
 
 function wireSettingsCfg() {
+  $('set-display').addEventListener('change', async (e) => {
+    const val = e.target.value;
+    const out = await aegis.displaySet(val === 'auto' ? null : Number(val));
+    if (!out.ok) { $('set-status').textContent = out.error; return; }
+    $('set-status').textContent = 'Moved the wallpaper to the selected display.';
+    clearTimeout(settingsSaved.timer);
+    settingsSaved.timer = setTimeout(() => { $('set-status').textContent = ''; }, 2400);
+  });
+  // A monitor was plugged/unplugged while the tab is open — refresh the picker.
+  if (aegis.onDisplaysChanged) {
+    aegis.onDisplaysChanged(() => { if (library.tab === 'settings') renderSettingsCfg(); });
+  }
   $('set-autostart').addEventListener('change', async (e) => {
     const out = await aegis.autoStartSet(e.target.checked);
     if (!out.ok) { $('set-status').textContent = out.error; e.target.checked = !e.target.checked; return; }

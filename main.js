@@ -165,9 +165,28 @@ function createEditorWindow(packId) {
 // its input can take keyboard focus directly on the wallpaper — no docked
 // bar, no overlap, one dialog per dashboard.
 
-// Reparent the dashboard under the shell's wallpaper layer. The hwnd is
-// program-generated; the PowerShell argv is fixed (CLAUDE.md shell rule).
-function attachToDesktop(win) {
+// Displays ranked by position (left-to-right, then top-to-bottom). This is the
+// SAME ordering desktop-attach.ps1 uses on the Win32 monitor list, so a rank
+// here maps to the same physical monitor there.
+function rankedDisplays() {
+  return screen.getAllDisplays().slice().sort((a, b) =>
+    (a.bounds.x - b.bounds.x) || (a.bounds.y - b.bounds.y));
+}
+
+// The monitor the wallpaper should render on: the user's pinned display if it
+// still exists, else the primary. Returns { display, explicit } — explicit is
+// false when we fell back to primary (auto), which the attach path leaves
+// unchanged from the long-proven single-monitor behaviour.
+function chosenDisplay() {
+  const id = settings.getDisplayId(USER_DIR);
+  const pinned = id != null && screen.getAllDisplays().find((d) => d.id === id);
+  return { display: pinned || screen.getPrimaryDisplay(), explicit: Boolean(pinned) };
+}
+
+// Reparent the dashboard under the shell's wallpaper layer, optionally moving it
+// onto a specific monitor (rank in rankedDisplays; -1 = leave bounds as set).
+// The hwnd is program-generated; the PowerShell argv is fixed (CLAUDE.md rule).
+function attachToDesktop(win, monitorIndex = -1) {
   return new Promise((resolve) => {
     if (process.platform !== 'win32') {
       resolve(false);
@@ -178,7 +197,7 @@ function attachToDesktop(win) {
     const child = spawn('powershell.exe', [
       '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
       '-File', path.join(__dirname, 'scripts', 'desktop-attach.ps1'),
-      hwnd.toString(),
+      hwnd.toString(), String(monitorIndex),
     ], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
 
     let out = '';
@@ -190,7 +209,10 @@ function attachToDesktop(win) {
 
 async function createDashboardWindow() {
   if (dashboardWindow) return;
-  const display = screen.getPrimaryDisplay();
+  const { display, explicit } = chosenDisplay();
+  // Only hand the attach script a monitor index when the user explicitly pinned
+  // a display; the default/primary path stays byte-for-byte what shipped before.
+  const monitorIndex = explicit ? rankedDisplays().findIndex((d) => d.id === display.id) : -1;
 
   dashboardWindow = new BrowserWindow({
     x: display.bounds.x,
@@ -224,7 +246,7 @@ async function createDashboardWindow() {
   dashboardWindow.showInactive(); // visible, but don't grab focus on launch
 
   if (!NO_DESKTOP) {
-    const attached = await attachToDesktop(dashboardWindow);
+    const attached = await attachToDesktop(dashboardWindow, monitorIndex);
     if (attached) return;
     console.warn('[desktop] could not attach to the wallpaper layer; falling back to a normal window.');
   }
@@ -256,6 +278,60 @@ function toggleDesktop() {
   desktopPaused = !desktopPaused;
   if (desktopPaused) dashboardWindow.hide();
   else { dashboardWindow.show(); sendDesktopPower(); }
+}
+
+// Tear down and rebuild the desktop window so it re-attaches on the currently
+// chosen monitor. Used when the user picks a different display, or when a
+// monitor is plugged/unplugged. Cheap enough (the pack re-renders from cache)
+// and far simpler than trying to re-parent a live window across monitors.
+function relocateDesktop() {
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
+  const wasPaused = desktopPaused;
+  dashboardWindow.destroy();
+  dashboardWindow = null;
+  desktopPaused = false;
+  createDashboardWindow().then(() => {
+    if (wasPaused && dashboardWindow && !dashboardWindow.isDestroyed()) {
+      desktopPaused = true;
+      dashboardWindow.hide();
+    }
+  });
+}
+
+// The display picker's data: every monitor ranked as the attach script sees
+// them, flagged with which is primary and which the user pinned.
+function listDisplays() {
+  const primaryId = screen.getPrimaryDisplay().id;
+  const selectedId = settings.getDisplayId(USER_DIR);
+  const displays = rankedDisplays().map((d, index) => ({
+    id: d.id,
+    index,
+    primary: d.id === primaryId,
+    label: d.label && d.label.trim() ? d.label : `Display ${index + 1}`,
+    width: d.bounds.width,
+    height: d.bounds.height,
+  }));
+  return { displays, selectedId };
+}
+
+// A monitor was added/removed/reconfigured. If the user's pinned display is
+// gone, drop the pin (fall back to primary). Then rebuild so the wallpaper
+// lands on the right screen. managerWindow (if open) refreshes its picker.
+// Debounced: metrics-changed can fire several times for one change, and each
+// relocate rebuilds the window + respawns the attach script.
+let displaysChangedTimer = null;
+function onDisplaysChanged() {
+  clearTimeout(displaysChangedTimer);
+  displaysChangedTimer = setTimeout(() => {
+    const pinned = settings.getDisplayId(USER_DIR);
+    if (pinned != null && !screen.getAllDisplays().find((d) => d.id === pinned)) {
+      settings.setDisplayId(USER_DIR, null);
+    }
+    relocateDesktop();
+    if (managerWindow && !managerWindow.isDestroyed()) {
+      managerWindow.webContents.send('aegis:displays:changed');
+    }
+  }, 600);
 }
 
 // Performance citizenship: fold the user's prefs together with the live
@@ -594,9 +670,19 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       onPerformanceChanged: () => sendDesktopPower(),
       getAutoStart,
       setAutoStart,
+      // Multi-monitor: the picker's data + rebuild-on-a-new-display.
+      getDisplays: listDisplays,
+      onDisplayChanged: relocateDesktop,
     });
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();
+    // Monitor hotplug / rearrange: re-place the wallpaper (and drop a pin whose
+    // display vanished). Only meaningful with a live desktop window.
+    if (!WANT_PANEL) {
+      for (const ev of ['display-added', 'display-removed', 'display-metrics-changed']) {
+        screen.on(ev, onDisplaysChanged);
+      }
+    }
     openFirstWindows();
     if (envFlag('SHOT')) scheduleDevShots(envFlag('SHOT'));
     // DE_SHOTPREVIEW=<dir>: dev utility — render DE_PACK's Workshop preview to
