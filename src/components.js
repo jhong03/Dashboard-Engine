@@ -385,6 +385,13 @@ const MODULE_BASE_CSS = [
 // listeners still get current values, and only trusts messages from the host.
 const MODULE_SDK = [
   '(function(){"use strict";',
+  // SECURITY: the served CSP is network-less, but CSP does NOT cover WebRTC — a
+  // hostile module could otherwise leak bytes via STUN/DNS lookups
+  // (RTCPeerConnection ICE gathering resolves an attacker-encoded hostname).
+  // This shim runs FIRST in the frame, so neuter WebRTC + media capture before
+  // any designer code runs.
+  'try{["RTCPeerConnection","webkitRTCPeerConnection","RTCDataChannel","RTCSessionDescription","RTCIceCandidate","RTCPeerConnectionIceEvent"].forEach(function(k){try{window[k]=undefined;}catch(e){}try{delete window[k];}catch(e){}});}catch(e){}',
+  'try{if(navigator.mediaDevices){navigator.mediaDevices.getUserMedia=function(){return Promise.reject(new Error("blocked"));};navigator.mediaDevices.enumerateDevices=function(){return Promise.resolve([]);};}}catch(e){}',
   'var themeCache=null,dataCache=null,assetCache={},themeCbs=[],dataCbs=[];',
   'function safe(fn,a){try{fn(a);}catch(e){}}',
   'function applyVars(t){if(!t||!t.vars)return;var r=document.documentElement;',
@@ -1640,6 +1647,7 @@ function createRenderer(services) {
     // access, no top navigation, no forms/popups. The served CSP kills network.
     frame.setAttribute('sandbox', 'allow-scripts');
     frame.setAttribute('referrerpolicy', 'no-referrer');
+    frame.setAttribute('allow', ''); // Permissions-Policy: grant the frame NO device features (camera/mic/geo/…)
     frame.setAttribute('title', 'pack module');
     frame.src = moduleDocUrl(moduleSrcdoc(html, { scroll: opts.scroll === true }));
     el.appendChild(frame);

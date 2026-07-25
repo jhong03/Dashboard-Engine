@@ -152,6 +152,10 @@ safe for the people who install your pack:
   it, the engine, the user's files, cookies, or storage;
 - a strict Content-Security-Policy that **blocks the network entirely** — no
   `fetch`, no `XMLHttpRequest`, no WebSocket, no external scripts/styles/images;
+- **no WebRTC and no camera/microphone/geolocation** — `RTCPeerConnection` and
+  `getUserMedia` are removed, and device permissions are denied engine-wide, so
+  there's no back channel to leak data or reach hardware;
+- **no navigation and no pop-ups** — the frame can't open windows or navigate;
 - no Node, no `require`, no `eval`.
 
 The engine talks to your module over one channel only, and only ever *hands it*

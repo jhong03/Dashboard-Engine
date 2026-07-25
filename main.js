@@ -8,7 +8,7 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const { createPresenceMonitor } = require('./lib/presence');
@@ -461,6 +461,17 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     else createManagerWindow();
   });
 
+  // SECURITY (defence in depth): our pages render untrusted pack content (and a
+  // pack's `module` component runs untrusted designer code in a sandboxed
+  // subframe). Deny every window/frame the ability to open new windows or
+  // navigate away — the app only ever loads its own local pages, so any
+  // navigation/window.open is either a bug or an attempted escape.
+  app.on('web-contents-created', (_event, contents) => {
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    contents.on('will-navigate', (event) => event.preventDefault());
+    contents.on('will-redirect', (event) => event.preventDefault());
+  });
+
   // Notification click lands the user on the planner.
   function openManagerView(view) {
     createManagerWindow();
@@ -490,6 +501,14 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     warnAboutUnauditedVoices();
+
+    // SECURITY: Electron GRANTS permission requests by default when no handler
+    // is set — which would let an untrusted pack `module` frame ask for camera,
+    // microphone, geolocation, etc. The engine needs none of these (planner
+    // alerts + notification reads happen in MAIN, replies play via Web Audio
+    // which needs no permission), so deny them all, everywhere.
+    session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    session.defaultSession.setPermissionCheckHandler(() => false);
 
     // Serve sandboxed module documents. The renderer (components.js
     // buildModule) base64url-encodes the whole wrapped HTML into the request
