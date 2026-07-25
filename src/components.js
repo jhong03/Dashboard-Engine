@@ -549,8 +549,16 @@ function createRenderer(services) {
         battery: await batteryPercent(),
         batteryText: null,
       };
-      if (values.battery === null) values.battery = 0;
-      values.batteryText = navigator.getBattery ? `${values.battery} %` : 'no battery';
+      if (res.hasBattery === false) {
+        // Settled OS-side: this machine has no battery (a desktop). It's always
+        // on mains, so show "AC power" and a full, never-"low" gauge instead of
+        // the Battery API's bogus 100%.
+        values.battery = 100;
+        values.batteryText = 'AC power';
+      } else {
+        if (values.battery === null) values.battery = 0;
+        values.batteryText = navigator.getBattery ? `${values.battery} %` : 'no battery';
+      }
       for (const key of ['cpu', 'mem', 'disk', 'battery']) {
         const series = live.telemetry.history[key];
         series.push(values[key]);
@@ -1030,7 +1038,9 @@ function createRenderer(services) {
     observeCanvas(canvas, draw);
     live.telemetry.subscribers.push((values) => {
       current = values[bind];
-      value.textContent = bind === 'battery' && !navigator.getBattery ? '—' : `${current}%`;
+      // Battery shows its label text ("AC power" / "80 %" / "no battery");
+      // other binds show the raw percent.
+      value.textContent = bind === 'battery' ? bindText(values, bind) : `${current}%`;
       draw();
     });
   }
