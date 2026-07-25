@@ -101,14 +101,25 @@
 
           <!-- Custom provider: endpoint + optional key + model id -->
           <label class="cfg-field hidden" id="ai-baseurl-field"><span>Base URL</span>
-            <input id="ai-baseurl" type="text" placeholder="https://openrouter.ai/api/v1  ·  or  http://localhost:11434/v1" spellcheck="false">
+            <input id="ai-baseurl" type="text" placeholder="https://openrouter.ai/api/v1" spellcheck="false">
+            <span class="hint cfg-hint">The address of an OpenAI-compatible API — it usually ends in <code>/v1</code>. Common ones:
+              OpenRouter <code>https://openrouter.ai/api/v1</code> · Groq <code>https://api.groq.com/openai/v1</code> ·
+              local Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>.
+              Leave blank to use OpenAI (<code>api.openai.com</code>).</span>
           </label>
-          <label class="cfg-field hidden" id="ai-key-field"><span>API key (optional — free tiers & local servers)</span>
-            <input id="ai-key" type="password" placeholder="Leave blank for keyless / local; paste to set or replace" spellcheck="false" autocomplete="off">
+          <label class="cfg-field hidden" id="ai-key-field"><span>API key</span>
+            <input id="ai-key" type="password" placeholder="Paste your key — or leave blank for a local server" spellcheck="false" autocomplete="off">
+            <span class="hint cfg-hint">Needed for hosted providers: make a free account at OpenRouter or Groq (or your OpenAI account)
+              and paste the key it gives you (usually starts with <code>sk-</code>). <b>Not</b> needed for a local Ollama/LM Studio —
+              leave it blank. Your key is stored encrypted on this PC and never goes into a pack or export.</span>
             <span class="hint hint-key" id="ai-key-state"></span>
           </label>
           <label class="cfg-field hidden" id="ai-model-field"><span>Model id</span>
-            <input id="ai-model" type="text" placeholder="google/gemini-2.0-flash-exp:free  ·  qwen/qwen-2.5-72b-instruct:free  ·  llama3.1" spellcheck="false">
+            <input id="ai-model" type="text" placeholder="e.g. google/gemini-2.0-flash-exp:free" spellcheck="false">
+            <span class="hint cfg-hint">The exact model name your provider expects — copy it from their models page. Examples:
+              OpenRouter <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-chat</code> ·
+              Groq <code>llama-3.3-70b-versatile</code> · Ollama/LM Studio the local name like <code>llama3.1</code> or <code>qwen2.5</code> ·
+              OpenAI <code>gpt-4o-mini</code>.</span>
           </label>
 
           <label class="cfg-field"><span>Voice for spoken replies</span>

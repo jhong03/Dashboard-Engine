@@ -324,6 +324,18 @@ body {
 .cfg-field textarea { resize: vertical; font-family: var(--font-ui); line-height: 1.5; }
 .cfg-check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .hint-key { margin-top: -6px; font-size: 11.5px; }
+/* Per-field setup guide under the custom-endpoint inputs. */
+.cfg-hint { font-size: 11.5px; }
+.cfg-hint code {
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--bg-input);
+  padding: 0 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.cfg-hint b { color: var(--text); font-weight: 600; }
 .cfg-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .cfg-actions .status-line-app { flex: 1; }
 
