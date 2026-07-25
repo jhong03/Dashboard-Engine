@@ -569,6 +569,17 @@ function createRenderer(services) {
     return `${values[bind]} %`;
   }
 
+  // A "hot" (warning) reading depends on the metric's direction: cpu/mem/disk
+  // are alarming when HIGH, but battery is alarming when LOW. Treating a nearly
+  // full battery as a warning (the old shared `>= 85`) was backwards.
+  const METER_HOT_HIGH = 85; // cpu / mem / disk
+  const METER_HOT_LOW = 15;  // battery
+  function meterHot(bind, value) {
+    if (typeof value !== 'number') return false;
+    if (bind === 'battery') return value <= METER_HOT_LOW;
+    return value >= METER_HOT_HIGH;
+  }
+
   // ── Builders ──────────────────────────────────────────────────────────────
 
   function buildStatus(component, el, ctx) {
@@ -943,7 +954,7 @@ function createRenderer(services) {
     live.telemetry.subscribers.push((values) => {
       for (const r of rows) {
         r.fill.style.width = `${values[r.bind]}%`;
-        r.fill.classList.toggle('hot', values[r.bind] >= (r.bind === 'battery' ? 101 : 85));
+        r.fill.classList.toggle('hot', meterHot(r.bind, values[r.bind]));
         r.value.textContent = bindText(values, r.bind);
         if (r.trace) drawTrace(r.trace, el, r.bind);
       }
@@ -976,7 +987,7 @@ function createRenderer(services) {
       el.appendChild(bar);
       live.telemetry.subscribers.push((values) => {
         fill.style.width = `${values[bind]}%`;
-        fill.classList.toggle('hot', values[bind] >= 85);
+        fill.classList.toggle('hot', meterHot(bind, values[bind]));
         if (big) big.textContent = bindText(values, bind);
         drawTrace(trace, el, bind);
       });
@@ -1010,7 +1021,7 @@ function createRenderer(services) {
       ctx2.arc(cx, cy, radius, 0, Math.PI * 2);
       ctx2.stroke();
 
-      ctx2.strokeStyle = current >= 85 ? cssVar(el, '--warn') : cssVar(el, '--accent');
+      ctx2.strokeStyle = meterHot(bind, current) ? cssVar(el, '--warn') : cssVar(el, '--accent');
       ctx2.beginPath();
       ctx2.arc(cx, cy, radius, start, start + (current / 100) * Math.PI * 2);
       ctx2.stroke();
@@ -1377,6 +1388,12 @@ function createRenderer(services) {
 
     let busy = false;
     let audioCtx = null;
+    // The context is created lazily on first spoken reply; close it on teardown
+    // so a re-render (pack switch, freeze/resume) doesn't leak audio contexts —
+    // browsers cap them and eventually refuse to create more.
+    live.disposers.push(() => {
+      if (audioCtx) { try { audioCtx.close(); } catch (e) { /* fail soft */ } audioCtx = null; }
+    });
     const playPcm = (pcm, sampleRate) => {
       try {
         if (!audioCtx) audioCtx = new AudioContext();
@@ -1445,13 +1462,19 @@ function createRenderer(services) {
     sub.className = 'clock-date';
     el.append(label, value, sub);
 
-    const target = new Date(component.options.target).getTime();
+    // A missing target must NOT parse to a real time. `new Date(null)` is the
+    // epoch (0), not Invalid Date, so the old NaN guard never fired and a fresh
+    // countdown read "NOW" forever. Map unset/blank to NaN explicitly.
+    const raw = component.options.target;
+    const target = (raw === undefined || raw === null || raw === '')
+      ? NaN : new Date(raw).getTime();
     const tick = () => {
-      const diff = target - Date.now();
-      if (Number.isNaN(target)) {
+      if (!Number.isFinite(target)) {
         value.textContent = '—';
+        sub.textContent = 'no date set';
         return;
       }
+      const diff = target - Date.now();
       if (diff <= 0) {
         value.textContent = 'NOW';
         sub.textContent = '';
@@ -1467,7 +1490,18 @@ function createRenderer(services) {
     live.timers.push(setInterval(tick, 30 * 1000));
   }
 
+  // A weather component with no location set would otherwise fetch 0°N 0°E —
+  // "null island" in the Gulf of Guinea — and quietly show that ocean's weather.
+  // Treat missing coords, or an exact 0,0, as "not configured yet".
+  function hasWeatherLocation(options) {
+    const { lat, lon } = options;
+    if (typeof lat !== 'number' || typeof lon !== 'number') return false;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
+    return !(lat === 0 && lon === 0);
+  }
+
   function buildWeather(component, el) {
+    const located = hasWeatherLocation(component.options);
     // Compact: one horizontal strip — place · temp · sky · wind.
     if (component.options.compact) {
       el.classList.add('weather-strip');
@@ -1482,6 +1516,7 @@ function createRenderer(services) {
       const wind = document.createElement('span');
       wind.className = 'wx-wind';
       el.append(place, temp, desc, wind);
+      if (!located) { desc.textContent = 'set a location'; return; }
       const refresh = async () => {
         if (!services.weather) return;
         const res = await services.weather({ lat: component.options.lat, lon: component.options.lon });
@@ -1514,6 +1549,11 @@ function createRenderer(services) {
       meta = document.createElement('div');
       meta.className = 'weather-meta';
       el.appendChild(meta);
+    }
+
+    if (!located) {
+      desc.textContent = 'set a location';
+      return;
     }
 
     const refresh = async () => {
