@@ -333,15 +333,22 @@ function buildPerformanceMenu() {
 // electron.exe, which needs the project path to launch our app; a packaged
 // build points at the real binary and needs no extra args. Fail-soft: any
 // platform without login-item support just reports "off / unsupported".
+//
+// CRITICAL: getLoginItemSettings must be queried with the SAME path/args used
+// to register, or on Windows it won't recognise its own entry and reports
+// openAtLogin:false — the write succeeds but the checkbox reads back unticked.
+function loginItemOptions() {
+  if (app.isPackaged) return {};
+  return { path: process.execPath, args: [path.resolve(__dirname)] };
+}
+
 function getAutoStart() {
-  try { return app.getLoginItemSettings().openAtLogin; } catch { return false; }
+  try { return app.getLoginItemSettings(loginItemOptions()).openAtLogin; } catch { return false; }
 }
 
 function setAutoStart(enabled) {
   try {
-    const opts = { openAtLogin: !!enabled };
-    if (!app.isPackaged) { opts.path = process.execPath; opts.args = [path.resolve(__dirname)]; }
-    app.setLoginItemSettings(opts);
+    app.setLoginItemSettings({ openAtLogin: !!enabled, ...loginItemOptions() });
   } catch (err) {
     console.error(`[main] auto-start: ${err.message}`);
   }
