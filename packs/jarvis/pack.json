@@ -49,6 +49,53 @@
   "canvas": {
     "padding": 0
   },
+  "props": [
+    {
+      "key": "accent",
+      "label": "Accent colour",
+      "type": "color",
+      "default": "#4DDDFF",
+      "bind": { "target": "palette", "key": "accent" }
+    },
+    {
+      "key": "accent-bright",
+      "label": "Highlight colour",
+      "type": "color",
+      "default": "#A5F2FF",
+      "bind": { "target": "palette", "key": "accentBright" }
+    },
+    {
+      "key": "particles",
+      "label": "Particles",
+      "type": "select",
+      "default": "none",
+      "options": [
+        { "value": "none", "label": "Off" },
+        { "value": "dust", "label": "Dust" },
+        { "value": "embers", "label": "Embers" },
+        { "value": "snow", "label": "Snow" },
+        { "value": "sparkle", "label": "Sparkle" }
+      ],
+      "bind": { "target": "ambience", "key": "effect" }
+    },
+    {
+      "key": "particle-density",
+      "label": "Particle density",
+      "type": "slider",
+      "min": 0.05,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.5,
+      "bind": { "target": "ambience", "key": "density" }
+    },
+    {
+      "key": "corner-notches",
+      "label": "Corner notches",
+      "type": "toggle",
+      "default": true,
+      "bind": { "target": "shape", "key": "cornerNotches" }
+    }
+  ],
   "components": [
     {
       "type": "text",

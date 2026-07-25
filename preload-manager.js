@@ -17,7 +17,13 @@ const bridge = {
   libraryState: () => ipcRenderer.invoke('aegis:library:state'),
   // Live previews render packs through the shared renderer, so the manager
   // needs the same read-only data services the desktop surface has.
-  packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
+  // withProps: the manager's previews show the user's customized pack, matching
+  // what's on the desktop.
+  packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id), { withProps: true }),
+  // Per-pack user properties (the "Customize" controls in pack detail).
+  userPropsGet: (id) => ipcRenderer.invoke('aegis:userprops:get', String(id)),
+  userPropsSet: (packId, key, value) => ipcRenderer.invoke('aegis:userprops:set', { packId: String(packId), key: String(key), value }),
+  userPropsReset: (id) => ipcRenderer.invoke('aegis:userprops:reset', String(id)),
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
   notifications: () => ipcRenderer.invoke('aegis:notifications'),

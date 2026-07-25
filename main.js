@@ -673,6 +673,13 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       // Multi-monitor: the picker's data + rebuild-on-a-new-display.
       getDisplays: listDisplays,
       onDisplayChanged: relocateDesktop,
+      // A user property changed — the live desktop reloads the pack (with the
+      // new overlay). The manager refreshes its own preview client-side.
+      onUserPropsChanged: (id) => {
+        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+          dashboardWindow.webContents.send('aegis:packs:changed', { id });
+        }
+      },
     });
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();

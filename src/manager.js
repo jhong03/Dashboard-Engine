@@ -60,6 +60,7 @@ function setActiveIndicator() {
 const packCache = new Map();      // id → { pack, assets } | null (load failed)
 const cardPreviews = [];          // frozen-card renderers awaiting cleanup
 let detailPreview = null;         // the one live sidebar renderer
+let detailPreviewEl = null;       // the sidebar preview element (re-rendered on prop changes)
 let displayAspect = null;         // "width / height" of the primary display
 const CARD_FREEZE_MS = 3500;      // enough ticks for bars/sparklines to fill
 
@@ -115,6 +116,7 @@ function destroyDetailPreview() {
     detailPreview.destroy();
     detailPreview = null;
   }
+  detailPreviewEl = null;
 }
 
 // Card thumb: real render, frozen shortly after so N cards don't each keep
@@ -146,8 +148,116 @@ async function livePreviewInto(preview, id) {
   if (displayAspect) preview.style.aspectRatio = displayAspect;
   destroyDetailPreview();
   detailPreview = AegisComponents.createRenderer(previewServices());
+  detailPreviewEl = preview; // so a prop change can re-render into this element
   renderPackInto(preview, loaded.pack, loaded.assets, detailPreview);
   return true;
+}
+
+// Re-render the sidebar preview after a user-property change, so the customize
+// controls feel live. The desktop updates separately via the packs:changed
+// broadcast from main.
+async function refreshDetailPreview(id) {
+  packCache.delete(id);
+  const el = detailPreviewEl; // livePreviewInto resets the ref mid-call; hold it
+  if (el && el.isConnected) await livePreviewInto(el, id);
+}
+
+// One labelled control for a user property. Discrete controls save on change;
+// the slider updates its number live but saves on release (no IPC spam).
+function buildPropControl(prop, value, packId) {
+  const row = document.createElement('label');
+  row.className = 'prop-row';
+  const label = document.createElement('span');
+  label.className = 'prop-label';
+  label.textContent = prop.label;
+
+  const save = async (v) => {
+    const out = await aegis.userPropsSet(packId, prop.key, v);
+    if (out.ok) refreshDetailPreview(packId);
+  };
+
+  if (prop.type === 'color') {
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.className = 'prop-color';
+    input.value = normalizeHex(value) || '#000000';
+    input.addEventListener('change', () => save(input.value));
+    row.append(label, input);
+  } else if (prop.type === 'slider') {
+    const input = document.createElement('input');
+    input.type = 'range';
+    input.className = 'prop-range';
+    input.min = String(prop.min);
+    input.max = String(prop.max);
+    input.step = String(prop.step);
+    input.value = String(value);
+    const out = document.createElement('span');
+    out.className = 'prop-num';
+    out.textContent = formatPropNum(value);
+    input.addEventListener('input', () => { out.textContent = formatPropNum(Number(input.value)); });
+    input.addEventListener('change', () => save(Number(input.value)));
+    row.append(label, input, out);
+  } else if (prop.type === 'select') {
+    const select = document.createElement('select');
+    select.className = 'prop-select';
+    for (const opt of prop.options) {
+      const o = document.createElement('option');
+      o.value = String(opt.value);
+      o.textContent = opt.label;
+      select.appendChild(o);
+    }
+    select.value = String(value);
+    select.addEventListener('change', () => save(select.value));
+    row.append(label, select);
+  } else { // toggle
+    row.classList.add('prop-toggle');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = value === true;
+    input.addEventListener('change', () => save(input.checked));
+    row.append(input, label);
+  }
+  return row;
+}
+
+function formatPropNum(n) {
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
+// A color <input> needs #rrggbb; packs may store #rgb or #rrggbbaa.
+function normalizeHex(hex) {
+  if (typeof hex !== 'string') return null;
+  const m = hex.trim().replace(/^#/, '');
+  if (/^[0-9a-fA-F]{3}$/.test(m)) return `#${m[0]}${m[0]}${m[1]}${m[1]}${m[2]}${m[2]}`;
+  if (/^[0-9a-fA-F]{6}$/.test(m) || /^[0-9a-fA-F]{8}$/.test(m)) return `#${m.slice(0, 6)}`;
+  return null;
+}
+
+// The "Customize" block in pack detail. Filled async so the pack's declared
+// props (+ the user's current values) can be fetched without blocking render.
+async function fillCustomize(box, id) {
+  const res = await aegis.userPropsGet(id);
+  if (!box.isConnected || !res.ok || res.props.length === 0) return;
+  const title = document.createElement('h4');
+  title.className = 'customize-title';
+  title.textContent = 'Customize';
+  box.appendChild(title);
+  for (const prop of res.props) {
+    box.appendChild(buildPropControl(prop, res.values[prop.key], id));
+  }
+  const reset = libButton('Reset to defaults', async () => {
+    await aegis.userPropsReset(id);
+    refreshDetailPreview(id);
+    fillCustomizeReload(box, id);
+  }, 'tiny');
+  box.appendChild(reset);
+  box.classList.remove('hidden');
+}
+
+// After a reset, rebuild the controls from the (now default) values.
+function fillCustomizeReload(box, id) {
+  box.textContent = '';
+  fillCustomize(box, id);
 }
 
 // Blueprint thumbnail: the pack's palette + component rects drawn as glass
@@ -1007,6 +1117,7 @@ async function renderDetail() {
     const { item } = s;
     blueprintInto(preview, item.pack); // instant placeholder…
     livePreviewInto(preview, item.id); // …replaced by the live render
+    detailPreviewEl = preview;         // prop changes re-render into this element
     name.textContent = item.name;
     detail.append(preview, name);
     const meta = item.meta || {};
@@ -1023,6 +1134,13 @@ async function renderDetail() {
       swatches.appendChild(sw);
     }
     detail.appendChild(swatches);
+
+    // Customize: the pack's user-adjustable knobs (hidden until we confirm the
+    // pack declares any). Personal values, applied live on the desktop.
+    const customize = document.createElement('div');
+    customize.className = 'customize hidden';
+    detail.appendChild(customize);
+    fillCustomize(customize, item.id);
 
     if (item.id === library.activeId) {
       detail.appendChild(detailLine('Currently on your desktop'));

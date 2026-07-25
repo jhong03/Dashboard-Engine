@@ -138,6 +138,49 @@ meters, per-core bars, sysinfo readouts, compact weather strip, agenda +
 launcher rails, layered text panels). Copy it, rename the folder, and start
 editing — it is also the project's quality floor for pack design.
 
+## User properties (`props`)
+
+Expose a few knobs the **user** can tweak from Manager → pack detail →
+Customize, without opening the editor (Wallpaper-Engine style). Their chosen
+values live in their own user data — never in your pack — so exports and forks
+always carry your defaults, not someone's tweaks.
+
+Add an optional top-level `props` array (max 16). Each entry binds one control
+to one existing skin field:
+
+```jsonc
+"props": [
+  { "key": "accent", "label": "Accent colour", "type": "color",
+    "default": "#4DDDFF", "bind": { "target": "palette", "key": "accent" } },
+
+  { "key": "particles", "label": "Particles", "type": "select", "default": "none",
+    "options": [ { "value": "none", "label": "Off" }, { "value": "snow", "label": "Snow" } ],
+    "bind": { "target": "ambience", "key": "effect" } },
+
+  { "key": "density", "label": "Particle density", "type": "slider",
+    "min": 0.05, "max": 1, "step": 0.05, "default": 0.5,
+    "bind": { "target": "ambience", "key": "density" } },
+
+  { "key": "notches", "label": "Corner notches", "type": "toggle", "default": true,
+    "bind": { "target": "shape", "key": "cornerNotches" } }
+]
+```
+
+`key` is a unique id (`[a-z0-9-]`). The supported `type` → `bind` pairs are the
+whole contract (anything else is dropped with a warning):
+
+| `type` | `bind.target` | `bind.key` | changes |
+|--------|---------------|------------|---------|
+| `color` | `palette` | `void`, `glass`, `accent`, `accentBright`, `muted`, `warn`, `gold` | that palette colour |
+| `select` | `ambience` | `effect` | the particle effect (`options` values must be real effect names) |
+| `slider` | `ambience` | `density` | particle density (0.05–1) |
+| `slider` | `texture` | `scanlines`, `grid`, `glow`, `vignette` | that texture intensity (0–1) |
+| `toggle` | `shape` | `cornerNotches` | corner notches on/off |
+
+Every value is re-clamped to the field's real range, so a property can only
+move a value the skin already allows. `jarvis` ships all four control types as
+a live example.
+
 ## Module SDK
 
 The 19 built-in components cover the common dashboard vocabulary. When you need

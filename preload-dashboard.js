@@ -24,8 +24,9 @@ function subscription(channel) {
 // origin with no network, so this is defence in depth, not the only wall.)
 const bridge = {
   version: '0.4.0',
-  packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
-  onPackChanged: subscription('aegis:packs:changed'),      // hot reload (file edits)
+  // withProps: the desktop shows the user's customized pack (per-pack knobs).
+  packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id), { withProps: true }),
+  onPackChanged: subscription('aegis:packs:changed'),      // hot reload (file edits + prop changes)
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   onActiveChanged: subscription('aegis:active:changed'),   // manager picked a pack
   onPower: subscription('aegis:desktop:power'),            // fps cap / freeze (perf citizenship)
