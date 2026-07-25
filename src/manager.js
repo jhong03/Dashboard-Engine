@@ -1238,6 +1238,13 @@ async function refreshLibrary() {
   packCache.clear(); // packs may have been installed/edited/uninstalled
   library.localPacks = res.packs;
   library.registries = res.registries;
+  // A selected local pack holds a stale item object from the previous fetch —
+  // re-point it to the fresh one (or clear it if the pack is gone) so the
+  // detail sidebar shows current metadata, not the pre-edit copy.
+  if (library.selected && library.selected.kind === 'local') {
+    const fresh = library.localPacks.find((p) => p.id === library.selected.item.id);
+    library.selected = fresh ? { kind: 'local', item: fresh } : null;
+  }
   if (!library.selected && library.tab === 'installed' && library.localPacks.length > 0) {
     const first = library.localPacks.find((p) => p.id === library.activeId) || library.localPacks[0];
     library.selected = { kind: 'local', item: first };
@@ -1260,6 +1267,15 @@ async function init() {
     setActiveIndicator();
     renderGallery();
     renderDetail();
+  });
+
+  // A pack was saved in the editor (or hot-reloaded on disk) — refresh so the
+  // gallery thumbnail, detail preview, and pack list reflect it immediately,
+  // no restart needed. Debounced: one save can emit several file-watch events.
+  let packChangeTimer = null;
+  aegis.onPackChanged(() => {
+    clearTimeout(packChangeTimer);
+    packChangeTimer = setTimeout(() => refreshLibrary(), 200);
   });
 
   $('btn-panel').addEventListener('click', () => aegis.openPanel());

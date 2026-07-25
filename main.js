@@ -658,9 +658,12 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       },
       openManager: (view) => openManagerView(view || 'installed'),
       onPackSaved: (id) => {
-        // Editor saved a pack — the desktop repaints if it's showing it.
-        if (dashboardWindow && !dashboardWindow.isDestroyed()) {
-          dashboardWindow.webContents.send('aegis:packs:changed', { id });
+        // Editor saved a pack — the desktop repaints if it's showing it, and
+        // the manager refreshes its library so an edit (or a brand-new fork)
+        // shows up without reopening the app. A fresh fork has no file watcher
+        // on the manager yet, so this direct ping is the only signal it gets.
+        for (const win of [dashboardWindow, managerWindow]) {
+          if (win && !win.isDestroyed()) win.webContents.send('aegis:packs:changed', { id });
         }
       },
       // Workshop publish asks for a rendered preview image of the pack.

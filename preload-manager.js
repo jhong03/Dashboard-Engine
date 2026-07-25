@@ -52,6 +52,13 @@ const bridge = {
 
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
+  // A pack's files changed (editor save, fork, or a hot-reload watcher) — the
+  // manager refreshes its library + previews so it never shows a stale pack.
+  onPackChanged: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('aegis:packs:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:packs:changed', handler);
+  },
 
   // Engine settings — performance (mirrors the tray) + start-with-Windows.
   performanceGet: () => ipcRenderer.invoke('aegis:settings:performance:get'),
