@@ -883,6 +883,31 @@ function wireSettingsCfg() {
   });
 }
 
+// ── First-run welcome ────────────────────────────────────────────────────────
+
+async function showWelcome() {
+  // Reflect the current auto-start state in the convenience checkbox.
+  const auto = await aegis.autoStartGet();
+  const box = $('welcome-autostart');
+  if (auto.ok) { box.checked = auto.enabled; box.disabled = !auto.supported; }
+  $('welcome-scrim').classList.remove('hidden');
+}
+
+function dismissWelcome() {
+  $('welcome-scrim').classList.add('hidden');
+  aegis.onboardedSet(true); // never auto-show again (Settings can re-open it)
+}
+
+function wireWelcome() {
+  $('welcome-start').addEventListener('click', dismissWelcome);
+  $('welcome-autostart').addEventListener('change', (e) => aegis.autoStartSet(e.target.checked));
+  $('welcome-assistant').addEventListener('click', () => {
+    dismissWelcome();
+    library.tab = 'assistant';
+    renderGallery();
+  });
+}
+
 // ── Event editor modal ──────────────────────────────────────────────────────
 
 function openEventEditor({ id, date }) {
@@ -1288,6 +1313,8 @@ async function init() {
   wirePlanner();
   wireAssistantCfg();
   wireSettingsCfg();
+  wireWelcome();
+  $('set-welcome').addEventListener('click', showWelcome);
   await wireLauncherCfg();
   $('lib-search').addEventListener('input', (e) => { library.search = e.target.value; renderGallery(); });
   $('btn-install-file').addEventListener('click', async () => {
@@ -1309,6 +1336,13 @@ async function init() {
   const view = new URLSearchParams(location.search).get('view');
   if (['browse', 'planner', 'launcher', 'assistant'].includes(view)) library.tab = view;
   await refreshLibrary();
+
+  // First launch ever: greet the user once. Only when they didn't ask for a
+  // specific view (e.g. a notification-click deep link shouldn't be interrupted).
+  if (!view) {
+    const ob = await aegis.onboardedGet();
+    if (ob.ok && !ob.onboarded) showWelcome();
+  }
 }
 
 init().catch((err) => libStatus(`The manager failed to start: ${err.message}`, true));

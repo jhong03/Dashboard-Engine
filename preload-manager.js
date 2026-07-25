@@ -67,6 +67,8 @@ const bridge = {
   autoStartSet: (enabled) => ipcRenderer.invoke('aegis:settings:autostart:set', Boolean(enabled)),
   displayGet: () => ipcRenderer.invoke('aegis:settings:display:get'),
   displaySet: (id) => ipcRenderer.invoke('aegis:settings:display:set', id === null ? null : Number(id)),
+  onboardedGet: () => ipcRenderer.invoke('aegis:settings:onboarded:get'),
+  onboardedSet: (value) => ipcRenderer.invoke('aegis:settings:onboarded:set', value === true),
   onDisplaysChanged: (callback) => {
     const handler = () => callback();
     ipcRenderer.on('aegis:displays:changed', handler);

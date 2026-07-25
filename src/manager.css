@@ -433,3 +433,33 @@ body {
 .event-card .hint { margin: 0; }
 .event-actions { display: flex; gap: 8px; align-items: center; }
 .event-spacer { flex: 1; }
+
+/* First-run welcome — quiet engine chrome, no glow. */
+.welcome-card {
+  width: min(520px, calc(100vw - 48px));
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 22px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+.welcome-card h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.welcome-lead { margin: 0; font-size: 13px; line-height: 1.55; color: var(--text-dim); }
+.welcome-points {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.welcome-points b { font-weight: 600; }
+.welcome-points em { font-style: normal; color: var(--accent); }
+.welcome-autostart { margin-top: 2px; }
+.welcome-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 2px; }
