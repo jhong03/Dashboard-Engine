@@ -35,6 +35,7 @@
         <button class="tab" id="tab-planner" role="tab" aria-selected="false">Planner</button>
         <button class="tab" id="tab-launcher" role="tab" aria-selected="false">Launcher</button>
         <button class="tab" id="tab-assistant" role="tab" aria-selected="false">Assistant</button>
+        <button class="tab" id="tab-settings" role="tab" aria-selected="false">Settings</button>
       </div>
       <label class="visually-hidden" for="lib-search">Search packs</label>
       <input id="lib-search" type="search" class="lib-search" placeholder="Search packs" spellcheck="false">
@@ -124,6 +125,21 @@
             <button class="btn" id="ai-test">Test connection</button>
             <span class="status-line-app" id="ai-status"></span>
           </div>
+        </div>
+        <div class="settings-cfg hidden" id="settings-cfg">
+          <h3 class="cfg-group-title">Startup</h3>
+          <label class="cfg-check"><input id="set-autostart" type="checkbox"><span>Start Dashboard Engine when Windows starts</span></label>
+          <p class="hint cfg-hint" id="set-autostart-hint">The engine launches quietly to the tray when you sign in, so your desktop is already alive — no window to open.</p>
+
+          <h3 class="cfg-group-title">Performance</h3>
+          <p class="hint">The animated wallpaper pauses and throttles like Wallpaper Engine so it stays a good background citizen. These are the same controls as the tray’s Performance menu.</p>
+          <label class="cfg-check"><input id="set-fullscreen" type="checkbox"><span>Pause when a full-screen app covers the screen</span></label>
+          <label class="cfg-check"><input id="set-battery" type="checkbox"><span>Pause on battery power</span></label>
+          <label class="cfg-field"><span>Frame-rate cap</span>
+            <select id="set-fps"></select>
+          </label>
+
+          <p class="status-line-app" id="set-status" role="status" aria-live="polite"></p>
         </div>
         <div class="gallery" id="gallery"></div>
       </div>

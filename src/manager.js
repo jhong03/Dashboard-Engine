@@ -231,9 +231,10 @@ function renderGallery() {
   $('planner').classList.toggle('hidden', library.tab !== 'planner');
   $('launcher-cfg').classList.toggle('hidden', library.tab !== 'launcher');
   $('assistant-cfg').classList.toggle('hidden', library.tab !== 'assistant');
-  const nonGallery = ['planner', 'launcher', 'assistant'].includes(library.tab);
+  $('settings-cfg').classList.toggle('hidden', library.tab !== 'settings');
+  const nonGallery = ['planner', 'launcher', 'assistant', 'settings'].includes(library.tab);
   gallery.classList.toggle('hidden', nonGallery);
-  for (const t of ['installed', 'browse', 'planner', 'launcher', 'assistant']) {
+  for (const t of ['installed', 'browse', 'planner', 'launcher', 'assistant', 'settings']) {
     $(`tab-${t}`).setAttribute('aria-selected', String(library.tab === t));
   }
   if (library.tab === 'planner') {
@@ -246,6 +247,10 @@ function renderGallery() {
   }
   if (library.tab === 'assistant') {
     renderAssistantCfg();
+    return;
+  }
+  if (library.tab === 'settings') {
+    renderSettingsCfg();
     return;
   }
 
@@ -666,6 +671,73 @@ function wireAssistantCfg() {
   });
 }
 
+// ── Settings tab: startup + performance ──────────────────────────────────────
+// Both prefs are owned by main (login item / settings.json) and also live on
+// the tray, so this tab always reads fresh state and writes through on change.
+
+let settingsFpsBuilt = false;
+
+async function renderSettingsCfg() {
+  // Auto-start: the login item is the source of truth. Where the OS has no
+  // login-item support the toggle disables itself rather than lying.
+  const auto = await aegis.autoStartGet();
+  const autoBox = $('set-autostart');
+  if (auto.ok) {
+    autoBox.checked = auto.enabled;
+    autoBox.disabled = !auto.supported;
+    $('set-autostart-hint').textContent = auto.supported
+      ? 'The engine launches quietly to the tray when you sign in, so your desktop is already alive — no window to open.'
+      : 'Start-with-the-OS isn’t available on this platform.';
+  }
+
+  const perf = await aegis.performanceGet();
+  if (perf.ok) {
+    $('set-fullscreen').checked = perf.performance.pauseOnFullscreen;
+    $('set-battery').checked = perf.performance.pauseOnBattery;
+    const fps = $('set-fps');
+    if (!settingsFpsBuilt) {
+      fps.textContent = '';
+      for (const choice of perf.fpsChoices) {
+        const opt = document.createElement('option');
+        opt.value = String(choice);
+        opt.textContent = `${choice} fps${choice === 30 ? ' (recommended)' : ''}`;
+        fps.appendChild(opt);
+      }
+      settingsFpsBuilt = true;
+    }
+    fps.value = String(perf.performance.maxFps);
+  }
+}
+
+function settingsSaved() {
+  const status = $('set-status');
+  status.textContent = 'Saved.';
+  // Brief confirmation; the change is already applied to the live desktop.
+  clearTimeout(settingsSaved.timer);
+  settingsSaved.timer = setTimeout(() => { status.textContent = ''; }, 1600);
+}
+
+function wireSettingsCfg() {
+  $('set-autostart').addEventListener('change', async (e) => {
+    const out = await aegis.autoStartSet(e.target.checked);
+    if (!out.ok) { $('set-status').textContent = out.error; e.target.checked = !e.target.checked; return; }
+    e.target.checked = out.enabled; // reflect what the OS actually did
+    settingsSaved();
+  });
+  $('set-fullscreen').addEventListener('change', async (e) => {
+    await aegis.performanceSet({ pauseOnFullscreen: e.target.checked });
+    settingsSaved();
+  });
+  $('set-battery').addEventListener('change', async (e) => {
+    await aegis.performanceSet({ pauseOnBattery: e.target.checked });
+    settingsSaved();
+  });
+  $('set-fps').addEventListener('change', async (e) => {
+    await aegis.performanceSet({ maxFps: Number(e.target.value) });
+    settingsSaved();
+  });
+}
+
 // ── Event editor modal ──────────────────────────────────────────────────────
 
 function openEventEditor({ id, date }) {
@@ -1043,8 +1115,10 @@ async function init() {
   $('tab-planner').addEventListener('click', () => { library.tab = 'planner'; renderGallery(); });
   $('tab-launcher').addEventListener('click', () => { library.tab = 'launcher'; renderGallery(); });
   $('tab-assistant').addEventListener('click', () => { library.tab = 'assistant'; renderGallery(); });
+  $('tab-settings').addEventListener('click', () => { library.tab = 'settings'; renderGallery(); });
   wirePlanner();
   wireAssistantCfg();
+  wireSettingsCfg();
   await wireLauncherCfg();
   $('lib-search').addEventListener('input', (e) => { library.search = e.target.value; renderGallery(); });
   $('btn-install-file').addEventListener('click', async () => {

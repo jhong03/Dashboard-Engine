@@ -339,6 +339,21 @@ body {
 .cfg-actions { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
 .cfg-actions .status-line-app { flex: 1; }
 
+/* ── Settings tab ───────────────────────────────────────────────────────── */
+
+.settings-cfg { max-width: 620px; display: flex; flex-direction: column; gap: 12px; }
+/* Section headings between grouped controls. First one has no top margin. */
+.cfg-group-title {
+  margin: 14px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.settings-cfg > .cfg-group-title:first-child { margin-top: 0; }
+.settings-cfg .cfg-field { max-width: 220px; }
+
 /* ── Event editor modal ─────────────────────────────────────────────────── */
 
 .modal-scrim {

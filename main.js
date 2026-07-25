@@ -327,6 +327,27 @@ function buildPerformanceMenu() {
   ];
 }
 
+// Auto-start with the OS (Windows/macOS login item). The login-item / registry
+// entry IS the persistence, so state is read straight back from Electron — we
+// keep nothing in settings.json. In a dev run (electron .) process.execPath is
+// electron.exe, which needs the project path to launch our app; a packaged
+// build points at the real binary and needs no extra args. Fail-soft: any
+// platform without login-item support just reports "off / unsupported".
+function getAutoStart() {
+  try { return app.getLoginItemSettings().openAtLogin; } catch { return false; }
+}
+
+function setAutoStart(enabled) {
+  try {
+    const opts = { openAtLogin: !!enabled };
+    if (!app.isPackaged) { opts.path = process.execPath; opts.args = [path.resolve(__dirname)]; }
+    app.setLoginItemSettings(opts);
+  } catch (err) {
+    console.error(`[main] auto-start: ${err.message}`);
+  }
+  return getAutoStart();
+}
+
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'resources', 'tray-icon.png')));
   tray.setToolTip('Dashboard Engine');
@@ -561,6 +582,11 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       },
       // Workshop publish asks for a rendered preview image of the pack.
       renderPreview: (id) => renderPackPreview(id),
+      // Settings screen: performance changes must reach the live desktop, and
+      // the OS login item is owned by main.
+      onPerformanceChanged: () => sendDesktopPower(),
+      getAutoStart,
+      setAutoStart,
     });
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();

@@ -46,6 +46,12 @@ const bridge = {
 
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
+
+  // Engine settings — performance (mirrors the tray) + start-with-Windows.
+  performanceGet: () => ipcRenderer.invoke('aegis:settings:performance:get'),
+  performanceSet: (patch) => ipcRenderer.invoke('aegis:settings:performance:set', patch),
+  autoStartGet: () => ipcRenderer.invoke('aegis:settings:autostart:get'),
+  autoStartSet: (enabled) => ipcRenderer.invoke('aegis:settings:autostart:set', Boolean(enabled)),
   onActiveChanged: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('aegis:active:changed', handler);
