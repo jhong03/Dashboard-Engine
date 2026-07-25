@@ -82,39 +82,27 @@
           <div id="pin-list"></div>
         </div>
         <div class="assistant-cfg hidden" id="assistant-cfg">
-          <p class="hint">The assistant runs on a free model out of the box — no account, no key, no charge.
-            Want a specific brand (Gemini, Qwen, Llama…)? Point it at any OpenAI-compatible endpoint below,
-            like a free OpenRouter key or a local Ollama. Any key you enter is optional, stored encrypted on
-            this PC, and never included in a pack or export.</p>
+          <p class="hint">The assistant connects to any OpenAI-compatible endpoint you choose — pick one below.
+            <b>Free options exist:</b> a local model (Ollama / LM Studio — no key, fully offline), or a free-tier key
+            from OpenRouter or Groq. Or use your own OpenAI key. A key you enter is optional (local servers need none),
+            stored encrypted on this PC, and never included in a pack or export.</p>
 
-          <label class="cfg-field"><span>Connection</span>
-            <select id="ai-provider">
-              <option value="free">Free — no key needed</option>
-              <option value="openai">Custom / OpenAI-compatible</option>
-            </select>
-          </label>
-
-          <!-- Free provider: pick from the live free-model list -->
-          <label class="cfg-field" id="ai-freemodel-field"><span>Model</span>
-            <select id="ai-freemodel"></select>
-          </label>
-
-          <!-- Custom provider: endpoint + optional key + model id -->
-          <label class="cfg-field hidden" id="ai-baseurl-field"><span>Base URL</span>
+          <!-- BYO OpenAI-compatible: endpoint + optional key + model id -->
+          <label class="cfg-field" id="ai-baseurl-field"><span>Base URL</span>
             <input id="ai-baseurl" type="text" placeholder="https://openrouter.ai/api/v1" spellcheck="false">
             <span class="hint cfg-hint">The address of an OpenAI-compatible API — it usually ends in <code>/v1</code>. Common ones:
               OpenRouter <code>https://openrouter.ai/api/v1</code> · Groq <code>https://api.groq.com/openai/v1</code> ·
               local Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>.
               Leave blank to use OpenAI (<code>api.openai.com</code>).</span>
           </label>
-          <label class="cfg-field hidden" id="ai-key-field"><span>API key</span>
+          <label class="cfg-field" id="ai-key-field"><span>API key</span>
             <input id="ai-key" type="password" placeholder="Paste your key — or leave blank for a local server" spellcheck="false" autocomplete="off">
             <span class="hint cfg-hint">Needed for hosted providers: make a free account at OpenRouter or Groq (or your OpenAI account)
               and paste the key it gives you (usually starts with <code>sk-</code>). <b>Not</b> needed for a local Ollama/LM Studio —
               leave it blank. Your key is stored encrypted on this PC and never goes into a pack or export.</span>
             <span class="hint hint-key" id="ai-key-state"></span>
           </label>
-          <label class="cfg-field hidden" id="ai-model-field"><span>Model id</span>
+          <label class="cfg-field" id="ai-model-field"><span>Model id</span>
             <input id="ai-model" type="text" placeholder="e.g. google/gemini-2.0-flash-exp:free" spellcheck="false">
             <span class="hint cfg-hint">The exact model name your provider expects — copy it from their models page. Examples:
               OpenRouter <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-chat</code> ·
