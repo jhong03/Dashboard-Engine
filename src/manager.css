@@ -515,6 +515,7 @@ body {
 .b-preset.active { border-color: var(--accent); color: var(--accent); }
 .b-swatch-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
 .b-summary { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--text-dim); }
+.b-comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
 
 /* ── Create hub ──────────────────────────────────────────────────────────── */
 

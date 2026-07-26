@@ -964,6 +964,102 @@ const BUILDER_TEXTURES = [
 const BUILDER_EFFECTS = ['none', 'embers', 'dust', 'snow', 'petals', 'rain', 'sparkle'];
 const BUILDER_FONTS = [['rajdhani', 'Rajdhani (HUD)'], ['system-sans', 'System sans'], ['system-serif', 'Serif'], ['mono', 'Monospace']];
 
+// The component menu (a curated subset of the 20 types), with defaults ticked.
+const BUILDER_COMPONENTS = [
+  ['hud-clock', 'Reactor clock', true],
+  ['clock', 'Digital clock', false],
+  ['analog-clock', 'Analog clock', false],
+  ['stats', 'System stats', true],
+  ['cores', 'CPU cores', false],
+  ['sysinfo', 'System info', false],
+  ['meter', 'Single gauge', false],
+  ['sparkline', 'History graph', false],
+  ['weather', 'Weather', true],
+  ['calendar', 'Calendar', false],
+  ['agenda', 'Agenda', false],
+  ['notifications', 'Notifications', false],
+  ['launcher', 'App launcher', false],
+  ['status', 'Status bar', true],
+  ['assistant', 'AI assistant', true],
+  ['text', 'Text label', false],
+];
+const DEFAULT_SELECTED = BUILDER_COMPONENTS.filter(([, , on]) => on).map(([t]) => t);
+
+// Sensible default options per type so an auto-placed component isn't blank.
+const STARTER_OPTS = {
+  clock: { format: '24h', seconds: true, showDate: true },
+  'hud-clock': { format: '24h', seconds: true, showDate: true },
+  'analog-clock': { seconds: true, numerals: 'quarters', minuteTicks: true },
+  stats: { cpu: true, mem: true, disk: true },
+  cores: {}, sysinfo: { memory: true, disk: true, uptime: true },
+  meter: { bind: 'cpu', variant: 'ring' }, sparkline: { bind: 'cpu' },
+  weather: { compact: true, place: 'Weather' },
+  calendar: {}, agenda: { days: 7, limit: 6 }, notifications: { limit: 5 },
+  launcher: { pinned: true, recent: true }, status: {}, assistant: {},
+  text: { text: 'HELLO' },
+};
+
+// Category decides which region a component lands in. Bars span full width,
+// heroes are the centrepiece, rails stack in the side columns.
+function componentCategory(type) {
+  if (['status', 'assistant', 'text', 'divider'].includes(type)) return 'bar';
+  if (['hud-clock', 'analog-clock', 'clock', 'calendar', 'module', 'image'].includes(type)) return 'hero';
+  return 'rail';
+}
+
+// Layout templates: a fixed 5-region grid (top/left/centre/right/bottom) whose
+// proportions differ. Regions never overlap, so any selection places cleanly.
+const BUILDER_LAYOUTS = [
+  { key: 'command', name: 'Command', desc: 'Balanced twin rails around a centre.',
+    top: [2, 2, 96, 11], bottom: [2, 88, 96, 10], left: [2, 15, 22, 70], center: [26, 15, 48, 70], right: [76, 15, 22, 70] },
+  { key: 'wide', name: 'Wide centre', desc: 'A big centrepiece with slim rails.',
+    top: [2, 2, 96, 11], bottom: [2, 88, 96, 10], left: [2, 15, 16, 70], center: [20, 15, 60, 70], right: [82, 15, 16, 70] },
+  { key: 'twin', name: 'Twin rails', desc: 'Fat side rails, compact centre.',
+    top: [2, 2, 96, 11], bottom: [2, 88, 96, 10], left: [2, 15, 30, 70], center: [34, 15, 32, 70], right: [68, 15, 30, 70] },
+];
+
+function stackVertical(region, n) {
+  if (n <= 0) return [];
+  const [x, y, w, h] = region;
+  const gap = 1.5;
+  const each = (h - gap * (n - 1)) / n;
+  const out = [];
+  for (let i = 0; i < n; i++) out.push([x, y + i * (each + gap), w, Math.max(4, each)]);
+  return out;
+}
+
+// Assign chosen component types to a template's regions by category, stacking
+// within a region. Overflow (extra bars/heroes) falls through to the rails.
+function autoLayout(types, layoutKey) {
+  const L = BUILDER_LAYOUTS.find((l) => l.key === layoutKey) || BUILDER_LAYOUTS[0];
+  const bars = [], heroes = [], rails = [];
+  for (const t of types) { const c = componentCategory(t); (c === 'bar' ? bars : c === 'hero' ? heroes : rails).push(t); }
+  const out = [];
+  const add = (type, rect) => out.push({
+    type,
+    rect: rect.map((n) => Math.round(n * 10) / 10),
+    z: componentCategory(type) === 'bar' ? 2 : 1,
+    style: { panel: componentCategory(type) !== 'hero' },
+    options: { ...(STARTER_OPTS[type] || {}) },
+  });
+
+  const barRegions = [L.top, L.bottom].filter(Boolean);
+  bars.forEach((t, i) => { if (i < barRegions.length) add(t, barRegions[i]); else rails.push(t); });
+
+  if (L.center && heroes.length) { add(heroes[0], L.center); heroes.slice(1).forEach((t) => rails.push(t)); }
+  else heroes.forEach((t) => rails.push(t));
+
+  const railRegions = [L.left, L.right].filter(Boolean);
+  if (railRegions.length === 0) {
+    stackVertical(L.center || [76, 15, 22, 70], rails.length).forEach((r, i) => add(rails[i], r));
+  } else {
+    const buckets = railRegions.map(() => []);
+    rails.forEach((t, i) => buckets[i % railRegions.length].push(t));
+    buckets.forEach((items, bi) => stackVertical(railRegions[bi], items.length).forEach((r, i) => add(items[i], r)));
+  }
+  return out.slice(0, 24);
+}
+
 function starterPack() {
   return {
     schema: 2, name: 'My Pack', author: '',
@@ -979,20 +1075,17 @@ function starterPack() {
     },
     canvas: { padding: 2 },
     props: [],
-    // A balanced starter set so the created pack clears the quality floor out
-    // of the box; the user adds/moves components in the editor (or, later, the
-    // components step chooses these).
-    components: [
-      { type: 'status', rect: [2, 3, 96, 12], z: 2, style: { panel: true }, options: {} },
-      { type: 'hud-clock', rect: [30, 22, 40, 48], z: 1, style: {}, options: { format: '24h', seconds: true, showDate: true } },
-      { type: 'stats', rect: [3, 22, 22, 42], z: 2, style: { panel: true }, options: { cpu: true, mem: true, disk: true } },
-      { type: 'weather', rect: [72, 22, 25, 10], z: 2, style: { panel: true }, options: { compact: true, place: 'Weather' } },
-      { type: 'assistant', rect: [2, 88, 96, 9], z: 2, style: { panel: true, font: 'mono' }, options: {} },
-    ],
+    // Filled by the Components step via autoLayout() (see applyBuilderLayout).
+    components: [],
   };
 }
 
-const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null };
+const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command' };
+
+// Recompute the pack's components from the current selection + layout template.
+function applyBuilderLayout() {
+  builder.pack.components = autoLayout(builder.selected, builder.layout);
+}
 let builderPreviewTimer = null;
 
 const BUILDER_STEPS = [
@@ -1000,6 +1093,7 @@ const BUILDER_STEPS = [
   { key: 'colours', label: 'Colours', render: renderColoursStep },
   { key: 'particles', label: 'Particles', render: renderParticlesStep },
   { key: 'type', label: 'Typography', render: renderTypeStep },
+  { key: 'components', label: 'Components', render: renderComponentsStep },
   { key: 'persona', label: 'Persona', render: renderPersonaStep },
   { key: 'finish', label: 'Name & finish', render: renderFinishStep },
 ];
@@ -1084,6 +1178,9 @@ async function openBuilder() {
   builder.step = 0;
   builder.pack = starterPack();
   builder.wallpaperUri = null;
+  builder.selected = [...DEFAULT_SELECTED];
+  builder.layout = 'command';
+  applyBuilderLayout();
   $('builder-overlay').classList.remove('hidden');
   renderBuilderRail();
   gotoBuilderStep(0);
@@ -1271,6 +1368,54 @@ function renderTypeStep(el) {
   const sp = document.createElement('span'); sp.textContent = 'Uppercase display text';
   up.append(cb, sp);
   el.appendChild(up);
+}
+
+function renderComponentsStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Components', 'Tick what to include and pick a layout — they’re auto-arranged into the template. Fine-tune the exact placement in the editor afterwards.'));
+
+  const layoutLabel = document.createElement('span');
+  layoutLabel.className = 'b-sublabel';
+  layoutLabel.textContent = 'Layout';
+  el.appendChild(layoutLabel);
+  const layouts = bPresetRow();
+  for (const L of BUILDER_LAYOUTS) {
+    const b = bPreset(L.name, builder.layout === L.key, () => {
+      builder.layout = L.key;
+      applyBuilderLayout();
+      renderComponentsStep(el); schedulePreview();
+    });
+    b.title = L.desc;
+    layouts.appendChild(b);
+  }
+  el.appendChild(layouts);
+
+  const compLabel = document.createElement('span');
+  compLabel.className = 'b-sublabel';
+  compLabel.textContent = `Components (${builder.selected.length})`;
+  el.appendChild(compLabel);
+  const grid = document.createElement('div');
+  grid.className = 'b-comp-grid';
+  for (const [type, label] of BUILDER_COMPONENTS) {
+    const row = document.createElement('label');
+    row.className = 'cfg-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = builder.selected.includes(type);
+    cb.addEventListener('change', () => {
+      if (cb.checked) { if (!builder.selected.includes(type)) builder.selected.push(type); }
+      else builder.selected = builder.selected.filter((t) => t !== type);
+      applyBuilderLayout();
+      // Update just the count label + preview; don't rebuild (keep checkbox focus).
+      compLabel.textContent = `Components (${builder.selected.length})`;
+      schedulePreview();
+    });
+    const sp = document.createElement('span');
+    sp.textContent = label;
+    row.append(cb, sp);
+    grid.appendChild(row);
+  }
+  el.appendChild(grid);
 }
 
 function renderPersonaStep(el) {
