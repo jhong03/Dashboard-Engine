@@ -118,9 +118,9 @@
       ],
       "z": 2,
       "options": {
-        "lat": 37.5665,
-        "lon": 126.978,
-        "place": "Seoul",
+        "lat": 0,
+        "lon": 0,
+        "place": null,
         "compact": true
       },
       "style": {

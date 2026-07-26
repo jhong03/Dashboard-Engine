@@ -396,6 +396,9 @@ body {
 .settings-cfg > .cfg-group-title:first-child { margin-top: 0; }
 .settings-cfg .cfg-field { max-width: 220px; }
 .set-help-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.set-weather-row { display: flex; gap: 6px; }
+.set-weather-row input { flex: 1; min-width: 0; }
+.set-weather-row .btn { width: auto; flex: 0 0 auto; }
 
 /* ── From-scratch pack builder (full-screen overlay) ─────────────────────── */
 

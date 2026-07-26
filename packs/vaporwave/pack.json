@@ -98,9 +98,9 @@
       ],
       "z": 2,
       "options": {
-        "lat": 25.7617,
-        "lon": -80.1918,
-        "place": "Miami",
+        "lat": 0,
+        "lon": 0,
+        "place": null,
         "compact": true
       },
       "style": {

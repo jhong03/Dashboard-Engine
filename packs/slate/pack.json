@@ -109,9 +109,9 @@
       ],
       "z": 2,
       "options": {
-        "lat": 51.5074,
-        "lon": -0.1278,
-        "place": "London",
+        "lat": 0,
+        "lon": 0,
+        "place": null,
         "compact": true,
         "details": false
       },

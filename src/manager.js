@@ -1816,6 +1816,13 @@ async function renderSettingsCfg() {
       : 'Start-with-the-OS isn’t available on this platform.';
   }
 
+  // Weather location.
+  const wloc = await aegis.weatherLocationGet();
+  const wcur = $('set-weather-current');
+  if (wloc.ok) {
+    wcur.textContent = wloc.location ? `Currently: ${wloc.location.place || `${wloc.location.lat.toFixed(2)}, ${wloc.location.lon.toFixed(2)}`}.` : 'Not set yet.';
+  }
+
   const perf = await aegis.performanceGet();
   if (perf.ok) {
     $('set-fullscreen').checked = perf.performance.pauseOnFullscreen;
@@ -1878,6 +1885,18 @@ function wireSettingsCfg() {
     const out = await aegis.openLogs();
     if (!out.ok) $('set-status').textContent = out.error || 'Could not open the logs folder.';
   });
+  const setWeather = async () => {
+    const q = $('set-weather').value.trim();
+    if (!q) return;
+    $('set-status').textContent = 'Finding location…';
+    const out = await aegis.weatherLocationSet(q);
+    if (!out.ok) { $('set-status').textContent = out.error || 'Could not find that place.'; return; }
+    $('set-weather').value = '';
+    $('set-weather-current').textContent = `Currently: ${out.location.place}.`;
+    $('set-status').textContent = `Weather location set to ${out.location.place}.`;
+  };
+  $('set-weather-go').addEventListener('click', setWeather);
+  $('set-weather').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); setWeather(); } });
 }
 
 // ── First-run welcome ────────────────────────────────────────────────────────

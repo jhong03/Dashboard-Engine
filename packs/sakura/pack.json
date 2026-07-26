@@ -138,9 +138,9 @@
       ],
       "z": 2,
       "options": {
-        "lat": 35.0116,
-        "lon": 135.7681,
-        "place": "Kyoto",
+        "lat": 0,
+        "lon": 0,
+        "place": null,
         "compact": true
       },
       "style": {

@@ -149,6 +149,15 @@
             <select id="set-fps"></select>
           </label>
 
+          <h3 class="cfg-group-title">Weather</h3>
+          <label class="cfg-field"><span>Your location</span>
+            <span class="set-weather-row">
+              <input id="set-weather" type="text" placeholder="Type a city, e.g. Kyoto" spellcheck="false">
+              <button class="btn" id="set-weather-go" type="button">Set</button>
+            </span>
+            <span class="hint cfg-hint">Any pack whose weather has no location of its own uses this. <span id="set-weather-current"></span></span>
+          </label>
+
           <h3 class="cfg-group-title">Help</h3>
           <div class="set-help-row">
             <button class="btn" id="set-welcome" type="button">Show the welcome guide</button>

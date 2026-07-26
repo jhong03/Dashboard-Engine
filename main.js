@@ -735,6 +735,14 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           dashboardWindow.webContents.send('aegis:packs:changed', { id });
         }
       },
+      // The default weather location changed — repaint so any unset-location
+      // weather component picks it up immediately (else it waits for its timer).
+      onWeatherLocationChanged: () => {
+        const activeId = settings.getActivePack(USER_DIR) || 'jarvis';
+        for (const win of [dashboardWindow, managerWindow]) {
+          if (win && !win.isDestroyed()) win.webContents.send('aegis:packs:changed', { id: activeId });
+        }
+      },
     });
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();

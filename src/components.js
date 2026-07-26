@@ -1568,18 +1568,10 @@ function createRenderer(services) {
     live.timers.push(setInterval(tick, 30 * 1000));
   }
 
-  // A weather component with no location set would otherwise fetch 0°N 0°E —
-  // "null island" in the Gulf of Guinea — and quietly show that ocean's weather.
-  // Treat missing coords, or an exact 0,0, as "not configured yet".
-  function hasWeatherLocation(options) {
-    const { lat, lon } = options;
-    if (typeof lat !== 'number' || typeof lon !== 'number') return false;
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return false;
-    return !(lat === 0 && lon === 0);
-  }
-
+  // Weather with no location of its own (unset, or 0,0 "null island") no longer
+  // dead-ends — main substitutes the user's default location from Settings and
+  // returns { needsLocation: true } only if the user hasn't set one either.
   function buildWeather(component, el) {
-    const located = hasWeatherLocation(component.options);
     // Compact: one horizontal strip — place · temp · sky · wind.
     if (component.options.compact) {
       el.classList.add('weather-strip');
@@ -1594,11 +1586,11 @@ function createRenderer(services) {
       const wind = document.createElement('span');
       wind.className = 'wx-wind';
       el.append(place, temp, desc, wind);
-      if (!located) { desc.textContent = 'set a location'; return; }
       const refresh = async () => {
         if (!services.weather) return;
         const res = await services.weather({ lat: component.options.lat, lon: component.options.lon });
-        if (!res.ok) { desc.textContent = 'weather unavailable'; return; }
+        if (!res.ok) { desc.textContent = res.needsLocation ? 'set location in Settings' : 'weather unavailable'; return; }
+        if (!component.options.place && res.place) place.textContent = res.place;
         temp.textContent = `${Math.round(res.tempC)}°C`;
         desc.textContent = res.description;
         wind.textContent = `wind ${Math.round(res.windKmh)} km/h`;
@@ -1629,18 +1621,14 @@ function createRenderer(services) {
       el.appendChild(meta);
     }
 
-    if (!located) {
-      desc.textContent = 'set a location';
-      return;
-    }
-
     const refresh = async () => {
       if (!services.weather) return;
       const res = await services.weather({ lat: component.options.lat, lon: component.options.lon });
       if (!res.ok) {
-        desc.textContent = 'weather unavailable';
+        desc.textContent = res.needsLocation ? 'set your location in Settings' : 'weather unavailable';
         return;
       }
+      if (!component.options.place && res.place) label.textContent = res.place;
       temp.textContent = `${Math.round(res.tempC)}°`;
       // Fixed engine-authored markup only — pack/service text never goes near innerHTML.
       glyph.innerHTML = WEATHER_GLYPHS[weatherGlyphKey(res.code)] || WEATHER_GLYPHS.cloud;

@@ -73,6 +73,8 @@ const bridge = {
   displaySet: (id) => ipcRenderer.invoke('aegis:settings:display:set', id === null ? null : Number(id)),
   onboardedGet: () => ipcRenderer.invoke('aegis:settings:onboarded:get'),
   onboardedSet: (value) => ipcRenderer.invoke('aegis:settings:onboarded:set', value === true),
+  weatherLocationGet: () => ipcRenderer.invoke('aegis:settings:weather:get'),
+  weatherLocationSet: (query) => ipcRenderer.invoke('aegis:settings:weather:set', query === null ? null : { query: String(query) }),
   openLogs: () => ipcRenderer.invoke('aegis:logs:open'),
   openGuide: () => ipcRenderer.invoke('aegis:guide:open'),
 

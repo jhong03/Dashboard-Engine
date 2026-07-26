@@ -514,9 +514,9 @@
         "rotate": null
       },
       "options": {
-        "lat": 5.4141,
-        "lon": 100.3288,
-        "place": "GEORGE TOWN, PENANG",
+        "lat": 0,
+        "lon": 0,
+        "place": null,
         "details": true,
         "compact": true
       }
