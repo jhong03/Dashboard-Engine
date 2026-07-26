@@ -481,6 +481,7 @@ body {
 }
 .builder-preview-label { font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-dim); }
 .builder-preview {
+  position: relative; /* contain the absolutely-positioned .thumb-skin render */
   width: 100%;
   aspect-ratio: 16 / 9;
   align-self: center;
