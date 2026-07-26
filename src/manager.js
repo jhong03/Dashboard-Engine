@@ -1965,10 +1965,10 @@ function openPublishDialog(item) {
     submit.disabled = false;
     if (!out.ok) return libStatus(out.error || 'Publish failed.', true);
     close();
-    const note = out.needsToAcceptAgreement
-      ? ' — accept the Workshop Legal Agreement on the item’s Steam page to make it visible.'
-      : '';
-    libStatus(`${out.updated ? 'Updated' : 'Published'}! ${out.url}${note}`);
+    const parts = [`${out.updated ? 'Updated' : 'Published'}! ${out.url}`];
+    if (out.needsToAcceptAgreement) parts.push('Accept the Workshop Legal Agreement on the item’s Steam page to make it visible.');
+    if (out.note) parts.push(out.note);
+    libStatus(parts.join(' — '));
   }, 'primary');
   actions.append(cancel, spacer, submit);
   card.appendChild(actions);
