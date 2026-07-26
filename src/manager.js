@@ -855,8 +855,25 @@ async function renderAssistantCfg() {
   $('ai-speak').checked = c.speak !== false;
   $('ai-key').value = '';
   $('ai-key-state').textContent = c.hasKey
-    ? 'A key is saved (encrypted). Blank keeps it; type to replace; clear + save to remove.'
+    ? 'A key is saved (encrypted). Leave blank to keep it, or type a new one to replace it.'
     : 'No key saved — needed for hosted providers; leave blank for a local model.';
+  // A blank password field can't mean "remove" unambiguously, so removal is an
+  // explicit action (only shown when there's a key to remove).
+  const keyField = $('ai-key-field');
+  const oldRemove = keyField.querySelector('.ai-remove-key');
+  if (oldRemove) oldRemove.remove();
+  if (c.hasKey) {
+    const rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'btn tiny ai-remove-key';
+    rm.textContent = 'Remove saved key';
+    rm.addEventListener('click', async () => {
+      const out = await aegis.assistantConfigSet({ apiKey: '' });
+      $('ai-status').textContent = out.ok ? 'Saved key removed.' : (out.error || 'Could not remove the key.');
+      if (out.ok) renderAssistantCfg();
+    });
+    keyField.appendChild(rm);
+  }
 
   // Voice dropdown: the tuned profiles, plus the engine default.
   const select = $('ai-voice');
@@ -1359,6 +1376,7 @@ async function openBuilder() {
 }
 
 function closeBuilder() {
+  clearTimeout(builderPreviewTimer); // don't let a pending render spawn an orphan
   if (builder.renderer) { builder.renderer.destroy(); builder.renderer = null; }
   $('builder-overlay').classList.add('hidden');
 }
@@ -1599,8 +1617,8 @@ function renderComponentsStep(el) {
       if (cb.checked) { if (!builder.selected.includes(type)) builder.selected.push(type); }
       else builder.selected = builder.selected.filter((t) => t !== type);
       applyBuilderLayout();
-      // Update just the count label + preview; don't rebuild (keep checkbox focus).
-      compLabel.textContent = `Components (${builder.selected.length})`;
+      // Re-render the step so a newly-ticked component's quick-options appear.
+      renderComponentsStep(el);
       schedulePreview();
     });
     const sp = document.createElement('span');
@@ -1702,6 +1720,7 @@ function renderPersonaStep(el) {
   ta.value = (builder.pack.persona.lines || []).join('\n');
   ta.addEventListener('input', () => {
     builder.pack.persona.lines = ta.value.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 8);
+    schedulePreview();
   });
   lines.appendChild(ta);
   el.appendChild(lines);
@@ -2094,7 +2113,8 @@ function openPublishDialog(item) {
   const card = document.createElement('div');
   card.className = 'event-card';
   scrim.appendChild(card);
-  const close = () => scrim.remove();
+  const escHandler = (e) => { if (e.key === 'Escape') close(); };
+  const close = () => { scrim.remove(); document.removeEventListener('keydown', escHandler); };
 
   const heading = document.createElement('h3');
   heading.textContent = `Publish “${item.name}” to Steam Workshop`;
@@ -2177,9 +2197,7 @@ function openPublishDialog(item) {
   card.appendChild(actions);
 
   scrim.addEventListener('click', (e) => { if (e.target === scrim) close(); });
-  document.addEventListener('keydown', function esc(e) {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', esc); }
-  });
+  document.addEventListener('keydown', escHandler);
   document.body.appendChild(scrim);
   title.focus();
 }
@@ -2280,7 +2298,8 @@ async function renderDetail() {
   name.textContent = entry.name;
   detail.append(preview, name);
   detail.appendChild(detailLine(`${entry.id} · v${entry.version} · by ${entry.author || 'unknown'}`));
-  detail.appendChild(detailLine(`${(entry.sizeBytes / 1024).toFixed(0)} KB · ${url}`));
+  const sizeLabel = Number.isFinite(entry.sizeBytes) ? `${(entry.sizeBytes / 1024).toFixed(0)} KB · ` : '';
+  detail.appendChild(detailLine(`${sizeLabel}${url}`));
   if (entry.description) {
     const desc = document.createElement('p');
     desc.className = 'detail-desc';
