@@ -620,8 +620,9 @@ body {
 .event-actions { display: flex; gap: 8px; align-items: center; }
 .event-spacer { flex: 1; }
 
-/* Steam Workshop browse section in the Browse tab. */
-.workshop-section { margin-bottom: 14px; }
+/* Steam Workshop browse section in the Browse tab. It lives inside .gallery
+   (a grid), so it must span every column for its own inner grid to spread. */
+.workshop-section { grid-column: 1 / -1; margin-bottom: 14px; }
 .ws-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ws-controls .lib-search { width: 180px; }
 .workshop-grid {
