@@ -1227,6 +1227,12 @@ function createRenderer(services) {
     grid.className = 'cal-grid';
     el.append(label, grid);
 
+    // Interactive only where reminder-write services exist (the live desktop),
+    // and only when the pack shows reminders at all. Editor/manager previews
+    // omit these services, so the calendar there stays a static preview.
+    const editable = component.options.showReminders !== false
+      && typeof services.remindersAdd === 'function';
+
     // Reminder markers: dot the days that still have something planned.
     // Repeating events land on every occurrence (expanded in main).
     const decorate = async () => {
@@ -1241,7 +1247,7 @@ function createRenderer(services) {
         entries.filter((r) => r.date.startsWith(prefix) && !r.done).map((r) => Number(r.date.slice(8))),
       );
       for (const cell of grid.querySelectorAll('.cal-day')) {
-        cell.classList.toggle('has-rem', marked.has(Number(cell.textContent)));
+        cell.classList.toggle('has-rem', marked.has(Number(cell.dataset.day)));
       }
     };
 
@@ -1257,6 +1263,7 @@ function createRenderer(services) {
         head.textContent = d;
         grid.appendChild(head);
       }
+      const prefix = localIso(now).slice(0, 8); // YYYY-MM-
       const first = new Date(now.getFullYear(), now.getMonth(), 1);
       const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
       let lead = first.getDay(); // 0 = Sunday
@@ -1266,10 +1273,225 @@ function createRenderer(services) {
         const cell = document.createElement('span');
         cell.className = `cal-day${day === now.getDate() ? ' today' : ''}`;
         cell.textContent = String(day);
+        cell.dataset.day = String(day);
+        cell.dataset.iso = `${prefix}${String(day).padStart(2, '0')}`;
+        if (editable) {
+          cell.classList.add('cal-clickable');
+          cell.addEventListener('click', () => openDay(cell.dataset.iso, cell));
+        }
         grid.appendChild(cell);
       }
       decorate();
     };
+
+    // ── In-place reminder editor (desktop only) ─────────────────────────────
+    // Clicking a day floats a small glass popover anchored to that cell where
+    // the user can add/remove/complete reminders without opening the manager.
+    let popover = null;
+
+    const closePopover = () => {
+      if (popover) { popover.remove(); popover = null; }
+    };
+
+    const openDay = async (iso, anchor) => {
+      closePopover();
+      const pop = document.createElement('div');
+      pop.className = 'cal-pop skin-root';
+      popover = pop;
+
+      const [y, m, d] = iso.split('-').map(Number);
+      const heading = new Date(y, m - 1, d)
+        .toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+
+      const head = document.createElement('div');
+      head.className = 'cal-pop-head';
+      const title = document.createElement('span');
+      title.className = 'cal-pop-title';
+      title.textContent = heading;
+      const close = document.createElement('button');
+      close.className = 'cal-pop-close';
+      close.type = 'button';
+      close.textContent = '×';
+      close.addEventListener('click', closePopover);
+      head.append(title, close);
+
+      const listEl = document.createElement('div');
+      listEl.className = 'cal-pop-list';
+
+      // Add form: text (required) + optional time + repeat.
+      const form = document.createElement('form');
+      form.className = 'cal-pop-form';
+      const textInput = document.createElement('input');
+      textInput.className = 'cal-pop-text-input';
+      textInput.type = 'text';
+      textInput.placeholder = 'Add a reminder…';
+      textInput.maxLength = 120;
+
+      // Time picker: explicit hour / minute / AM-PM spinners. The native
+      // <input type="time"> hides an AM/PM slot in 12-hour locales and refuses
+      // to submit while any part is blank ("field is incomplete"); these can't
+      // reach that state, and read clearly on the wallpaper. "No time" leaves
+      // the reminder untimed (a whole-day item).
+      const helper = (cls, values, labeller) => {
+        const sel = document.createElement('select');
+        sel.className = cls;
+        for (const v of values) {
+          const opt = document.createElement('option');
+          opt.value = String(v);
+          opt.textContent = labeller ? labeller(v) : String(v);
+          sel.appendChild(opt);
+        }
+        return sel;
+      };
+      const timeWrap = document.createElement('div');
+      timeWrap.className = 'cal-pop-timepick';
+      const hourSel = helper('cal-pop-hour', ['', 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        (v) => (v === '' ? 'No time' : String(v)));
+      const minSel = helper('cal-pop-min', Array.from({ length: 60 }, (_, i) => i),
+        (v) => String(v).padStart(2, '0'));
+      const apSel = helper('cal-pop-ap', ['AM', 'PM']);
+      timeWrap.append(hourSel, minSel, apSel);
+
+      // Grey out minute/AM-PM until an hour is chosen, so "No time" is obvious.
+      const syncTimeEnabled = () => {
+        const off = hourSel.value === '';
+        minSel.disabled = off;
+        apSel.disabled = off;
+      };
+      hourSel.addEventListener('change', syncTimeEnabled);
+      syncTimeEnabled();
+
+      // Combine the pickers into a 24-hour "HH:MM" string, or null if untimed.
+      const readTime = () => {
+        if (hourSel.value === '') return null;
+        let h = Number(hourSel.value) % 12;        // 12 → 0
+        if (apSel.value === 'PM') h += 12;         // 12PM→12, 12AM→0, 1PM→13…
+        return `${String(h).padStart(2, '0')}:${String(Number(minSel.value)).padStart(2, '0')}`;
+      };
+      const resetTime = () => {
+        hourSel.value = ''; minSel.value = '0'; apSel.value = 'AM';
+        syncTimeEnabled();
+      };
+
+      const row = document.createElement('div');
+      row.className = 'cal-pop-row';
+      const repeatSel = helper('cal-pop-repeat', ['none', 'daily', 'weekly', 'monthly', 'yearly'],
+        (v) => ({ none: 'Once', daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }[v]));
+      const addBtn = document.createElement('button');
+      addBtn.className = 'cal-pop-add';
+      addBtn.type = 'submit';
+      addBtn.textContent = 'Add';
+      row.append(repeatSel, addBtn);
+      form.append(textInput, timeWrap, row);
+
+      // Render this day's reminders into the list (re-run after any change).
+      const refresh = async () => {
+        const res = await services.reminders({ from: iso, to: iso });
+        listEl.textContent = '';
+        const entries = (res.ok && (res.occurrences || res.reminders)) || [];
+        const dayEntries = entries.filter((r) => r.date === iso);
+        if (dayEntries.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'cal-pop-empty';
+          empty.textContent = 'Nothing planned.';
+          listEl.appendChild(empty);
+          return;
+        }
+        for (const r of dayEntries) {
+          const item = document.createElement('div');
+          item.className = `cal-pop-item${r.done ? ' done' : ''}`;
+          const when = document.createElement('span');
+          when.className = 'cal-pop-when';
+          when.textContent = r.time || (r.repeat && r.repeat !== 'none' ? '↻' : '·');
+          const text = document.createElement('span');
+          text.className = 'cal-pop-text';
+          text.textContent = r.text;
+          // One-off tasks toggle done on click; repeating events can't be done.
+          if (r.repeat === 'none') {
+            text.classList.add('togglable');
+            text.title = 'Mark done';
+            text.addEventListener('click', async () => {
+              await services.remindersToggle(r.id);
+              await refresh();
+              decorate();
+            });
+          }
+          const del = document.createElement('button');
+          del.className = 'cal-pop-del';
+          del.type = 'button';
+          del.textContent = '×';
+          del.title = r.repeat === 'none' ? 'Remove' : 'Remove series';
+          del.addEventListener('click', async () => {
+            await services.remindersRemove(r.id);
+            await refresh();
+            decorate();
+          });
+          item.append(when, text, del);
+          listEl.appendChild(item);
+        }
+      };
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const value = textInput.value.trim();
+        if (!value) { textInput.focus(); return; }
+        addBtn.disabled = true;
+        const res = await services.remindersAdd({
+          date: iso,
+          time: readTime(),
+          text: value,
+          repeat: repeatSel.value,
+        });
+        addBtn.disabled = false;
+        if (res && res.ok) {
+          textInput.value = '';
+          resetTime();
+          repeatSel.value = 'none';
+          await refresh();
+          decorate();
+          textInput.focus();
+        }
+      });
+
+      pop.append(head, listEl, form);
+      document.body.appendChild(pop);
+      positionPopover(pop, anchor);
+      await refresh();
+      textInput.focus();
+    };
+
+    // Anchor the popover under its day cell, flipping above / clamping to the
+    // viewport so it's never clipped off-screen.
+    const positionPopover = (pop, anchor) => {
+      const rect = anchor.getBoundingClientRect();
+      const pw = pop.offsetWidth;
+      const ph = pop.offsetHeight;
+      const margin = 8;
+      let left = rect.left + rect.width / 2 - pw / 2;
+      left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
+      let top = rect.bottom + 6;
+      if (top + ph > window.innerHeight - margin) top = rect.top - ph - 6;
+      if (top < margin) top = margin;
+      pop.style.left = `${Math.round(left)}px`;
+      pop.style.top = `${Math.round(top)}px`;
+    };
+
+    if (editable) {
+      // Dismiss on outside click / Escape. mousedown fires before the day's
+      // click, and popover is still null then, so opening never self-closes.
+      const onDocDown = (e) => {
+        if (popover && !popover.contains(e.target) && !e.target.closest('.cal-day')) closePopover();
+      };
+      const onKey = (e) => { if (e.key === 'Escape') closePopover(); };
+      document.addEventListener('mousedown', onDocDown, true);
+      document.addEventListener('keydown', onKey);
+      live.disposers.push(() => {
+        document.removeEventListener('mousedown', onDocDown, true);
+        document.removeEventListener('keydown', onKey);
+        closePopover();
+      });
+    }
+
     render();
     live.timers.push(setInterval(render, 60 * 1000));
   }
@@ -1426,108 +1648,237 @@ function createRenderer(services) {
     live.timers.push(setInterval(paint, 20000));
   }
 
-  // Assistant console: an in-pack, self-contained AI chat. On the desktop it's
-  // a real typeable input with an inline reply log that expands upward; the
-  // reply is spoken through the tuned voice. In the editor/manager preview
-  // there's no `services.assistant`, so it renders as a static prompt line.
+  // Assistant chat: an in-pack, self-contained AI console. The wallpaper shows
+  // a compact prompt line; clicking it opens a PERSISTENT chat panel with the
+  // full, scrollable conversation. The panel lives on <body> (not inside the
+  // component tree) and is a renderer-scoped singleton, so it survives the
+  // frequent pack re-renders that used to wipe the old inline log — and its
+  // transcript is restored from main (persisted to disk) for real history.
+  const chat = {
+    panel: null, log: null, input: null, sendBtn: null,
+    built: false, busy: false, audioCtx: null, anchor: null, moved: false,
+  };
+
+  // One reused AudioContext for spoken replies. Reusing a single context (the
+  // panel is built once) avoids the per-render leak the old design guarded.
+  const playAssistantPcm = (pcm, sampleRate) => {
+    try {
+      if (!chat.audioCtx) chat.audioCtx = new AudioContext();
+      const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength >> 1);
+      const floats = new Float32Array(int16.length);
+      for (let i = 0; i < int16.length; i++) floats[i] = int16[i] / 32768;
+      const buffer = chat.audioCtx.createBuffer(1, floats.length, sampleRate);
+      buffer.copyToChannel(floats, 0);
+      const src = chat.audioCtx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(chat.audioCtx.destination);
+      src.start();
+    } catch (err) { console.warn(`[assistant] playback: ${err.message}`); }
+  };
+
+  const addChatMsg = (who, text) => {
+    const m = document.createElement('div');
+    m.className = `ac-msg ac-${who}`;
+    m.textContent = text;
+    chat.log.appendChild(m);
+    chat.log.scrollTop = chat.log.scrollHeight;
+    return m;
+  };
+
+  // Repaint the panel from main's saved transcript (history + traceability).
+  const renderChatHistory = async () => {
+    chat.log.textContent = '';
+    let thread = [];
+    if (services.assistant.history) {
+      const res = await services.assistant.history();
+      if (res && res.ok && Array.isArray(res.thread)) thread = res.thread;
+    }
+    if (thread.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'ac-empty';
+      empty.textContent = 'No conversation yet — ask me anything.';
+      chat.log.appendChild(empty);
+      return;
+    }
+    for (const m of thread) addChatMsg(m.role === 'user' ? 'you' : 'bot', m.content);
+    chat.log.scrollTop = chat.log.scrollHeight;
+  };
+
+  const chatSend = async () => {
+    const text = chat.input.value.trim();
+    if (text === '' || chat.busy) return;
+    chat.input.value = '';
+    chat.busy = true;
+    chat.sendBtn.disabled = true;
+    // Drop the "nothing yet" hint on the first message.
+    const hint = chat.log.querySelector('.ac-empty');
+    if (hint) hint.remove();
+    addChatMsg('you', text);
+    const reply = addChatMsg('bot', '…');
+    const res = await services.assistant.ask(text);
+    if (!res || !res.ok) {
+      reply.textContent = (res && res.error) || 'Something went wrong.';
+      reply.classList.add('ac-err');
+    } else {
+      reply.textContent = res.text;
+      chat.log.scrollTop = chat.log.scrollHeight;
+      const cfg = await services.assistant.config();
+      if (cfg && cfg.ok && cfg.config.speak) {
+        const spoken = await services.assistant.speak(res.text);
+        if (spoken && spoken.ok) playAssistantPcm(spoken.pcm, spoken.sampleRate);
+      }
+    }
+    chat.busy = false;
+    chat.sendBtn.disabled = false;
+    chat.input.focus();
+  };
+
+  const closeChatPanel = () => {
+    if (chat.panel) chat.panel.classList.remove('open');
+  };
+
+  // Anchor the panel to the console line, growing upward; flip below / clamp to
+  // the viewport so the conversation is never clipped or off-screen.
+  const positionChatPanel = () => {
+    if (!chat.anchor || !document.body.contains(chat.anchor)) return;
+    const rect = chat.anchor.getBoundingClientRect();
+    const pw = chat.panel.offsetWidth;
+    const ph = chat.panel.offsetHeight;
+    const margin = 12;
+    let left = rect.left + rect.width / 2 - pw / 2;
+    left = Math.max(margin, Math.min(left, window.innerWidth - pw - margin));
+    let top = rect.top - ph - 8;
+    if (top < margin) top = Math.min(rect.bottom + 8, window.innerHeight - ph - margin);
+    if (top < margin) top = margin;
+    chat.panel.style.left = `${Math.round(left)}px`;
+    chat.panel.style.top = `${Math.round(top)}px`;
+  };
+
+  const ensureChatPanel = () => {
+    if (chat.built) return;
+    const panel = document.createElement('div');
+    panel.className = 'ac-panel skin-root';
+
+    const head = document.createElement('div');
+    head.className = 'ac-panel-head';
+    const title = document.createElement('span');
+    title.className = 'ac-panel-title';
+    title.textContent = 'Assistant';
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'ac-panel-clear';
+    clearBtn.textContent = 'Clear';
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'ac-panel-close';
+    closeBtn.textContent = '×';
+    head.append(title, clearBtn, closeBtn);
+
+    const log = document.createElement('div');
+    log.className = 'ac-panel-log';
+
+    const form = document.createElement('form');
+    form.className = 'ac-panel-form';
+    const mark = document.createElement('span');
+    mark.className = 'ac-mark';
+    mark.textContent = '❯';
+    const input = document.createElement('input');
+    input.className = 'ac-panel-input';
+    input.type = 'text';
+    input.autocomplete = 'off';
+    input.spellcheck = false;
+    input.placeholder = 'Ask anything, or give me a task on this machine…';
+    const sendBtn = document.createElement('button');
+    sendBtn.type = 'submit';
+    sendBtn.className = 'ac-panel-send display-case';
+    sendBtn.textContent = 'Send';
+    form.append(mark, input, sendBtn);
+
+    panel.append(head, log, form);
+    document.body.appendChild(panel);
+    chat.panel = panel; chat.log = log; chat.input = input; chat.sendBtn = sendBtn; chat.built = true;
+
+    form.addEventListener('submit', (e) => { e.preventDefault(); chatSend(); });
+    input.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChatPanel(); });
+    closeBtn.addEventListener('click', closeChatPanel);
+    clearBtn.addEventListener('click', async () => {
+      await services.assistant.reset();
+      await renderChatHistory();
+      chat.input.focus();
+    });
+    // Dismiss on an outside click (but not on any assistant console trigger).
+    document.addEventListener('mousedown', (e) => {
+      if (chat.panel.classList.contains('open')
+        && !chat.panel.contains(e.target) && !e.target.closest('.assistant-console')) {
+        closeChatPanel();
+      }
+    }, true);
+
+    // Draggable by its header. Grabbing a header button (Clear/×) doesn't drag.
+    // Once moved, the panel keeps that spot instead of snapping back to the
+    // console on the next open.
+    let drag = null;
+    head.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) return;
+      const rect = panel.getBoundingClientRect();
+      drag = { dx: e.clientX - rect.left, dy: e.clientY - rect.top };
+      e.preventDefault(); // don't select the header text while dragging
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!drag) return;
+      const margin = 8;
+      let left = e.clientX - drag.dx;
+      let top = e.clientY - drag.dy;
+      left = Math.max(margin, Math.min(left, window.innerWidth - panel.offsetWidth - margin));
+      top = Math.max(margin, Math.min(top, window.innerHeight - panel.offsetHeight - margin));
+      panel.style.left = `${Math.round(left)}px`;
+      panel.style.top = `${Math.round(top)}px`;
+      chat.moved = true;
+    });
+    document.addEventListener('mouseup', () => { drag = null; });
+    // Deliberately NO live.disposer: the panel is a persistent singleton that
+    // must outlive component re-renders (that's what keeps the chat from
+    // vanishing). It's rebuilt only if the whole window reloads.
+  };
+
+  const openChatPanel = async (component, anchor) => {
+    ensureChatPanel();
+    chat.anchor = anchor;
+    if (component.options.label) chat.input.placeholder = component.options.label;
+    chat.panel.classList.add('open');
+    // Anchor to the console on first open; once the user has dragged it, respect
+    // where they put it. (The panel is a fixed size now, so no re-clamp needed.)
+    if (!chat.moved) positionChatPanel();
+    await renderChatHistory();
+    chat.input.focus();
+  };
+
+  // Assistant console: the always-visible prompt line on the wallpaper. It's a
+  // trigger — clicking it opens the chat panel above. In the editor/manager
+  // preview there's no `services.assistant`, so it stays a static prompt line.
   function buildAssistant(component, el) {
     el.classList.add('assistant-console');
     const interactive = !!(services.assistant && services.assistant.ask);
 
-    const log = document.createElement('div');
-    log.className = 'ac-log';
     const row = document.createElement('div');
     row.className = 'ac-row';
     const mark = document.createElement('span');
     mark.className = 'ac-mark';
     mark.textContent = '❯';
-
-    let field;
-    if (interactive) {
-      field = document.createElement('input');
-      field.className = 'ac-input';
-      field.type = 'text';
-      field.autocomplete = 'off';
-      field.spellcheck = false;
-      field.placeholder = component.options.label || 'Ask anything, or give me a task on this machine…';
-    } else {
-      field = document.createElement('span');
-      field.className = 'ac-prompt';
-      field.textContent = component.options.label || 'Ask anything, or give me a task on this machine…';
-    }
+    const prompt = document.createElement('span');
+    prompt.className = 'ac-prompt';
+    prompt.textContent = component.options.label || 'Ask anything, or give me a task on this machine…';
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'ac-btn display-case';
     btn.textContent = component.options.button || 'Execute';
-    row.append(mark, field, btn);
-    el.append(log, row);
+    row.append(mark, prompt, btn);
+    el.append(row);
 
     if (!interactive) { el.classList.add('ac-inert'); return; }
 
-    let busy = false;
-    let audioCtx = null;
-    // The context is created lazily on first spoken reply; close it on teardown
-    // so a re-render (pack switch, freeze/resume) doesn't leak audio contexts —
-    // browsers cap them and eventually refuse to create more.
-    live.disposers.push(() => {
-      if (audioCtx) { try { audioCtx.close(); } catch (e) { /* fail soft */ } audioCtx = null; }
-    });
-    const playPcm = (pcm, sampleRate) => {
-      try {
-        if (!audioCtx) audioCtx = new AudioContext();
-        const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength >> 1);
-        const floats = new Float32Array(int16.length);
-        for (let i = 0; i < int16.length; i++) floats[i] = int16[i] / 32768;
-        const buffer = audioCtx.createBuffer(1, floats.length, sampleRate);
-        buffer.copyToChannel(floats, 0);
-        const src = audioCtx.createBufferSource();
-        src.buffer = buffer;
-        src.connect(audioCtx.destination);
-        src.start();
-      } catch (err) { console.warn(`[assistant] playback: ${err.message}`); }
-    };
-
-    const addMsg = (who, text) => {
-      const m = document.createElement('div');
-      m.className = `ac-msg ac-${who}`;
-      m.textContent = text;
-      log.appendChild(m);
-      el.classList.add('ac-open');
-      log.scrollTop = log.scrollHeight;
-      return m;
-    };
-
-    const send = async () => {
-      const text = field.value.trim();
-      if (text === '' || busy) return;
-      field.value = '';
-      busy = true;
-      btn.disabled = true;
-      addMsg('you', text);
-      const reply = addMsg('bot', '…');
-      const res = await services.assistant.ask(text);
-      if (!res || !res.ok) {
-        reply.textContent = (res && res.error) || 'Something went wrong.';
-        reply.classList.add('ac-err');
-      } else {
-        reply.textContent = res.text;
-        log.scrollTop = log.scrollHeight;
-        const cfg = await services.assistant.config();
-        if (cfg && cfg.ok && cfg.config.speak) {
-          const spoken = await services.assistant.speak(res.text);
-          if (spoken && spoken.ok) playPcm(spoken.pcm, spoken.sampleRate);
-        }
-      }
-      busy = false;
-      btn.disabled = false;
-      field.focus();
-    };
-
-    field.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); send(); }
-      if (e.key === 'Escape') { field.value = ''; el.classList.remove('ac-open'); }
-    });
-    btn.addEventListener('click', send);
+    el.classList.add('ac-trigger');
+    row.addEventListener('click', () => openChatPanel(component, row));
   }
 
   function buildCountdown(component, el) {

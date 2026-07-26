@@ -32,8 +32,21 @@ const bridge = {
   onPower: subscription('aegis:desktop:power'),            // fps cap / freeze (perf citizenship)
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
-  remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',   // read-only here
+  remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',
     window && window.from && window.to ? { from: String(window.from), to: String(window.to) } : undefined),
+  // The desktop calendar is INTERACTIVE: a user adds/removes/toggles their own
+  // reminders straight from the wallpaper (their own personal data — same trust
+  // level as the launcher, which already launches apps from here). Top-frame
+  // only; a module iframe never sees this bridge. Main validates every field.
+  remindersAdd: (r) => ipcRenderer.invoke('aegis:reminders:add', {
+    date: String(r.date),
+    time: r.time ? String(r.time) : null,
+    text: String(r.text),
+    repeat: r.repeat ? String(r.repeat) : 'none',
+    lead: Number(r.lead) || 0,
+  }),
+  remindersRemove: (id) => ipcRenderer.invoke('aegis:reminders:remove', String(id)),
+  remindersToggle: (id) => ipcRenderer.invoke('aegis:reminders:toggle', String(id)),
   onRemindersChanged: subscription('aegis:reminders:changed'),
   // Launcher: tiles resolve to opaque ids; main holds the real paths.
   launcherState: (opts) => ipcRenderer.invoke('aegis:launcher:state', { running: Boolean(opts && opts.running) }),
@@ -46,6 +59,7 @@ const bridge = {
   assistantAsk: (prompt) => ipcRenderer.invoke('aegis:assistant:ask', String(prompt)),
   assistantSpeak: (text) => ipcRenderer.invoke('aegis:assistant:speak', String(text)),
   assistantConfig: () => ipcRenderer.invoke('aegis:assistant:config:get'),
+  assistantHistory: () => ipcRenderer.invoke('aegis:assistant:history'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
 };
 

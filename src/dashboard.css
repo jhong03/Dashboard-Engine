@@ -378,6 +378,141 @@ body {
 }
 .cal-day.today.has-rem::after { background: var(--void); }
 
+/* Interactive calendar (desktop only): clickable days + the reminder popover.
+   The popover is desktop chrome floated on <body>, so it sizes in px/rem for
+   readability at any component scale — it never renders in the editor preview.
+   It inherits the active pack's palette vars (cascaded from <body>) so it
+   still looks like it belongs to the pack. */
+.cal-day.cal-clickable { cursor: pointer; }
+.cal-day.cal-clickable:hover {
+  opacity: 1;
+  background: var(--hairline-dim);
+}
+
+.cal-pop {
+  position: fixed;
+  z-index: 100;
+  width: 240px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--void) 88%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55), 0 0 0 1px var(--hairline-dim);
+  color: var(--accent-bright);
+  font-family: var(--font-display);
+}
+.cal-pop-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.cal-pop-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.cal-pop-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.cal-pop-close:hover { color: var(--accent-bright); }
+
+.cal-pop-list {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.cal-pop-empty {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 2px;
+}
+.cal-pop-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.cal-pop-when {
+  font-family: var(--font-mono, monospace);
+  color: var(--gold);
+  min-width: 38px;
+  font-size: 11.5px;
+}
+.cal-pop-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cal-pop-text.togglable { cursor: pointer; }
+.cal-pop-item.done .cal-pop-text {
+  text-decoration: line-through;
+  opacity: 0.5;
+}
+.cal-pop-del {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.cal-pop-del:hover { color: var(--warn); }
+
+.cal-pop-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--hairline-dim);
+  padding-top: 8px;
+}
+.cal-pop-row { display: flex; gap: 6px; }
+.cal-pop input,
+.cal-pop select {
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--accent-bright);
+  background: color-mix(in srgb, var(--void) 60%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  padding: 5px 7px;
+  outline: none;
+}
+.cal-pop input:focus,
+.cal-pop select:focus { border-color: var(--accent); }
+.cal-pop-text-input { width: 100%; }
+/* Time picker: hour / minute / AM-PM spinners share the row evenly. */
+.cal-pop-timepick { display: flex; gap: 6px; }
+.cal-pop-timepick select { flex: 1; min-width: 0; text-align: center; }
+.cal-pop-timepick select:disabled { opacity: 0.4; }
+.cal-pop-repeat { flex: 1; min-width: 0; }
+.cal-pop-add {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--void);
+  background: var(--accent);
+  border: none;
+  border-radius: 5px;
+  padding: 5px 12px;
+}
+.cal-pop-add:hover { background: var(--accent-bright); }
+.cal-pop-add:disabled { opacity: 0.5; cursor: default; }
+
 /* agenda (daily planner) */
 .agenda {
   flex: 1 1 auto;
@@ -488,8 +623,8 @@ body {
 }
 .spark-value { font-family: var(--font-mono); font-size: 1.05em; color: var(--accent-bright); }
 
-/* assistant console: an in-pack typeable chat (the reply log expands upward) */
-.comp-assistant { justify-content: center; overflow: visible; }
+/* assistant console: the in-pack prompt line that opens the chat panel */
+.comp-assistant { justify-content: center; }
 .ac-row { display: flex; align-items: center; gap: 0.94cqw; width: 100%; }
 .ac-mark { font-family: var(--font-mono); color: var(--accent); font-size: 1.1em; flex-shrink: 0; }
 .ac-prompt {
@@ -501,18 +636,6 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.ac-input {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-family: var(--font-mono);
-  font-size: 0.82em;
-  letter-spacing: 0.04em;
-  color: var(--accent-bright);
-}
-.ac-input::placeholder { color: var(--muted); }
 .ac-btn {
   flex-shrink: 0;
   font-size: 0.72em;
@@ -528,27 +651,138 @@ body {
 .ac-btn:hover { background: var(--glow-wash); color: var(--accent-bright); }
 .ac-btn:disabled { opacity: 0.5; cursor: default; }
 
-/* the reply log floats above the input, over the wallpaper */
-.ac-log {
-  position: absolute;
-  left: 0; right: 0; bottom: 100%;
-  margin-bottom: 0.52cqw;
-  max-height: 34vh;
-  overflow-y: auto;
+/* The console line is a trigger — clicking it opens the chat panel. */
+.assistant-console.ac-trigger { cursor: pointer; }
+.assistant-console.ac-trigger:hover .ac-prompt { color: var(--accent-bright); }
+
+/* Chat panel — a persistent, scrollable overlay floated on <body>. Desktop
+   chrome, so it sizes in px/rem for readability at any component scale; it
+   inherits the active pack's palette vars (cascaded from <body>) so it still
+   looks like it belongs to the pack. A solid backdrop means it never reads as
+   "overlapping" the components beneath it. */
+.ac-panel {
+  position: fixed;
+  z-index: 120;
   display: none;
   flex-direction: column;
-  gap: 0.52cqw;
-  padding: 0.94cqw 1.05cqw;
-  background: var(--panel-bg);
+  width: min(420px, 92vw);
+  height: 60vh;
+  min-height: 240px;
+  max-height: 80vh;
+  border-radius: 10px;
   border: 1px solid var(--hairline);
-  border-radius: var(--radius);
-  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--void) 92%, transparent);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6), 0 0 0 1px var(--hairline-dim);
+  color: var(--accent-bright);
+  font-family: var(--font-display);
+  overflow: hidden;
 }
-.assistant-console.ac-open .ac-log { display: flex; }
-.ac-msg { font-size: 0.82em; line-height: 1.42; white-space: pre-wrap; }
-.ac-msg.ac-you { color: var(--accent-bright); text-align: right; opacity: 0.85; }
+.ac-panel.open { display: flex; }
+.ac-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--hairline-dim);
+  flex-shrink: 0;      /* stays put; only the log scrolls */
+  cursor: move;        /* drag the panel by its header */
+  user-select: none;
+}
+.ac-panel-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.ac-panel-clear {
+  background: none;
+  border: 1px solid var(--hairline);
+  border-radius: 5px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.ac-panel-clear:hover { color: var(--accent-bright); border-color: var(--hairline); }
+.ac-panel-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+.ac-panel-close:hover { color: var(--accent-bright); }
+
+.ac-panel-log {
+  flex: 1 1 auto;
+  min-height: 0;       /* REQUIRED so the log can shrink and scroll inside the
+                          flex column instead of pushing the panel taller */
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+.ac-empty { font-size: 12.5px; color: var(--muted); }
+.ac-msg { font-size: 13px; line-height: 1.45; white-space: pre-wrap; word-break: break-word; }
+.ac-msg.ac-you {
+  align-self: flex-end;
+  max-width: 85%;
+  color: var(--accent-bright);
+  opacity: 0.9;
+  background: var(--glow-wash);
+  border: 1px solid var(--hairline-dim);
+  border-radius: 8px;
+  padding: 5px 9px;
+}
 .ac-msg.ac-bot { color: var(--accent-bright); }
 .ac-msg.ac-err { color: var(--warn); }
+
+.ac-panel-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--hairline-dim);
+  flex-shrink: 0;      /* stays put; only the log scrolls */
+}
+.ac-panel-input {
+  flex: 1;
+  min-width: 0;
+  background: color-mix(in srgb, var(--void) 55%, transparent);
+  border: 1px solid var(--hairline);
+  border-radius: 6px;
+  outline: none;
+  color: var(--accent-bright);
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  padding: 7px 9px;
+}
+.ac-panel-input::placeholder { color: var(--muted); }
+.ac-panel-input:focus { border-color: var(--accent); }
+.ac-panel-send {
+  flex-shrink: 0;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--void);
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  padding: 7px 14px;
+  cursor: pointer;
+  font-family: var(--font-display);
+}
+.ac-panel-send:hover { background: var(--accent-bright); }
+.ac-panel-send:disabled { opacity: 0.5; cursor: default; }
 
 /* notifications feed (live Windows toasts) */
 .notif-feed {

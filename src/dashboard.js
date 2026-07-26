@@ -7,10 +7,26 @@
 
 /* global aegis, AegisComponents */
 
+// Reminder edits made from the desktop calendar's own popover repaint in place;
+// their reminders:changed echo must NOT force a full pack reload (that would
+// destroy the open popover). We note the moment of a local edit and skip the
+// reload for a short window afterwards. External changes (the manager planner)
+// still reload normally.
+let localReminderEditAt = 0;
+function markLocalReminderEdit() { localReminderEditAt = Date.now(); }
+
 const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
   weather: (opts) => aegis.weather(opts),
   reminders: (window) => aegis.remindersList(window),
+  // Present only on the desktop — the calendar component uses these to let a
+  // user manage reminders in place. Editor/manager previews omit them, so the
+  // calendar there stays a static read-only preview. Each write flags a local
+  // edit so the reminders:changed echo doesn't trigger a full pack reload (which
+  // would tear down the calendar's open editing popover — see onRemindersChanged).
+  remindersAdd: (r) => { markLocalReminderEdit(); return aegis.remindersAdd(r); },
+  remindersRemove: (id) => { markLocalReminderEdit(); return aegis.remindersRemove(id); },
+  remindersToggle: (id) => { markLocalReminderEdit(); return aegis.remindersToggle(id); },
   launcher: {
     state: (opts) => aegis.launcherState(opts),
     launch: (id) => aegis.launcherLaunch(id),
@@ -21,6 +37,7 @@ const renderer = AegisComponents.createRenderer({
     ask: (prompt) => aegis.assistantAsk(prompt),
     speak: (text) => aegis.assistantSpeak(text),
     config: () => aegis.assistantConfig(),
+    history: () => aegis.assistantHistory(),
     reset: () => aegis.assistantReset(),
   },
 });
@@ -88,8 +105,13 @@ async function init() {
   });
   // The manager or tray picked a different pack.
   aegis.onActiveChanged((data) => loadPack(data.id));
-  // Planner changed — calendars and agendas repaint.
-  aegis.onRemindersChanged(() => loadPack(state.packId));
+  // Planner changed — calendars and agendas repaint. Skip the reload when the
+  // change came from the desktop calendar itself (it already repainted in place
+  // and a reload would close its open editing popover).
+  aegis.onRemindersChanged(() => {
+    if (Date.now() - localReminderEditAt < 2000) return;
+    loadPack(state.packId);
+  });
   // Pins/recents changed — launcher tiles repaint.
   aegis.onLauncherChanged(() => loadPack(state.packId));
 }
