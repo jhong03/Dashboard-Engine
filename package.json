@@ -36,7 +36,10 @@
     "asar": false,
     "files": [
       "**/*",
-      "!**/{out,dist,bin,profiles}/**",
+      "!out/**",
+      "!dist/**",
+      "!bin/**",
+      "!profiles/**",
       "!voices/**",
       "voices/voices.json",
       "!steam_appid.txt",
