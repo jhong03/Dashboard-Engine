@@ -653,6 +653,9 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
 
   app.whenReady().then(() => {
     logEngine('INFO', `engine start — v${app.getVersion()} · electron ${process.versions.electron} · ${process.platform} · ${LAUNCHED_AT_LOGIN ? 'login' : 'manual'}`);
+    // Voice models now live in user data (survive updates); bring any the owner
+    // downloaded into the old in-app voices/ dir across so they aren't refetched.
+    voicebank.migrateModelsFromAppRoot(__dirname);
     warnAboutUnauditedVoices();
 
     // SECURITY: Electron GRANTS permission requests by default when no handler
