@@ -1028,9 +1028,36 @@ function stackVertical(region, n) {
   return out;
 }
 
+// Which selected components expose a quick option in the Components step, so a
+// creator can set the few things that would otherwise render "unset".
+const BUILDER_QUICK_OPTS = {
+  weather: [
+    { key: 'place', label: 'Place name', kind: 'text' },
+    { key: 'lat', label: 'Latitude', kind: 'number', min: -90, max: 90 },
+    { key: 'lon', label: 'Longitude', kind: 'number', min: -180, max: 180 },
+  ],
+  meter: [{ key: 'bind', label: 'Reads', kind: 'select', options: [['cpu', 'CPU'], ['mem', 'Memory'], ['disk', 'Disk'], ['battery', 'Battery']] }],
+  sparkline: [{ key: 'bind', label: 'Reads', kind: 'select', options: [['cpu', 'CPU'], ['mem', 'Memory'], ['disk', 'Disk'], ['battery', 'Battery']] }],
+  'hud-clock': [{ key: 'format', label: 'Clock', kind: 'select', options: [['24h', '24-hour'], ['12h', '12-hour']] }],
+  clock: [{ key: 'format', label: 'Clock', kind: 'select', options: [['24h', '24-hour'], ['12h', '12-hour']] }],
+  agenda: [{ key: 'days', label: 'Days ahead', kind: 'number', min: 1, max: 14 }],
+};
+
+// User-adjustable "Customize knobs" the creator can expose (→ pack.props). The
+// default value is snapshotted from the pack at create time.
+const BUILDER_KNOBS = [
+  { key: 'accent', label: 'Accent colour', type: 'color', bind: { target: 'palette', key: 'accent' }, from: (p) => p.skin.palette.accent },
+  { key: 'accent-bright', label: 'Highlight colour', type: 'color', bind: { target: 'palette', key: 'accentBright' }, from: (p) => p.skin.palette.accentBright },
+  { key: 'particles', label: 'Particles', type: 'select', bind: { target: 'ambience', key: 'effect' }, from: (p) => p.skin.ambience.effect,
+    options: [['none', 'Off'], ['dust', 'Dust'], ['embers', 'Embers'], ['snow', 'Snow'], ['petals', 'Petals'], ['rain', 'Rain'], ['sparkle', 'Sparkle']] },
+  { key: 'particle-density', label: 'Particle density', type: 'slider', min: 0.05, max: 1, step: 0.05, bind: { target: 'ambience', key: 'density' }, from: (p) => p.skin.ambience.density },
+  { key: 'corner-notches', label: 'Corner notches', type: 'toggle', bind: { target: 'shape', key: 'cornerNotches' }, from: (p) => p.skin.shape.cornerNotches },
+];
+
 // Assign chosen component types to a template's regions by category, stacking
 // within a region. Overflow (extra bars/heroes) falls through to the rails.
-function autoLayout(types, layoutKey) {
+// optOverrides: per-type option tweaks from the Components step's quick-options.
+function autoLayout(types, layoutKey, optOverrides) {
   const L = BUILDER_LAYOUTS.find((l) => l.key === layoutKey) || BUILDER_LAYOUTS[0];
   const bars = [], heroes = [], rails = [];
   for (const t of types) { const c = componentCategory(t); (c === 'bar' ? bars : c === 'hero' ? heroes : rails).push(t); }
@@ -1040,7 +1067,7 @@ function autoLayout(types, layoutKey) {
     rect: rect.map((n) => Math.round(n * 10) / 10),
     z: componentCategory(type) === 'bar' ? 2 : 1,
     style: { panel: componentCategory(type) !== 'hero' },
-    options: { ...(STARTER_OPTS[type] || {}) },
+    options: { ...(STARTER_OPTS[type] || {}), ...((optOverrides && optOverrides[type]) || {}) },
   });
 
   const barRegions = [L.top, L.bottom].filter(Boolean);
@@ -1080,11 +1107,26 @@ function starterPack() {
   };
 }
 
-const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command' };
+const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set() };
 
-// Recompute the pack's components from the current selection + layout template.
+// Recompute the pack's components from the current selection + layout + option
+// tweaks.
 function applyBuilderLayout() {
-  builder.pack.components = autoLayout(builder.selected, builder.layout);
+  builder.pack.components = autoLayout(builder.selected, builder.layout, builder.compOpts);
+}
+
+// Build pack.props from the exposed knobs, snapshotting current pack values as
+// each knob's default. Called at create time.
+function buildBuilderProps() {
+  const props = [];
+  for (const k of BUILDER_KNOBS) {
+    if (!builder.knobs.has(k.key)) continue;
+    const prop = { key: k.key, label: k.label, type: k.type, bind: k.bind, default: k.from(builder.pack) };
+    if (k.type === 'slider') { prop.min = k.min; prop.max = k.max; prop.step = k.step; }
+    if (k.type === 'select') prop.options = k.options.map(([value, label]) => ({ value, label }));
+    props.push(prop);
+  }
+  return props;
 }
 let builderPreviewTimer = null;
 
@@ -1095,6 +1137,7 @@ const BUILDER_STEPS = [
   { key: 'type', label: 'Typography', render: renderTypeStep },
   { key: 'components', label: 'Components', render: renderComponentsStep },
   { key: 'persona', label: 'Persona', render: renderPersonaStep },
+  { key: 'knobs', label: 'Customize knobs', render: renderKnobsStep },
   { key: 'finish', label: 'Name & finish', render: renderFinishStep },
 ];
 
@@ -1180,6 +1223,8 @@ async function openBuilder() {
   builder.wallpaperUri = null;
   builder.selected = [...DEFAULT_SELECTED];
   builder.layout = 'command';
+  builder.compOpts = {};
+  builder.knobs = new Set();
   applyBuilderLayout();
   $('builder-overlay').classList.remove('hidden');
   renderBuilderRail();
@@ -1192,12 +1237,33 @@ function closeBuilder() {
 }
 
 async function finishBuilder() {
+  builder.pack.props = buildBuilderProps();
   $('builder-status').textContent = 'Creating…';
-  const out = await aegis.builderCreate(builder.pack);
+  const out = await aegis.builderCreate(builder.pack, true);
   if (!out.ok) { $('builder-status').textContent = out.error || 'Could not create the pack.'; return; }
   closeBuilder();
   await refreshLibrary();
   libStatus(`Created “${out.id}”. Opening the editor to fine-tune…`);
+}
+
+// Create the pack, then open the Workshop publish dialog (no editor).
+async function finishBuilderAndPublish() {
+  const st = await aegis.workshopStatus();
+  if (!st.available) { $('builder-status').textContent = st.reason || 'Steam Workshop isn’t available (start Steam and sign in).'; return; }
+  builder.pack.props = buildBuilderProps();
+  $('builder-status').textContent = 'Creating…';
+  const out = await aegis.builderCreate(builder.pack, false); // don't open the editor
+  if (!out.ok) { $('builder-status').textContent = out.error || 'Could not create the pack.'; return; }
+  closeBuilder();
+  await refreshLibrary();
+  const item = library.localPacks.find((p) => p.id === out.id);
+  if (item) {
+    library.tab = 'installed';
+    library.selected = { kind: 'local', item };
+    renderGallery();
+    renderDetail();
+    openPublishDialog(item);
+  }
 }
 
 // ── Step renderers ───────────────────────────────────────────────────────────
@@ -1416,6 +1482,76 @@ function renderComponentsStep(el) {
     grid.appendChild(row);
   }
   el.appendChild(grid);
+
+  // Quick options for the selected components that have anything worth setting
+  // now (so e.g. weather isn't left showing "set a location").
+  const withOpts = builder.selected.filter((t) => BUILDER_QUICK_OPTS[t]);
+  if (withOpts.length) {
+    const optLabel = document.createElement('span');
+    optLabel.className = 'b-sublabel';
+    optLabel.textContent = 'Quick options';
+    el.appendChild(optLabel);
+    for (const type of withOpts) {
+      const group = document.createElement('div');
+      group.className = 'b-optgroup';
+      const gl = document.createElement('div');
+      gl.className = 'b-optgroup-title';
+      gl.textContent = (BUILDER_COMPONENTS.find(([t]) => t === type) || [, type])[1];
+      group.appendChild(gl);
+      for (const spec of BUILDER_QUICK_OPTS[type]) group.appendChild(buildQuickOpt(type, spec));
+      el.appendChild(group);
+    }
+  }
+}
+
+// One quick-option control that writes into builder.compOpts[type][key].
+function buildQuickOpt(type, spec) {
+  const cur = (builder.compOpts[type] || {})[spec.key];
+  const def = (STARTER_OPTS[type] || {})[spec.key];
+  const val = cur !== undefined ? cur : def;
+  const set = (v) => {
+    builder.compOpts[type] = builder.compOpts[type] || {};
+    builder.compOpts[type][spec.key] = v;
+    applyBuilderLayout();
+    schedulePreview();
+  };
+  const f = bField(spec.label);
+  if (spec.kind === 'select') {
+    const sel = document.createElement('select');
+    for (const [v, l] of spec.options) { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.appendChild(o); }
+    sel.value = String(val != null ? val : spec.options[0][0]);
+    sel.addEventListener('change', () => set(sel.value));
+    f.appendChild(sel);
+  } else if (spec.kind === 'number') {
+    const inp = document.createElement('input');
+    inp.type = 'number'; inp.min = String(spec.min); inp.max = String(spec.max);
+    inp.value = val != null ? String(val) : '';
+    inp.addEventListener('input', () => { const n = Number(inp.value); if (Number.isFinite(n)) set(Math.min(spec.max, Math.max(spec.min, n))); });
+    f.appendChild(inp);
+  } else {
+    const inp = document.createElement('input');
+    inp.type = 'text'; inp.value = val != null ? String(val) : '';
+    inp.addEventListener('input', () => set(inp.value));
+    f.appendChild(inp);
+  }
+  return f;
+}
+
+function renderKnobsStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Customize knobs', 'Optionally let subscribers tweak your pack without editing it (Wallpaper-Engine style). Whatever you tick becomes an adjustable control in the pack’s Customize panel; its starting value is what you set here.'));
+  for (const k of BUILDER_KNOBS) {
+    const row = document.createElement('label');
+    row.className = 'cfg-check';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = builder.knobs.has(k.key);
+    cb.addEventListener('change', () => { if (cb.checked) builder.knobs.add(k.key); else builder.knobs.delete(k.key); });
+    const sp = document.createElement('span');
+    sp.textContent = k.label;
+    row.append(cb, sp);
+    el.appendChild(row);
+  }
 }
 
 function renderPersonaStep(el) {
@@ -1446,7 +1582,7 @@ function renderPersonaStep(el) {
 
 function renderFinishStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Name & finish', 'Name your pack, then create it. It opens in the editor so you can arrange components and save.'));
+  el.appendChild(stepHead('Name & finish', 'Name your pack and add your author name, review what’s included, then create it.'));
 
   const name = bField('Pack name');
   const nIn = document.createElement('input'); nIn.type = 'text'; nIn.maxLength = 60; nIn.value = builder.pack.name;
@@ -1454,17 +1590,43 @@ function renderFinishStep(el) {
   name.appendChild(nIn);
   el.appendChild(name);
 
+  const author = bField('Author (you)');
+  const aIn = document.createElement('input'); aIn.type = 'text'; aIn.maxLength = 60; aIn.value = builder.pack.author || '';
+  aIn.placeholder = 'Your name or handle';
+  aIn.addEventListener('input', () => { builder.pack.author = aIn.value; });
+  author.appendChild(aIn);
+  el.appendChild(author);
+
+  const reviewLabel = document.createElement('span');
+  reviewLabel.className = 'b-sublabel';
+  reviewLabel.textContent = 'Review';
+  el.appendChild(reviewLabel);
   const summary = document.createElement('ul');
   summary.className = 'b-summary';
   const items = [
-    `Palette: ${builder.pack.skin.palette.accent}`,
-    `Particles: ${builder.pack.skin.ambience.effect}`,
-    `Font: ${builder.pack.skin.typography.display}`,
-    `Background: ${builder.pack.skin.wallpaper ? 'your image' : 'engine-drawn'}`,
-    `Starter components: ${builder.pack.components.length} (edit freely next)`,
+    `Layout: ${(BUILDER_LAYOUTS.find((l) => l.key === builder.layout) || {}).name || builder.layout}`,
+    `Components: ${builder.pack.components.length} — ${builder.selected.join(', ') || 'none'}`,
+    `Background: ${builder.pack.skin.wallpaper ? 'your image' : 'engine-drawn (' + builder.pack.skin.palette.void + ')'}`,
+    `Accent: ${builder.pack.skin.palette.accent} · Particles: ${builder.pack.skin.ambience.effect} · Font: ${builder.pack.skin.typography.display}`,
+    `Persona: ${builder.pack.persona.name || '—'}`,
+    `Customize knobs: ${builder.knobs.size ? [...builder.knobs].length + ' exposed' : 'none'}`,
   ];
   for (const it of items) { const li = document.createElement('li'); li.textContent = it; summary.appendChild(li); }
   el.appendChild(summary);
+
+  if (!builder.selected.length) {
+    const warn = document.createElement('p');
+    warn.className = 'hint';
+    warn.textContent = 'No components selected — a default set will be added so the pack isn’t empty.';
+    el.appendChild(warn);
+  }
+
+  // Secondary path: create and go straight to Workshop publish (skips the
+  // editor). The nav "Next" button remains "Create & open in editor".
+  const pubRow = document.createElement('div');
+  pubRow.className = 'b-presets';
+  pubRow.appendChild(libButton('Create & publish to Workshop…', () => finishBuilderAndPublish()));
+  el.appendChild(pubRow);
 }
 
 function stepHead(title, body) {

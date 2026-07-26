@@ -75,7 +75,7 @@ const bridge = {
   // From-scratch pack builder: import a wallpaper (staged in main, returns a
   // preview data URI + rel), then create the assembled pack and open it.
   builderImportImage: (existingNames) => ipcRenderer.invoke('aegis:editor:importImage', existingNames || []),
-  builderCreate: (pack) => ipcRenderer.invoke('aegis:builder:create', { pack }),
+  builderCreate: (pack, openInEditor = true) => ipcRenderer.invoke('aegis:builder:create', { pack, openInEditor }),
   onDisplaysChanged: (callback) => {
     const handler = () => callback();
     ipcRenderer.on('aegis:displays:changed', handler);

@@ -516,6 +516,9 @@ body {
 .b-swatch-dot { width: 12px; height: 12px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); }
 .b-summary { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; color: var(--text-dim); }
 .b-comp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 14px; }
+.b-optgroup { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px solid var(--border); }
+.b-optgroup-title { font-size: 12px; font-weight: 600; color: var(--text); }
+.b-optgroup .b-field { max-width: 260px; }
 
 /* ── Create hub ──────────────────────────────────────────────────────────── */
 
