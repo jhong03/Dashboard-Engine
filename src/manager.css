@@ -401,6 +401,7 @@ body {
 .set-weather-row .btn { width: auto; flex: 0 0 auto; }
 
 /* Background-music track list (Settings). */
+.cfg-value { color: var(--text-dim); font-variant-numeric: tabular-nums; font-weight: 400; }
 .set-music-tracks { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
 .music-track-row {
   display: flex;

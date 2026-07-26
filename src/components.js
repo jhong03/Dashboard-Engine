@@ -1457,6 +1457,7 @@ function createRenderer(services) {
       document.body.appendChild(pop);
       positionPopover(pop, anchor);
       await refresh();
+      positionPopover(pop, anchor); // re-place now the day's events give it real height
       textInput.focus();
     };
 

@@ -1870,6 +1870,7 @@ async function renderMusicSettings() {
   if (!res || !res.ok) return;
   $('set-music-on').checked = res.enabled;
   $('set-music-vol').value = String(res.volume);
+  $('set-music-vol-val').textContent = `${Math.round(res.volume * 100)}%`;
   const list = $('set-music-tracks');
   list.textContent = '';
   if (res.tracks.length === 0) {
@@ -1955,8 +1956,11 @@ function wireSettingsCfg() {
     await aegis.musicEnabled(e.target.checked);
     settingsSaved();
   });
-  // `change` (on release), not `input`, so a drag doesn't thrash the file /
-  // broadcast on every pixel; the level then applies to the live desktop.
+  // Live % readout on every `input`; the actual write/broadcast fires on
+  // `change` (release) so a drag doesn't thrash the file on every pixel.
+  $('set-music-vol').addEventListener('input', (e) => {
+    $('set-music-vol-val').textContent = `${Math.round(Number(e.target.value) * 100)}%`;
+  });
   $('set-music-vol').addEventListener('change', (e) => { aegis.musicVolume(Number(e.target.value)); });
   $('set-music-add').addEventListener('click', async () => {
     const res = await aegis.musicAdd();

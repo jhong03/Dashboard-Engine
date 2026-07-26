@@ -315,7 +315,8 @@ function toggleDesktop() {
   if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
   desktopPaused = !desktopPaused;
   if (desktopPaused) dashboardWindow.hide();
-  else { dashboardWindow.show(); sendDesktopPower(); }
+  else dashboardWindow.show();
+  sendDesktopPower(); // reflect the manual pause in the power state (music + render)
 }
 
 // Tear down and rebuild the desktop window so it re-attaches on the currently
@@ -380,7 +381,9 @@ function onDisplaysChanged() {
 function sendDesktopPower() {
   if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
   const perf = settings.getPerformance(USER_DIR);
-  const shouldPause = (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery);
+  // The manual tray pause counts too, so hiding the desktop also silences the
+  // background music and stops the render loop (a hidden window keeps running).
+  const shouldPause = desktopPaused || (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery);
   dashboardWindow.webContents.send('aegis:desktop:power', { active: !shouldPause, maxFps: perf.maxFps });
 }
 
@@ -712,7 +715,10 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         const id = new URL(request.url).hostname;
         const file = music.pathForId(USER_DIR, id);
         if (!file) return new Response('', { status: 404 });
-        return net.fetch(pathToFileURL(file).toString(), { headers: request.headers });
+        // Forward ONLY Range (for seeking) — never the whole request's headers —
+        // to a file:// fetch main built from a vetted, id-resolved path.
+        const range = request.headers.get('range');
+        return net.fetch(pathToFileURL(file).toString(), range ? { headers: { Range: range } } : undefined);
       } catch (err) {
         return new Response('', { status: 400 });
       }
@@ -774,11 +780,15 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:packs:changed', { id: activeId });
         }
       },
-      // Background music changed in Settings — the desktop updates playback, and
-      // the manager's Settings list stays in sync if it's open elsewhere.
-      onMusicChanged: () => {
+      // Background music changed in Settings — tell the OTHER windows (the
+      // desktop updates playback; a second window stays in sync). Skip the
+      // sender: it already reflects its own change, and re-rendering it would
+      // drop keyboard focus mid-list.
+      onMusicChanged: (sender) => {
         for (const win of [dashboardWindow, managerWindow]) {
-          if (win && !win.isDestroyed()) win.webContents.send('aegis:music:changed');
+          if (win && !win.isDestroyed() && win.webContents !== sender) {
+            win.webContents.send('aegis:music:changed');
+          }
         }
       },
     });

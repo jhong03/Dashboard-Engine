@@ -48,14 +48,23 @@ const renderer = AegisComponents.createRenderer({
 // own tracks over demusic://<id> (main gates every id → real path; nothing ever
 // enters a pack). Enabled/volume/tracks live in user data; we mirror changes
 // via aegis:music:changed. Freezes with the wallpaper for performance.
-const music = { audio: null, tracks: [], index: 0, enabled: false, volume: 0.5, armed: false };
+const music = { audio: null, tracks: [], index: 0, enabled: false, volume: 0.5, armed: false, fails: 0 };
 
 function musicEnsure() {
   if (music.audio) return;
   const audio = new Audio();
   audio.preload = 'none';
-  audio.addEventListener('ended', musicNext);
-  audio.addEventListener('error', () => { if (musicShouldPlay() && music.tracks.length > 1) musicNext(); });
+  audio.addEventListener('playing', () => { music.fails = 0; }); // a track loaded — reset the failure count
+  audio.addEventListener('ended', () => { music.fails = 0; musicNext(); });
+  // A missing/unreadable file (moved folder, unplugged drive → demusic 404)
+  // fires 'error'. Skip to the next, but STOP after cycling the whole list with
+  // nothing playable, so a fully-unreachable library can't spin the CPU 24/7.
+  audio.addEventListener('error', () => {
+    if (!musicShouldPlay() || music.tracks.length < 2) return;
+    music.fails += 1;
+    if (music.fails >= music.tracks.length) { music.audio.pause(); return; }
+    musicNext();
+  });
   music.audio = audio;
 }
 
@@ -115,10 +124,15 @@ function musicStart() {
 async function musicSync() {
   const state = await aegis.musicList();
   if (!state || !state.ok) return;
+  // Keep the play pointer on the SAME track across a library change (adding or
+  // removing an earlier track would otherwise shift what `index` points at).
+  const currentId = music.tracks[music.index] && music.tracks[music.index].id;
   music.enabled = state.enabled === true;
   music.volume = Number(state.volume) || 0.5;
   music.tracks = Array.isArray(state.tracks) ? state.tracks : [];
-  if (music.index >= music.tracks.length) music.index = 0;
+  const at = currentId ? music.tracks.findIndex((t) => t.id === currentId) : -1;
+  music.index = at >= 0 ? at : (music.index >= music.tracks.length ? 0 : music.index);
+  music.fails = 0;
   if (music.audio) music.audio.volume = music.volume;
   musicReconcile();
 }
