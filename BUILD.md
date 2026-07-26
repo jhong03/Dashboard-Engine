@@ -70,8 +70,21 @@ CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist
 
 ## Real Steam release checklist (business + build)
 
-1. Steam Direct ($100) → get a real AppID.
-2. Replace the dev AppID 480 path; the packaged build already omits
-   `steam_appid.txt`, so the AppID comes from Steam at launch.
+1. Steam Direct ($100) → **create your app** in Steamworks, get its **AppID**,
+   and **enable Workshop** for it. (Until all of that exists, Spacewar/480 is
+   the only app you can publish to — there is no generic "public" Workshop.)
+2. Point the engine at your AppID:
+   - **To test against it now** (running outside Steam): set the env var
+     `DE_STEAM_APPID=<your appid>` AND put the same number in `steam_appid.txt`.
+     You must own the app on the Steam account you're signed into.
+   - **For the shipped Steam build**: bake your AppID in as the default in
+     `lib/workshop.js` (`resolveAppId`) and **delete `steam_appid.txt`** — Steam
+     supplies the AppID at launch. The packaged build already omits it.
 3. Build `npm run pack`, upload `dist/win-unpacked/` to the app's depot via
    SteamPipe, set launch options, submit for review.
+
+Note on the Spacewar (480) item limit: an account can only hold so many
+Workshop items on the shared test app, and it's a count (not time-based). Clear
+them at steamcommunity.com → your Workshop files, or move to your own AppID.
+Publishing still works meanwhile — it adopts an existing item when creation is
+capped.
