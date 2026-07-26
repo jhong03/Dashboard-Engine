@@ -203,11 +203,16 @@ function drawGuides(guidesX, guidesY) {
 
 // ── Rendering ───────────────────────────────────────────────────────────────
 
+// True while a range slider is being dragged. Rebuilding the inspector then
+// would replace the very <input> under the cursor and drop the drag (you'd have
+// to click for each step), so we skip the inspector rebuild until release.
+let sliderActive = false;
+
 function renderAll() {
   AegisComponents.applySkin($('skin'), state.pack, state.assets);
   state.renderedEls = renderer.render($('canvas'), state.pack, state.assets);
   rebuildOverlay();
-  renderInspector();
+  if (!sliderActive) renderInspector();
 }
 
 // ── Overlay: hitboxes, selection box, handles, drag/resize ─────────────────
@@ -507,7 +512,10 @@ function rangeControl(value, min, max, step, onChange) {
   input.type = 'range';
   input.min = min; input.max = max; input.step = step;
   input.value = value;
-  input.addEventListener('input', () => onChange(Number(input.value)));
+  // input = live while dragging (inspector rebuild suppressed); change = on
+  // release (full render re-syncs the panel).
+  input.addEventListener('input', () => { sliderActive = true; onChange(Number(input.value)); });
+  input.addEventListener('change', () => { sliderActive = false; onChange(Number(input.value)); });
   return input;
 }
 
