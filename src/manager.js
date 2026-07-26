@@ -341,10 +341,11 @@ function renderGallery() {
   $('planner').classList.toggle('hidden', library.tab !== 'planner');
   $('launcher-cfg').classList.toggle('hidden', library.tab !== 'launcher');
   $('assistant-cfg').classList.toggle('hidden', library.tab !== 'assistant');
+  $('create-cfg').classList.toggle('hidden', library.tab !== 'create');
   $('settings-cfg').classList.toggle('hidden', library.tab !== 'settings');
-  const nonGallery = ['planner', 'launcher', 'assistant', 'settings'].includes(library.tab);
+  const nonGallery = ['planner', 'launcher', 'assistant', 'create', 'settings'].includes(library.tab);
   gallery.classList.toggle('hidden', nonGallery);
-  for (const t of ['installed', 'browse', 'planner', 'launcher', 'assistant', 'settings']) {
+  for (const t of ['installed', 'browse', 'create', 'planner', 'launcher', 'assistant', 'settings']) {
     $(`tab-${t}`).setAttribute('aria-selected', String(library.tab === t));
   }
   if (library.tab === 'planner') {
@@ -357,6 +358,10 @@ function renderGallery() {
   }
   if (library.tab === 'assistant') {
     renderAssistantCfg();
+    return;
+  }
+  if (library.tab === 'create') {
+    renderCreate();
     return;
   }
   if (library.tab === 'settings') {
@@ -779,6 +784,161 @@ function wireAssistantCfg() {
     await aegis.assistantReset(); // don't leave the test in the real conversation
     renderAssistantCfg();
   });
+}
+
+// ── Create tab: the in-app designer hub (guide + reference + actions) ─────────
+// Content-only reference derived from PACKS.md + packs.js, rendered natively so
+// it matches the app chrome and needs no markdown parser. The full authoring
+// guide (PACKS.md) opens on demand.
+
+const CREATE_STEPS = [
+  ['Open a pack in the editor', 'Start from any pack — the JARVIS reference is the quality floor. Editing a built-in makes your own copy on save; the original is never touched.'],
+  ['Arrange the canvas', 'Drag, resize, layer, and duplicate components on a percent-based canvas at your display’s real aspect ratio. What you see is exactly what the desktop renders.'],
+  ['Style the skin', 'Set the palette, fonts, textures, ambience particles, and per-component overrides in the inspector.'],
+  ['Add Customize knobs', 'Optionally expose a few user-adjustable properties (colours, particles, density) so subscribers can tweak your pack without editing it.'],
+  ['Save', 'Your pack lands in your library and on the desktop. Personal data (reminders, pins, notifications, keys) never enters a pack.'],
+  ['Publish to Steam Workshop', 'From a pack’s detail panel, publish with a rendered preview + description so others can subscribe.'],
+];
+
+const CREATE_COMPONENTS = [
+  ['status', 'Persona status console / line-up', '—'],
+  ['clock', 'Digital clock', 'format (24h/12h), seconds, showDate'],
+  ['analog-clock', 'Analog clock face', 'seconds, numerals (none/quarters/all), minuteTicks'],
+  ['hud-clock', 'Sci-fi reactor-ring clock', 'format, seconds, showDate'],
+  ['cores', 'Per-core CPU load bars', 'label'],
+  ['sysinfo', 'Key/value machine readouts', 'memory, disk, uptime, host, statusText'],
+  ['stats', 'CPU/mem/disk/battery bars + history', 'cpu, mem, disk, battery, history'],
+  ['meter', 'A single live gauge', 'bind (cpu/mem/disk/battery), variant (ring/bar), label, ticks, readout'],
+  ['sparkline', 'A metric’s recent history', 'bind, label, grid, readout'],
+  ['text', 'A styled text label', 'text'],
+  ['image', 'A pack image asset', 'src (assets/…), fit (contain/cover)'],
+  ['divider', 'A hairline rule', 'orientation (h/v)'],
+  ['calendar', 'Month calendar with your reminders', 'weekStart (sun/mon), showReminders'],
+  ['countdown', 'Counts down to a date', 'target (ISO date), label'],
+  ['weather', 'Live weather (Open-Meteo, keyless)', 'lat, lon, place, details, compact'],
+  ['agenda', 'Your upcoming reminders', 'days, limit, label'],
+  ['notifications', 'Your live Windows notifications', 'limit, label, showApp'],
+  ['launcher', 'Your pinned / recent / open apps', 'pinned, recent, running, labels, iconSize, label'],
+  ['assistant', 'The AI console on the wallpaper', 'label, button'],
+  ['module', 'Your own sandboxed HTML/CSS/JS', 'html, scroll, telemetry'],
+];
+
+const CREATE_SKIN = [
+  ['Palette', 'void · glass · accent · accentBright · muted · warn · gold — hex colours that drive the whole look.'],
+  ['Fonts', 'rajdhani · system-sans · system-serif · mono (packs can’t ship font files).'],
+  ['Ambience', 'none · embers · dust · snow · petals · rain · sparkle, with a density 0.05–1 (reduced-motion safe).'],
+  ['Textures', 'scanlines · grid · glow · vignette, each 0–1.'],
+];
+
+const CREATE_PROPS = [
+  ['color', 'palette.<key>', 'recolour a palette entry'],
+  ['select', 'ambience.effect', 'choose the particle effect'],
+  ['slider', 'ambience.density', 'particle density (0.05–1)'],
+  ['slider', 'texture.<key>', 'a texture’s intensity (0–1)'],
+  ['toggle', 'shape.cornerNotches', 'corner notches on / off'],
+];
+
+function createSection(title) {
+  const h = document.createElement('h3');
+  h.className = 'create-section-title';
+  h.textContent = title;
+  return h;
+}
+
+function refTable(headers, rows) {
+  const table = document.createElement('table');
+  table.className = 'create-table';
+  const thead = document.createElement('thead');
+  const hr = document.createElement('tr');
+  for (const h of headers) {
+    const th = document.createElement('th');
+    th.textContent = h;
+    hr.appendChild(th);
+  }
+  thead.appendChild(hr);
+  table.appendChild(thead);
+  const tbody = document.createElement('tbody');
+  for (const row of rows) {
+    const tr = document.createElement('tr');
+    row.forEach((cell, i) => {
+      const td = document.createElement('td');
+      if (i === 0) { const code = document.createElement('code'); code.textContent = cell; td.appendChild(code); }
+      else td.textContent = cell;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  return table;
+}
+
+function renderCreate() {
+  const root = $('create-cfg');
+  root.textContent = '';
+
+  const intro = document.createElement('div');
+  intro.className = 'create-intro';
+  const h = document.createElement('h2');
+  h.textContent = 'Design your own dashboard pack';
+  const p = document.createElement('p');
+  p.className = 'hint';
+  p.textContent = 'A pack is a skin, a layout, a persona, and a voice — everything the wallpaper needs to think and speak. '
+    + 'Build one in the editor, then share it on Steam Workshop. No account, no code required (though you can add sandboxed code if you want).';
+  intro.append(h, p);
+  root.appendChild(intro);
+
+  // Actions.
+  const actions = document.createElement('div');
+  actions.className = 'create-actions';
+  actions.appendChild(libButton('Open the editor', () => {
+    aegis.openEditor(library.activeId || 'jarvis');
+  }, 'primary'));
+  actions.appendChild(libButton('Read the full guide', async () => {
+    const out = await aegis.openGuide();
+    if (!out.ok) libStatus(out.error || 'Could not open the guide.', true);
+  }));
+  root.appendChild(actions);
+
+  // How it works.
+  root.appendChild(createSection('How it works'));
+  const steps = document.createElement('ol');
+  steps.className = 'create-steps';
+  for (const [title, body] of CREATE_STEPS) {
+    const li = document.createElement('li');
+    const b = document.createElement('b');
+    b.textContent = title + '. ';
+    li.appendChild(b);
+    li.appendChild(document.createTextNode(body));
+    steps.appendChild(li);
+  }
+  root.appendChild(steps);
+
+  // Reference.
+  root.appendChild(createSection('Components'));
+  root.appendChild(refTable(['Type', 'What it shows', 'Options'], CREATE_COMPONENTS));
+
+  root.appendChild(createSection('Skin & ambience'));
+  const skinList = document.createElement('div');
+  skinList.className = 'create-deflist';
+  for (const [term, def] of CREATE_SKIN) {
+    const row = document.createElement('div');
+    row.className = 'create-def';
+    const dt = document.createElement('span');
+    dt.className = 'create-dt';
+    dt.textContent = term;
+    const dd = document.createElement('span');
+    dd.textContent = def;
+    row.append(dt, dd);
+    skinList.appendChild(row);
+  }
+  root.appendChild(skinList);
+
+  root.appendChild(createSection('User properties (Customize knobs)'));
+  const propsNote = document.createElement('p');
+  propsNote.className = 'hint';
+  propsNote.textContent = 'Declare a few of these in your pack so subscribers can adjust it without editing. Values live in their user data, never in your pack.';
+  root.appendChild(propsNote);
+  root.appendChild(refTable(['Control', 'Binds to', 'Effect'], CREATE_PROPS));
 }
 
 // ── Settings tab: startup + performance ──────────────────────────────────────
@@ -1310,6 +1470,7 @@ async function init() {
   $('btn-panel').addEventListener('click', () => aegis.openPanel());
   $('tab-installed').addEventListener('click', () => { library.tab = 'installed'; renderGallery(); });
   $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
+  $('tab-create').addEventListener('click', () => { library.tab = 'create'; renderGallery(); });
   $('tab-planner').addEventListener('click', () => { library.tab = 'planner'; renderGallery(); });
   $('tab-launcher').addEventListener('click', () => { library.tab = 'launcher'; renderGallery(); });
   $('tab-assistant').addEventListener('click', () => { library.tab = 'assistant'; renderGallery(); });

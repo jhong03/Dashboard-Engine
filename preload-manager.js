@@ -70,6 +70,7 @@ const bridge = {
   onboardedGet: () => ipcRenderer.invoke('aegis:settings:onboarded:get'),
   onboardedSet: (value) => ipcRenderer.invoke('aegis:settings:onboarded:set', value === true),
   openLogs: () => ipcRenderer.invoke('aegis:logs:open'),
+  openGuide: () => ipcRenderer.invoke('aegis:guide:open'),
   onDisplaysChanged: (callback) => {
     const handler = () => callback();
     ipcRenderer.on('aegis:displays:changed', handler);

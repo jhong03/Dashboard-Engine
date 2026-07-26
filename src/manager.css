@@ -397,6 +397,65 @@ body {
 .settings-cfg .cfg-field { max-width: 220px; }
 .set-help-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
+/* ── Create hub ──────────────────────────────────────────────────────────── */
+
+.create-cfg {
+  max-width: 760px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.create-intro h2 { margin: 0 0 4px; font-size: 18px; font-weight: 600; }
+.create-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.create-actions .btn { width: auto; }
+.create-section-title {
+  margin: 8px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.create-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.create-steps b { font-weight: 600; }
+.create-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.create-table th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-dim);
+  padding: 5px 10px 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.create-table td {
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  line-height: 1.45;
+}
+.create-table td:first-child { white-space: nowrap; }
+.create-table code {
+  font-family: Consolas, 'Cascadia Mono', monospace;
+  font-size: 11.5px;
+  color: var(--accent);
+}
+.create-deflist { display: flex; flex-direction: column; gap: 7px; font-size: 13px; line-height: 1.5; }
+.create-def { display: flex; gap: 10px; }
+.create-dt { flex: 0 0 120px; font-weight: 600; color: var(--text); }
+
 /* ── Event editor modal ─────────────────────────────────────────────────── */
 
 .modal-scrim {
