@@ -393,6 +393,13 @@ function renderGallery() {
     return;
   }
 
+  // Steam Workshop — browse / subscribe / install inside the app (fail-soft;
+  // filled async so the registry feeds below aren't blocked on Steam).
+  const wsBox = document.createElement('div');
+  wsBox.className = 'workshop-section';
+  gallery.appendChild(wsBox);
+  renderWorkshopSection(wsBox);
+
   if (library.registries.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'hint';
@@ -432,6 +439,124 @@ function renderGallery() {
       }));
     }
   }
+}
+
+// ── Steam Workshop (consume side): browse / subscribe / import ───────────────
+
+const ws = { available: null, items: [], search: '', sort: 'trend', loaded: false, loading: false, error: null, testApp: false };
+
+async function loadWorkshop() {
+  ws.loading = true;
+  const st = await aegis.workshopStatus();
+  ws.available = !!st.available;
+  ws.testApp = !!st.testApp;
+  ws.error = st.available ? null : (st.reason || 'Steam Workshop is unavailable.');
+  if (ws.available) {
+    const res = await aegis.workshopBrowse({ search: ws.search, sort: ws.sort });
+    if (res.ok) { ws.items = res.items; ws.testApp = res.testApp; ws.error = null; }
+    else { ws.items = []; ws.error = res.error; }
+  } else ws.items = [];
+  ws.loading = false;
+  ws.loaded = true;
+  if (library.tab === 'browse') renderGallery();
+}
+
+function reloadWorkshop() { ws.loaded = false; ws.loading = false; renderGallery(); }
+
+function renderWorkshopSection(box) {
+  box.textContent = '';
+  // Header + controls.
+  const controls = document.createElement('div');
+  controls.className = 'ws-controls';
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.className = 'lib-search';
+  searchInput.placeholder = 'Search Workshop';
+  searchInput.value = ws.search;
+  searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { ws.search = searchInput.value.trim(); reloadWorkshop(); } });
+  const sortSel = document.createElement('select');
+  for (const [v, l] of [['trend', 'Trending'], ['newest', 'Newest'], ['top', 'Most subscribed'], ['updated', 'Recently updated']]) {
+    const o = document.createElement('option'); o.value = v; o.textContent = l; sortSel.appendChild(o);
+  }
+  sortSel.value = ws.sort;
+  sortSel.addEventListener('change', () => { ws.sort = sortSel.value; reloadWorkshop(); });
+  controls.append(searchInput, sortSel,
+    libButton('Refresh', () => reloadWorkshop(), 'tiny'),
+    libButton('Open on Steam', () => aegis.workshopOpen(), 'tiny'));
+  box.appendChild(sectionLabel(`Steam Workshop${ws.testApp ? ' — test app (Spacewar)' : ''}`, [controls]));
+
+  if (!ws.loaded && !ws.loading) loadWorkshop();
+  if (ws.loading) { box.appendChild(hintP('Loading Workshop…')); return; }
+  if (!ws.available) { box.appendChild(hintP(ws.error || 'Start Steam and sign in to browse the Workshop.')); return; }
+  if (ws.error) { box.appendChild(hintP(ws.error)); return; }
+  if (ws.items.length === 0) { box.appendChild(hintP('No Workshop items found. Publish one, or try a different search.')); return; }
+
+  const installedWsIds = new Set(library.localPacks.filter((p) => p.meta && p.meta.workshopId).map((p) => String(p.meta.workshopId)));
+  const grid = document.createElement('div');
+  grid.className = 'workshop-grid';
+  for (const item of ws.items) grid.appendChild(workshopCard(item, installedWsIds.has(item.itemId)));
+  box.appendChild(grid);
+}
+
+function hintP(text) {
+  const p = document.createElement('p');
+  p.className = 'hint';
+  p.textContent = text;
+  return p;
+}
+
+function workshopCard(item, inLibrary) {
+  const card = document.createElement('div');
+  card.className = 'ws-card';
+  const thumb = document.createElement('div');
+  thumb.className = 'ws-thumb';
+  if (item.previewUrl) {
+    aegis.workshopPreview(item.previewUrl).then((res) => {
+      if (res && res.ok && thumb.isConnected) { const img = document.createElement('img'); img.alt = ''; img.src = res.uri; thumb.appendChild(img); }
+      else thumb.classList.add('ws-noimg');
+    });
+  } else thumb.classList.add('ws-noimg');
+
+  const body = document.createElement('div');
+  body.className = 'ws-body';
+  const title = document.createElement('div');
+  title.className = 'ws-title';
+  title.textContent = item.title;
+  const meta = document.createElement('div');
+  meta.className = 'ws-meta';
+  meta.textContent = `▲ ${item.votesUp}${item.tags.length ? ' · ' + item.tags.slice(0, 3).join(', ') : ''}`;
+  const status = document.createElement('div');
+  status.className = 'ws-cardstatus';
+
+  const action = document.createElement('button');
+  action.className = 'btn tiny';
+  const setBtn = (label, disabled) => { action.textContent = label; action.disabled = !!disabled; };
+  if (inLibrary) {
+    setBtn('In library', true);
+  } else if (item.subscribed) {
+    setBtn('Add to library');
+    status.textContent = 'Subscribed — click Add once Steam finishes downloading it.';
+    action.addEventListener('click', async () => {
+      setBtn('Importing…', true);
+      const out = await aegis.workshopImport(item.itemId);
+      if (out.ok) { status.textContent = 'Added to your library!'; await refreshLibrary(); }
+      else { status.textContent = out.error || 'Not downloaded yet — let Steam finish, then retry.'; setBtn('Add to library'); }
+    });
+  } else {
+    setBtn('Subscribe');
+    action.addEventListener('click', async () => {
+      setBtn('Subscribing…', true);
+      const out = await aegis.workshopSubscribe(item.itemId);
+      // Re-render from the mutated cache (no refetch) so the card flips to the
+      // subscribed state with its download hint.
+      if (out.ok) { item.subscribed = true; renderGallery(); }
+      else { status.textContent = out.error || 'Subscribe failed.'; setBtn('Subscribe'); }
+    });
+  }
+
+  body.append(title, meta, action, status);
+  card.append(thumb, body);
+  return card;
 }
 
 // ── Planner: Google-Calendar-style month grid + upcoming list ───────────────

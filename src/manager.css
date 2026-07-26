@@ -617,6 +617,42 @@ body {
 .event-actions { display: flex; gap: 8px; align-items: center; }
 .event-spacer { flex: 1; }
 
+/* Steam Workshop browse section in the Browse tab. */
+.workshop-section { margin-bottom: 14px; }
+.ws-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.ws-controls .lib-search { width: 180px; }
+.workshop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+.ws-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-raised);
+  display: flex;
+  flex-direction: column;
+}
+.ws-thumb {
+  aspect-ratio: 16 / 10;
+  background: var(--bg-input);
+  position: relative;
+}
+.ws-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ws-thumb.ws-noimg::after {
+  content: 'no preview';
+  position: absolute; inset: 0;
+  display: grid; place-items: center;
+  font-size: 11px; color: var(--text-dim);
+}
+.ws-body { padding: 8px 10px; display: flex; flex-direction: column; gap: 5px; }
+.ws-title { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-meta { font-size: 11px; color: var(--text-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-body .btn { width: 100%; }
+.ws-cardstatus { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
 /* Workshop tag chips in the publish dialog. */
 .tag-groups { display: flex; flex-direction: column; gap: 8px; }
 .tag-group { display: flex; flex-direction: column; gap: 4px; }

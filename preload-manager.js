@@ -43,6 +43,10 @@ const bridge = {
   }),
   workshopSubscribed: () => ipcRenderer.invoke('aegis:workshop:subscribed'),
   workshopImport: (itemId) => ipcRenderer.invoke('aegis:workshop:import', String(itemId)),
+  workshopBrowse: (opts) => ipcRenderer.invoke('aegis:workshop:browse', opts || {}),
+  workshopSubscribe: (itemId) => ipcRenderer.invoke('aegis:workshop:subscribe', String(itemId)),
+  workshopPreview: (url) => ipcRenderer.invoke('aegis:workshop:preview', String(url)),
+  workshopOpen: () => ipcRenderer.invoke('aegis:workshop:open'),
 
   registryAdd: (url) => ipcRenderer.invoke('aegis:registry:add', String(url)),
   registryRemove: (url) => ipcRenderer.invoke('aegis:registry:remove', String(url)),
