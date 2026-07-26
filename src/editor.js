@@ -798,6 +798,20 @@ function renderSkinTab(panel) {
     if (rel) { skin.wallpaper = rel; renderAll(); }
   });
   panel.appendChild(importBtn);
+
+  // Fit & crop — only meaningful with a wallpaper image. Defaults applied
+  // in place so packs authored before these fields gain sane values.
+  if (skin.wallpaper) {
+    if (!skin.wallpaperFit) skin.wallpaperFit = 'cover';
+    if (typeof skin.wallpaperPosX !== 'number') skin.wallpaperPosX = 50;
+    if (typeof skin.wallpaperPosY !== 'number') skin.wallpaperPosY = 50;
+    panel.appendChild(field('Fit', selectControl(skin.wallpaperFit, [['cover', 'Fill (crop)'], ['contain', 'Fit whole'], ['stretch', 'Stretch']], (v) => { skin.wallpaperFit = v; renderAll(); })));
+    if (skin.wallpaperFit !== 'stretch') {
+      // Focal point: which part of a cropped image shows.
+      panel.appendChild(field('Position X', rangeControl(skin.wallpaperPosX, 0, 100, 1, (v) => { skin.wallpaperPosX = v; renderAll(); })));
+      panel.appendChild(field('Position Y', rangeControl(skin.wallpaperPosY, 0, 100, 1, (v) => { skin.wallpaperPosY = v; renderAll(); })));
+    }
+  }
 }
 
 function renderPersonaTab(panel) {
