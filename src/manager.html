@@ -167,6 +167,30 @@
     </div>
   </section>
 
+  <!-- From-scratch pack builder: a guided, full-screen overlay. -->
+  <div class="builder-overlay hidden" id="builder-overlay" role="dialog" aria-modal="true" aria-label="New pack builder">
+    <header class="builder-top">
+      <h2 class="builder-title">New pack</h2>
+      <button class="btn" id="builder-close" type="button">Cancel</button>
+    </header>
+    <div class="builder-body">
+      <nav class="builder-rail" id="builder-rail" aria-label="Steps"></nav>
+      <section class="builder-main">
+        <div class="builder-step" id="builder-step"></div>
+        <footer class="builder-nav">
+          <button class="btn" id="builder-back" type="button">Back</button>
+          <span class="builder-spacer"></span>
+          <span class="status-line-app" id="builder-status"></span>
+          <button class="btn primary" id="builder-next" type="button">Next</button>
+        </footer>
+      </section>
+      <aside class="builder-preview-wrap">
+        <span class="builder-preview-label">Live preview</span>
+        <div class="builder-preview" id="builder-preview"></div>
+      </aside>
+    </div>
+  </div>
+
   <!-- First-run welcome: shown once, until "Get started" is clicked. -->
   <div class="modal-scrim hidden" id="welcome-scrim">
     <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcome-title">

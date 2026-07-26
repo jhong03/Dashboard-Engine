@@ -890,9 +890,10 @@ function renderCreate() {
   // Actions.
   const actions = document.createElement('div');
   actions.className = 'create-actions';
+  actions.appendChild(libButton('Start from scratch', () => openBuilder(), 'primary'));
   actions.appendChild(libButton('Open the editor', () => {
     aegis.openEditor(library.activeId || 'jarvis');
-  }, 'primary'));
+  }));
   actions.appendChild(libButton('Read the full guide', async () => {
     const out = await aegis.openGuide();
     if (!out.ok) libStatus(out.error || 'Could not open the guide.', true);
@@ -939,6 +940,362 @@ function renderCreate() {
   propsNote.textContent = 'Declare a few of these in your pack so subscribers can adjust it without editing. Values live in their user data, never in your pack.';
   root.appendChild(propsNote);
   root.appendChild(refTable(['Control', 'Binds to', 'Effect'], CREATE_PROPS));
+}
+
+// ── From-scratch pack builder (the guided "sandwich order") ──────────────────
+// A full-screen overlay: pick a background feel, colours, particles, type, and
+// persona with a live preview, then create a real pack and open it in the
+// editor to fine-tune. Static backgrounds only in v1 (engine-drawn textures +
+// your own image); animated/parallax backgrounds are a later phase.
+
+const BUILDER_PALETTES = [
+  { name: 'Cyan HUD', p: { void: '#04080F', glass: '#0A16238C', accent: '#3FD8FF', accentBright: '#7FE9FF', muted: '#5A7E93', warn: '#FFB23E', gold: '#E8C56A' } },
+  { name: 'Ember', p: { void: '#140A06', glass: '#241109A0', accent: '#FF7A3C', accentBright: '#FFC27A', muted: '#8A6A55', warn: '#FF5A5A', gold: '#E8C56A' } },
+  { name: 'Mono', p: { void: '#0B0D10', glass: '#1A1E24AA', accent: '#C7D0DA', accentBright: '#FFFFFF', muted: '#6A727C', warn: '#E0A446', gold: '#C9B27A' } },
+  { name: 'Sakura', p: { void: '#1A0E16', glass: '#2A1622A0', accent: '#FF8FC0', accentBright: '#FFC7E0', muted: '#9A7088', warn: '#FFB23E', gold: '#F0C86A' } },
+  { name: 'Matrix', p: { void: '#020A06', glass: '#0A1A10A0', accent: '#5BE58A', accentBright: '#B7FFCF', muted: '#4A7A5E', warn: '#E0C246', gold: '#B7E86A' } },
+];
+const BUILDER_TEXTURES = [
+  { name: 'Clean', t: { scanlines: 0, grid: 0.1, glow: 0.3, vignette: 0.3 } },
+  { name: 'Grid', t: { scanlines: 0.05, grid: 0.5, glow: 0.35, vignette: 0.3 } },
+  { name: 'Scanline', t: { scanlines: 0.4, grid: 0.15, glow: 0.4, vignette: 0.35 } },
+  { name: 'Deep glow', t: { scanlines: 0, grid: 0.05, glow: 0.7, vignette: 0.5 } },
+];
+const BUILDER_EFFECTS = ['none', 'embers', 'dust', 'snow', 'petals', 'rain', 'sparkle'];
+const BUILDER_FONTS = [['rajdhani', 'Rajdhani (HUD)'], ['system-sans', 'System sans'], ['system-serif', 'Serif'], ['mono', 'Monospace']];
+
+function starterPack() {
+  return {
+    schema: 2, name: 'My Pack', author: '',
+    persona: { name: 'AEGIS', tagline: '', lines: [] },
+    skin: {
+      palette: { ...BUILDER_PALETTES[0].p },
+      typography: { display: 'rajdhani', uppercase: true, letterSpacing: 0.2 },
+      texture: { ...BUILDER_TEXTURES[0].t },
+      shape: { cornerNotches: true, borderOpacity: 0.28, panelOpacity: 0.55, radius: 6 },
+      ambience: { effect: 'none', density: 0.5 },
+      wallpaper: null,
+    },
+    canvas: { padding: 2 },
+    props: [],
+    // A balanced starter set so the created pack clears the quality floor out
+    // of the box; the user adds/moves components in the editor (or, later, the
+    // components step chooses these).
+    components: [
+      { type: 'status', rect: [2, 3, 96, 12], z: 2, style: { panel: true }, options: {} },
+      { type: 'hud-clock', rect: [30, 22, 40, 48], z: 1, style: {}, options: { format: '24h', seconds: true, showDate: true } },
+      { type: 'stats', rect: [3, 22, 22, 42], z: 2, style: { panel: true }, options: { cpu: true, mem: true, disk: true } },
+      { type: 'weather', rect: [72, 22, 25, 10], z: 2, style: { panel: true }, options: { compact: true, place: 'Weather' } },
+      { type: 'assistant', rect: [2, 88, 96, 9], z: 2, style: { panel: true, font: 'mono' }, options: {} },
+    ],
+  };
+}
+
+const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null };
+let builderPreviewTimer = null;
+
+const BUILDER_STEPS = [
+  { key: 'background', label: 'Background', render: renderBgStep },
+  { key: 'colours', label: 'Colours', render: renderColoursStep },
+  { key: 'particles', label: 'Particles', render: renderParticlesStep },
+  { key: 'type', label: 'Typography', render: renderTypeStep },
+  { key: 'persona', label: 'Persona', render: renderPersonaStep },
+  { key: 'finish', label: 'Name & finish', render: renderFinishStep },
+];
+
+// Small control helpers (keep step renderers readable).
+function bField(label) {
+  const w = document.createElement('label');
+  w.className = 'b-field';
+  const s = document.createElement('span');
+  s.textContent = label;
+  w.appendChild(s);
+  return w;
+}
+function bColorInput(value, onChange) {
+  const i = document.createElement('input');
+  i.type = 'color';
+  i.className = 'b-color';
+  i.value = normalizeHex(value) || '#000000';
+  i.addEventListener('input', () => onChange(i.value));
+  return i;
+}
+function bPresetRow() { const d = document.createElement('div'); d.className = 'b-presets'; return d; }
+function bPreset(label, active, onClick) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = 'b-preset' + (active ? ' active' : '');
+  b.textContent = label;
+  b.addEventListener('click', onClick);
+  return b;
+}
+
+function schedulePreview() {
+  clearTimeout(builderPreviewTimer);
+  builderPreviewTimer = setTimeout(updateBuilderPreview, 110);
+}
+
+function updateBuilderPreview() {
+  const el = $('builder-preview');
+  if (!el) return;
+  if (displayAspect) el.style.aspectRatio = displayAspect;
+  if (builder.renderer) { builder.renderer.destroy(); builder.renderer = null; }
+  builder.renderer = AegisComponents.createRenderer(previewServices());
+  const assets = (builder.pack.skin.wallpaper && builder.wallpaperUri)
+    ? { [builder.pack.skin.wallpaper]: builder.wallpaperUri } : {};
+  renderPackInto(el, builder.pack, assets, builder.renderer);
+}
+
+function renderBuilderRail() {
+  const rail = $('builder-rail');
+  rail.textContent = '';
+  BUILDER_STEPS.forEach((s, idx) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'builder-step-btn' + (idx === builder.step ? ' active' : '');
+    b.innerHTML = '';
+    const num = document.createElement('span');
+    num.className = 'builder-step-num';
+    num.textContent = String(idx + 1);
+    const lab = document.createElement('span');
+    lab.textContent = s.label;
+    b.append(num, lab);
+    b.addEventListener('click', () => gotoBuilderStep(idx));
+    rail.appendChild(b);
+  });
+}
+
+function gotoBuilderStep(i) {
+  builder.step = Math.max(0, Math.min(BUILDER_STEPS.length - 1, i));
+  [...$('builder-rail').children].forEach((c, idx) => c.classList.toggle('active', idx === builder.step));
+  BUILDER_STEPS[builder.step].render($('builder-step'));
+  const last = builder.step === BUILDER_STEPS.length - 1;
+  $('builder-back').disabled = builder.step === 0;
+  $('builder-next').textContent = last ? 'Create & open in editor' : 'Next';
+  $('builder-status').textContent = '';
+  updateBuilderPreview();
+}
+
+async function openBuilder() {
+  if (!displayAspect) {
+    try { const d = await aegis.display(); if (d.ok) displayAspect = `${d.width} / ${d.height}`; } catch { /* CSS default */ }
+  }
+  builder.step = 0;
+  builder.pack = starterPack();
+  builder.wallpaperUri = null;
+  $('builder-overlay').classList.remove('hidden');
+  renderBuilderRail();
+  gotoBuilderStep(0);
+}
+
+function closeBuilder() {
+  if (builder.renderer) { builder.renderer.destroy(); builder.renderer = null; }
+  $('builder-overlay').classList.add('hidden');
+}
+
+async function finishBuilder() {
+  $('builder-status').textContent = 'Creating…';
+  const out = await aegis.builderCreate(builder.pack);
+  if (!out.ok) { $('builder-status').textContent = out.error || 'Could not create the pack.'; return; }
+  closeBuilder();
+  await refreshLibrary();
+  libStatus(`Created “${out.id}”. Opening the editor to fine-tune…`);
+}
+
+// ── Step renderers ───────────────────────────────────────────────────────────
+
+function renderBgStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Background', 'Start with a base colour and a surface feel. The engine draws grids, scanlines, glow, and vignette for you — no image needed. Or bring your own.'));
+
+  const base = bField('Base colour');
+  base.appendChild(bColorInput(builder.pack.skin.palette.void, (v) => { builder.pack.skin.palette.void = v; schedulePreview(); }));
+  el.appendChild(base);
+
+  const feelLabel = document.createElement('span');
+  feelLabel.className = 'b-sublabel';
+  feelLabel.textContent = 'Surface feel';
+  el.appendChild(feelLabel);
+  const feel = bPresetRow();
+  const currentFeel = () => {
+    const t = builder.pack.skin.texture;
+    const match = BUILDER_TEXTURES.find((x) => x.t.scanlines === t.scanlines && x.t.grid === t.grid && x.t.glow === t.glow && x.t.vignette === t.vignette);
+    return match ? match.name : null;
+  };
+  for (const preset of BUILDER_TEXTURES) {
+    feel.appendChild(bPreset(preset.name, currentFeel() === preset.name, () => {
+      builder.pack.skin.texture = { ...preset.t };
+      renderBgStep(el); schedulePreview();
+    }));
+  }
+  el.appendChild(feel);
+
+  const imgLabel = document.createElement('span');
+  imgLabel.className = 'b-sublabel';
+  imgLabel.textContent = 'Your own image (optional)';
+  el.appendChild(imgLabel);
+  const imgNote = document.createElement('p');
+  imgNote.className = 'hint';
+  imgNote.textContent = 'Use any image as the wallpaper. Note: publishing a pack with copyrighted characters/art can be taken down — for public packs, use original or licensed art.';
+  el.appendChild(imgNote);
+  const imgRow = document.createElement('div');
+  imgRow.className = 'b-presets';
+  imgRow.appendChild(libButton(builder.pack.skin.wallpaper ? 'Replace image…' : 'Choose an image…', async () => {
+    const out = await aegis.builderImportImage([]);
+    if (out.error === null && !out.ok) return; // cancelled
+    if (!out.ok) { $('builder-status').textContent = out.error; return; }
+    builder.pack.skin.wallpaper = out.rel;
+    builder.wallpaperUri = out.uri;
+    renderBgStep(el); updateBuilderPreview();
+  }));
+  if (builder.pack.skin.wallpaper) {
+    imgRow.appendChild(libButton('Remove image', () => {
+      builder.pack.skin.wallpaper = null;
+      builder.wallpaperUri = null;
+      renderBgStep(el); updateBuilderPreview();
+    }, 'danger'));
+  }
+  el.appendChild(imgRow);
+}
+
+function renderColoursStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Colours', 'Pick a palette, then tweak the accents. These drive every component’s look.'));
+
+  const presets = bPresetRow();
+  const activePalette = BUILDER_PALETTES.find((x) => x.p.accent === builder.pack.skin.palette.accent);
+  for (const preset of BUILDER_PALETTES) {
+    const b = bPreset(preset.name, activePalette === preset, () => {
+      builder.pack.skin.palette = { ...preset.p };
+      renderColoursStep(el); schedulePreview();
+    });
+    const dot = document.createElement('span');
+    dot.className = 'b-swatch-dot';
+    dot.style.background = preset.p.accent;
+    b.prepend(dot);
+    presets.appendChild(b);
+  }
+  el.appendChild(presets);
+
+  for (const [key, label] of [['accent', 'Accent'], ['accentBright', 'Highlight'], ['muted', 'Muted'], ['warn', 'Warning'], ['gold', 'Gold']]) {
+    const f = bField(label);
+    f.appendChild(bColorInput(builder.pack.skin.palette[key], (v) => { builder.pack.skin.palette[key] = v; schedulePreview(); }));
+    el.appendChild(f);
+  }
+}
+
+function renderParticlesStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Particles', 'An optional drifting-particle layer over the background. Reduced-motion safe.'));
+
+  const fx = bField('Effect');
+  const sel = document.createElement('select');
+  for (const e of BUILDER_EFFECTS) {
+    const o = document.createElement('option'); o.value = e; o.textContent = e === 'none' ? 'None' : e[0].toUpperCase() + e.slice(1);
+    sel.appendChild(o);
+  }
+  sel.value = builder.pack.skin.ambience.effect;
+  sel.addEventListener('change', () => { builder.pack.skin.ambience.effect = sel.value; schedulePreview(); });
+  fx.appendChild(sel);
+  el.appendChild(fx);
+
+  const dens = bField('Density');
+  const range = document.createElement('input');
+  range.type = 'range'; range.min = '0.05'; range.max = '1'; range.step = '0.05';
+  range.value = String(builder.pack.skin.ambience.density);
+  range.addEventListener('input', () => { builder.pack.skin.ambience.density = Number(range.value); schedulePreview(); });
+  dens.appendChild(range);
+  el.appendChild(dens);
+}
+
+function renderTypeStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Typography', 'The display font and casing. Readouts always use a mono face.'));
+
+  const font = bField('Display font');
+  const sel = document.createElement('select');
+  for (const [val, label] of BUILDER_FONTS) {
+    const o = document.createElement('option'); o.value = val; o.textContent = label; sel.appendChild(o);
+  }
+  sel.value = builder.pack.skin.typography.display;
+  sel.addEventListener('change', () => { builder.pack.skin.typography.display = sel.value; schedulePreview(); });
+  font.appendChild(sel);
+  el.appendChild(font);
+
+  const up = document.createElement('label');
+  up.className = 'cfg-check';
+  const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = builder.pack.skin.typography.uppercase;
+  cb.addEventListener('change', () => { builder.pack.skin.typography.uppercase = cb.checked; schedulePreview(); });
+  const sp = document.createElement('span'); sp.textContent = 'Uppercase display text';
+  up.append(cb, sp);
+  el.appendChild(up);
+}
+
+function renderPersonaStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Persona', 'Who is this dashboard? The name and lines it speaks. (The spoken voice is tuned separately in Voice tuning.)'));
+
+  const pname = bField('Persona name');
+  const pIn = document.createElement('input'); pIn.type = 'text'; pIn.maxLength = 40; pIn.value = builder.pack.persona.name;
+  pIn.addEventListener('input', () => { builder.pack.persona.name = pIn.value; schedulePreview(); });
+  pname.appendChild(pIn);
+  el.appendChild(pname);
+
+  const tag = bField('Tagline');
+  const tIn = document.createElement('input'); tIn.type = 'text'; tIn.maxLength = 80; tIn.value = builder.pack.persona.tagline;
+  tIn.addEventListener('input', () => { builder.pack.persona.tagline = tIn.value; schedulePreview(); });
+  tag.appendChild(tIn);
+  el.appendChild(tag);
+
+  const lines = bField('Spoken lines (one per line)');
+  const ta = document.createElement('textarea'); ta.rows = 5;
+  ta.value = (builder.pack.persona.lines || []).join('\n');
+  ta.addEventListener('input', () => {
+    builder.pack.persona.lines = ta.value.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 8);
+  });
+  lines.appendChild(ta);
+  el.appendChild(lines);
+}
+
+function renderFinishStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Name & finish', 'Name your pack, then create it. It opens in the editor so you can arrange components and save.'));
+
+  const name = bField('Pack name');
+  const nIn = document.createElement('input'); nIn.type = 'text'; nIn.maxLength = 60; nIn.value = builder.pack.name;
+  nIn.addEventListener('input', () => { builder.pack.name = nIn.value; });
+  name.appendChild(nIn);
+  el.appendChild(name);
+
+  const summary = document.createElement('ul');
+  summary.className = 'b-summary';
+  const items = [
+    `Palette: ${builder.pack.skin.palette.accent}`,
+    `Particles: ${builder.pack.skin.ambience.effect}`,
+    `Font: ${builder.pack.skin.typography.display}`,
+    `Background: ${builder.pack.skin.wallpaper ? 'your image' : 'engine-drawn'}`,
+    `Starter components: ${builder.pack.components.length} (edit freely next)`,
+  ];
+  for (const it of items) { const li = document.createElement('li'); li.textContent = it; summary.appendChild(li); }
+  el.appendChild(summary);
+}
+
+function stepHead(title, body) {
+  const wrap = document.createElement('div');
+  wrap.className = 'b-step-head';
+  const h = document.createElement('h3'); h.textContent = title;
+  const p = document.createElement('p'); p.className = 'hint'; p.textContent = body;
+  wrap.append(h, p);
+  return wrap;
+}
+
+function wireBuilder() {
+  $('builder-close').addEventListener('click', closeBuilder);
+  $('builder-back').addEventListener('click', () => gotoBuilderStep(builder.step - 1));
+  $('builder-next').addEventListener('click', () => {
+    if (builder.step === BUILDER_STEPS.length - 1) finishBuilder();
+    else gotoBuilderStep(builder.step + 1);
+  });
 }
 
 // ── Settings tab: startup + performance ──────────────────────────────────────
@@ -1478,6 +1835,7 @@ async function init() {
   wirePlanner();
   wireAssistantCfg();
   wireSettingsCfg();
+  wireBuilder();
   wireWelcome();
   $('set-welcome').addEventListener('click', showWelcome);
   await wireLauncherCfg();

@@ -71,6 +71,11 @@ const bridge = {
   onboardedSet: (value) => ipcRenderer.invoke('aegis:settings:onboarded:set', value === true),
   openLogs: () => ipcRenderer.invoke('aegis:logs:open'),
   openGuide: () => ipcRenderer.invoke('aegis:guide:open'),
+
+  // From-scratch pack builder: import a wallpaper (staged in main, returns a
+  // preview data URI + rel), then create the assembled pack and open it.
+  builderImportImage: (existingNames) => ipcRenderer.invoke('aegis:editor:importImage', existingNames || []),
+  builderCreate: (pack) => ipcRenderer.invoke('aegis:builder:create', { pack }),
   onDisplaysChanged: (callback) => {
     const handler = () => callback();
     ipcRenderer.on('aegis:displays:changed', handler);
