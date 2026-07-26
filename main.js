@@ -64,6 +64,12 @@ if (WANT_PANEL) {
 // for debugging the desktop layer itself).
 const NO_DESKTOP = process.argv.includes('--no-desktop');
 
+// The OS login item launches us with this marker (see loginItemOptions) so the
+// engine can start QUIETLY to the tray at sign-in — no manager window popping
+// up on every boot. A manual launch (or a tray "Open Manager") has no marker.
+const AUTOSTART_FLAG = '--autostart';
+const LAUNCHED_AT_LOGIN = process.argv.includes(AUTOSTART_FLAG);
+
 let panelWindow = null;
 let managerWindow = null;
 let dashboardWindow = null;
@@ -414,8 +420,10 @@ function buildPerformanceMenu() {
 // to register, or on Windows it won't recognise its own entry and reports
 // openAtLogin:false — the write succeeds but the checkbox reads back unticked.
 function loginItemOptions() {
-  if (app.isPackaged) return {};
-  return { path: process.execPath, args: [path.resolve(__dirname)] };
+  // The marker rides in BOTH set and get so the Windows registry-entry match
+  // stays consistent (getLoginItemSettings must be queried with the same args).
+  if (app.isPackaged) return { args: [AUTOSTART_FLAG] };
+  return { path: process.execPath, args: [path.resolve(__dirname), AUTOSTART_FLAG] };
 }
 
 function getAutoStart() {
@@ -539,7 +547,9 @@ function openFirstWindows() {
     return;
   }
   createDashboardWindow(); // the desktop persona, immediately
-  createManagerWindow();   // the engine app: content navigation + selection
+  // Quiet at login: bring up only the tray + desktop. A manual launch opens the
+  // manager; so does clicking the tray icon. This keeps auto-start unobtrusive.
+  if (!LAUNCHED_AT_LOGIN) createManagerWindow();
   const editAt = process.argv.indexOf('--edit');
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'jarvis');
 }
