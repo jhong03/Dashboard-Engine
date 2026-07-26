@@ -885,16 +885,97 @@ function renderPersonaTab(panel) {
   panel.appendChild(field('Ticker lines (one per line, up to 8)', area));
 }
 
+// ── Customize knobs (pack.props) ─────────────────────────────────────────────
+// The bindable knobs a pack may expose to subscribers. Mirrors the sanitizer's
+// allowlist (lib/packs bindSpec) — anything outside it would be dropped on save.
+const KNOB_CATALOG = [
+  { key: 'accent', label: 'Accent colour', type: 'color', bind: { target: 'palette', key: 'accent' } },
+  { key: 'accent-bright', label: 'Highlight colour', type: 'color', bind: { target: 'palette', key: 'accentBright' } },
+  { key: 'muted', label: 'Muted colour', type: 'color', bind: { target: 'palette', key: 'muted' } },
+  { key: 'gold', label: 'Gold colour', type: 'color', bind: { target: 'palette', key: 'gold' } },
+  { key: 'particles', label: 'Particles', type: 'select', bind: { target: 'ambience', key: 'effect' },
+    options: [['none', 'Off'], ['embers', 'Embers'], ['dust', 'Dust'], ['snow', 'Snow'], ['petals', 'Petals'], ['rain', 'Rain'], ['sparkle', 'Sparkle']] },
+  { key: 'particle-density', label: 'Particle density', type: 'slider', min: 0.05, max: 1, step: 0.05, bind: { target: 'ambience', key: 'density' } },
+  { key: 'glow', label: 'Glow', type: 'slider', min: 0, max: 1, step: 0.05, bind: { target: 'texture', key: 'glow' } },
+  { key: 'scanlines', label: 'Scanlines', type: 'slider', min: 0, max: 1, step: 0.05, bind: { target: 'texture', key: 'scanlines' } },
+  { key: 'grid', label: 'Grid', type: 'slider', min: 0, max: 1, step: 0.05, bind: { target: 'texture', key: 'grid' } },
+  { key: 'vignette', label: 'Vignette', type: 'slider', min: 0, max: 1, step: 0.05, bind: { target: 'texture', key: 'vignette' } },
+  { key: 'corner-notches', label: 'Corner notches', type: 'toggle', bind: { target: 'shape', key: 'cornerNotches' } },
+];
+
+// A knob's starting value = the pack's current value for its bound field.
+function knobDefault(pack, knob) {
+  const { target, key } = knob.bind;
+  const src = { palette: pack.skin.palette, ambience: pack.skin.ambience, texture: pack.skin.texture, shape: pack.skin.shape }[target];
+  return src ? src[key] : undefined;
+}
+
+function makeProp(knob, pack) {
+  const prop = { key: knob.key, label: knob.label, type: knob.type, bind: { ...knob.bind }, default: knobDefault(pack, knob) };
+  if (knob.type === 'slider') { prop.min = knob.min; prop.max = knob.max; prop.step = knob.step; }
+  if (knob.type === 'select') prop.options = knob.options.map(([value, label]) => ({ value, label }));
+  return prop;
+}
+
+function renderPropsTab(panel) {
+  if (!Array.isArray(state.pack.props)) state.pack.props = [];
+  const props = state.pack.props;
+
+  panel.appendChild(sectionLabel('Customize knobs'));
+  const intro = document.createElement('p');
+  intro.className = 'ed-empty';
+  intro.textContent = 'Expose a few controls subscribers can tweak without editing the pack. Each knob’s starting value tracks the pack’s current look.';
+  panel.appendChild(intro);
+
+  if (props.length === 0) {
+    const none = document.createElement('p');
+    none.className = 'ed-empty';
+    none.textContent = 'No knobs yet — add some below.';
+    panel.appendChild(none);
+  }
+
+  props.forEach((prop, i) => {
+    // Keep the default in sync with the current pack value so a knob always
+    // starts at whatever the pack looks like now.
+    const knob = KNOB_CATALOG.find((k) => k.key === prop.key);
+    if (knob) prop.default = knobDefault(state.pack, knob);
+    const row = document.createElement('div');
+    row.className = 'prop-edit-row';
+    const label = textControl(prop.label, (v) => { prop.label = v.slice(0, 40) || prop.key; });
+    label.classList.add('prop-edit-label');
+    const type = document.createElement('span');
+    type.className = 'prop-edit-type';
+    type.textContent = prop.type;
+    const rm = document.createElement('button');
+    rm.className = 'btn tiny danger';
+    rm.textContent = 'Remove';
+    rm.addEventListener('click', () => { props.splice(i, 1); renderInspector(); });
+    row.append(label, type, rm);
+    panel.appendChild(field(`${i + 1}.`, row));
+  });
+
+  // Add: knobs not already exposed.
+  const available = KNOB_CATALOG.filter((k) => !props.some((p) => p.key === k.key));
+  if (available.length) {
+    const choices = [['', 'Add a knob…'], ...available.map((k) => [k.key, `${k.label} (${k.type})`])];
+    panel.appendChild(field('Add', selectControl('', choices, (v) => {
+      const knob = KNOB_CATALOG.find((k) => k.key === v);
+      if (knob) { props.push(makeProp(knob, state.pack)); renderInspector(); }
+    })));
+  }
+}
+
 function renderInspector() {
   const panel = $('inspector');
   panel.textContent = '';
   if (state.tab === 'component') renderComponentTab(panel);
   else if (state.tab === 'skin') renderSkinTab(panel);
+  else if (state.tab === 'props') renderPropsTab(panel);
   else renderPersonaTab(panel);
 }
 
 function syncTabs() {
-  for (const tab of ['component', 'skin', 'persona']) {
+  for (const tab of ['component', 'skin', 'persona', 'props']) {
     $(`itab-${tab}`).setAttribute('aria-selected', String(state.tab === tab));
   }
 }
@@ -984,6 +1065,7 @@ async function init() {
   $('itab-component').addEventListener('click', () => { state.tab = 'component'; syncTabs(); renderInspector(); });
   $('itab-skin').addEventListener('click', () => { state.tab = 'skin'; syncTabs(); renderInspector(); });
   $('itab-persona').addEventListener('click', () => { state.tab = 'persona'; syncTabs(); renderInspector(); });
+  $('itab-props').addEventListener('click', () => { state.tab = 'props'; syncTabs(); renderInspector(); });
   $('btn-save').addEventListener('click', () => save(false));
   $('btn-save-apply').addEventListener('click', () => save(true));
   $('btn-import-image').addEventListener('click', importImageAsComponent);

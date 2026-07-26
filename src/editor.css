@@ -188,3 +188,8 @@ body.editor-body {
 .gallery-editlist { display: flex; flex-direction: column; gap: 4px; }
 .gallery-editrow { display: flex; align-items: center; gap: 6px; }
 .gallery-editname { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Customize-knobs (pack.props) authoring rows. */
+.prop-edit-row { display: flex; align-items: center; gap: 6px; }
+.prop-edit-label { flex: 1; min-width: 0; }
+.prop-edit-type { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; }
