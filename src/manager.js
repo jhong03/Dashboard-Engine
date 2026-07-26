@@ -2111,7 +2111,7 @@ function openPublishDialog(item) {
   const scrim = document.createElement('div');
   scrim.className = 'modal-scrim';
   const card = document.createElement('div');
-  card.className = 'event-card';
+  card.className = 'event-card publish-card';
   scrim.appendChild(card);
   const escHandler = (e) => { if (e.key === 'Escape') close(); };
   const close = () => { scrim.remove(); document.removeEventListener('keydown', escHandler); };

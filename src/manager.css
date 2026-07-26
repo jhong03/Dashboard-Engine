@@ -604,6 +604,10 @@ body {
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 .event-card h3 { margin: 0; font-size: 15px; font-weight: 600; }
+/* The publish dialog is tall (title + description + tag groups + visibility) —
+   cap it to the viewport and scroll inside so it's never cut off on a short
+   or non-maximised window. */
+.publish-card { max-height: calc(100vh - 40px); overflow-y: auto; }
 .event-card #ev-text { width: 100%; }
 .event-row { display: flex; gap: 10px; }
 .event-field {
