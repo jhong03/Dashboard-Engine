@@ -547,9 +547,13 @@ function openFirstWindows() {
     return;
   }
   createDashboardWindow(); // the desktop persona, immediately
-  // Quiet at login: bring up only the tray + desktop. A manual launch opens the
-  // manager; so does clicking the tray icon. This keeps auto-start unobtrusive.
-  if (!LAUNCHED_AT_LOGIN) createManagerWindow();
+  // The engine is a background wallpaper service: launches go straight to the
+  // tray + desktop, and the manager opens from the tray (or a deliberate
+  // relaunch). ONE exception — the very first run greets the user with the
+  // manager + welcome so a new install isn't just an unexplained new wallpaper.
+  // After onboarding, every launch (manual or at login) is silent.
+  const firstRun = !settings.getOnboarded(USER_DIR);
+  if (!LAUNCHED_AT_LOGIN && firstRun) createManagerWindow();
   const editAt = process.argv.indexOf('--edit');
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'jarvis');
 }
