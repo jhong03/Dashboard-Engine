@@ -131,6 +131,18 @@ body.editor-body {
   border-radius: var(--radius);
   padding: 2px;
 }
+/* Four tabs share the inspector width equally (they overflowed once the
+   "Customize" tab was added). */
+.ed-tabs .tab {
+  flex: 1 1 0;
+  min-width: 0;
+  padding: 6px 4px;
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .ed-panel {
   flex: 1;
   overflow-y: auto;
