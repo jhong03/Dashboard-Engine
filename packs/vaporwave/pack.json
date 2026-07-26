@@ -23,33 +23,247 @@
       "warn": "#FF71CE",
       "gold": "#FFE45F"
     },
-    "typography": { "display": "rajdhani", "uppercase": true, "letterSpacing": 0.18 },
-    "texture": { "scanlines": 0.25, "grid": 0.0, "glow": 0.6, "vignette": 0.3 },
-    "shape": { "cornerNotches": false, "borderOpacity": 0.3, "panelOpacity": 0.62, "radius": 4 },
-    "ambience": { "effect": "none", "density": 0.5 },
+    "typography": {
+      "display": "rajdhani",
+      "uppercase": true,
+      "letterSpacing": 0.18
+    },
+    "texture": {
+      "scanlines": 0.25,
+      "grid": 0,
+      "glow": 0.6,
+      "vignette": 0.3
+    },
+    "shape": {
+      "cornerNotches": false,
+      "borderOpacity": 0.3,
+      "panelOpacity": 0.62,
+      "radius": 4
+    },
+    "ambience": {
+      "effect": "none",
+      "density": 0.5
+    },
     "wallpaper": "assets/bg.png"
   },
-  "canvas": { "padding": 2.5 },
+  "canvas": {
+    "padding": 2.5
+  },
   "components": [
-    { "type": "status", "rect": [2, 4, 40, 14], "z": 2, "options": {},
-      "style": { "panel": true, "align": "left", "fontScale": 0.9, "padding": 14 } },
-    { "type": "clock", "rect": [2, 20, 34, 16], "z": 2,
-      "options": { "format": "12h", "seconds": true, "showDate": true },
-      "style": { "panel": true, "align": "left", "fontScale": 1.1, "padding": 14 } },
-    { "type": "weather", "rect": [2, 38, 40, 8], "z": 2,
-      "options": { "lat": 25.7617, "lon": -80.1918, "place": "Miami", "compact": true },
-      "style": { "panel": true, "padding": 14 } },
-    { "type": "sysinfo", "rect": [2, 48, 40, 14], "z": 2,
-      "options": { "memory": true, "disk": true, "uptime": true, "host": true, "statusText": "VIBES NOMINAL" },
-      "style": { "panel": true, "padding": 14 } },
-    { "type": "agenda", "rect": [72, 5, 25, 32], "z": 2,
-      "options": { "days": 5, "limit": 5, "label": "PLANS" },
-      "style": { "panel": true, "padding": 14 } },
-    { "type": "launcher", "rect": [72, 40, 25, 22], "z": 2,
-      "options": { "pinned": true, "recent": false, "running": false, "labels": true, "iconSize": "s", "label": "APPS" },
-      "style": { "panel": true, "padding": 12 } },
-    { "type": "assistant", "rect": [1, 93.5, 98, 5.5], "z": 2,
-      "options": { "label": "ENTER COMMAND…", "button": "RUN" },
-      "style": { "panel": true, "font": "mono", "fontScale": 0.72, "padding": 8 } }
+    {
+      "type": "status",
+      "rect": [
+        2,
+        4,
+        40,
+        14
+      ],
+      "z": 2,
+      "options": {},
+      "style": {
+        "panel": true,
+        "align": "left",
+        "fontScale": 0.9,
+        "padding": 14
+      }
+    },
+    {
+      "type": "clock",
+      "rect": [
+        2,
+        20,
+        34,
+        16
+      ],
+      "z": 2,
+      "options": {
+        "format": "12h",
+        "seconds": true,
+        "showDate": true
+      },
+      "style": {
+        "panel": true,
+        "align": "left",
+        "fontScale": 1.1,
+        "padding": 14
+      }
+    },
+    {
+      "type": "weather",
+      "rect": [
+        2,
+        38,
+        40,
+        8
+      ],
+      "z": 2,
+      "options": {
+        "lat": 25.7617,
+        "lon": -80.1918,
+        "place": "Miami",
+        "compact": true
+      },
+      "style": {
+        "panel": true,
+        "padding": 14
+      }
+    },
+    {
+      "type": "sysinfo",
+      "rect": [
+        2,
+        48,
+        40,
+        14
+      ],
+      "z": 2,
+      "options": {
+        "memory": true,
+        "disk": true,
+        "uptime": true,
+        "host": false,
+        "statusText": "VIBES NOMINAL"
+      },
+      "style": {
+        "panel": true,
+        "padding": 14
+      }
+    },
+    {
+      "type": "agenda",
+      "rect": [
+        72,
+        5,
+        25,
+        32
+      ],
+      "z": 2,
+      "options": {
+        "days": 5,
+        "limit": 5,
+        "label": "PLANS"
+      },
+      "style": {
+        "panel": true,
+        "padding": 14
+      }
+    },
+    {
+      "type": "launcher",
+      "rect": [
+        72,
+        40,
+        25,
+        22
+      ],
+      "z": 2,
+      "options": {
+        "pinned": true,
+        "recent": false,
+        "running": false,
+        "labels": true,
+        "iconSize": "s",
+        "label": "APPS"
+      },
+      "style": {
+        "panel": true,
+        "padding": 12
+      }
+    },
+    {
+      "type": "assistant",
+      "rect": [
+        1,
+        93.5,
+        98,
+        5.5
+      ],
+      "z": 2,
+      "options": {
+        "label": "ENTER COMMAND…",
+        "button": "RUN"
+      },
+      "style": {
+        "panel": true,
+        "font": "mono",
+        "fontScale": 0.72,
+        "padding": 8
+      }
+    }
+  ],
+  "props": [
+    {
+      "key": "accent",
+      "label": "Accent colour",
+      "type": "color",
+      "default": "#FF6AD5",
+      "bind": {
+        "target": "palette",
+        "key": "accent"
+      }
+    },
+    {
+      "key": "accent-bright",
+      "label": "Highlight colour",
+      "type": "color",
+      "default": "#FFFFFF",
+      "bind": {
+        "target": "palette",
+        "key": "accentBright"
+      }
+    },
+    {
+      "key": "particles",
+      "label": "Particles",
+      "type": "select",
+      "default": "none",
+      "options": [
+        {
+          "value": "none",
+          "label": "Off"
+        },
+        {
+          "value": "embers",
+          "label": "Embers"
+        },
+        {
+          "value": "dust",
+          "label": "Dust"
+        },
+        {
+          "value": "snow",
+          "label": "Snow"
+        },
+        {
+          "value": "petals",
+          "label": "Petals"
+        },
+        {
+          "value": "rain",
+          "label": "Rain"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        }
+      ],
+      "bind": {
+        "target": "ambience",
+        "key": "effect"
+      }
+    },
+    {
+      "key": "particle-density",
+      "label": "Particle density",
+      "type": "slider",
+      "min": 0.05,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.5,
+      "bind": {
+        "target": "ambience",
+        "key": "density"
+      }
+    }
   ]
 }

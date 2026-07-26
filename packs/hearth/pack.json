@@ -24,39 +24,245 @@
       "warn": "#E0663C",
       "gold": "#E8C56A"
     },
-    "typography": { "display": "system-serif", "uppercase": false, "letterSpacing": 0.04 },
-    "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.35, "vignette": 0.55 },
-    "shape": { "cornerNotches": false, "borderOpacity": 0.22, "panelOpacity": 0.55, "radius": 12 },
-    "ambience": { "effect": "embers", "density": 0.4 }
+    "typography": {
+      "display": "system-serif",
+      "uppercase": false,
+      "letterSpacing": 0.04
+    },
+    "texture": {
+      "scanlines": 0,
+      "grid": 0,
+      "glow": 0.35,
+      "vignette": 0.55
+    },
+    "shape": {
+      "cornerNotches": false,
+      "borderOpacity": 0.22,
+      "panelOpacity": 0.55,
+      "radius": 12
+    },
+    "ambience": {
+      "effect": "embers",
+      "density": 0.4
+    }
   },
-  "canvas": { "padding": 3 },
+  "canvas": {
+    "padding": 3
+  },
   "components": [
-    { "type": "status", "rect": [3, 6, 52, 15], "z": 2,
+    {
+      "type": "status",
+      "rect": [
+        3,
+        6,
+        52,
+        15
+      ],
+      "z": 2,
       "options": {},
-      "style": { "panel": false, "align": "left", "fontScale": 0.95 } },
-
-    { "type": "analog-clock", "rect": [64, 7, 32, 42], "z": 2,
-      "options": { "seconds": true, "numerals": "all", "minuteTicks": true },
-      "style": { "panel": true, "border": false, "padding": 14 } },
-
-    { "type": "clock", "rect": [3, 24, 42, 15], "z": 2,
-      "options": { "format": "12h", "seconds": false, "showDate": true },
-      "style": { "panel": false, "align": "left", "fontScale": 1.25, "glow": 0.2 } },
-
-    { "type": "weather", "rect": [3, 41, 53, 8], "z": 2,
-      "options": { "lat": 35.0116, "lon": 135.7681, "place": "Kyoto", "compact": true },
-      "style": { "panel": true, "border": false, "padding": 16 } },
-
-    { "type": "text", "rect": [3, 52, 53, 18], "z": 2,
-      "options": { "text": "Pour something warm.\nThe evening isn't going anywhere." },
-      "style": { "panel": true, "border": false, "align": "left", "fontScale": 1.15, "padding": 20 } },
-
-    { "type": "agenda", "rect": [64, 52, 32, 30], "z": 2,
-      "options": { "days": 5, "limit": 4, "label": "today, gently" },
-      "style": { "panel": true, "border": false, "padding": 18 } },
-
-    { "type": "launcher", "rect": [3, 72, 53, 16], "z": 2,
-      "options": { "pinned": true, "recent": true, "running": false, "labels": true, "iconSize": "m", "label": "the shelf" },
-      "style": { "panel": false } }
+      "style": {
+        "panel": false,
+        "align": "left",
+        "fontScale": 0.95
+      }
+    },
+    {
+      "type": "analog-clock",
+      "rect": [
+        64,
+        7,
+        32,
+        42
+      ],
+      "z": 2,
+      "options": {
+        "seconds": true,
+        "numerals": "all",
+        "minuteTicks": true
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "padding": 14
+      }
+    },
+    {
+      "type": "clock",
+      "rect": [
+        3,
+        24,
+        42,
+        15
+      ],
+      "z": 2,
+      "options": {
+        "format": "12h",
+        "seconds": false,
+        "showDate": true
+      },
+      "style": {
+        "panel": false,
+        "align": "left",
+        "fontScale": 1.25,
+        "glow": 0.2
+      }
+    },
+    {
+      "type": "weather",
+      "rect": [
+        3,
+        41,
+        53,
+        8
+      ],
+      "z": 2,
+      "options": {
+        "lat": 35.0116,
+        "lon": 135.7681,
+        "place": "Kyoto",
+        "compact": true
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "padding": 16
+      }
+    },
+    {
+      "type": "text",
+      "rect": [
+        3,
+        52,
+        53,
+        18
+      ],
+      "z": 2,
+      "options": {
+        "text": "Pour something warm.\nThe evening isn't going anywhere."
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "align": "left",
+        "fontScale": 1.15,
+        "padding": 20
+      }
+    },
+    {
+      "type": "agenda",
+      "rect": [
+        64,
+        52,
+        32,
+        30
+      ],
+      "z": 2,
+      "options": {
+        "days": 5,
+        "limit": 4,
+        "label": "today, gently"
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "padding": 18
+      }
+    },
+    {
+      "type": "launcher",
+      "rect": [
+        3,
+        72,
+        53,
+        16
+      ],
+      "z": 2,
+      "options": {
+        "pinned": true,
+        "recent": true,
+        "running": false,
+        "labels": true,
+        "iconSize": "m",
+        "label": "the shelf"
+      },
+      "style": {
+        "panel": false
+      }
+    }
+  ],
+  "props": [
+    {
+      "key": "accent",
+      "label": "Accent colour",
+      "type": "color",
+      "default": "#E39A54",
+      "bind": {
+        "target": "palette",
+        "key": "accent"
+      }
+    },
+    {
+      "key": "accent-bright",
+      "label": "Highlight colour",
+      "type": "color",
+      "default": "#FBD9A5",
+      "bind": {
+        "target": "palette",
+        "key": "accentBright"
+      }
+    },
+    {
+      "key": "particles",
+      "label": "Particles",
+      "type": "select",
+      "default": "embers",
+      "options": [
+        {
+          "value": "none",
+          "label": "Off"
+        },
+        {
+          "value": "embers",
+          "label": "Embers"
+        },
+        {
+          "value": "dust",
+          "label": "Dust"
+        },
+        {
+          "value": "snow",
+          "label": "Snow"
+        },
+        {
+          "value": "petals",
+          "label": "Petals"
+        },
+        {
+          "value": "rain",
+          "label": "Rain"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        }
+      ],
+      "bind": {
+        "target": "ambience",
+        "key": "effect"
+      }
+    },
+    {
+      "key": "particle-density",
+      "label": "Particle density",
+      "type": "slider",
+      "min": 0.05,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.4,
+      "bind": {
+        "target": "ambience",
+        "key": "density"
+      }
+    }
   ]
 }

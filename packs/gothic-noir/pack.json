@@ -23,33 +23,258 @@
       "warn": "#D0304A",
       "gold": "#9A6A72"
     },
-    "typography": { "display": "system-serif", "uppercase": false, "letterSpacing": 0.06 },
-    "texture": { "scanlines": 0.05, "grid": 0.0, "glow": 0.4, "vignette": 0.85 },
-    "shape": { "cornerNotches": false, "borderOpacity": 0.28, "panelOpacity": 0.5, "radius": 2 },
-    "ambience": { "effect": "dust", "density": 0.22 }
+    "typography": {
+      "display": "system-serif",
+      "uppercase": false,
+      "letterSpacing": 0.06
+    },
+    "texture": {
+      "scanlines": 0.05,
+      "grid": 0,
+      "glow": 0.4,
+      "vignette": 0.85
+    },
+    "shape": {
+      "cornerNotches": false,
+      "borderOpacity": 0.28,
+      "panelOpacity": 0.5,
+      "radius": 2
+    },
+    "ambience": {
+      "effect": "dust",
+      "density": 0.22
+    }
   },
-  "canvas": { "padding": 4 },
+  "canvas": {
+    "padding": 4
+  },
   "components": [
-    { "type": "status", "rect": [4, 7, 54, 16], "z": 2, "options": {},
-      "style": { "panel": false, "align": "left", "fontScale": 1.0 } },
-    { "type": "analog-clock", "rect": [66, 8, 30, 42], "z": 2,
-      "options": { "seconds": true, "numerals": "quarters", "minuteTicks": true },
-      "style": { "panel": true, "border": true, "padding": 14 } },
-    { "type": "clock", "rect": [4, 27, 44, 14], "z": 2,
-      "options": { "format": "24h", "seconds": true, "showDate": true },
-      "style": { "panel": false, "align": "left", "fontScale": 1.15, "glow": 0.35 } },
-    { "type": "divider", "rect": [4, 43, 50, 2], "z": 2, "options": { "orientation": "h" } },
-    { "type": "text", "rect": [4, 46, 52, 18], "z": 2,
-      "options": { "text": "Some of us are looking\nat the stars." },
-      "style": { "panel": true, "border": false, "align": "left", "fontScale": 1.15, "padding": 20 } },
-    { "type": "agenda", "rect": [66, 52, 30, 30], "z": 2,
-      "options": { "days": 5, "limit": 4, "label": "the ledger" },
-      "style": { "panel": true, "border": false, "padding": 16 } },
-    { "type": "launcher", "rect": [4, 68, 52, 18], "z": 2,
-      "options": { "pinned": true, "recent": false, "running": false, "labels": true, "iconSize": "m", "label": "the shelf" },
-      "style": { "panel": false } },
-    { "type": "assistant", "rect": [1, 93.5, 98, 5.5], "z": 2,
-      "options": { "label": "speak, and I shall answer…", "button": "invoke" },
-      "style": { "panel": true, "border": true, "font": "mono", "fontScale": 0.72, "padding": 8 } }
+    {
+      "type": "status",
+      "rect": [
+        4,
+        7,
+        54,
+        16
+      ],
+      "z": 2,
+      "options": {},
+      "style": {
+        "panel": false,
+        "align": "left",
+        "fontScale": 1
+      }
+    },
+    {
+      "type": "analog-clock",
+      "rect": [
+        66,
+        8,
+        30,
+        42
+      ],
+      "z": 2,
+      "options": {
+        "seconds": true,
+        "numerals": "quarters",
+        "minuteTicks": true
+      },
+      "style": {
+        "panel": true,
+        "border": true,
+        "padding": 14
+      }
+    },
+    {
+      "type": "clock",
+      "rect": [
+        4,
+        27,
+        44,
+        14
+      ],
+      "z": 2,
+      "options": {
+        "format": "24h",
+        "seconds": true,
+        "showDate": true
+      },
+      "style": {
+        "panel": false,
+        "align": "left",
+        "fontScale": 1.15,
+        "glow": 0.35
+      }
+    },
+    {
+      "type": "divider",
+      "rect": [
+        4,
+        43,
+        50,
+        2
+      ],
+      "z": 2,
+      "options": {
+        "orientation": "h"
+      }
+    },
+    {
+      "type": "text",
+      "rect": [
+        4,
+        46,
+        52,
+        18
+      ],
+      "z": 2,
+      "options": {
+        "text": "Some of us are looking\nat the stars."
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "align": "left",
+        "fontScale": 1.15,
+        "padding": 20
+      }
+    },
+    {
+      "type": "agenda",
+      "rect": [
+        66,
+        52,
+        30,
+        30
+      ],
+      "z": 2,
+      "options": {
+        "days": 5,
+        "limit": 4,
+        "label": "the ledger"
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "padding": 16
+      }
+    },
+    {
+      "type": "launcher",
+      "rect": [
+        4,
+        68,
+        52,
+        18
+      ],
+      "z": 2,
+      "options": {
+        "pinned": true,
+        "recent": false,
+        "running": false,
+        "labels": true,
+        "iconSize": "m",
+        "label": "the shelf"
+      },
+      "style": {
+        "panel": false
+      }
+    },
+    {
+      "type": "assistant",
+      "rect": [
+        1,
+        93.5,
+        98,
+        5.5
+      ],
+      "z": 2,
+      "options": {
+        "label": "speak, and I shall answer…",
+        "button": "invoke"
+      },
+      "style": {
+        "panel": true,
+        "border": true,
+        "font": "mono",
+        "fontScale": 0.72,
+        "padding": 8
+      }
+    }
+  ],
+  "props": [
+    {
+      "key": "accent",
+      "label": "Accent colour",
+      "type": "color",
+      "default": "#B4102E",
+      "bind": {
+        "target": "palette",
+        "key": "accent"
+      }
+    },
+    {
+      "key": "accent-bright",
+      "label": "Highlight colour",
+      "type": "color",
+      "default": "#E6D6DA",
+      "bind": {
+        "target": "palette",
+        "key": "accentBright"
+      }
+    },
+    {
+      "key": "particles",
+      "label": "Particles",
+      "type": "select",
+      "default": "dust",
+      "options": [
+        {
+          "value": "none",
+          "label": "Off"
+        },
+        {
+          "value": "embers",
+          "label": "Embers"
+        },
+        {
+          "value": "dust",
+          "label": "Dust"
+        },
+        {
+          "value": "snow",
+          "label": "Snow"
+        },
+        {
+          "value": "petals",
+          "label": "Petals"
+        },
+        {
+          "value": "rain",
+          "label": "Rain"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        }
+      ],
+      "bind": {
+        "target": "ambience",
+        "key": "effect"
+      }
+    },
+    {
+      "key": "particle-density",
+      "label": "Particle density",
+      "type": "slider",
+      "min": 0.05,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.22,
+      "bind": {
+        "target": "ambience",
+        "key": "density"
+      }
+    }
   ]
 }

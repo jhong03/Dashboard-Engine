@@ -23,33 +23,249 @@
       "warn": "#F58FB0",
       "gold": "#6FCBB0"
     },
-    "typography": { "display": "system-sans", "uppercase": false, "letterSpacing": 0.02 },
-    "texture": { "scanlines": 0.0, "grid": 0.0, "glow": 0.28, "vignette": 0.08 },
-    "shape": { "cornerNotches": false, "borderOpacity": 0.14, "panelOpacity": 0.55, "radius": 16 },
-    "ambience": { "effect": "sparkle", "density": 0.6 },
+    "typography": {
+      "display": "system-sans",
+      "uppercase": false,
+      "letterSpacing": 0.02
+    },
+    "texture": {
+      "scanlines": 0,
+      "grid": 0,
+      "glow": 0.28,
+      "vignette": 0.08
+    },
+    "shape": {
+      "cornerNotches": false,
+      "borderOpacity": 0.14,
+      "panelOpacity": 0.55,
+      "radius": 16
+    },
+    "ambience": {
+      "effect": "sparkle",
+      "density": 0.6
+    },
     "wallpaper": "assets/bg.png"
   },
-  "canvas": { "padding": 3 },
+  "canvas": {
+    "padding": 3
+  },
   "components": [
-    { "type": "status", "rect": [4, 6, 52, 15], "z": 2, "options": {},
-      "style": { "panel": false, "align": "left", "fontScale": 0.95, "glow": 0.15 } },
-    { "type": "clock", "rect": [4, 24, 44, 16], "z": 2,
-      "options": { "format": "12h", "seconds": false, "showDate": true },
-      "style": { "panel": false, "align": "left", "fontScale": 1.35, "glow": 0.2 } },
-    { "type": "text", "rect": [4, 44, 52, 14], "z": 2,
-      "options": { "text": "today is going to be a good one." },
-      "style": { "panel": true, "border": false, "align": "left", "fontScale": 1.05, "padding": 18 } },
-    { "type": "weather", "rect": [4, 60, 52, 8], "z": 2,
-      "options": { "lat": 37.5665, "lon": 126.978, "place": "Seoul", "compact": true },
-      "style": { "panel": true, "border": false, "padding": 16 } },
-    { "type": "agenda", "rect": [64, 6, 32, 34], "z": 2,
-      "options": { "days": 5, "limit": 5, "label": "to-do" },
-      "style": { "panel": true, "border": false, "padding": 18 } },
-    { "type": "launcher", "rect": [64, 44, 32, 24], "z": 2,
-      "options": { "pinned": true, "recent": true, "running": false, "labels": true, "iconSize": "m", "label": "faves" },
-      "style": { "panel": true, "border": false, "padding": 16 } },
-    { "type": "assistant", "rect": [1, 93.5, 98, 5.5], "z": 2,
-      "options": { "label": "talk to me about anything ♪", "button": "send" },
-      "style": { "panel": true, "border": false, "fontScale": 0.72, "padding": 8 } }
+    {
+      "type": "status",
+      "rect": [
+        4,
+        6,
+        52,
+        15
+      ],
+      "z": 2,
+      "options": {},
+      "style": {
+        "panel": false,
+        "align": "left",
+        "fontScale": 0.95,
+        "glow": 0.15
+      }
+    },
+    {
+      "type": "clock",
+      "rect": [
+        4,
+        24,
+        44,
+        16
+      ],
+      "z": 2,
+      "options": {
+        "format": "12h",
+        "seconds": false,
+        "showDate": true
+      },
+      "style": {
+        "panel": false,
+        "align": "left",
+        "fontScale": 1.35,
+        "glow": 0.2
+      }
+    },
+    {
+      "type": "text",
+      "rect": [
+        4,
+        44,
+        52,
+        14
+      ],
+      "z": 2,
+      "options": {
+        "text": "today is going to be a good one."
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "align": "left",
+        "fontScale": 1.05,
+        "padding": 18
+      }
+    },
+    {
+      "type": "weather",
+      "rect": [
+        4,
+        60,
+        52,
+        8
+      ],
+      "z": 2,
+      "options": {
+        "lat": 37.5665,
+        "lon": 126.978,
+        "place": "Seoul",
+        "compact": true
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "padding": 16
+      }
+    },
+    {
+      "type": "agenda",
+      "rect": [
+        64,
+        6,
+        32,
+        34
+      ],
+      "z": 2,
+      "options": {
+        "days": 5,
+        "limit": 5,
+        "label": "to-do"
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "padding": 18
+      }
+    },
+    {
+      "type": "launcher",
+      "rect": [
+        64,
+        44,
+        32,
+        24
+      ],
+      "z": 2,
+      "options": {
+        "pinned": true,
+        "recent": true,
+        "running": false,
+        "labels": true,
+        "iconSize": "m",
+        "label": "faves"
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "padding": 16
+      }
+    },
+    {
+      "type": "assistant",
+      "rect": [
+        1,
+        93.5,
+        98,
+        5.5
+      ],
+      "z": 2,
+      "options": {
+        "label": "talk to me about anything ♪",
+        "button": "send"
+      },
+      "style": {
+        "panel": true,
+        "border": false,
+        "fontScale": 0.72,
+        "padding": 8
+      }
+    }
+  ],
+  "props": [
+    {
+      "key": "accent",
+      "label": "Accent colour",
+      "type": "color",
+      "default": "#9B7EF0",
+      "bind": {
+        "target": "palette",
+        "key": "accent"
+      }
+    },
+    {
+      "key": "accent-bright",
+      "label": "Highlight colour",
+      "type": "color",
+      "default": "#443F6E",
+      "bind": {
+        "target": "palette",
+        "key": "accentBright"
+      }
+    },
+    {
+      "key": "particles",
+      "label": "Particles",
+      "type": "select",
+      "default": "sparkle",
+      "options": [
+        {
+          "value": "none",
+          "label": "Off"
+        },
+        {
+          "value": "embers",
+          "label": "Embers"
+        },
+        {
+          "value": "dust",
+          "label": "Dust"
+        },
+        {
+          "value": "snow",
+          "label": "Snow"
+        },
+        {
+          "value": "petals",
+          "label": "Petals"
+        },
+        {
+          "value": "rain",
+          "label": "Rain"
+        },
+        {
+          "value": "sparkle",
+          "label": "Sparkle"
+        }
+      ],
+      "bind": {
+        "target": "ambience",
+        "key": "effect"
+      }
+    },
+    {
+      "key": "particle-density",
+      "label": "Particle density",
+      "type": "slider",
+      "min": 0.05,
+      "max": 1,
+      "step": 0.05,
+      "default": 0.6,
+      "bind": {
+        "target": "ambience",
+        "key": "density"
+      }
+    }
   ]
 }
