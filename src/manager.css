@@ -395,6 +395,7 @@ body {
 }
 .settings-cfg > .cfg-group-title:first-child { margin-top: 0; }
 .settings-cfg .cfg-field { max-width: 220px; }
+.set-help-row { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* ── Event editor modal ─────────────────────────────────────────────────── */
 

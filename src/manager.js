@@ -881,6 +881,10 @@ function wireSettingsCfg() {
     await aegis.performanceSet({ maxFps: Number(e.target.value) });
     settingsSaved();
   });
+  $('set-logs').addEventListener('click', async () => {
+    const out = await aegis.openLogs();
+    if (!out.ok) $('set-status').textContent = out.error || 'Could not open the logs folder.';
+  });
 }
 
 // ── First-run welcome ────────────────────────────────────────────────────────

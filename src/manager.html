@@ -148,7 +148,12 @@
           </label>
 
           <h3 class="cfg-group-title">Help</h3>
-          <button class="btn" id="set-welcome" type="button">Show the welcome guide</button>
+          <div class="set-help-row">
+            <button class="btn" id="set-welcome" type="button">Show the welcome guide</button>
+            <button class="btn" id="set-logs" type="button">Open logs folder</button>
+          </div>
+          <p class="hint cfg-hint">If something goes wrong, the logs folder holds a diagnostic log
+            (and any crash dumps) you can share when reporting a problem. It contains no personal data.</p>
 
           <p class="status-line-app" id="set-status" role="status" aria-live="polite"></p>
         </div>

@@ -8,18 +8,33 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const { createPresenceMonitor } = require('./lib/presence');
 const voicebank = require('./lib/voicebank');
 const packs = require('./lib/packs');
 const settings = require('./lib/settings');
+const logger = require('./lib/logger');
 const { registerIpcHandlers } = require('./lib/ipc');
 const { createAlertScheduler } = require('./lib/alerts');
 const { userDataDir } = require('./lib/paths');
 
 const USER_DIR = userDataDir();
+
+// Crash reporting, privacy-first: collect NATIVE crash minidumps locally and
+// NEVER upload them (there is no server, and nothing about this app should phone
+// home). Combined with lib/logger, a user who hits a crash has a local trail to
+// share if they choose to. Must start before the app is ready.
+try {
+  crashReporter.start({ uploadToServer: false });
+} catch (err) {
+  // Non-fatal — the JS-level logging below still works without native dumps.
+  console.error(`[engine] crashReporter unavailable: ${err.message}`);
+}
+function logEngine(level, message) {
+  logger.write(USER_DIR, level, message);
+}
 
 // Windows routes toast notifications by AppUserModelID; without one set,
 // planner alerts never reach the Action Center.
@@ -559,9 +574,28 @@ function openFirstWindows() {
 }
 
 // Fail soft (CLAUDE.md): a stray error in main must never crash the engine
-// with a raw stack dialog. Log it; the desktop persona stays up.
+// with a raw stack dialog. Log it (console + engine.log); the desktop stays up.
 process.on('uncaughtException', (err) => {
-  console.error(`[engine] uncaught exception (survived): ${err.stack || err.message}`);
+  const detail = err && err.stack ? err.stack : String(err);
+  console.error(`[engine] uncaught exception (survived): ${detail}`);
+  logEngine('CRASH', `uncaughtException: ${detail}`);
+});
+
+process.on('unhandledRejection', (reason) => {
+  const detail = reason && reason.stack ? reason.stack : String(reason);
+  console.error(`[engine] unhandled rejection (survived): ${detail}`);
+  logEngine('CRASH', `unhandledRejection: ${detail}`);
+});
+
+// Renderer / GPU / utility process death — these don't crash main, but they
+// blank a window or the wallpaper, so they're the crashes users actually feel.
+// Recorded so a "it went black" report has something behind it.
+app.on('render-process-gone', (_event, webContents, details) => {
+  const url = (() => { try { return webContents.getURL(); } catch { return '?'; } })();
+  logEngine('CRASH', `render-process-gone (${details.reason}, exit ${details.exitCode}) at ${url}`);
+});
+app.on('child-process-gone', (_event, details) => {
+  logEngine('CRASH', `child-process-gone (${details.type}: ${details.reason}, exit ${details.exitCode})`);
 });
 
 // One engine instance owns the desktop; a second launch just re-opens the
@@ -618,6 +652,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
   }
 
   app.whenReady().then(() => {
+    logEngine('INFO', `engine start — v${app.getVersion()} · electron ${process.versions.electron} · ${process.platform} · ${LAUNCHED_AT_LOGIN ? 'login' : 'manual'}`);
     warnAboutUnauditedVoices();
 
     // SECURITY: Electron GRANTS permission requests by default when no handler
