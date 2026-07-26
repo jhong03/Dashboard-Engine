@@ -617,6 +617,24 @@ body {
 .event-actions { display: flex; gap: 8px; align-items: center; }
 .event-spacer { flex: 1; }
 
+/* Workshop tag chips in the publish dialog. */
+.tag-groups { display: flex; flex-direction: column; gap: 8px; }
+.tag-group { display: flex; flex-direction: column; gap: 4px; }
+.tag-group-label { font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-dim); }
+.tag-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag-chip {
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-input);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.tag-chip:hover { border-color: var(--text-dim); }
+.tag-chip.on { background: var(--accent); border-color: var(--accent); color: #06121b; font-weight: 600; }
+
 /* First-run welcome — quiet engine chrome, no glow. */
 .welcome-card {
   width: min(520px, calc(100vw - 48px));

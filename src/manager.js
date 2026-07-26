@@ -1889,6 +1889,35 @@ const COMPONENT_LABELS = {
 
 // A ready-to-post Workshop description (Steam BBCode) built from the pack —
 // gives the item real context instead of a bare tagline. The user can edit it.
+// Workshop tag taxonomy: Style + Purpose are how people browse; Palette is a
+// cheap visual filter; Includes is component-based (auto-suggested).
+const DE_TAGS = {
+  Style: ['Sci-Fi HUD', 'Minimal', 'Cyberpunk', 'Anime', 'Vaporwave', 'Gothic', 'Cozy', 'Pastel', 'Retro', 'Nature', 'Monochrome'],
+  Purpose: ['Productivity', 'Gaming', 'System Monitor', 'Decorative', 'Developer'],
+  Palette: ['Dark', 'Light', 'Colorful'],
+  Includes: ['Weather', 'Clock', 'Stats', 'Launcher', 'Assistant', 'Calendar', 'Custom Art'],
+};
+
+// Pre-tick the obvious tags from what the pack actually contains, so a creator
+// starts with sensible, consistent tags and just adjusts Style/Purpose.
+function suggestTags(pack) {
+  const set = new Set();
+  const types = new Set((pack.components || []).map((c) => c.type));
+  if (types.has('weather')) set.add('Weather');
+  if (types.has('assistant')) set.add('Assistant');
+  if (['stats', 'meter', 'cores', 'sysinfo', 'sparkline'].some((t) => types.has(t))) set.add('Stats');
+  if (types.has('launcher')) set.add('Launcher');
+  if (types.has('calendar') || types.has('agenda')) set.add('Calendar');
+  if (['clock', 'hud-clock', 'analog-clock'].some((t) => types.has(t))) set.add('Clock');
+  if (types.has('image') || types.has('gallery') || (pack.skin && pack.skin.wallpaper)) set.add('Custom Art');
+  try {
+    const v = String((pack.skin && pack.skin.palette && pack.skin.palette.void) || '#000').replace('#', '');
+    const r = parseInt(v.slice(0, 2), 16), g = parseInt(v.slice(2, 4), 16), b = parseInt(v.slice(4, 6), 16);
+    set.add((0.299 * r + 0.587 * g + 0.114 * b) > 140 ? 'Light' : 'Dark');
+  } catch { /* default: no palette tag */ }
+  return set;
+}
+
 function describePack(item) {
   const pack = item.pack || {};
   const persona = pack.persona || {};
@@ -1930,8 +1959,34 @@ function openPublishDialog(item) {
   const desc = document.createElement('textarea');
   desc.rows = 8; desc.maxLength = 8000;
   desc.value = describePack(item);
+  // Tag chips (auto-suggested from the pack) + a free-text field for extras.
+  const selectedTags = suggestTags(item.pack);
+  const tagGroups = document.createElement('div');
+  tagGroups.className = 'tag-groups';
+  for (const [group, list] of Object.entries(DE_TAGS)) {
+    const g = document.createElement('div');
+    g.className = 'tag-group';
+    const gl = document.createElement('span');
+    gl.className = 'tag-group-label';
+    gl.textContent = group;
+    const row = document.createElement('div');
+    row.className = 'tag-chips';
+    for (const t of list) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'tag-chip' + (selectedTags.has(t) ? ' on' : '');
+      chip.textContent = t;
+      chip.addEventListener('click', () => {
+        if (selectedTags.has(t)) selectedTags.delete(t); else selectedTags.add(t);
+        chip.classList.toggle('on');
+      });
+      row.appendChild(chip);
+    }
+    g.append(gl, row);
+    tagGroups.appendChild(g);
+  }
   const tags = document.createElement('input');
-  tags.type = 'text'; tags.placeholder = 'comma, separated, tags';
+  tags.type = 'text'; tags.placeholder = 'extra tags, comma-separated (optional)';
   const vis = document.createElement('select');
   for (const [v, label] of [['unlisted', 'Unlisted (link only)'], ['public', 'Public'], ['friends', 'Friends only'], ['private', 'Private']]) {
     const opt = document.createElement('option'); opt.value = v; opt.textContent = label; vis.appendChild(opt);
@@ -1939,7 +1994,8 @@ function openPublishDialog(item) {
   card.append(
     publishField('Title', title),
     publishField('Description', desc),
-    publishField('Tags', tags),
+    publishField('Tags', tagGroups),
+    publishField('More tags', tags),
     publishField('Visibility', vis),
   );
 
@@ -1959,7 +2015,8 @@ function openPublishDialog(item) {
       packId: item.id,
       title: title.value,
       description: desc.value,
-      tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean),
+      // Chips + any free-text extras, deduped, Steam's 10-tag cap applied.
+      tags: [...new Set([...selectedTags, ...tags.value.split(',').map((t) => t.trim()).filter(Boolean)])].slice(0, 10),
       visibility: vis.value,
     });
     submit.disabled = false;
