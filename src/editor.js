@@ -69,7 +69,7 @@ const MODULE_STARTER = [
 const DEFAULT_RECTS = {
   'status': [10, 10, 40, 18], 'clock': [10, 10, 26, 20], 'analog-clock': [10, 10, 18, 28],
   'stats': [10, 10, 34, 22], 'meter': [10, 10, 14, 22], 'sparkline': [10, 10, 26, 16],
-  'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'divider': [10, 10, 30, 3],
+  'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'gallery': [10, 10, 28, 34], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
   'hud-clock': [10, 10, 24, 42], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
@@ -87,6 +87,7 @@ function defaultOptions(type, assets) {
     'sparkline': { bind: 'cpu', label: null, grid: true, readout: true },
     'text': { text: 'New text' },
     'image': { src: firstAsset, fit: 'contain' },
+    'gallery': { images: [], interval: 6, fit: 'cover', transition: 'fade', shuffle: false },
     'divider': { orientation: 'h' },
     'calendar': { weekStart: 'mon', showReminders: true },
     'countdown': { target: in30days, label: 'Countdown' },
