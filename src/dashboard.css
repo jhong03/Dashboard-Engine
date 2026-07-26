@@ -286,6 +286,27 @@ body {
 .image-body.fit-contain { object-fit: contain; }
 .image-body.fit-cover { object-fit: cover; }
 
+/* Photo gallery: crossfading stacked slides that fill the component box. */
+.comp-gallery { overflow: hidden; }
+.gallery-slide {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+}
+.comp-gallery.gallery-fade .gallery-slide { transition: opacity 0.9s ease; }
+.gallery-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.72em;
+  color: var(--muted);
+  text-align: center;
+  padding: 1cqw;
+}
+
 /* divider — always chromeless, whatever the style block says */
 .comp-divider {
   padding: 0;

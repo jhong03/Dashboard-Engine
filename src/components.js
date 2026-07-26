@@ -1159,6 +1159,62 @@ function createRenderer(services) {
     el.appendChild(line);
   }
 
+  // Photo gallery: cycle a list of pack images, one at a time, inside the box.
+  // Two stacked layers crossfade between slides. Low-frequency timer (seconds),
+  // so freezing/destroying the renderer stops it cleanly.
+  function buildGallery(component, el, ctx) {
+    const o = component.options;
+    el.classList.add('comp-gallery');
+    const uris = (o.images || []).map((src) => ctx.assets[src]).filter(Boolean);
+    if (uris.length === 0) {
+      const hint = document.createElement('div');
+      hint.className = 'gallery-empty';
+      hint.textContent = 'Add photos in the editor';
+      el.appendChild(hint);
+      return;
+    }
+
+    const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (o.transition === 'fade' && !reduced) el.classList.add('gallery-fade');
+
+    const size = o.fit === 'contain' ? 'contain' : 'cover';
+    const layers = [document.createElement('div'), document.createElement('div')];
+    for (const layer of layers) {
+      layer.className = 'gallery-slide';
+      layer.style.backgroundSize = size;
+      el.appendChild(layer);
+    }
+
+    // A stable per-render order (optionally shuffled). No Math.random at module
+    // scope — vary the seed by first URI length so packs differ but a render is
+    // deterministic.
+    let order = uris.map((_, i) => i);
+    if (o.shuffle && uris.length > 2) {
+      let seed = uris[0].length + uris.length;
+      for (let i = order.length - 1; i > 0; i--) {
+        seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+        const j = seed % (i + 1);
+        [order[i], order[j]] = [order[j], order[i]];
+      }
+    }
+
+    let front = 0;
+    let idx = 0;
+    layers[0].style.backgroundImage = `url(${uris[order[0]]})`;
+    layers[0].style.opacity = '1';
+    if (uris.length === 1) return;
+
+    const advance = () => {
+      idx = (idx + 1) % order.length;
+      const back = 1 - front;
+      layers[back].style.backgroundImage = `url(${uris[order[idx]]})`;
+      layers[back].style.opacity = '1';
+      layers[front].style.opacity = '0';
+      front = back;
+    };
+    live.timers.push(setInterval(advance, Math.max(2, o.interval || 6) * 1000));
+  }
+
   // Local (not UTC) YYYY-MM-DD — reminder dates are the user's wall dates.
   function localIso(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -1760,6 +1816,7 @@ function createRenderer(services) {
     sparkline: buildSparkline,
     text: buildText,
     image: buildImage,
+    gallery: buildGallery,
     divider: buildDivider,
     calendar: buildCalendar,
     countdown: buildCountdown,

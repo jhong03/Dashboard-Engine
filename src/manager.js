@@ -812,6 +812,7 @@ const CREATE_COMPONENTS = [
   ['sparkline', 'A metric’s recent history', 'bind, label, grid, readout'],
   ['text', 'A styled text label', 'text'],
   ['image', 'A pack image asset', 'src (assets/…), fit (contain/cover)'],
+  ['gallery', 'A looping photo slideshow', 'images (assets/…), interval, fit, transition, shuffle'],
   ['divider', 'A hairline rule', 'orientation (h/v)'],
   ['calendar', 'Month calendar with your reminders', 'weekStart (sun/mon), showReminders'],
   ['countdown', 'Counts down to a date', 'target (ISO date), label'],
@@ -979,6 +980,7 @@ const BUILDER_COMPONENTS = [
   ['agenda', 'Agenda', false],
   ['notifications', 'Notifications', false],
   ['launcher', 'App launcher', false],
+  ['gallery', 'Photo gallery', false],
   ['status', 'Status bar', true],
   ['assistant', 'AI assistant', true],
   ['text', 'Text label', false],
@@ -996,14 +998,14 @@ const STARTER_OPTS = {
   weather: { compact: true, place: 'Weather' },
   calendar: {}, agenda: { days: 7, limit: 6 }, notifications: { limit: 5 },
   launcher: { pinned: true, recent: true }, status: {}, assistant: {},
-  text: { text: 'HELLO' },
+  text: { text: 'HELLO' }, gallery: { images: [], interval: 6, fit: 'cover' },
 };
 
 // Category decides which region a component lands in. Bars span full width,
 // heroes are the centrepiece, rails stack in the side columns.
 function componentCategory(type) {
   if (['status', 'assistant', 'text', 'divider'].includes(type)) return 'bar';
-  if (['hud-clock', 'analog-clock', 'clock', 'calendar', 'module', 'image'].includes(type)) return 'hero';
+  if (['hud-clock', 'analog-clock', 'clock', 'calendar', 'module', 'image', 'gallery'].includes(type)) return 'hero';
   return 'rail';
 }
 

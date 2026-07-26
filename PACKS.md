@@ -86,6 +86,7 @@ art behind widgets.
 | `sparkline` | `bind`, `label`, `grid`, `readout` | 3-minute history graph with grid + live value |
 | `text` | `text` (≤200 chars, `\n` allowed) | free text block |
 | `image` | `src` (`assets/…`), `fit` (`contain`/`cover`) | your art, ≤5 MB each |
+| `gallery` | `images` (list of `assets/…`, ≤30), `interval` (2–120 s), `fit`, `transition` (`fade`/`none`), `shuffle` | looping photo slideshow inside the box |
 | `divider` | `orientation` (`h`/`v`) | hairline rule |
 | `calendar` | `weekStart` (`mon`/`sun`), `showReminders` | month grid, today marked, reminder days dotted |
 | `countdown` | `target` (ISO date), `label` | days/hours to a date |

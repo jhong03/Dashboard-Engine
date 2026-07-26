@@ -24,6 +24,7 @@ const PALETTE = [
   { type: 'sparkline', label: 'Sparkline', hint: '3-minute history graph' },
   { type: 'text', label: 'Text', hint: 'free text block' },
   { type: 'image', label: 'Image', hint: 'pack art (assets/)' },
+  { type: 'gallery', label: 'Photo gallery', hint: 'looping photo slideshow' },
   { type: 'divider', label: 'Divider', hint: 'hairline rule' },
   { type: 'calendar', label: 'Calendar', hint: 'month grid, today marked' },
   { type: 'countdown', label: 'Countdown', hint: 'days/hours to a date' },
@@ -597,6 +598,50 @@ function optionFields(component, panel) {
       if (rel) { o.src = rel; renderAll(); }
     });
     panel.append(importBtn);
+  } else if (type === 'gallery') {
+    if (!Array.isArray(o.images)) o.images = [];
+    // Current photos, in order, each removable.
+    const list = document.createElement('div');
+    list.className = 'gallery-editlist';
+    if (o.images.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'hint';
+      empty.textContent = 'No photos yet — add or import below.';
+      list.appendChild(empty);
+    }
+    o.images.forEach((rel, i) => {
+      const row = document.createElement('div');
+      row.className = 'gallery-editrow';
+      const name = document.createElement('span');
+      name.className = 'gallery-editname';
+      name.textContent = `${i + 1}. ${rel.replace('assets/', '')}`;
+      const up = document.createElement('button');
+      up.className = 'btn tiny'; up.textContent = '↑'; up.disabled = i === 0;
+      up.addEventListener('click', () => { [o.images[i - 1], o.images[i]] = [o.images[i], o.images[i - 1]]; renderAll(); });
+      const rm = document.createElement('button');
+      rm.className = 'btn tiny danger'; rm.textContent = 'Remove';
+      rm.addEventListener('click', () => { o.images.splice(i, 1); renderAll(); });
+      row.append(name, up, rm);
+      list.appendChild(row);
+    });
+    panel.append(field('Photos', list));
+
+    const existing = Object.keys(state.assets).filter((r) => !o.images.includes(r));
+    if (existing.length) {
+      panel.append(field('Add existing', selectControl('', [['', 'Choose an image…'], ...existing.map((r) => [r, r.replace('assets/', '')])], (v) => { if (v) { o.images.push(v); renderAll(); } })));
+    }
+    const importBtn = document.createElement('button');
+    importBtn.className = 'btn tiny';
+    importBtn.textContent = 'Import photo…';
+    importBtn.addEventListener('click', async () => { const rel = await importImage(); if (rel) { o.images.push(rel); renderAll(); } });
+    panel.append(importBtn);
+
+    panel.append(
+      field('Seconds per photo', rangeControl(o.interval, 2, 60, 1, set('interval'))),
+      field('Fit', selectControl(o.fit, [['cover', 'Cover'], ['contain', 'Contain']], set('fit'))),
+      field('Transition', selectControl(o.transition, [['fade', 'Crossfade'], ['none', 'None']], set('transition'))),
+      checkControl('Shuffle order', o.shuffle, set('shuffle')),
+    );
   } else if (type === 'divider') {
     panel.append(field('Direction', selectControl(o.orientation, [['h', 'Horizontal'], ['v', 'Vertical']], set('orientation'))));
   } else if (type === 'calendar') {
