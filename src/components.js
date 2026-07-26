@@ -95,7 +95,19 @@ function applySkin(root, pack, assets, opts) {
   root.classList.toggle('uppercase', typography.uppercase);
   root.classList.toggle('notches', shape.cornerNotches);
   s.backgroundColor = palette.void;
-  s.backgroundImage = pack.skin.wallpaper && assets[pack.skin.wallpaper] ? `url(${assets[pack.skin.wallpaper]})` : 'none';
+  if (pack.skin.wallpaper && assets[pack.skin.wallpaper]) {
+    s.backgroundImage = `url(${assets[pack.skin.wallpaper]})`;
+    // Fit + focal point let a creator crop/adjust an imported image. Defaults
+    // (cover, centred) apply to packs authored before these fields existed.
+    const fit = pack.skin.wallpaperFit || 'cover';
+    const px = typeof pack.skin.wallpaperPosX === 'number' ? pack.skin.wallpaperPosX : 50;
+    const py = typeof pack.skin.wallpaperPosY === 'number' ? pack.skin.wallpaperPosY : 50;
+    s.backgroundSize = fit === 'contain' ? 'contain' : fit === 'stretch' ? '100% 100%' : 'cover';
+    s.backgroundPosition = `${px}% ${py}%`;
+    s.backgroundRepeat = 'no-repeat';
+  } else {
+    s.backgroundImage = 'none';
+  }
 
   applyAmbience(root, pack, opts);
 }

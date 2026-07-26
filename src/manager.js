@@ -975,6 +975,7 @@ function starterPack() {
       shape: { cornerNotches: true, borderOpacity: 0.28, panelOpacity: 0.55, radius: 6 },
       ambience: { effect: 'none', density: 0.5 },
       wallpaper: null,
+      wallpaperFit: 'cover', wallpaperPosX: 50, wallpaperPosY: 50,
     },
     canvas: { padding: 2 },
     props: [],
@@ -1156,6 +1157,47 @@ function renderBgStep(el) {
     }, 'danger'));
   }
   el.appendChild(imgRow);
+
+  // Crop / adjust — only relevant once there's an image.
+  if (builder.pack.skin.wallpaper) {
+    const adjLabel = document.createElement('span');
+    adjLabel.className = 'b-sublabel';
+    adjLabel.textContent = 'Fit & crop';
+    el.appendChild(adjLabel);
+
+    const fits = bPresetRow();
+    for (const [val, label] of [['cover', 'Fill (crop)'], ['contain', 'Fit whole'], ['stretch', 'Stretch']]) {
+      fits.appendChild(bPreset(label, (builder.pack.skin.wallpaperFit || 'cover') === val, () => {
+        builder.pack.skin.wallpaperFit = val;
+        renderBgStep(el); schedulePreview();
+      }));
+    }
+    el.appendChild(fits);
+
+    // Focal point matters when the image is cropped (Fill) — pick what shows.
+    if ((builder.pack.skin.wallpaperFit || 'cover') !== 'stretch') {
+      const posNote = document.createElement('p');
+      posNote.className = 'hint';
+      posNote.textContent = 'Position — drag to choose which part of the image is shown.';
+      el.appendChild(posNote);
+      const mkPos = (axis, label) => {
+        const f = bField(label);
+        const r = document.createElement('input');
+        r.type = 'range'; r.min = '0'; r.max = '100'; r.step = '1';
+        r.value = String(builder.pack.skin[axis]);
+        r.addEventListener('input', () => { builder.pack.skin[axis] = Number(r.value); schedulePreview(); });
+        f.appendChild(r);
+        el.appendChild(f);
+      };
+      mkPos('wallpaperPosX', 'Horizontal');
+      mkPos('wallpaperPosY', 'Vertical');
+      el.appendChild(libButton('Center', () => {
+        builder.pack.skin.wallpaperPosX = 50;
+        builder.pack.skin.wallpaperPosY = 50;
+        renderBgStep(el); schedulePreview();
+      }, 'tiny'));
+    }
+  }
 }
 
 function renderColoursStep(el) {
