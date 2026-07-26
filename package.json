@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Dashboard Engine — designers publish live desktop dashboard packs; users subscribe. Profiles and packs are parameters, never audio or code.",
   "main": "main.js",
+  "author": "jhong03",
   "private": true,
   "scripts": {
     "start": "electron .",
@@ -12,12 +13,53 @@
     "audition": "node scripts/audition.js",
     "selftest": "node scripts/selftest.js",
     "packs": "node scripts/packs.js",
-    "panel": "electron . --panel"
+    "panel": "electron . --panel",
+    "icon": "node build/gen-icon.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win"
   },
   "devDependencies": {
-    "electron": "^33.0.0"
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8"
   },
   "optionalDependencies": {
     "steamworks.js": "^0.4.0"
+  },
+  "build": {
+    "appId": "com.dashboardengine.app",
+    "productName": "Dashboard Engine",
+    "copyright": "Copyright © 2026 jhong03",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "asar": false,
+    "files": [
+      "**/*",
+      "!**/{out,dist,bin,profiles}/**",
+      "!voices/**",
+      "voices/voices.json",
+      "!steam_appid.txt",
+      "!CLAUDE.md",
+      "!build/gen-icon.js",
+      "!scripts/{smoke,voices,calibrate,audition,selftest,packs}.js",
+      "!package-lock.json",
+      "!**/.git/**"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Dashboard Engine"
+    }
   }
 }
