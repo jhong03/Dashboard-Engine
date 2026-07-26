@@ -158,6 +158,15 @@
             <span class="hint cfg-hint">Any pack whose weather has no location of its own uses this. <span id="set-weather-current"></span></span>
           </label>
 
+          <h3 class="cfg-group-title">Background music</h3>
+          <p class="hint">Play your own music on the desktop. Files stay on your PC and are never saved into a pack or shared — the wallpaper just plays them, looping through the list.</p>
+          <label class="cfg-check"><input id="set-music-on" type="checkbox"><span>Play background music</span></label>
+          <label class="cfg-field"><span>Volume</span>
+            <input id="set-music-vol" type="range" min="0" max="1" step="0.01">
+          </label>
+          <div class="set-music-tracks" id="set-music-tracks"></div>
+          <button class="btn" id="set-music-add" type="button">Add music files…</button>
+
           <h3 class="cfg-group-title">Help</h3>
           <div class="set-help-row">
             <button class="btn" id="set-welcome" type="button">Show the welcome guide</button>

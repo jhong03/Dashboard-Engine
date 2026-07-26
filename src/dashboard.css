@@ -651,6 +651,7 @@ body {
 .ac-btn:hover { background: var(--glow-wash); color: var(--accent-bright); }
 .ac-btn:disabled { opacity: 0.5; cursor: default; }
 
+
 /* The console line is a trigger — clicking it opens the chat panel. */
 .assistant-console.ac-trigger { cursor: pointer; }
 .assistant-console.ac-trigger:hover .ac-prompt { color: var(--accent-bright); }

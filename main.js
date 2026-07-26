@@ -8,12 +8,14 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net } = require('electron');
 const path = require('path');
+const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
 const { createPresenceMonitor } = require('./lib/presence');
 const voicebank = require('./lib/voicebank');
 const packs = require('./lib/packs');
+const music = require('./lib/music');
 const settings = require('./lib/settings');
 const logger = require('./lib/logger');
 const { registerIpcHandlers } = require('./lib/ipc');
@@ -60,10 +62,21 @@ const MODULE_DOC_CSP = [
   "base-uri 'none'",
   "form-action 'none'",
 ].join('; ');
-protocol.registerSchemesAsPrivileged([{
-  scheme: MODULE_SCHEME,
-  privileges: { standard: true, secure: true, supportFetchAPI: false, corsEnabled: false, stream: false },
-}]);
+// Background music streams the user's own local audio files to the wallpaper
+// over demusic://<opaque-id>. A custom streaming scheme (not file://, which the
+// page CSP forbids) lets main gate every request through the music library —
+// only ids the user actually added resolve to a real path.
+const MUSIC_SCHEME = 'demusic';
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: MODULE_SCHEME,
+    privileges: { standard: true, secure: true, supportFetchAPI: false, corsEnabled: false, stream: false },
+  },
+  {
+    scheme: MUSIC_SCHEME,
+    privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true },
+  },
+]);
 
 // `npm run panel` / the selftest open only the tuning panel.
 // DE_* env vars are canonical since the rebrand; legacy AEGIS_* still work.
@@ -253,6 +266,10 @@ async function createDashboardWindow() {
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
       preload: path.join(__dirname, 'preload-dashboard.js'),
+      // Background music is enabled by the user in Settings, not on this window,
+      // so its gesture doesn't count here — let the desktop start audio on its
+      // own. (The assistant's Web-Audio playback benefits too.)
+      autoplayPolicy: 'no-user-gesture-required',
     },
   });
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
@@ -686,6 +703,20 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         return new Response('', { status: 400 });
       }
     });
+
+    // Stream a background-music track. The URL host is the OPAQUE track id;
+    // main resolves it to a real path ONLY if the user added that track, then
+    // streams the file (forwarding Range so the audio element can seek).
+    protocol.handle(MUSIC_SCHEME, (request) => {
+      try {
+        const id = new URL(request.url).hostname;
+        const file = music.pathForId(USER_DIR, id);
+        if (!file) return new Response('', { status: 404 });
+        return net.fetch(pathToFileURL(file).toString(), { headers: request.headers });
+      } catch (err) {
+        return new Response('', { status: 400 });
+      }
+    });
     if (!WANT_PANEL) {
       alertScheduler = createAlertScheduler({ userDir: USER_DIR, notify: notifyReminder });
       alertScheduler.rearm();
@@ -741,6 +772,13 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         const activeId = settings.getActivePack(USER_DIR) || 'jarvis';
         for (const win of [dashboardWindow, managerWindow]) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:packs:changed', { id: activeId });
+        }
+      },
+      // Background music changed in Settings — the desktop updates playback, and
+      // the manager's Settings list stays in sync if it's open elsewhere.
+      onMusicChanged: () => {
+        for (const win of [dashboardWindow, managerWindow]) {
+          if (win && !win.isDestroyed()) win.webContents.send('aegis:music:changed');
         }
       },
     });

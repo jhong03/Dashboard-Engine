@@ -61,6 +61,11 @@ const bridge = {
   assistantConfig: () => ipcRenderer.invoke('aegis:assistant:config:get'),
   assistantHistory: () => ipcRenderer.invoke('aegis:assistant:history'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
+  // Background music (configured in Manager → Settings; played here). The
+  // desktop only READS the library and hears about changes — it works in opaque
+  // track ids, streamed by main over demusic://. Main holds the real paths.
+  musicList: () => ipcRenderer.invoke('aegis:music:list'),
+  onMusicChanged: subscription('aegis:music:changed'),
 };
 
 if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

@@ -5,9 +5,11 @@
   <!-- Strict CSP; data: images are pack wallpapers/assets delivered as
        sanitized data URIs by the main process, never raw paths. `frame-src
        demodule:` lets sandboxed `module` components load (they serve their own
-       network-less policy); the page's own script-src stays locked to 'self'. -->
+       network-less policy); `media-src demusic:` lets the background-music
+       player stream the user's own local files (gated by main, by opaque id);
+       the page's own script-src stays locked to 'self'. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; frame-src demodule:">
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; media-src demusic:; frame-src demodule:">
   <title>Dashboard Engine</title>
   <link rel="stylesheet" href="dashboard.css">
 </head>

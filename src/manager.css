@@ -400,6 +400,26 @@ body {
 .set-weather-row input { flex: 1; min-width: 0; }
 .set-weather-row .btn { width: auto; flex: 0 0 auto; }
 
+/* Background-music track list (Settings). */
+.set-music-tracks { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.music-track-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-input);
+}
+.music-track-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
 /* ── From-scratch pack builder (full-screen overlay) ─────────────────────── */
 
 .builder-overlay {

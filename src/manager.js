@@ -1859,6 +1859,39 @@ async function renderSettingsCfg() {
     }
     fps.value = String(perf.performance.maxFps);
   }
+
+  renderMusicSettings();
+}
+
+// Background music: the user's own files, played on the desktop. Managed here
+// (not on the wallpaper). Paths never leave main — we deal in ids + names.
+async function renderMusicSettings() {
+  const res = await aegis.musicList();
+  if (!res || !res.ok) return;
+  $('set-music-on').checked = res.enabled;
+  $('set-music-vol').value = String(res.volume);
+  const list = $('set-music-tracks');
+  list.textContent = '';
+  if (res.tracks.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'hint cfg-hint';
+    empty.textContent = 'No music added yet — add some audio files below.';
+    list.appendChild(empty);
+    return;
+  }
+  for (const track of res.tracks) {
+    const row = document.createElement('div');
+    row.className = 'music-track-row';
+    const name = document.createElement('span');
+    name.className = 'music-track-name';
+    name.textContent = track.name;
+    const rm = document.createElement('button');
+    rm.className = 'btn tiny danger';
+    rm.textContent = 'Remove';
+    rm.addEventListener('click', async () => { await aegis.musicRemove(track.id); renderMusicSettings(); });
+    row.append(name, rm);
+    list.appendChild(row);
+  }
 }
 
 function settingsSaved() {
@@ -1916,6 +1949,25 @@ function wireSettingsCfg() {
   };
   $('set-weather-go').addEventListener('click', setWeather);
   $('set-weather').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); setWeather(); } });
+
+  // Background music.
+  $('set-music-on').addEventListener('change', async (e) => {
+    await aegis.musicEnabled(e.target.checked);
+    settingsSaved();
+  });
+  // `change` (on release), not `input`, so a drag doesn't thrash the file /
+  // broadcast on every pixel; the level then applies to the live desktop.
+  $('set-music-vol').addEventListener('change', (e) => { aegis.musicVolume(Number(e.target.value)); });
+  $('set-music-add').addEventListener('click', async () => {
+    const res = await aegis.musicAdd();
+    if (res && res.ok) {
+      renderMusicSettings();
+      if (res.added > 0) { $('set-status').textContent = `Added ${res.added} track${res.added === 1 ? '' : 's'}.`; settingsSaved(); }
+    }
+  });
+  if (aegis.onMusicChanged) {
+    aegis.onMusicChanged(() => { if (library.tab === 'settings') renderMusicSettings(); });
+  }
 }
 
 // ── First-run welcome ────────────────────────────────────────────────────────

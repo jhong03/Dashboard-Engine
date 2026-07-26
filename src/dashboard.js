@@ -42,6 +42,87 @@ const renderer = AegisComponents.createRenderer({
   },
 });
 
+// ── Background music ─────────────────────────────────────────────────────────
+// A global setting, not a component: the user configures it in Manager →
+// Settings; the desktop just plays it. One <audio> element streams the user's
+// own tracks over demusic://<id> (main gates every id → real path; nothing ever
+// enters a pack). Enabled/volume/tracks live in user data; we mirror changes
+// via aegis:music:changed. Freezes with the wallpaper for performance.
+const music = { audio: null, tracks: [], index: 0, enabled: false, volume: 0.5, armed: false };
+
+function musicEnsure() {
+  if (music.audio) return;
+  const audio = new Audio();
+  audio.preload = 'none';
+  audio.addEventListener('ended', musicNext);
+  audio.addEventListener('error', () => { if (musicShouldPlay() && music.tracks.length > 1) musicNext(); });
+  music.audio = audio;
+}
+
+function musicLoad(index) {
+  if (!music.tracks.length) return;
+  const n = music.tracks.length;
+  music.index = ((index % n) + n) % n;
+  music.audio.src = `demusic://${music.tracks[music.index].id}`;
+}
+
+function musicNext() {
+  if (!music.tracks.length) return;
+  musicLoad(music.index + 1);
+  if (musicShouldPlay()) { music.audio.volume = music.volume; music.audio.play().catch(() => {}); }
+}
+
+// Music plays only when it's enabled AND the desktop isn't power-frozen (a
+// full-screen app / battery). This single predicate is the source of truth —
+// so a freeze always silences it, whatever order events arrive in.
+function musicShouldPlay() {
+  return music.enabled && power.active && music.tracks.length > 0;
+}
+
+// Reconcile actual playback with musicShouldPlay(). Called on every input that
+// can change it: saved-state sync, and every power signal.
+function musicReconcile() {
+  if (musicShouldPlay()) {
+    musicEnsure();
+    if (!music.audio.src) musicLoad(music.index);
+    music.audio.volume = music.volume;
+    if (music.audio.paused) musicStart();
+  } else if (music.audio && !music.audio.paused) {
+    music.audio.pause();
+  }
+}
+
+// Start playback; autoplay may need a gesture, so fall back to the first
+// click/keypress, then reconcile again (it may have been frozen since).
+function musicStart() {
+  const p = music.audio.play();
+  if (p && p.catch) {
+    p.catch(() => {
+      if (music.armed) return;
+      music.armed = true;
+      const start = () => {
+        document.removeEventListener('pointerdown', start);
+        document.removeEventListener('keydown', start);
+        musicReconcile();
+      };
+      document.addEventListener('pointerdown', start);
+      document.addEventListener('keydown', start);
+    });
+  }
+}
+
+// Reflect saved state (Settings changes / initial load), then reconcile.
+async function musicSync() {
+  const state = await aegis.musicList();
+  if (!state || !state.ok) return;
+  music.enabled = state.enabled === true;
+  music.volume = Number(state.volume) || 0.5;
+  music.tracks = Array.isArray(state.tracks) ? state.tracks : [];
+  if (music.index >= music.tracks.length) music.index = 0;
+  if (music.audio) music.audio.volume = music.volume;
+  musicReconcile();
+}
+
 const state = { packId: null };
 
 // Performance citizenship: main drives this over aegis:desktop:power. `active`
@@ -114,6 +195,10 @@ async function init() {
   });
   // Pins/recents changed — launcher tiles repaint.
   aegis.onLauncherChanged(() => loadPack(state.packId));
+
+  // Background music: start from saved state, and follow Settings changes.
+  musicSync();
+  aegis.onMusicChanged(() => musicSync());
 }
 
 // Power signals stream from main. Register synchronously (before init()'s first
@@ -123,6 +208,10 @@ aegis.onPower((p) => {
   power.active = p.active !== false;
   power.maxFps = Number(p.maxFps) > 0 ? Number(p.maxFps) : 30;
   applyPower();
+  // Music follows the same power state as the visuals — driven straight off the
+  // signal (not the render state machine, which no-ops before a pack loads), so
+  // a full-screen app always silences it and leaving it resumes.
+  musicReconcile();
 });
 
 init().catch((err) => console.error(`[dashboard] failed to initialise: ${err.message}`));

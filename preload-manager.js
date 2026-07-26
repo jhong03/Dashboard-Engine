@@ -78,6 +78,14 @@ const bridge = {
   openLogs: () => ipcRenderer.invoke('aegis:logs:open'),
   openGuide: () => ipcRenderer.invoke('aegis:guide:open'),
 
+  // Background music — the user's own local files, played on the desktop. Main
+  // holds the real paths; here we only ever pass opaque track ids.
+  musicList: () => ipcRenderer.invoke('aegis:music:list'),
+  musicAdd: () => ipcRenderer.invoke('aegis:music:add'),
+  musicRemove: (id) => ipcRenderer.invoke('aegis:music:remove', String(id)),
+  musicEnabled: (on) => ipcRenderer.invoke('aegis:music:enabled', Boolean(on)),
+  musicVolume: (v) => ipcRenderer.invoke('aegis:music:volume', Number(v)),
+
   // From-scratch pack builder: import a wallpaper (staged in main, returns a
   // preview data URI + rel), then create the assembled pack and open it.
   builderImportImage: (existingNames) => ipcRenderer.invoke('aegis:editor:importImage', existingNames || []),
@@ -91,6 +99,11 @@ const bridge = {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('aegis:active:changed', handler);
     return () => ipcRenderer.removeListener('aegis:active:changed', handler);
+  },
+  onMusicChanged: (callback) => {
+    const handler = () => callback();
+    ipcRenderer.on('aegis:music:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:music:changed', handler);
   },
 
   openPanel: () => ipcRenderer.invoke('aegis:open-panel'),
