@@ -16,7 +16,8 @@ const PALETTE = [
   { type: 'status', label: 'Persona status', hint: 'name · tagline · ticker' },
   { type: 'clock', label: 'Clock', hint: 'digital time + date' },
   { type: 'analog-clock', label: 'Analog clock', hint: 'drawn clock face' },
-  { type: 'hud-clock', label: 'HUD clock', hint: 'rotating reactor rings' },
+  { type: 'hud-clock', label: 'HUD clock', hint: 'rotating reactor rings (sci-fi)' },
+  { type: 'ring-clock', label: 'Ring clock', hint: 'minimal or soft-halo centrepiece' },
   { type: 'stats', label: 'Stats', hint: 'labelled telemetry bars' },
   { type: 'cores', label: 'Core load', hint: 'per-core CPU bars' },
   { type: 'sysinfo', label: 'System info', hint: 'memory / disk / uptime rows' },
@@ -72,7 +73,7 @@ const DEFAULT_RECTS = {
   'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'gallery': [10, 10, 28, 34], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
-  'hud-clock': [10, 10, 24, 42], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
+  'hud-clock': [10, 10, 24, 42], 'ring-clock': [10, 10, 22, 38], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
   'assistant': [10, 10, 60, 6], 'module': [10, 10, 26, 26],
 };
 
@@ -96,6 +97,7 @@ function defaultOptions(type, assets) {
     'notifications': { limit: 6, label: null, showApp: true },
     'launcher': { pinned: true, recent: true, running: false, labels: true, iconSize: 'm', label: null },
     'hud-clock': { format: '24h', seconds: true, showDate: true },
+    'ring-clock': { style: 'minimal', format: '24h', seconds: true, showDate: true },
     'cores': { label: null },
     'sysinfo': { memory: true, disk: true, uptime: true, host: false, statusText: null },
     'assistant': { label: null, button: null },
@@ -536,7 +538,10 @@ function optionFields(component, panel) {
   const set = (key) => (v) => { o[key] = v; renderAll(); };
   const type = component.type;
 
-  if (type === 'clock' || type === 'hud-clock') {
+  if (type === 'clock' || type === 'hud-clock' || type === 'ring-clock') {
+    if (type === 'ring-clock') {
+      panel.append(field('Style', selectControl(o.style, [['minimal', 'Minimal (thin ring)'], ['halo', 'Halo (soft fill)']], set('style'))));
+    }
     panel.append(
       field('Format', selectControl(o.format, [['24h', '24-hour'], ['12h', '12-hour']], set('format'))),
       checkControl('Show seconds', o.seconds, set('seconds')),

@@ -1110,6 +1110,7 @@ const BUILDER_FONTS = [['rajdhani', 'Rajdhani (HUD)'], ['system-sans', 'System s
 // The component menu (a curated subset of the 20 types), with defaults ticked.
 const BUILDER_COMPONENTS = [
   ['hud-clock', 'Reactor clock', true],
+  ['ring-clock', 'Ring clock', false],
   ['clock', 'Digital clock', false],
   ['analog-clock', 'Analog clock', false],
   ['stats', 'System stats', true],
@@ -1133,6 +1134,7 @@ const DEFAULT_SELECTED = BUILDER_COMPONENTS.filter(([, , on]) => on).map(([t]) =
 const STARTER_OPTS = {
   clock: { format: '24h', seconds: true, showDate: true },
   'hud-clock': { format: '24h', seconds: true, showDate: true },
+  'ring-clock': { style: 'minimal', format: '24h', seconds: true, showDate: true },
   'analog-clock': { seconds: true, numerals: 'quarters', minuteTicks: true },
   stats: { cpu: true, mem: true, disk: true },
   cores: {}, sysinfo: { memory: true, disk: true, uptime: true },
@@ -1147,7 +1149,7 @@ const STARTER_OPTS = {
 // heroes are the centrepiece, rails stack in the side columns.
 function componentCategory(type) {
   if (['status', 'assistant', 'text', 'divider'].includes(type)) return 'bar';
-  if (['hud-clock', 'analog-clock', 'clock', 'calendar', 'module', 'image', 'gallery'].includes(type)) return 'hero';
+  if (['hud-clock', 'ring-clock', 'analog-clock', 'clock', 'calendar', 'module', 'image', 'gallery'].includes(type)) return 'hero';
   return 'rail';
 }
 

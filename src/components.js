@@ -892,6 +892,124 @@ function createRenderer(services) {
     if (!reduced) live.timers.push(setInterval(draw, 50)); // 20 fps ring drift
   }
 
+  // A themeable centerpiece clock — the non-sci-fi counterpart to hud-clock.
+  // Same palette-driven colour, but the drawn form is quiet and adapts to any
+  // pack: `minimal` (a clean thin ring + tick marks) or `halo` (a soft thick
+  // ring that fills with the passing seconds). No reactor motif, no constant
+  // rotation. The time uses the pack's display font so it reads warm/serif/
+  // minimal as the pack intends, not techy-mono.
+  function buildRingClock(component, el) {
+    const style = component.options.style === 'halo' ? 'halo' : 'minimal';
+    el.classList.add('ring-clock', `ring-${style}`);
+    const wrap = document.createElement('div');
+    wrap.className = 'rc-wrap';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'fill-canvas';
+    const face = document.createElement('div');
+    face.className = 'rc-face';
+    const time = document.createElement('div');
+    time.className = 'rc-time';
+    const date = document.createElement('div');
+    date.className = 'rc-date display-case';
+    face.append(time);
+    if (component.options.showDate) face.append(date);
+    wrap.append(canvas, face);
+    el.appendChild(wrap);
+
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const draw = () => {
+      const ctx2 = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      ctx2.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+      const R = Math.min(w, h) / 2 - 3 * devicePixelRatio;
+      if (R <= 0) return;
+      const accent = cssVar(el, '--accent');
+      const bright = cssVar(el, '--accent-bright');
+      const glow = cssVar(el, '--glow');
+      const now = new Date();
+      // The seconds fraction drives a gentle sweep. Under reduced motion it
+      // still reflects the current time, just stepped once per second.
+      const secFrac = (now.getSeconds() + (reduced ? 0 : now.getMilliseconds() / 1000)) / 60;
+      const top = -Math.PI / 2; // 12 o'clock
+
+      if (style === 'halo') {
+        const lw = Math.max(2 * devicePixelRatio, R * 0.09);
+        ctx2.lineCap = 'round';
+        // Soft track ring.
+        ctx2.beginPath();
+        ctx2.globalAlpha = 0.16;
+        ctx2.lineWidth = lw;
+        ctx2.strokeStyle = accent;
+        ctx2.arc(cx, cy, R * 0.82, 0, Math.PI * 2);
+        ctx2.stroke();
+        // Progress arc fills clockwise with the passing seconds, with a soft glow.
+        ctx2.beginPath();
+        ctx2.globalAlpha = 1;
+        ctx2.lineWidth = lw;
+        ctx2.strokeStyle = bright;
+        ctx2.shadowColor = glow;
+        ctx2.shadowBlur = 8 * devicePixelRatio;
+        ctx2.arc(cx, cy, R * 0.82, top, top + secFrac * Math.PI * 2);
+        ctx2.stroke();
+        ctx2.shadowBlur = 0;
+        ctx2.globalAlpha = 1;
+        ctx2.lineCap = 'butt';
+      } else {
+        // minimal: a hairline ring, 12 ticks (12/3/6/9 longer), a bright dot at
+        // the current second.
+        ctx2.beginPath();
+        ctx2.globalAlpha = 0.4;
+        ctx2.lineWidth = 1.5 * devicePixelRatio;
+        ctx2.strokeStyle = accent;
+        ctx2.arc(cx, cy, R * 0.9, 0, Math.PI * 2);
+        ctx2.stroke();
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          const major = i % 3 === 0;
+          const r1 = R * 0.9, r2 = R * (major ? 0.81 : 0.86);
+          ctx2.beginPath();
+          ctx2.globalAlpha = major ? 0.7 : 0.4;
+          ctx2.lineWidth = (major ? 1.5 : 1) * devicePixelRatio;
+          ctx2.strokeStyle = accent;
+          ctx2.moveTo(cx + Math.cos(a) * r1, cy + Math.sin(a) * r1);
+          ctx2.lineTo(cx + Math.cos(a) * r2, cy + Math.sin(a) * r2);
+          ctx2.stroke();
+        }
+        const sa = top + secFrac * Math.PI * 2;
+        ctx2.beginPath();
+        ctx2.globalAlpha = 1;
+        ctx2.fillStyle = bright;
+        ctx2.arc(cx + Math.cos(sa) * R * 0.9, cy + Math.sin(sa) * R * 0.9, 2.6 * devicePixelRatio, 0, Math.PI * 2);
+        ctx2.fill();
+        ctx2.globalAlpha = 1;
+      }
+    };
+
+    const tick = () => {
+      const now = new Date();
+      let hours = now.getHours();
+      let suffix = '';
+      if (component.options.format === '12h') {
+        suffix = hours >= 12 ? ' PM' : ' AM';
+        hours = hours % 12 || 12;
+      }
+      const parts = [String(hours).padStart(2, '0'), String(now.getMinutes()).padStart(2, '0')];
+      if (component.options.seconds) parts.push(String(now.getSeconds()).padStart(2, '0'));
+      time.textContent = parts.join(':') + suffix;
+      if (component.options.showDate) {
+        date.textContent = now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+      }
+      draw();
+    };
+
+    observeCanvas(canvas, draw);
+    tick();
+    // A soft ~4 fps sweep normally; once per second under reduced motion.
+    live.timers.push(setInterval(tick, reduced ? 1000 : 250));
+  }
+
   // Per-core CPU load bars (the JARVIS "core load" strip).
   function buildCores(component, el) {
     const label = document.createElement('span');
@@ -2149,6 +2267,7 @@ function createRenderer(services) {
     clock: buildClock,
     'analog-clock': buildAnalogClock,
     'hud-clock': buildHudClock,
+    'ring-clock': buildRingClock,
     cores: buildCores,
     sysinfo: buildSysinfo,
     stats: buildStats,
