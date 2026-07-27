@@ -745,6 +745,13 @@ body {
 .np-btn:hover:not(:disabled) { color: var(--accent-bright); }
 .np-btn:disabled { opacity: 0.3; cursor: default; }
 
+/* Audio visualizer: a full-bleed canvas driven by the shared loopback analyser.
+   Place a Bloom one full-screen (panel/border off) behind other components for
+   a reactive ambience. */
+.comp-visualizer { padding: 0; overflow: hidden; }
+.visualizer { position: relative; width: 100%; height: 100%; }
+.visualizer .fill-canvas { position: absolute; inset: 0; height: 100%; }
+
 /* Chat panel — a persistent, scrollable overlay floated on <body>. Desktop
    chrome, so it sizes in px/rem for readability at any component scale; it
    inherits the active pack's palette vars (cascaded from <body>) so it still

@@ -693,11 +693,38 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
 
     // SECURITY: Electron GRANTS permission requests by default when no handler
     // is set — which would let an untrusted pack `module` frame ask for camera,
-    // microphone, geolocation, etc. The engine needs none of these (planner
-    // alerts + notification reads happen in MAIN, replies play via Web Audio
-    // which needs no permission), so deny them all, everywhere.
-    session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
-    session.defaultSession.setPermissionCheckHandler(() => false);
+    // microphone, geolocation, etc. The engine needs none of these EXCEPT one:
+    // the audio visualizer captures system-audio loopback via getDisplayMedia,
+    // which needs 'display-capture'. Grant that ONLY to the trusted desktop
+    // window's TOP frame (never a module iframe, never another window); deny
+    // everything else, everywhere.
+    const isDesktopTopFrame = (wc, details) => {
+      try {
+        return dashboardWindow && !dashboardWindow.isDestroyed()
+          && wc === dashboardWindow.webContents
+          && !!details && details.isMainFrame === true;
+      } catch { return false; }
+    };
+    session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) => {
+      callback(permission === 'display-capture' && isDesktopTopFrame(wc, details));
+    });
+    session.defaultSession.setPermissionCheckHandler((wc, permission, _origin, details) => {
+      return permission === 'display-capture' && isDesktopTopFrame(wc, details);
+    });
+    // getDisplayMedia for the visualizer: grant system-audio loopback (no video)
+    // ONLY to the desktop's top frame; deny any other frame/window. A pack
+    // `module` runs in an iframe (frame.top !== frame) so it can never reach this.
+    session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      try {
+        const frame = request.frame;
+        const url = frame ? String(frame.url || '') : '';
+        if (frame && frame.top === frame && url.includes('/dashboard.html')) {
+          callback({ audio: 'loopback' }); // system audio only, never video
+          return;
+        }
+      } catch (err) { /* fall through to deny */ }
+      callback({}); // deny — no streams
+    }, { useSystemPicker: false });
 
     // Serve sandboxed module documents. The renderer (components.js
     // buildModule) base64url-encodes the whole wrapped HTML into the request

@@ -2103,6 +2103,187 @@ function createRenderer(services) {
     live.timers.push(setInterval(tickProgress, 500));
   }
 
+  // ── Audio visualizer (system-audio loopback) ───────────────────────────────
+  // One shared capture → AnalyserNode drives every `visualizer` component. The
+  // stream comes from getDisplayMedia({audio:'loopback'}) — main grants system
+  // audio ONLY to this desktop top-frame (never a module). Fail-soft: if capture
+  // is unavailable/denied, the component shows a quiet idle pattern, never an
+  // error. Renderer-scoped singleton so multiple visualizers share one stream.
+  const viz = {
+    ctx: null, analyser: null, stream: null, freq: null, time: null,
+    requested: false, ready: false, armed: false, raf: 0, drawers: new Set(),
+  };
+
+  async function vizGetLoopbackStream() {
+    try {
+      return await navigator.mediaDevices.getDisplayMedia({ audio: true, video: false });
+    } catch (e) {
+      // Some builds reject audio-only getDisplayMedia; request video too, then
+      // drop it below (main grants audio-loopback only, no video, regardless).
+      return navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+    }
+  }
+
+  async function vizAcquire() {
+    if (viz.ready) return true;
+    if (viz.requested) return false;
+    viz.requested = true;
+    try {
+      const stream = await vizGetLoopbackStream();
+      stream.getVideoTracks().forEach((t) => t.stop()); // never keep a video track
+      if (stream.getAudioTracks().length === 0) throw new Error('no audio track granted');
+      const ctx = new AudioContext();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.82;
+      source.connect(analyser);
+      viz.ctx = ctx;
+      viz.analyser = analyser;
+      viz.stream = stream;
+      viz.freq = new Uint8Array(analyser.frequencyBinCount);
+      viz.time = new Uint8Array(analyser.fftSize);
+      viz.ready = true;
+      return true;
+    } catch (err) {
+      viz.requested = false; // allow a gesture-triggered retry
+      console.warn(`[visualizer] system audio capture unavailable: ${err.message}`);
+      return false;
+    }
+  }
+
+  function vizStartLoop() {
+    if (viz.raf) return;
+    const loop = () => {
+      viz.raf = requestAnimationFrame(loop);
+      if (!viz.ready || viz.drawers.size === 0) return;
+      viz.analyser.getByteFrequencyData(viz.freq);
+      viz.analyser.getByteTimeDomainData(viz.time);
+      for (const d of viz.drawers) { try { d(viz.freq, viz.time); } catch (e) { /* one bad drawer won't stop the rest */ } }
+    };
+    viz.raf = requestAnimationFrame(loop);
+  }
+  function vizStopLoop() { if (viz.raf) { cancelAnimationFrame(viz.raf); viz.raf = 0; } }
+
+  function vizEnsureRunning() {
+    vizAcquire().then((ok) => {
+      if (ok) {
+        if (viz.ctx.state === 'suspended') viz.ctx.resume().catch(() => {});
+        vizStartLoop();
+        return;
+      }
+      // getDisplayMedia often needs a user gesture — retry on first interaction.
+      if (viz.armed) return;
+      viz.armed = true;
+      const start = () => {
+        document.removeEventListener('pointerdown', start);
+        document.removeEventListener('keydown', start);
+        vizEnsureRunning();
+      };
+      document.addEventListener('pointerdown', start);
+      document.addEventListener('keydown', start);
+    });
+  }
+
+  // Register a per-frame drawer; returns an unregister fn. When the last drawer
+  // leaves (freeze / re-render), the loop stops and capture is suspended.
+  function vizAddDrawer(fn) {
+    viz.drawers.add(fn);
+    vizEnsureRunning();
+    return () => {
+      viz.drawers.delete(fn);
+      if (viz.drawers.size === 0) { vizStopLoop(); if (viz.ctx) { try { viz.ctx.suspend(); } catch (e) { /* ignore */ } } }
+    };
+  }
+
+  const VIZ_IDLE_FREQ = new Uint8Array(256).fill(5);
+  const VIZ_IDLE_TIME = new Uint8Array(512).fill(128);
+
+  function buildVisualizer(component, el) {
+    const style = ['bars', 'waveform', 'radial', 'bloom'].includes(component.options.style)
+      ? component.options.style : 'bars';
+    el.classList.add('visualizer', `viz-${style}`);
+    const canvas = document.createElement('canvas');
+    canvas.className = 'fill-canvas';
+    el.appendChild(canvas);
+
+    const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const desktop = !!services.media; // live capture only on the desktop surface
+
+    const draw = (freq, time) => {
+      const ctx2 = canvas.getContext('2d');
+      const W = canvas.width, H = canvas.height;
+      if (W <= 0 || H <= 0) return;
+      ctx2.clearRect(0, 0, W, H);
+      const accent = cssVar(el, '--accent');
+      const bright = cssVar(el, '--accent-bright');
+      const dpr = devicePixelRatio;
+
+      if (style === 'waveform') {
+        ctx2.beginPath();
+        ctx2.lineWidth = Math.max(1, 1.6 * dpr);
+        ctx2.strokeStyle = bright;
+        for (let i = 0; i < time.length; i++) {
+          const x = (i / (time.length - 1)) * W;
+          const y = (time[i] / 255) * H;
+          if (i === 0) ctx2.moveTo(x, y); else ctx2.lineTo(x, y);
+        }
+        ctx2.stroke();
+      } else if (style === 'radial') {
+        const cx = W / 2, cy = H / 2, R = Math.min(W, H) / 2 * 0.5;
+        const n = 64, step = Math.floor(freq.length / n) || 1;
+        ctx2.strokeStyle = accent;
+        ctx2.lineWidth = Math.max(1, 2 * dpr);
+        for (let i = 0; i < n; i++) {
+          const len = ((freq[i * step] || 0) / 255) * R * 0.95;
+          const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+          ctx2.globalAlpha = 0.85;
+          ctx2.beginPath();
+          ctx2.moveTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+          ctx2.lineTo(cx + Math.cos(a) * (R + len), cy + Math.sin(a) * (R + len));
+          ctx2.stroke();
+        }
+        ctx2.globalAlpha = 1;
+      } else if (style === 'bloom') {
+        // Overall energy → a soft radial glow that pulses. Reads well full-bleed
+        // behind other components as a reactive "ambience".
+        let sum = 0;
+        for (let i = 0; i < freq.length; i++) sum += freq[i];
+        const energy = sum / (freq.length * 255);
+        const cx = W / 2, cy = H / 2;
+        const g = ctx2.createRadialGradient(cx, cy, 0, cx, cy, Math.min(W, H) * (0.2 + energy * 0.55));
+        g.addColorStop(0, bright);
+        g.addColorStop(0.55, accent);
+        g.addColorStop(1, 'transparent');
+        ctx2.globalAlpha = 0.2 + energy * 0.55;
+        ctx2.fillStyle = g;
+        ctx2.fillRect(0, 0, W, H);
+        ctx2.globalAlpha = 1;
+      } else { // bars
+        const n = 48, step = Math.floor(freq.length / n) || 1, bw = W / n;
+        ctx2.fillStyle = accent;
+        for (let i = 0; i < n; i++) {
+          let v = 0;
+          for (let j = 0; j < step; j++) v += freq[i * step + j] || 0;
+          v /= step;
+          const bh = (v / 255) * H * 0.94;
+          ctx2.globalAlpha = 0.85;
+          ctx2.fillRect(i * bw + bw * 0.15, H - bh, bw * 0.7, Math.max(bh, dpr));
+        }
+        ctx2.globalAlpha = 1;
+      }
+    };
+
+    // Resize keeps the canvas crisp; on resize (and in the static case) draw a
+    // quiet idle frame — the live loop overwrites it each frame when running.
+    observeCanvas(canvas, () => draw(VIZ_IDLE_FREQ, VIZ_IDLE_TIME));
+
+    // Reduced-motion or non-desktop (editor/manager preview): no capture, no
+    // animation — just the static idle pattern.
+    if (reduced || !desktop) { draw(VIZ_IDLE_FREQ, VIZ_IDLE_TIME); return; }
+    live.disposers.push(vizAddDrawer(draw));
+  }
+
   function buildCountdown(component, el) {
     const label = document.createElement('span');
     label.className = 'comp-label';
@@ -2388,6 +2569,7 @@ function createRenderer(services) {
     launcher: buildLauncher,
     assistant: buildAssistant,
     nowplaying: buildNowPlaying,
+    visualizer: buildVisualizer,
     module: buildModule,
   };
 
