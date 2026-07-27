@@ -2000,6 +2000,109 @@ function createRenderer(services) {
     row.addEventListener('click', () => openChatPanel(component, row));
   }
 
+  // Now playing (Windows media session — Spotify, a browser, any player). Album
+  // art + title/artist + a progress bar + transport controls. Live only on the
+  // desktop (services.media); editor/manager previews show a static placeholder.
+  function buildNowPlaying(component, el) {
+    el.classList.add('nowplaying');
+    const o = component.options;
+    const liveMedia = !!(services.media && services.media.state);
+
+    const art = document.createElement('div');
+    art.className = 'np-art np-noart';
+    const info = document.createElement('div');
+    info.className = 'np-info';
+    const title = document.createElement('div');
+    title.className = 'np-title';
+    const artist = document.createElement('div');
+    artist.className = 'np-artist';
+    const bar = document.createElement('div');
+    bar.className = 'np-bar';
+    const fill = document.createElement('div');
+    fill.className = 'np-fill';
+    bar.appendChild(fill);
+    info.append(title, artist, bar);
+
+    const controls = document.createElement('div');
+    controls.className = 'np-controls';
+    const mkBtn = (cls, glyph, action) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `np-btn ${cls}`;
+      b.textContent = glyph;
+      if (liveMedia) b.addEventListener('click', () => services.media.control(action));
+      return b;
+    };
+    const prevBtn = mkBtn('np-prev', '⏮', 'previous');
+    const playBtn = mkBtn('np-play', '▶', 'playpause');
+    const nextBtn = mkBtn('np-next', '⏭', 'next');
+    controls.append(prevBtn, playBtn, nextBtn);
+
+    if (o.showArt !== false) el.appendChild(art);
+    el.appendChild(info);
+    if (o.showControls !== false) el.appendChild(controls);
+
+    if (!liveMedia) { // preview: static placeholder
+      el.classList.add('np-inert');
+      title.textContent = o.label || 'Now Playing';
+      artist.textContent = 'nothing playing';
+      for (const b of [prevBtn, playBtn, nextBtn]) b.disabled = true;
+      return;
+    }
+
+    const base = { posMs: 0, durMs: 0, updated: Date.now(), status: 'stopped' };
+    let hasMedia = false;
+
+    const paintMeta = (s) => {
+      hasMedia = !!(s && s.has);
+      if (!hasMedia) {
+        title.textContent = o.label || 'Now Playing';
+        artist.textContent = 'nothing playing';
+        art.className = 'np-art np-noart';
+        art.style.backgroundImage = '';
+        playBtn.textContent = '▶';
+        for (const b of [prevBtn, playBtn, nextBtn]) b.disabled = true;
+        base.durMs = 0;
+        fill.style.width = '0%';
+        return;
+      }
+      title.textContent = s.title || 'Unknown';
+      artist.textContent = s.artist || '';
+      if (o.showArt !== false) {
+        if (s.art) {
+          // SMTC thumbnails are PNG or JPEG; sniff from the base64 header.
+          const mime = String(s.art).startsWith('iVBOR') ? 'image/png' : 'image/jpeg';
+          art.className = 'np-art';
+          art.style.backgroundImage = `url(data:${mime};base64,${s.art})`;
+        } else {
+          art.className = 'np-art np-noart';
+          art.style.backgroundImage = '';
+        }
+      }
+      playBtn.textContent = s.status === 'playing' ? '⏸' : '▶';
+      prevBtn.disabled = !s.canPrev;
+      nextBtn.disabled = !s.canNext;
+      playBtn.disabled = !s.canPause;
+      base.posMs = Number(s.posMs) || 0;
+      base.durMs = Number(s.durMs) || 0;
+      base.updated = Number(s.updated) || Date.now();
+      base.status = s.status;
+    };
+
+    // Advance the progress bar between metadata pushes (main only re-emits on a
+    // change + a periodic resync), so it moves smoothly while playing.
+    const tickProgress = () => {
+      if (!hasMedia || !base.durMs) { fill.style.width = '0%'; return; }
+      const pos = base.status === 'playing' ? base.posMs + (Date.now() - base.updated) : base.posMs;
+      fill.style.width = `${Math.max(0, Math.min(100, (pos / base.durMs) * 100))}%`;
+    };
+
+    services.media.state().then((res) => { if (res && res.ok) paintMeta(res.media); tickProgress(); });
+    const off = services.media.onChange((s) => { paintMeta(s); tickProgress(); });
+    live.disposers.push(off);
+    live.timers.push(setInterval(tickProgress, 500));
+  }
+
   function buildCountdown(component, el) {
     const label = document.createElement('span');
     label.className = 'comp-label';
@@ -2284,6 +2387,7 @@ function createRenderer(services) {
     notifications: buildNotifications,
     launcher: buildLauncher,
     assistant: buildAssistant,
+    nowplaying: buildNowPlaying,
     module: buildModule,
   };
 

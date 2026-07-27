@@ -1206,6 +1206,7 @@ const BUILDER_COMPONENTS = [
   ['agenda', 'Agenda', false],
   ['notifications', 'Notifications', false],
   ['launcher', 'App launcher', false],
+  ['nowplaying', 'Now playing', false],
   ['gallery', 'Photo gallery', false],
   ['status', 'Status bar', true],
   ['assistant', 'AI assistant', true],
@@ -1225,6 +1226,7 @@ const STARTER_OPTS = {
   weather: { compact: true, place: 'Weather' },
   calendar: {}, agenda: { days: 7, limit: 6 }, notifications: { limit: 5 },
   launcher: { pinned: true, recent: true }, status: {}, assistant: {},
+  nowplaying: { showArt: true, showControls: true },
   text: { text: 'HELLO' }, gallery: { images: [], interval: 6, fit: 'cover' },
 };
 

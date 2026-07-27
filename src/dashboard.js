@@ -40,6 +40,13 @@ const renderer = AegisComponents.createRenderer({
     history: () => aegis.assistantHistory(),
     reset: () => aegis.assistantReset(),
   },
+  // Now playing (Windows media session) — desktop only, so editor/manager
+  // previews render the nowplaying component as a static placeholder.
+  media: {
+    state: () => aegis.mediaState(),
+    control: (action) => aegis.mediaControl(action),
+    onChange: (cb) => aegis.onMediaChanged(cb),
+  },
 });
 
 // ── Background music ─────────────────────────────────────────────────────────

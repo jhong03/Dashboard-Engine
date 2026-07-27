@@ -66,6 +66,11 @@ const bridge = {
   // track ids, streamed by main over demusic://. Main holds the real paths.
   musicList: () => ipcRenderer.invoke('aegis:music:list'),
   onMusicChanged: subscription('aegis:music:changed'),
+  // Now playing (Windows media session — Spotify / browser / any player).
+  // Read-only telemetry + transport control; personal data, never in a pack.
+  mediaState: () => ipcRenderer.invoke('aegis:media:state'),
+  mediaControl: (action) => ipcRenderer.invoke('aegis:media:control', String(action)),
+  onMediaChanged: subscription('aegis:media:changed'),
 };
 
 if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

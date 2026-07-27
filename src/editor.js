@@ -33,6 +33,7 @@ const PALETTE = [
   { type: 'agenda', label: 'Agenda', hint: 'your upcoming reminders' },
   { type: 'notifications', label: 'Notifications', hint: 'live Windows notifications' },
   { type: 'launcher', label: 'Launcher', hint: 'your pinned & recent apps' },
+  { type: 'nowplaying', label: 'Now playing', hint: 'Spotify / any media, with controls' },
   { type: 'assistant', label: 'Assistant console', hint: 'opens the AI chat' },
   { type: 'module', label: 'Custom module', hint: 'your own sandboxed HTML/JS' },
 ];
@@ -74,7 +75,7 @@ const DEFAULT_RECTS = {
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
   'hud-clock': [10, 10, 24, 42], 'ring-clock': [10, 10, 22, 38], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
-  'assistant': [10, 10, 60, 6], 'module': [10, 10, 26, 26],
+  'assistant': [10, 10, 60, 6], 'nowplaying': [10, 10, 30, 12], 'module': [10, 10, 26, 26],
 };
 
 function defaultOptions(type, assets) {
@@ -101,6 +102,7 @@ function defaultOptions(type, assets) {
     'cores': { label: null },
     'sysinfo': { memory: true, disk: true, uptime: true, host: false, statusText: null },
     'assistant': { label: null, button: null },
+    'nowplaying': { showArt: true, showControls: true, label: null },
     'module': { html: MODULE_STARTER, scroll: false, telemetry: true },
   }[type];
 }
@@ -706,6 +708,16 @@ function optionFields(component, panel) {
     const note = document.createElement('p');
     note.className = 'ed-empty';
     note.textContent = 'Tiles show the user’s own pins and recents (managed in the manager) — they are never saved into the pack.';
+    panel.appendChild(note);
+  } else if (type === 'nowplaying') {
+    panel.append(
+      checkControl('Album art', o.showArt !== false, set('showArt')),
+      checkControl('Playback controls', o.showControls !== false, set('showControls')),
+      field('Label (when idle)', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Now Playing')),
+    );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = 'Shows whatever the user is playing — Spotify, a browser, any player — via the Windows media session, with play/pause/next/prev. Personal data; never saved into the pack. Live only on the desktop.';
     panel.appendChild(note);
   } else if (type === 'module') {
     const area = document.createElement('textarea');

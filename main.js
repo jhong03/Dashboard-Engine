@@ -13,6 +13,7 @@ const path = require('path');
 const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
 const { createPresenceMonitor } = require('./lib/presence');
+const { createMediaMonitor } = require('./lib/media');
 const voicebank = require('./lib/voicebank');
 const packs = require('./lib/packs');
 const music = require('./lib/music');
@@ -39,8 +40,10 @@ function logEngine(level, message) {
 }
 
 // Windows routes toast notifications by AppUserModelID; without one set,
-// planner alerts never reach the Action Center.
-app.setAppUserModelId('com.dashboardengine.app');
+// planner alerts never reach the Action Center. Kept as a constant so the
+// now-playing watcher can exclude our OWN media session by the same id.
+const APP_USER_MODEL_ID = 'com.dashboardengine.app';
+app.setAppUserModelId(APP_USER_MODEL_ID);
 
 // Sandboxed module components render from `demodule://` (registered below).
 // A custom scheme is NOT a "local scheme" (unlike data:/srcdoc), so its
@@ -109,6 +112,7 @@ let alertScheduler = null;
 // Performance citizenship: pause/throttle the animated wallpaper when a
 // full-screen app is up or the machine is on battery (both user-configurable).
 let presenceMonitor = null;
+let mediaMonitor = null;
 let isFullscreen = false;
 let onBattery = false;
 
@@ -396,6 +400,15 @@ function startPresenceMonitoring() {
     isFullscreen = fullscreen;
     sendDesktopPower();
   });
+  // "Now playing" from the Windows media session — pushed to the desktop for the
+  // `nowplaying` component (personal data; never enters a pack).
+  // Exclude our OWN media session (the background-music <audio> registers with
+  // Windows) so the widget shows the user's real player (Spotify, etc.).
+  mediaMonitor = createMediaMonitor(__dirname, (state) => {
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('aegis:media:changed', state);
+    }
+  }, APP_USER_MODEL_ID);
 }
 
 // ── Tray: the engine's home. Menu is rebuilt on every right-click so the
@@ -791,6 +804,12 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           }
         }
       },
+      // Now-playing: the `nowplaying` component reads current state on load and
+      // drives transport controls (play/pause/next/prev) via the media session.
+      getMediaState: () => (mediaMonitor ? mediaMonitor.current() : { has: false }),
+      mediaControl: (action) => (mediaMonitor
+        ? mediaMonitor.control(action)
+        : Promise.resolve({ ok: false, error: 'Media control is unavailable.' })),
     });
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();
@@ -829,5 +848,8 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
   });
 
   // Don't leave the full-screen watcher process behind on quit.
-  app.on('before-quit', () => { if (presenceMonitor) presenceMonitor.stop(); });
+  app.on('before-quit', () => {
+    if (presenceMonitor) presenceMonitor.stop();
+    if (mediaMonitor) mediaMonitor.stop();
+  });
 }
