@@ -650,6 +650,67 @@ body {
 .workshop-section { grid-column: 1 / -1; margin-bottom: 14px; }
 .ws-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ws-controls .lib-search { width: 180px; }
+
+/* Browse filter sidebar + results. */
+.ws-layout { display: flex; gap: 14px; align-items: flex-start; margin-top: 8px; }
+.ws-sidebar {
+  flex: 0 0 168px;
+  width: 168px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-raised);
+  padding: 10px;
+  /* Natural height — the Browse view scrolls as a whole, so the full filter
+     list is always reachable. (An internal max-height + overflow here clipped
+     on short windows and couldn't be scrolled.) */
+}
+.ws-main { flex: 1 1 auto; min-width: 0; }
+.ws-main .workshop-grid { margin-top: 0; }
+.ws-filter-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.ws-filter-head > span {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+.ws-clear {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 0;
+}
+.ws-clear:hover { text-decoration: underline; }
+.ws-fgroup { margin-bottom: 10px; }
+.ws-fgroup-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+}
+.ws-fopt {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-dim);
+  padding: 2px 0;
+  cursor: pointer;
+}
+.ws-fopt:hover { color: var(--text); }
+.ws-fopt input { margin: 0; flex-shrink: 0; }
+/* Narrow windows: drop the sidebar above the grid. */
+@media (max-width: 720px) {
+  .ws-layout { flex-direction: column; }
+  .ws-sidebar { flex-basis: auto; width: 100%; max-height: none; }
+}
 .workshop-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));

@@ -443,7 +443,76 @@ function renderGallery() {
 
 // ── Steam Workshop (consume side): browse / subscribe / import ───────────────
 
-const ws = { available: null, items: [], search: '', sort: 'trend', loaded: false, loading: false, error: null, testApp: false };
+const ws = { available: null, items: [], search: '', sort: 'trend', loaded: false, loading: false, error: null, testApp: false, filters: {} };
+
+// Sidebar facet groups: [display label, DE_TAGS key]. The four content groups
+// plus the auto-derived Compatibility group. (DE_TAGS is defined later; read at
+// render time.)
+const WS_FILTER_ORDER = [['Style', 'Style'], ['Purpose', 'Purpose'], ['Palette', 'Palette'], ['Features', 'Includes'], ['Compatibility', 'Compatibility']];
+
+// Count the active filters across all groups.
+function wsActiveFilterCount() {
+  return Object.values(ws.filters).reduce((n, s) => n + (s ? s.size : 0), 0);
+}
+
+// Faceted filter over the fetched items: OR within a group, AND across groups.
+// Steam's UGC query only supports one global required-tags list, so we filter
+// client-side (the catalogue is small/new; fetch more pages later if needed).
+function wsFilteredItems() {
+  const active = Object.entries(ws.filters).filter(([, set]) => set && set.size);
+  if (!active.length) return ws.items;
+  return ws.items.filter((item) => {
+    const itemTags = (item.tags || []).map((t) => String(t).toLowerCase());
+    return active.every(([, set]) => [...set].some((tag) => itemTags.includes(tag.toLowerCase())));
+  });
+}
+
+// Build the filter sidebar. Filter state lives in `ws.filters` so it survives
+// re-renders; toggling a box re-renders the grid client-side (no re-fetch).
+function wsSidebar() {
+  const aside = document.createElement('aside');
+  aside.className = 'ws-sidebar';
+  const head = document.createElement('div');
+  head.className = 'ws-filter-head';
+  const title = document.createElement('span');
+  title.textContent = 'Filters';
+  head.appendChild(title);
+  const activeCount = wsActiveFilterCount();
+  if (activeCount) {
+    const clear = document.createElement('button');
+    clear.className = 'ws-clear';
+    clear.textContent = `Clear (${activeCount})`;
+    clear.addEventListener('click', () => { ws.filters = {}; renderGallery(); });
+    head.appendChild(clear);
+  }
+  aside.appendChild(head);
+
+  for (const [label, key] of WS_FILTER_ORDER) {
+    const tags = DE_TAGS[key] || [];
+    if (!tags.length) continue;
+    const set = ws.filters[key] || (ws.filters[key] = new Set());
+    const group = document.createElement('div');
+    group.className = 'ws-fgroup';
+    const gt = document.createElement('div');
+    gt.className = 'ws-fgroup-title';
+    gt.textContent = label;
+    group.appendChild(gt);
+    for (const tag of tags) {
+      const row = document.createElement('label');
+      row.className = 'ws-fopt';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = set.has(tag);
+      cb.addEventListener('change', () => { if (cb.checked) set.add(tag); else set.delete(tag); renderGallery(); });
+      const span = document.createElement('span');
+      span.textContent = tag;
+      row.append(cb, span);
+      group.appendChild(row);
+    }
+    aside.appendChild(group);
+  }
+  return aside;
+}
 
 async function loadWorkshop() {
   ws.loading = true;
@@ -491,11 +560,25 @@ function renderWorkshopSection(box) {
   if (ws.error) { box.appendChild(hintP(ws.error)); return; }
   if (ws.items.length === 0) { box.appendChild(hintP('No Workshop items found. Publish one, or try a different search.')); return; }
 
-  const installedWsIds = new Set(library.localPacks.filter((p) => p.meta && p.meta.workshopId).map((p) => String(p.meta.workshopId)));
-  const grid = document.createElement('div');
-  grid.className = 'workshop-grid';
-  for (const item of ws.items) grid.appendChild(workshopCard(item, installedWsIds.has(item.itemId)));
-  box.appendChild(grid);
+  // Two columns: the filter sidebar + the results grid.
+  const layout = document.createElement('div');
+  layout.className = 'ws-layout';
+  layout.appendChild(wsSidebar());
+  const main = document.createElement('div');
+  main.className = 'ws-main';
+
+  const items = wsFilteredItems();
+  if (items.length === 0) {
+    main.appendChild(hintP('No packs match these filters. Clear a filter to see more.'));
+  } else {
+    const installedWsIds = new Set(library.localPacks.filter((p) => p.meta && p.meta.workshopId).map((p) => String(p.meta.workshopId)));
+    const grid = document.createElement('div');
+    grid.className = 'workshop-grid';
+    for (const item of items) grid.appendChild(workshopCard(item, installedWsIds.has(item.itemId)));
+    main.appendChild(grid);
+  }
+  layout.appendChild(main);
+  box.appendChild(layout);
 }
 
 function hintP(text) {
@@ -2119,6 +2202,10 @@ const DE_TAGS = {
   Purpose: ['Productivity', 'Gaming', 'System Monitor', 'Decorative', 'Developer'],
   Palette: ['Dark', 'Light', 'Colorful'],
   Includes: ['Weather', 'Clock', 'Stats', 'Launcher', 'Assistant', 'Calendar', 'Custom Art'],
+  // Auto-derived requirements a browser might want to filter on (never new pack
+  // metadata — read straight from the components). "Contains Code" flags a
+  // sandboxed module; "Needs AI" flags an assistant console (needs a BYO key).
+  Compatibility: ['Contains Code', 'Needs AI'],
 };
 
 // Pre-tick the obvious tags from what the pack actually contains, so a creator
@@ -2127,11 +2214,12 @@ function suggestTags(pack) {
   const set = new Set();
   const types = new Set((pack.components || []).map((c) => c.type));
   if (types.has('weather')) set.add('Weather');
-  if (types.has('assistant')) set.add('Assistant');
+  if (types.has('assistant')) { set.add('Assistant'); set.add('Needs AI'); }
   if (['stats', 'meter', 'cores', 'sysinfo', 'sparkline'].some((t) => types.has(t))) set.add('Stats');
   if (types.has('launcher')) set.add('Launcher');
   if (types.has('calendar') || types.has('agenda')) set.add('Calendar');
-  if (['clock', 'hud-clock', 'analog-clock'].some((t) => types.has(t))) set.add('Clock');
+  if (['clock', 'hud-clock', 'ring-clock', 'analog-clock'].some((t) => types.has(t))) set.add('Clock');
+  if (types.has('module')) set.add('Contains Code');
   if (types.has('image') || types.has('gallery') || (pack.skin && pack.skin.wallpaper)) set.add('Custom Art');
   try {
     const v = String((pack.skin && pack.skin.palette && pack.skin.palette.void) || '#000').replace('#', '');
