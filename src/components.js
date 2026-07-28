@@ -2189,7 +2189,12 @@ function createRenderer(services) {
     vizEnsureRunning();
     return () => {
       viz.drawers.delete(fn);
-      if (viz.drawers.size === 0) { vizStopLoop(); if (viz.ctx) { try { viz.ctx.suspend(); } catch (e) { /* ignore */ } } }
+      // Only stop the DRAW loop when nothing's on screen — keep the audio graph
+      // running. Suspending/resuming a MediaStream-fed AudioContext on every
+      // re-render (a style change + save does that) desyncs the analyser and,
+      // under fast repeated saves, races itself into a stuck state (needed a
+      // full reload to recover). An idle analyser on a stream is ~0 CPU.
+      if (viz.drawers.size === 0) vizStopLoop();
     };
   }
 
