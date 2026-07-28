@@ -8,7 +8,7 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net, desktopCapturer } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
@@ -698,33 +698,34 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     // which needs 'display-capture'. Grant that ONLY to the trusted desktop
     // window's TOP frame (never a module iframe, never another window); deny
     // everything else, everywhere.
-    const isDesktopTopFrame = (wc, details) => {
-      try {
-        return dashboardWindow && !dashboardWindow.isDestroyed()
-          && wc === dashboardWindow.webContents
-          && !!details && details.isMainFrame === true;
-      } catch { return false; }
-    };
-    session.defaultSession.setPermissionRequestHandler((wc, permission, callback, details) => {
-      callback(permission === 'display-capture' && isDesktopTopFrame(wc, details));
+    // The audio visualizer captures system-audio loopback via getDisplayMedia,
+    // which needs 'display-capture' AND — for the audio track — a 'media' check.
+    // Grant BOTH only to the DESKTOP window; the display-media handler below
+    // further restricts the actual stream to that window's TOP frame, and a pack
+    // `module` iframe is blocked by Permissions Policy (allow="") + the SDK shim
+    // regardless. Every OTHER permission (camera, mic, geolocation, …) and every
+    // other window/frame stays denied.
+    const isDesktopWc = (wc) => !!wc && dashboardWindow && !dashboardWindow.isDestroyed() && wc === dashboardWindow.webContents;
+    const isCapturePerm = (p) => p === 'display-capture' || p === 'media';
+    session.defaultSession.setPermissionRequestHandler((wc, permission, callback) => {
+      callback(isCapturePerm(permission) && isDesktopWc(wc));
     });
-    session.defaultSession.setPermissionCheckHandler((wc, permission, _origin, details) => {
-      return permission === 'display-capture' && isDesktopTopFrame(wc, details);
-    });
-    // getDisplayMedia for the visualizer: grant system-audio loopback (no video)
-    // ONLY to the desktop's top frame; deny any other frame/window. A pack
-    // `module` runs in an iframe (frame.top !== frame) so it can never reach this.
+    session.defaultSession.setPermissionCheckHandler((_wc, permission) => isCapturePerm(permission));
+    // Chromium REQUIRES a video source for getDisplayMedia to resolve even when
+    // we only want audio, so we pair a screen source with loopback audio and the
+    // renderer stops that video track immediately (keeping only the audio).
     session.defaultSession.setDisplayMediaRequestHandler((request, callback) => {
+      let frameOk = false;
       try {
         const frame = request.frame;
         const url = frame ? String(frame.url || '') : '';
-        if (frame && frame.top === frame && url.includes('/dashboard.html')) {
-          callback({ audio: 'loopback' }); // system audio only, never video
-          return;
-        }
-      } catch (err) { /* fall through to deny */ }
-      callback({}); // deny — no streams
-    }, { useSystemPicker: false });
+        frameOk = !!frame && frame.top === frame && url.includes('/dashboard.html');
+      } catch (err) { frameOk = false; }
+      if (!frameOk) { callback({}); return; }
+      desktopCapturer.getSources({ types: ['screen'], fetchWindowIcons: false }).then((sources) => {
+        callback(sources && sources.length ? { video: sources[0], audio: 'loopback' } : { audio: 'loopback' });
+      }).catch(() => callback({}));
+    });
 
     // Serve sandboxed module documents. The renderer (components.js
     // buildModule) base64url-encodes the whole wrapped HTML into the request

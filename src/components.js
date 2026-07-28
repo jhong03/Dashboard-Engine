@@ -2115,13 +2115,11 @@ function createRenderer(services) {
   };
 
   async function vizGetLoopbackStream() {
-    try {
-      return await navigator.mediaDevices.getDisplayMedia({ audio: true, video: false });
-    } catch (e) {
-      // Some builds reject audio-only getDisplayMedia; request video too, then
-      // drop it below (main grants audio-loopback only, no video, regardless).
-      return navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
-    }
+    // Request video too — Chromium requires it for getDisplayMedia to resolve —
+    // then stop the video track; main pairs a screen source with loopback audio.
+    const stream = await navigator.mediaDevices.getDisplayMedia({ audio: true, video: true });
+    stream.getVideoTracks().forEach((t) => t.stop());
+    return stream;
   }
 
   async function vizAcquire() {
@@ -2130,7 +2128,6 @@ function createRenderer(services) {
     viz.requested = true;
     try {
       const stream = await vizGetLoopbackStream();
-      stream.getVideoTracks().forEach((t) => t.stop()); // never keep a video track
       if (stream.getAudioTracks().length === 0) throw new Error('no audio track granted');
       const ctx = new AudioContext();
       const source = ctx.createMediaStreamSource(stream);
@@ -2147,7 +2144,7 @@ function createRenderer(services) {
       return true;
     } catch (err) {
       viz.requested = false; // allow a gesture-triggered retry
-      console.warn(`[visualizer] system audio capture unavailable: ${err.message}`);
+      console.warn(`[visualizer] system audio capture unavailable: ${err && err.message}`);
       return false;
     }
   }
