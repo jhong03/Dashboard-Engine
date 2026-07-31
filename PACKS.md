@@ -94,6 +94,45 @@ sets the speed.
 - **Author it** in the editor (Skin tab → **Import video…**) or the from-scratch
   builder (Background → **Choose a video…**).
 
+### Layered backgrounds & parallax
+
+For depth, the background can be a **stack of up to 6 layers** (images and/or
+videos), back-to-front, each with a parallax `depth`. This replaces the single
+`wallpaper` for advanced packs — a plain `wallpaper` is just the one-layer case
+(the engine normalizes it), so you never *have* to use layers.
+
+```jsonc
+"skin": {
+  "background": {
+    "layers": [                      // back-to-front, 1–6; each an image OR video
+      { "src": "assets/sky.png",   "depth": 0.0 },                 // fixed backdrop
+      { "src": "assets/hills.png", "depth": 0.4, "opacity": 1,
+        "drift": { "x": 6, "y": 0 } },                             // slow pan
+      { "src": "assets/fog.webm",  "depth": 0.9, "fit": "cover" }  // moves most
+    ],
+    "parallax": { "strength": 1.0, "axis": "both" }  // strength 0–2; both | x | y
+  }
+}
+```
+
+- **`depth`** (0–1) — how much a layer moves with the cursor: `0` is pinned, `1`
+  moves the most. Stack a far backdrop at `0` and nearer layers at higher depths
+  for a 3-D feel.
+- **`opacity`** (0.05–1) — blend a foreground layer over the ones behind it.
+- **`fit` / `posX` / `posY`** — same crop/position controls as a wallpaper.
+- **`drift`** `{ x, y }` (−20…20) — a slow, continuous, *bounded* pan even when
+  the cursor is still (px/s at the 1920 design basis). Great for clouds/fog.
+- **`parallax.strength`** (0–2) scales the whole effect; **`axis`** limits it to
+  horizontal or vertical. The user also has a global **Settings → Background
+  motion** slider (0–100 %, or Off) that multiplies every pack's motion.
+- **No edge gaps, ever.** The engine scales each moving layer up just enough that
+  its motion never reveals an edge — you don't manage overscan. **Reduced motion**
+  freezes all layers to a still frame.
+- Videos in a layer follow every video-wallpaper rule (muted, freeze, 30 MB cap).
+- **Author it** in the editor (Skin tab → **Background layers**: add/reorder/
+  remove, per-layer depth/opacity/drift) or start simple in the builder
+  (Background → **Depth layers (optional)**).
+
 ## Components
 
 Up to 24 components, placed freely: `rect: [x, y, w, h]` in **percent of the
