@@ -17,6 +17,7 @@ const { createMediaMonitor } = require('./lib/media');
 const voicebank = require('./lib/voicebank');
 const packs = require('./lib/packs');
 const music = require('./lib/music');
+const videostore = require('./lib/videostore');
 const settings = require('./lib/settings');
 const logger = require('./lib/logger');
 const { registerIpcHandlers } = require('./lib/ipc');
@@ -70,6 +71,10 @@ const MODULE_DOC_CSP = [
 // page CSP forbids) lets main gate every request through the music library —
 // only ids the user actually added resolve to a real path.
 const MUSIC_SCHEME = 'demusic';
+// Video wallpapers stream the same way as music — a gated streaming scheme so
+// main resolves an OPAQUE id to a validated pack-video path (never a raw path
+// to the renderer), and video is never base64'd into a pack's assets map.
+const VIDEO_SCHEME = 'depack';
 protocol.registerSchemesAsPrivileged([
   {
     scheme: MODULE_SCHEME,
@@ -77,6 +82,10 @@ protocol.registerSchemesAsPrivileged([
   },
   {
     scheme: MUSIC_SCHEME,
+    privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true },
+  },
+  {
+    scheme: VIDEO_SCHEME,
     privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true },
   },
 ]);
@@ -758,6 +767,22 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         if (!file) return new Response('', { status: 404 });
         // Forward ONLY Range (for seeking) — never the whole request's headers —
         // to a file:// fetch main built from a vetted, id-resolved path.
+        const range = request.headers.get('range');
+        return net.fetch(pathToFileURL(file).toString(), range ? { headers: { Range: range } } : undefined);
+      } catch (err) {
+        return new Response('', { status: 400 });
+      }
+    });
+
+    // Stream a pack VIDEO wallpaper. Identical gating to music: the URL host is
+    // an OPAQUE id that resolves (via lib/videostore) to a real path ONLY if a
+    // currently-loaded pack registered that video; unknown id → 404. Range is
+    // forwarded so the <video> element can seek/loop efficiently.
+    protocol.handle(VIDEO_SCHEME, (request) => {
+      try {
+        const id = new URL(request.url).hostname;
+        const file = videostore.pathForId(id);
+        if (!file) return new Response('', { status: 404 });
         const range = request.headers.get('range');
         return net.fetch(pathToFileURL(file).toString(), range ? { headers: { Range: range } } : undefined);
       } catch (err) {
