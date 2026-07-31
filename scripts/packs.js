@@ -36,9 +36,25 @@ function validate(listed) {
   for (const p of listed.packs) {
     const loaded = packs.loadPack(APP_ROOT, USER_DIR, p.id);
     const collected = packs.collectAssets(loaded.dir, loaded.pack);
-    const all = [...loaded.warnings, ...collected.warnings];
+    // Video wallpapers stream over depack:// (not base64'd), so validate them
+    // separately: a missing / oversized / wrong-type video is a warning, and
+    // we print the resolved size so an author can see they're near the 30 MB cap.
+    const videoRefs = packs.collectVideoRefs(loaded.pack);
+    const videoNotes = [];
+    const videoWarnings = [];
+    for (const rel of videoRefs) {
+      const resolved = packs.videoPathFor(loaded.dir, rel);
+      if (resolved.warning) videoWarnings.push(resolved.warning);
+      else {
+        const mb = (fs.statSync(resolved.path).size / 1048576).toFixed(1);
+        videoNotes.push(`${rel} (${mb} MB)`);
+      }
+    }
+    const all = [...loaded.warnings, ...collected.warnings, ...videoWarnings];
     totalWarnings += all.length;
-    console.log(`  ${all.length === 0 ? 'CLEAN' : 'WARN '}  ${p.id} — ${loaded.pack.components.length} component(s), ${Object.keys(collected.assets).length} asset(s) [${loaded.origin}]`);
+    const videoLabel = videoRefs.length ? `, ${videoRefs.length} video(s)` : '';
+    console.log(`  ${all.length === 0 ? 'CLEAN' : 'WARN '}  ${p.id} — ${loaded.pack.components.length} component(s), ${Object.keys(collected.assets).length} asset(s)${videoLabel} [${loaded.origin}]`);
+    for (const note of videoNotes) console.log(`         video: ${note}`);
     for (const w of all) console.log(`         ${w}`);
   }
   if (totalWarnings > 0) {
