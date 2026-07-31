@@ -44,7 +44,16 @@
       "effect": "none",
       "density": 0.5
     },
-    "wallpaper": "assets/bg.png"
+    "wallpaper": "assets/bg.png",
+    "background": {
+      "layers": [
+        { "src": "assets/bg.png", "depth": 0, "fit": "cover", "effects": [
+          { "type": "drift-warp", "speed": 0.25, "scale": 2 },
+          { "type": "pulse", "speed": 0.5, "amount": 0.1, "paletteKey": "accent" }
+        ] }
+      ],
+      "parallax": { "strength": 0.6, "axis": "both" }
+    }
   },
   "canvas": {
     "padding": 2.5

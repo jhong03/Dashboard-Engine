@@ -44,7 +44,16 @@
       "effect": "petals",
       "density": 0.5
     },
-    "wallpaper": "assets/bg.png"
+    "wallpaper": "assets/bg.png",
+    "background": {
+      "layers": [
+        { "src": "assets/bg.png", "depth": 0, "fit": "cover", "effects": [
+          { "type": "drift-warp", "speed": 0.2, "scale": 3 },
+          { "type": "ripple", "speed": 0.4, "scale": 2, "strength": 0.12 }
+        ] }
+      ],
+      "parallax": { "strength": 0.5, "axis": "both" }
+    }
   },
   "canvas": {
     "padding": 3

@@ -133,6 +133,42 @@ videos), back-to-front, each with a parallax `depth`. This replaces the single
   remove, per-layer depth/opacity/drift) or start simple in the builder
   (Background → **Depth layers (optional)**).
 
+### Background effects (WebGL)
+
+Each background layer can carry up to **3 shader effects** that animate the layer
+— ripples, warps, a glow pulse, interactive cursor rings. Effects render through
+WebGL; on a machine without it (or with a global override), the layer just draws
+as a static image — the pack still works, it simply doesn't animate.
+
+```jsonc
+{ "src": "assets/sky.png", "depth": 0, "effects": [
+    { "type": "drift-warp", "speed": 0.3, "scale": 3 },
+    { "type": "pulse", "speed": 0.6, "amount": 0.12, "paletteKey": "accent" }
+] }
+```
+
+| effect | params (range) | what it does |
+|---|---|---|
+| `ripple` | `speed` 0–3, `scale` 0.5–8, `strength` 0–1 | sine ripples across the layer |
+| `sway` | `speed` 0–3, `strength` 0–1, `direction` 0–360 | a gentle corner-anchored sway |
+| `drift-warp` | `speed` 0–3, `scale` 0.5–8 | slow noise-flow warp (mist, heat-haze) |
+| `pulse` | `speed` 0–3, `amount` 0–1, `paletteKey` (a palette key or null) | brightness pulse, or a tint toward a palette colour |
+| `cursor-ripple` | `strength` 0–1, `decay` 0.2–3 | expanding rings that follow the cursor |
+
+- **Region** (optional, per effect) — confine the effect to part of the layer:
+  `"region": { "shape": "rect" | "ellipse", "x": 0–100, "y": 0–100, "w": 0–100, "h": 0–100, "feather": 0–50 }`
+  (percent of the layer; `feather` softens the edge).
+- **Mask** (optional, per effect) — `"mask": "assets/mask.png"` multiplies the
+  effect by the mask's brightness (white = full effect, black = none).
+- **Taste + the quality floor.** Keep `amount`/`strength` low — these read best as
+  subtle ambience, not a screensaver. The refreshed `vaporwave`, `sakura` and
+  `neon-cyberpunk` seeds are worked examples.
+- **Performance.** Effects ride the same fps cap and freeze as everything else
+  (a full-screen app / battery pauses them). Reduced motion renders one static
+  frame. Prefer one or two gentle effects over stacking three loud ones.
+- **Author it** in the editor (Skin tab → a layer's **Effects (WebGL)** section:
+  add/reorder/remove, param sliders, optional region).
+
 ## Components
 
 Up to 24 components, placed freely: `rect: [x, y, w, h]` in **percent of the

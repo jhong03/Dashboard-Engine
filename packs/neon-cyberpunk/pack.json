@@ -44,7 +44,16 @@
       "effect": "rain",
       "density": 0.55
     },
-    "wallpaper": "assets/bg.png"
+    "wallpaper": "assets/bg.png",
+    "background": {
+      "layers": [
+        { "src": "assets/bg.png", "depth": 0, "fit": "cover", "effects": [
+          { "type": "pulse", "speed": 0.7, "amount": 0.14, "paletteKey": "accent" },
+          { "type": "cursor-ripple", "strength": 0.35, "decay": 1.3 }
+        ] }
+      ],
+      "parallax": { "strength": 0.7, "axis": "both" }
+    }
   },
   "canvas": {
     "padding": 2.5

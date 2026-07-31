@@ -1054,6 +1054,9 @@ const CREATE_SKIN = [
   ['Fonts', 'rajdhani · system-sans · system-serif · mono (packs can’t ship font files).'],
   ['Ambience', 'none · embers · dust · snow · petals · rain · sparkle, with a density 0.05–1 (reduced-motion safe).'],
   ['Textures', 'scanlines · grid · glow · vignette, each 0–1.'],
+  ['Wallpaper', 'an image (≤5 MB) or a muted looping video (mp4/webm, ≤30 MB), with fit + focal point.'],
+  ['Background layers', 'stack up to 6 image/video layers with a parallax depth (0–1) + drift — the cursor gives the scene 3-D depth.'],
+  ['Background effects', 'up to 3 WebGL shader effects per layer: ripple · sway · drift-warp · pulse · cursor-ripple (fail-soft to a static image without WebGL).'],
 ];
 
 const CREATE_PROPS = [
@@ -1171,8 +1174,8 @@ function renderCreate() {
 // ── From-scratch pack builder (the guided "sandwich order") ──────────────────
 // A full-screen overlay: pick a background feel, colours, particles, type, and
 // persona with a live preview, then create a real pack and open it in the
-// editor to fine-tune. Static backgrounds only in v1 (engine-drawn textures +
-// your own image); animated/parallax backgrounds are a later phase.
+// editor to fine-tune. Backgrounds can be an image/video wallpaper plus optional
+// parallax depth layers; WebGL effects are added per layer in the editor.
 
 const BUILDER_PALETTES = [
   { name: 'Cyan HUD', p: { void: '#04080F', glass: '#0A16238C', accent: '#3FD8FF', accentBright: '#7FE9FF', muted: '#5A7E93', warn: '#FFB23E', gold: '#E8C56A' } },
