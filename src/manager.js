@@ -1534,7 +1534,7 @@ function renderBgStep(el) {
   el.appendChild(imgLabel);
   const imgNote = document.createElement('p');
   imgNote.className = 'hint';
-  imgNote.textContent = 'Use any image as the wallpaper. Note: publishing a pack with copyrighted characters/art can be taken down — for public packs, use original or licensed art.';
+  imgNote.textContent = 'Use an image (≤5 MB) or a looping video (mp4/webm, ≤30 MB, always muted) as the wallpaper. Note: publishing a pack with copyrighted characters/art can be taken down — for public packs, use original or licensed art.';
   el.appendChild(imgNote);
   const imgRow = document.createElement('div');
   imgRow.className = 'b-presets';

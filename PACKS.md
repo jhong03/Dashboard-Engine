@@ -58,7 +58,12 @@ as the default skin, never a crash. Save your file as UTF-8 (BOM is tolerated).
       "effect": "embers",             // none | embers | dust | snow | petals | rain | sparkle
       "density": 0.45                 // 0.05–1
     },
-    "wallpaper": "assets/bg.png"      // optional, ≤5 MB, png/jpg/webp
+    "wallpaper": "assets/bg.png",     // optional — an image (≤5 MB, png/jpg/webp)
+                                      //            OR a video (≤30 MB, mp4/webm) — see below
+    "wallpaperFit": "cover",          // cover (crop) | contain (fit whole) | stretch
+    "wallpaperPosX": 50,              // focal point %, 0–100 (which part of a crop shows)
+    "wallpaperPosY": 50,
+    "wallpaperVideo": { "playbackRate": 1 }  // video only, 0.25–2 (ignored for an image)
   },
 
   "canvas": { "padding": 2 },         // % margin around the component area
@@ -66,6 +71,28 @@ as the default skin, never a crash. Save your file as UTF-8 (BOM is tolerated).
   "components": [ /* see below */ ]
 }
 ```
+
+### Video wallpapers
+
+`skin.wallpaper` may point at a **video** (`assets/<name>.mp4` or `.webm`, ≤ 30 MB)
+instead of an image. The engine plays it as a looping, muted, full-surface
+wallpaper behind your components — `wallpaperFit` / `wallpaperPosX/Y` crop and
+position it exactly like an image, and `wallpaperVideo.playbackRate` (0.25–2)
+sets the speed.
+
+- **Always muted.** A video wallpaper never plays audio — that's a fixed rule, not
+  a knob. If you want sound, the user adds their own music in Settings → Background
+  music; a pack never ships or plays audio.
+- **Good citizen.** The video pauses (frozen on its last frame) whenever the
+  wallpaper is frozen — a full-screen app on the primary monitor, on battery (if
+  enabled), or a manual tray pause — and honours the fps cap. With the OS
+  "reduce motion" setting on, it shows a still first frame and never autoplays.
+- **Size.** Keep it small — a short seamless loop at a sane bitrate. 30 MB is the
+  hard cap (the importer and `packs -- validate` both reject anything larger).
+  Prefer `webm` (VP9) for the best size/quality; `mp4` (H.264) is the safe
+  fallback. It travels inside the `.dpack` like any other asset.
+- **Author it** in the editor (Skin tab → **Import video…**) or the from-scratch
+  builder (Background → **Choose a video…**).
 
 ## Components
 
