@@ -4,9 +4,10 @@
   <meta charset="UTF-8">
   <!-- Strict CSP; data: images are previews delivered as sanitized data URIs
        by the main process. -->
-  <!-- frame-src demodule: lets live pack previews render sandboxed `module`s. -->
+  <!-- frame-src demodule: lets live pack previews render sandboxed `module`s;
+       media-src depack: lets the detail preview play a video wallpaper. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; frame-src demodule:">
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; media-src depack:; frame-src demodule:">
   <title>Dashboard Engine</title>
   <!-- dashboard.css first: pack previews style themselves through it, and
        chrome.css/manager.css loading later win any shared-token collisions

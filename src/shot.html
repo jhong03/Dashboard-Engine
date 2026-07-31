@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <!-- Same strict CSP as the desktop; frame-src demodule: lets module
-       components render in the preview. -->
+       components render in the preview; media-src depack: lets a video
+       wallpaper load so previews aren't captured black. -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; frame-src demodule:">
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; media-src depack:; frame-src demodule:">
   <title>Dashboard Engine — preview</title>
   <link rel="stylesheet" href="dashboard.css">
 </head>

@@ -95,21 +95,116 @@ function applySkin(root, pack, assets, opts) {
   root.classList.toggle('uppercase', typography.uppercase);
   root.classList.toggle('notches', shape.cornerNotches);
   s.backgroundColor = palette.void;
-  if (pack.skin.wallpaper && assets[pack.skin.wallpaper]) {
-    s.backgroundImage = `url(${assets[pack.skin.wallpaper]})`;
-    // Fit + focal point let a creator crop/adjust an imported image. Defaults
-    // (cover, centred) apply to packs authored before these fields existed.
-    const fit = pack.skin.wallpaperFit || 'cover';
-    const px = typeof pack.skin.wallpaperPosX === 'number' ? pack.skin.wallpaperPosX : 50;
-    const py = typeof pack.skin.wallpaperPosY === 'number' ? pack.skin.wallpaperPosY : 50;
-    s.backgroundSize = fit === 'contain' ? 'contain' : fit === 'stretch' ? '100% 100%' : 'cover';
-    s.backgroundPosition = `${px}% ${py}%`;
-    s.backgroundRepeat = 'no-repeat';
-  } else {
+  const wallpaper = pack.skin.wallpaper;
+  const wallpaperUri = wallpaper && assets[wallpaper];
+  if (wallpaperUri && isVideoWallpaper(wallpaper)) {
+    // A video wallpaper: a muted, looping <video> in the wallpaper slot. No
+    // background image behind it; a prior image/video is torn down below/here.
     s.backgroundImage = 'none';
+    setupWallpaperVideo(root, wallpaperUri, pack, opts);
+  } else {
+    removeWallpaperVideo(root);
+    if (wallpaperUri) {
+      s.backgroundImage = `url(${wallpaperUri})`;
+      // Fit + focal point let a creator crop/adjust an imported image. Defaults
+      // (cover, centred) apply to packs authored before these fields existed.
+      const fit = pack.skin.wallpaperFit || 'cover';
+      const px = typeof pack.skin.wallpaperPosX === 'number' ? pack.skin.wallpaperPosX : 50;
+      const py = typeof pack.skin.wallpaperPosY === 'number' ? pack.skin.wallpaperPosY : 50;
+      s.backgroundSize = fit === 'contain' ? 'contain' : fit === 'stretch' ? '100% 100%' : 'cover';
+      s.backgroundPosition = `${px}% ${py}%`;
+      s.backgroundRepeat = 'no-repeat';
+    } else {
+      s.backgroundImage = 'none';
+    }
   }
 
   applyAmbience(root, pack, opts);
+}
+
+// ── Video wallpapers ─────────────────────────────────────────────────────────
+// A <video> in the wallpaper slot (z-index:0, behind textures/ambience/
+// components — the same layer a background image paints in). ALWAYS muted: pack
+// audio is out of scope, and muted also lets it autoplay everywhere. The source
+// is an opaque depack:// url (main streams it); the renderer never sees a path.
+
+const WALLPAPER_VIDEO_EXTS = ['.mp4', '.webm'];
+
+function isVideoWallpaper(relPath) {
+  if (typeof relPath !== 'string') return false;
+  const dot = relPath.lastIndexOf('.');
+  return dot >= 0 && WALLPAPER_VIDEO_EXTS.includes(relPath.slice(dot).toLowerCase());
+}
+
+// Reduced motion (OS pref) OR a static-thumbnail surface (gallery cards) → show
+// the first frame as a still, never autoplay.
+function wallpaperShouldFreeze(opts) {
+  return (opts && opts.staticAmbience === true)
+    || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+function setupWallpaperVideo(root, uri, pack, opts) {
+  const still = wallpaperShouldFreeze(opts);
+  let video = root.__aegisWallpaperVideo;
+  if (!video) {
+    video = document.createElement('video');
+    video.className = 'wallpaper-video';
+    video.muted = true;          // legal/UX boundary: pack video is always silent
+    video.defaultMuted = true;
+    video.loop = true;
+    video.playsInline = true;
+    video.setAttribute('playsinline', '');
+    video.setAttribute('muted', '');
+    video.disablePictureInPicture = true;
+    video.setAttribute('disablepictureinpicture', '');
+    // A decode/network error must never leave a black desktop — drop back to the
+    // palette void (and to any image path on the next applySkin).
+    video.addEventListener('error', () => removeWallpaperVideo(root));
+    root.insertBefore(video, root.firstChild); // behind everything (z-index:0)
+    root.__aegisWallpaperVideo = video;
+  }
+  // Fit / focal point / rate are cheap to (re)apply every render.
+  const fit = pack.skin.wallpaperFit || 'cover';
+  video.style.objectFit = fit === 'stretch' ? 'fill' : fit === 'contain' ? 'contain' : 'cover';
+  const px = typeof pack.skin.wallpaperPosX === 'number' ? pack.skin.wallpaperPosX : 50;
+  const py = typeof pack.skin.wallpaperPosY === 'number' ? pack.skin.wallpaperPosY : 50;
+  video.style.objectPosition = `${px}% ${py}%`;
+  const rate = pack.skin.wallpaperVideo && pack.skin.wallpaperVideo.playbackRate;
+  video.__rate = typeof rate === 'number' ? rate : 1;
+  video.__still = still;
+  if (video.getAttribute('src') !== uri) {
+    video.setAttribute('preload', still ? 'metadata' : 'auto');
+    video.setAttribute('src', uri);
+    if (still) {
+      // Show frame 0 as a still — decode metadata, seek to start, stay paused.
+      video.addEventListener('loadeddata', () => { try { video.currentTime = 0; video.pause(); } catch (e) {} }, { once: true });
+      video.load();
+    }
+  }
+  setWallpaperPlayback(root, true);
+}
+
+function removeWallpaperVideo(root) {
+  const video = root && root.__aegisWallpaperVideo;
+  if (!video) return;
+  try { video.pause(); video.removeAttribute('src'); video.load(); } catch (e) {}
+  video.remove();
+  root.__aegisWallpaperVideo = null;
+}
+
+// Pause/resume the wallpaper video WITH the ambience. applySkin calls it (play)
+// and freezeAmbience calls it (pause), so dashboard.js's existing freeze/resume
+// flow drives video playback with no new wiring. Never plays a still surface.
+function setWallpaperPlayback(root, playing) {
+  const video = root && root.__aegisWallpaperVideo;
+  if (!video) return;
+  if (playing && !video.__still) {
+    video.playbackRate = video.__rate || 1;
+    const p = video.play();
+    if (p && typeof p.catch === 'function') p.catch(() => {}); // autoplay guard
+  } else {
+    try { video.pause(); } catch (e) {}
+  }
 }
 
 // ── Ambience ────────────────────────────────────────────────────────────────
@@ -327,6 +422,8 @@ function applyAmbience(root, pack, opts) {
 function freezeAmbience(root) {
   const s = root && root.__aegisAmbience;
   if (s) { s.paused = true; cancelAnimationFrame(s.raf); }
+  // Freeze the video wallpaper too, so a power-frozen desktop is truly idle.
+  setWallpaperPlayback(root, false);
 }
 
 function applyComponentStyle(el, style, pack) {
@@ -2615,6 +2712,6 @@ function createRenderer(services) {
   return { render, destroy: cleanup };
 }
 
-window.AegisComponents = { FONT_STACKS, rgba, applySkin, createRenderer, freezeAmbience };
+window.AegisComponents = { FONT_STACKS, rgba, applySkin, createRenderer, freezeAmbience, setWallpaperPlayback };
 
 })();
