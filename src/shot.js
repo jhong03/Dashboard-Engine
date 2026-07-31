@@ -34,6 +34,22 @@ const services = {
   notifications: async () => ({ ok: true, granted: true, notifications: [] }),
 };
 
+// A video wallpaper needs its first frame decoded before the capture, or the
+// preview is black. Resolve on loadeddata (readyState >= HAVE_CURRENT_DATA),
+// or after a 5 s cap — proceed regardless so a stuck decode never hangs.
+function waitForWallpaperVideo(root, timeoutMs) {
+  const video = root && root.__aegisWallpaperVideo;
+  if (!video) return Promise.resolve();
+  if (video.readyState >= 2) return Promise.resolve();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => { if (done) return; done = true; resolve(); };
+    video.addEventListener('loadeddata', finish, { once: true });
+    video.addEventListener('error', finish, { once: true });
+    setTimeout(finish, timeoutMs);
+  });
+}
+
 async function run() {
   const id = new URLSearchParams(location.search).get('pack') || 'jarvis';
   const res = await aegis.packLoad(id);
@@ -41,6 +57,7 @@ async function run() {
   const renderer = AegisComponents.createRenderer(services);
   AegisComponents.applySkin(document.body, res.pack, res.assets, { maxFps: 60 });
   renderer.render(document.getElementById('canvas'), res.pack, res.assets);
+  await waitForWallpaperVideo(document.body, 5000);
   // Let fonts load and a few animation frames settle before the capture.
   setTimeout(() => { window.__shotReady = true; }, 900);
 }

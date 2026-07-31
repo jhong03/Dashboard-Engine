@@ -569,12 +569,13 @@ function renderPackPreview(packId) {
       win = null;
       resolve(result);
     };
-    const guard = setTimeout(() => finish(null), 9000); // never hang a publish
+    const guard = setTimeout(() => finish(null), 13000); // never hang a publish
     win.webContents.on('did-finish-load', async () => {
       try {
-        // Wait for the render to signal it has settled (fonts + a few frames).
+        // Wait for the render to signal it has settled (fonts + a few frames,
+        // and a video wallpaper's first decoded frame — up to shot.js's 5 s cap).
         const start = Date.now();
-        while (Date.now() - start < 4000) {
+        while (Date.now() - start < 8000) {
           const ready = await win.webContents.executeJavaScript('window.__shotReady === true').catch(() => false);
           if (ready) break;
           await new Promise((r) => setTimeout(r, 150));
