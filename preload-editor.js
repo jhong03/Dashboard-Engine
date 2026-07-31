@@ -16,6 +16,7 @@ const bridge = {
   assetsAll: (id) => ipcRenderer.invoke('aegis:packs:assetsAll', String(id)),
   editorSave: (baseId, pack) => ipcRenderer.invoke('aegis:editor:save', { baseId: String(baseId), pack }),
   importImage: (existingNames) => ipcRenderer.invoke('aegis:editor:importImage', existingNames),
+  importVideo: (existingNames) => ipcRenderer.invoke('aegis:editor:importVideo', existingNames),
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
   stats: () => ipcRenderer.invoke('aegis:stats'),
   display: () => ipcRenderer.invoke('aegis:display'),

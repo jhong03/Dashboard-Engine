@@ -437,6 +437,24 @@ async function importImage() {
   return res.rel;
 }
 
+// Video wallpaper import: staged in main, returned as a depack:// url the stage
+// plays live (30 MB never rides base64). Same shape as importImage.
+async function importVideo() {
+  const res = await aegis.importVideo(Object.keys(state.assets));
+  if (!res.ok) {
+    if (res.error) setStatus(res.error, true);
+    return null; // cancelled or refused
+  }
+  state.assets[res.rel] = res.uri;
+  setStatus(`Imported ${res.rel} — it becomes part of the pack when you save.`);
+  return res.rel;
+}
+
+// Classify a wallpaper ref so the skin tab shows the right controls.
+function isVideoRel(rel) {
+  return typeof rel === 'string' && /\.(mp4|webm)$/i.test(rel);
+}
+
 async function importImageAsComponent() {
   const rel = await importImage();
   if (!rel) return;
@@ -870,27 +888,40 @@ function renderSkinTab(panel) {
 
   panel.appendChild(sectionLabel('Wallpaper'));
   const choices = [['', 'None'], ...Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')])];
-  panel.appendChild(field('Image', selectControl(skin.wallpaper || '', choices, (v) => { skin.wallpaper = v || null; renderAll(); })));
+  panel.appendChild(field('Source', selectControl(skin.wallpaper || '', choices, (v) => { skin.wallpaper = v || null; renderAll(); })));
   const importBtn = document.createElement('button');
   importBtn.className = 'btn tiny';
-  importBtn.textContent = 'Import wallpaper…';
+  importBtn.textContent = 'Import image…';
   importBtn.addEventListener('click', async () => {
     const rel = await importImage();
     if (rel) { skin.wallpaper = rel; renderAll(); }
   });
   panel.appendChild(importBtn);
+  const importVidBtn = document.createElement('button');
+  importVidBtn.className = 'btn tiny';
+  importVidBtn.textContent = 'Import video…';
+  importVidBtn.addEventListener('click', async () => {
+    const rel = await importVideo();
+    if (rel) { skin.wallpaper = rel; renderAll(); }
+  });
+  panel.appendChild(importVidBtn);
 
-  // Fit & crop — only meaningful with a wallpaper image. Defaults applied
-  // in place so packs authored before these fields gain sane values.
+  // Fit & crop — meaningful for both an image and a video wallpaper. Defaults
+  // applied in place so packs authored before these fields gain sane values.
   if (skin.wallpaper) {
     if (!skin.wallpaperFit) skin.wallpaperFit = 'cover';
     if (typeof skin.wallpaperPosX !== 'number') skin.wallpaperPosX = 50;
     if (typeof skin.wallpaperPosY !== 'number') skin.wallpaperPosY = 50;
     panel.appendChild(field('Fit', selectControl(skin.wallpaperFit, [['cover', 'Fill (crop)'], ['contain', 'Fit whole'], ['stretch', 'Stretch']], (v) => { skin.wallpaperFit = v; renderAll(); })));
     if (skin.wallpaperFit !== 'stretch') {
-      // Focal point: which part of a cropped image shows.
+      // Focal point: which part of a cropped image/video shows.
       panel.appendChild(field('Position X', rangeControl(skin.wallpaperPosX, 0, 100, 1, (v) => { skin.wallpaperPosX = v; renderAll(); })));
       panel.appendChild(field('Position Y', rangeControl(skin.wallpaperPosY, 0, 100, 1, (v) => { skin.wallpaperPosY = v; renderAll(); })));
+    }
+    // Video-only: playback speed. Muting is forced by the engine (no control).
+    if (isVideoRel(skin.wallpaper)) {
+      if (!skin.wallpaperVideo || typeof skin.wallpaperVideo.playbackRate !== 'number') skin.wallpaperVideo = { playbackRate: 1 };
+      panel.appendChild(field('Playback speed', rangeControl(skin.wallpaperVideo.playbackRate, 0.25, 2, 0.05, (v) => { skin.wallpaperVideo.playbackRate = v; renderAll(); })));
     }
   }
 }

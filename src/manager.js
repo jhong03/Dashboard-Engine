@@ -1538,7 +1538,8 @@ function renderBgStep(el) {
   el.appendChild(imgNote);
   const imgRow = document.createElement('div');
   imgRow.className = 'b-presets';
-  imgRow.appendChild(libButton(builder.pack.skin.wallpaper ? 'Replace image…' : 'Choose an image…', async () => {
+  const isVideoWp = /\.(mp4|webm)$/i.test(builder.pack.skin.wallpaper || '');
+  imgRow.appendChild(libButton(builder.pack.skin.wallpaper && !isVideoWp ? 'Replace image…' : 'Choose an image…', async () => {
     const out = await aegis.builderImportImage([]);
     if (out.error === null && !out.ok) return; // cancelled
     if (!out.ok) { $('builder-status').textContent = out.error; return; }
@@ -1546,8 +1547,16 @@ function renderBgStep(el) {
     builder.wallpaperUri = out.uri;
     renderBgStep(el); updateBuilderPreview();
   }));
+  imgRow.appendChild(libButton(isVideoWp ? 'Replace video…' : 'Choose a video…', async () => {
+    const out = await aegis.builderImportVideo([]);
+    if (out.error === null && !out.ok) return; // cancelled
+    if (!out.ok) { $('builder-status').textContent = out.error; return; }
+    builder.pack.skin.wallpaper = out.rel;
+    builder.wallpaperUri = out.uri; // a depack:// url — the preview plays it live
+    renderBgStep(el); updateBuilderPreview();
+  }));
   if (builder.pack.skin.wallpaper) {
-    imgRow.appendChild(libButton('Remove image', () => {
+    imgRow.appendChild(libButton(isVideoWp ? 'Remove video' : 'Remove image', () => {
       builder.pack.skin.wallpaper = null;
       builder.wallpaperUri = null;
       renderBgStep(el); updateBuilderPreview();
@@ -1593,6 +1602,20 @@ function renderBgStep(el) {
         builder.pack.skin.wallpaperPosY = 50;
         renderBgStep(el); schedulePreview();
       }, 'tiny'));
+    }
+
+    // Video-only: playback speed. The engine always mutes a video wallpaper.
+    if (isVideoWp) {
+      if (!builder.pack.skin.wallpaperVideo || typeof builder.pack.skin.wallpaperVideo.playbackRate !== 'number') {
+        builder.pack.skin.wallpaperVideo = { playbackRate: 1 };
+      }
+      const speed = bField('Playback speed');
+      const sr = document.createElement('input');
+      sr.type = 'range'; sr.min = '0.25'; sr.max = '2'; sr.step = '0.05';
+      sr.value = String(builder.pack.skin.wallpaperVideo.playbackRate);
+      sr.addEventListener('input', () => { builder.pack.skin.wallpaperVideo.playbackRate = Number(sr.value); schedulePreview(); });
+      speed.appendChild(sr);
+      el.appendChild(speed);
     }
   }
 }
