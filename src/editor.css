@@ -208,6 +208,9 @@ body.editor-body {
 .ed-bg-layer-name { flex: 1; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ed-bg-layer-tools { display: flex; gap: 4px; flex: 0 0 auto; }
 .ed-bg-layer-tools .btn.tiny { padding: 1px 6px; min-width: 22px; }
+.ed-bg-fx-head { font-size: 11px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.04em; margin: 8px 0 4px; }
+.ed-bg-fx { border: 1px dashed var(--border); border-radius: 5px; padding: 6px; margin-bottom: 6px; }
+.ed-bg-fx .ed-bg-layer-name { text-transform: capitalize; }
 
 /* Photo gallery: the ordered, removable photo list in the inspector. */
 .gallery-editlist { display: flex; flex-direction: column; gap: 4px; }

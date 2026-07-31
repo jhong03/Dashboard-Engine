@@ -950,6 +950,7 @@ function renderBackgroundSection(panel, skin) {
     card.appendChild(field('Opacity', rangeControl(layer.opacity, 0.05, 1, 0.05, (v) => { layer.opacity = v; renderAll(); })));
     card.appendChild(field('Drift X', rangeControl(layer.drift.x, -20, 20, 1, (v) => { layer.drift.x = v; renderAll(); })));
     card.appendChild(field('Drift Y', rangeControl(layer.drift.y, -20, 20, 1, (v) => { layer.drift.y = v; renderAll(); })));
+    renderLayerEffects(card, layer);
     panel.appendChild(card);
   });
 
@@ -985,6 +986,95 @@ function renderBackgroundSection(panel, skin) {
     panel.appendChild(field('Strength', rangeControl(bg.parallax.strength, 0, 2, 0.1, (v) => { bg.parallax.strength = v; renderAll(); })));
     panel.appendChild(field('Axis', selectControl(bg.parallax.axis || 'both', [['both', 'Both'], ['x', 'Horizontal'], ['y', 'Vertical']], (v) => { bg.parallax.axis = v; renderAll(); })));
   }
+}
+
+// Fresh effect with the sanitizer's defaults.
+function defaultEffect(type) {
+  if (type === 'ripple') return { type, speed: 1, scale: 3, strength: 0.5 };
+  if (type === 'sway') return { type, speed: 0.5, strength: 0.5, direction: 0 };
+  if (type === 'drift-warp') return { type, speed: 0.5, scale: 3 };
+  if (type === 'pulse') return { type, speed: 1, amount: 0.3, paletteKey: null };
+  return { type: 'cursor-ripple', strength: 0.5, decay: 1 };
+}
+
+const EFFECT_ADD_CHOICES = [['', 'Add effect…'], ['ripple', 'Ripple'], ['sway', 'Sway'], ['drift-warp', 'Drift warp'], ['pulse', 'Pulse'], ['cursor-ripple', 'Cursor ripple']];
+const PALETTE_TINT_CHOICES = [['', 'None'], ['accent', 'Accent'], ['accentBright', 'Bright'], ['gold', 'Gold'], ['warn', 'Warn'], ['muted', 'Muted']];
+
+// Per-layer WebGL effects: a small card per effect with its params + optional
+// region, an add-effect dropdown (max 3). Effects need WebGL; if this display
+// lacks it, authoring still works but the stage can't preview.
+function renderLayerEffects(card, layer) {
+  if (!Array.isArray(layer.effects)) layer.effects = [];
+  const head = document.createElement('div');
+  head.className = 'ed-bg-fx-head';
+  head.textContent = 'Effects (WebGL)';
+  card.appendChild(head);
+  if (!(window.AegisGL && window.AegisGL.supported())) {
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = 'Effects preview unavailable on this GPU — they’re still saved and run where WebGL is available.';
+    card.appendChild(note);
+  }
+
+  const mkTool = (glyph, title, enabled, onClick) => {
+    const b = document.createElement('button');
+    b.className = 'btn tiny'; b.textContent = glyph; b.title = title; b.disabled = !enabled;
+    if (enabled) b.addEventListener('click', onClick);
+    return b;
+  };
+
+  layer.effects.forEach((fx, j) => {
+    const box = document.createElement('div');
+    box.className = 'ed-bg-fx';
+    const fh = document.createElement('div');
+    fh.className = 'ed-bg-layer-head';
+    const name = document.createElement('span');
+    name.className = 'ed-bg-layer-name';
+    name.textContent = fx.type;
+    fh.appendChild(name);
+    const tools = document.createElement('span');
+    tools.className = 'ed-bg-layer-tools';
+    tools.appendChild(mkTool('↑', 'Earlier', j > 0, () => { [layer.effects[j - 1], layer.effects[j]] = [layer.effects[j], layer.effects[j - 1]]; renderAll(); }));
+    tools.appendChild(mkTool('↓', 'Later', j < layer.effects.length - 1, () => { [layer.effects[j + 1], layer.effects[j]] = [layer.effects[j], layer.effects[j + 1]]; renderAll(); }));
+    tools.appendChild(mkTool('×', 'Remove', true, () => { layer.effects.splice(j, 1); renderAll(); }));
+    fh.appendChild(tools);
+    box.appendChild(fh);
+
+    const rc = (label, key, min, max, step) => box.appendChild(field(label, rangeControl(fx[key], min, max, step, (v) => { fx[key] = v; renderAll(); })));
+    if (fx.type === 'ripple') { rc('Speed', 'speed', 0, 3, 0.1); rc('Scale', 'scale', 0.5, 8, 0.5); rc('Strength', 'strength', 0, 1, 0.05); }
+    else if (fx.type === 'sway') { rc('Speed', 'speed', 0, 3, 0.1); rc('Strength', 'strength', 0, 1, 0.05); rc('Direction', 'direction', 0, 360, 5); }
+    else if (fx.type === 'drift-warp') { rc('Speed', 'speed', 0, 3, 0.1); rc('Scale', 'scale', 0.5, 8, 0.5); }
+    else if (fx.type === 'pulse') { rc('Speed', 'speed', 0, 3, 0.1); rc('Amount', 'amount', 0, 1, 0.05); box.appendChild(field('Tint', selectControl(fx.paletteKey || '', PALETTE_TINT_CHOICES, (v) => { fx.paletteKey = v || null; renderAll(); }))); }
+    else if (fx.type === 'cursor-ripple') { rc('Strength', 'strength', 0, 1, 0.05); rc('Decay', 'decay', 0.2, 3, 0.1); }
+
+    renderEffectRegion(box, fx);
+    card.appendChild(box);
+  });
+
+  if (layer.effects.length < 3) {
+    const add = selectControl('', EFFECT_ADD_CHOICES, (v) => { if (!v) return; layer.effects.push(defaultEffect(v)); renderAll(); });
+    card.appendChild(field('', add));
+  }
+}
+
+// Optional per-effect region (confine the effect to a rect/ellipse). Numeric
+// controls in v1 — a drag-on-stage overlay is a future nicety.
+function renderEffectRegion(box, fx) {
+  const toggle = document.createElement('button');
+  toggle.className = 'btn tiny';
+  toggle.textContent = fx.region ? 'Remove region' : 'Add region';
+  toggle.addEventListener('click', () => {
+    if (fx.region) delete fx.region; else fx.region = { shape: 'rect', x: 25, y: 25, w: 50, h: 50, feather: 10 };
+    renderAll();
+  });
+  box.appendChild(toggle);
+  if (!fx.region) return;
+  const r = fx.region;
+  box.appendChild(field('Shape', selectControl(r.shape, [['rect', 'Rectangle'], ['ellipse', 'Ellipse']], (v) => { r.shape = v; renderAll(); })));
+  const rc = (label, key, min, max) => box.appendChild(field(label, rangeControl(r[key], min, max, 1, (v) => { r[key] = v; renderAll(); })));
+  rc('Region X', 'x', 0, 100); rc('Region Y', 'y', 0, 100);
+  rc('Region W', 'w', 0, 100); rc('Region H', 'h', 0, 100);
+  rc('Feather', 'feather', 0, 50);
 }
 
 function renderPersonaTab(panel) {

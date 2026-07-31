@@ -130,7 +130,7 @@ async function realThumbInto(thumb, id, fallbackPack) {
     return;
   }
   const renderer = AegisComponents.createRenderer(previewServices());
-  renderPackInto(thumb, loaded.pack, loaded.assets, renderer, { staticAmbience: true });
+  renderPackInto(thumb, loaded.pack, loaded.assets, renderer, { staticAmbience: true, noGL: true });
   cardPreviews.push({ renderer, freezeTimer: setTimeout(() => renderer.destroy(), CARD_FREEZE_MS) });
 }
 

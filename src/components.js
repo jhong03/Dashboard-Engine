@@ -176,9 +176,17 @@ function applyBackground(root, pack, assets, opts) {
   // disabled for this surface after a lost context). Otherwise the DOM path runs
   // — zero new cost for effect-less packs.
   const wantEffects = layers.some((l) => Array.isArray(l.effects) && l.effects.length);
-  const useGL = wantEffects && !root.__aegisGlDisabled && window.AegisGL && window.AegisGL.supported();
+  // opts.noGL forces the DOM path — gallery mini-render cards use it so N cards
+  // never allocate N live GL contexts (the browser caps them).
+  const useGL = wantEffects && !(opts && opts.noGL) && !root.__aegisGlDisabled && window.AegisGL && window.AegisGL.supported();
   const mode = useGL ? 'gl' : 'dom';
-  const sig = `${mode}::${layers.map((l) => `${l.src}#${useGL ? JSON.stringify(l.effects || []) : ''}`).join('|')}`;
+  // The GL sig captures only what changes the SHADER or the baked motion params
+  // (effect types, region shape, mask, pulse-tint on/off; still + strength). Plain
+  // param values (speed/scale/…) are live uniforms read each tick from the shared
+  // layer object, so tweaking a slider updates live WITHOUT a costly rebuild.
+  const fxSig = (l) => (l.effects || []).map((e) => `${e.type}${e.region ? 'r' + e.region.shape : ''}${e.mask ? 'm' + e.mask : ''}${e.type === 'pulse' && e.paletteKey ? 't' : ''}`).join(',');
+  const glMeta = useGL ? `#g${still ? 's' : ''}${Math.round(strength * 10)}` : '';
+  const sig = `${mode}::${layers.map((l) => `${l.src}#${useGL ? fxSig(l) : ''}`).join('|')}${glMeta}`;
 
   let bg = root.__aegisBg;
   if (!bg || bg.sig !== sig || !bg.stack || !bg.stack.isConnected) {
