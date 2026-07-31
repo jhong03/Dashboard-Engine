@@ -291,7 +291,7 @@ async function createDashboardWindow() {
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
   // Push the current power state on first load and every reload/hot-reload, so
   // the renderer starts at the right fps / frozen if a game is already up.
-  dashboardWindow.webContents.on('did-finish-load', () => sendDesktopPower());
+  dashboardWindow.webContents.on('did-finish-load', () => { sendDesktopPower(); sendBackgroundMotion(); });
 
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
   dashboardWindow.showInactive(); // visible, but don't grab focus on launch
@@ -398,6 +398,13 @@ function sendDesktopPower() {
   // background music and stops the render loop (a hidden window keeps running).
   const shouldPause = desktopPaused || (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery);
   dashboardWindow.webContents.send('aegis:desktop:power', { active: !shouldPause, maxFps: perf.maxFps });
+}
+
+// Push the global background-motion multiplier to the desktop (on load + change),
+// so parallax/drift scale by the user's preference without a pack edit.
+function sendBackgroundMotion() {
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
+  dashboardWindow.webContents.send('aegis:desktop:backgroundMotion', settings.getBackgroundMotion(USER_DIR));
 }
 
 // Start the full-screen watcher + battery listeners once, on ready.
@@ -827,6 +834,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       // Settings screen: performance changes must reach the live desktop, and
       // the OS login item is owned by main.
       onPerformanceChanged: () => sendDesktopPower(),
+      onBackgroundMotionChanged: () => sendBackgroundMotion(),
       getAutoStart,
       setAutoStart,
       // Multi-monitor: the picker's data + rebuild-on-a-new-display.

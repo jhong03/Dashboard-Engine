@@ -1972,7 +1972,18 @@ async function renderSettingsCfg() {
     fps.value = String(perf.performance.maxFps);
   }
 
+  const bm = await aegis.backgroundMotionGet();
+  if (bm && bm.ok) setBgMotionControl(bm.backgroundMotion.parallax);
+
   renderMusicSettings();
+}
+
+// Format the background-motion slider's readout (Off / a percentage).
+function setBgMotionControl(value) {
+  const slider = $('set-bgmotion');
+  const label = $('set-bgmotion-val');
+  slider.value = String(value);
+  if (label) label.textContent = value <= 0 ? 'Off' : `${Math.round(value * 100)}%`;
 }
 
 // Background music: the user's own files, played on the desktop. Managed here
@@ -2044,6 +2055,17 @@ function wireSettingsCfg() {
   });
   $('set-fps').addEventListener('change', async (e) => {
     await aegis.performanceSet({ maxFps: Number(e.target.value) });
+    settingsSaved();
+  });
+  // Live-update the readout while dragging; persist (and broadcast to the
+  // desktop) on release.
+  $('set-bgmotion').addEventListener('input', (e) => {
+    const label = $('set-bgmotion-val');
+    const v = Number(e.target.value);
+    if (label) label.textContent = v <= 0 ? 'Off' : `${Math.round(v * 100)}%`;
+  });
+  $('set-bgmotion').addEventListener('change', async (e) => {
+    await aegis.backgroundMotionSet({ parallax: Number(e.target.value) });
     settingsSaved();
   });
   $('set-logs').addEventListener('click', async () => {

@@ -152,12 +152,15 @@ const state = { packId: null };
 // without another IPC round-trip.
 const power = { active: true, maxFps: 30 };
 const applied = { active: true, maxFps: 30 };
+// Global background-motion multiplier (Settings → Background motion): scales
+// every pack's parallax/drift, 0 (off) to 1 (full). Main pushes it on load + change.
+const bgMotion = { parallax: 1 };
 let cache = { pack: null, assets: null };
 
 // Render the active pack at the current frame cap, then freeze if we're paused.
 function renderActive() {
   if (!cache.pack) return;
-  AegisComponents.applySkin(document.body, cache.pack, cache.assets, { maxFps: power.maxFps });
+  AegisComponents.applySkin(document.body, cache.pack, cache.assets, { maxFps: power.maxFps, parallaxMultiplier: bgMotion.parallax });
   renderer.render(document.getElementById('canvas'), cache.pack, cache.assets);
   applied.active = true;
   applied.maxFps = power.maxFps;
@@ -233,6 +236,16 @@ aegis.onPower((p) => {
   // signal (not the render state machine, which no-ops before a pack loads), so
   // a full-screen app always silences it and leaving it resumes.
   musicReconcile();
+});
+
+// Global background-motion multiplier — main pushes it on load and whenever the
+// Settings slider moves. Re-apply the skin so parallax/drift rescale live (the
+// element set is unchanged, so video layers keep playing without a restart).
+aegis.onBackgroundMotion((v) => {
+  const p = v && typeof v.parallax === 'number' ? v.parallax : 1;
+  if (p === bgMotion.parallax) return;
+  bgMotion.parallax = p;
+  if (applied.active && cache.pack) renderActive();
 });
 
 init().catch((err) => console.error(`[dashboard] failed to initialise: ${err.message}`));

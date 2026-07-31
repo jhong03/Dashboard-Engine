@@ -400,6 +400,10 @@ body {
 .set-weather-row input { flex: 1; min-width: 0; }
 .set-weather-row .btn { width: auto; flex: 0 0 auto; }
 
+.set-range-row { display: flex; align-items: center; gap: 10px; }
+.set-range-row input[type="range"] { flex: 1; min-width: 0; }
+.set-range-val { flex: 0 0 auto; min-width: 3ch; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
 /* Background-music track list (Settings). */
 .cfg-value { color: var(--text-dim); font-variant-numeric: tabular-nums; font-weight: 400; }
 .set-music-tracks { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }

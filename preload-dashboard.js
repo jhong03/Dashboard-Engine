@@ -30,6 +30,8 @@ const bridge = {
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   onActiveChanged: subscription('aegis:active:changed'),   // manager picked a pack
   onPower: subscription('aegis:desktop:power'),            // fps cap / freeze (perf citizenship)
+  backgroundMotion: () => ipcRenderer.invoke('aegis:settings:backgroundMotion:get'),
+  onBackgroundMotion: subscription('aegis:desktop:backgroundMotion'), // global parallax multiplier
   stats: () => ipcRenderer.invoke('aegis:stats'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
   remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',
