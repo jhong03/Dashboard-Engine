@@ -1340,7 +1340,25 @@ function starterPack() {
   };
 }
 
-const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set() };
+const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set(), depthLayers: [], parallaxStrength: 1 };
+
+// Optional parallax: when the user adds depth layers, compose skin.background as
+// [base wallpaper, ...extra layers]; otherwise leave it off so a plain wallpaper
+// renders via the renderer's wallpaper fallback.
+function syncBuilderBackground() {
+  const skin = builder.pack.skin;
+  if (builder.depthLayers.length && skin.wallpaper) {
+    skin.background = {
+      layers: [
+        { src: skin.wallpaper, depth: 0, fit: skin.wallpaperFit || 'cover', posX: typeof skin.wallpaperPosX === 'number' ? skin.wallpaperPosX : 50, posY: typeof skin.wallpaperPosY === 'number' ? skin.wallpaperPosY : 50, opacity: 1, drift: { x: 0, y: 0 } },
+        ...builder.depthLayers.map((d) => ({ src: d.src, depth: d.depth, fit: 'cover', posX: 50, posY: 50, opacity: 1, drift: { x: d.driftX || 0, y: 0 } })),
+      ],
+      parallax: { strength: builder.parallaxStrength, axis: 'both' },
+    };
+  } else {
+    delete skin.background;
+  }
+}
 
 // Recompute the pack's components from the current selection + layout + option
 // tweaks.
@@ -1409,11 +1427,13 @@ function schedulePreview() {
 function updateBuilderPreview() {
   const el = $('builder-preview');
   if (!el) return;
+  syncBuilderBackground(); // compose skin.background from wallpaper + depth layers
   if (displayAspect) el.style.aspectRatio = displayAspect;
   if (builder.renderer) { builder.renderer.destroy(); builder.renderer = null; }
   builder.renderer = AegisComponents.createRenderer(previewServices());
-  const assets = (builder.pack.skin.wallpaper && builder.wallpaperUri)
-    ? { [builder.pack.skin.wallpaper]: builder.wallpaperUri } : {};
+  const assets = {};
+  if (builder.pack.skin.wallpaper && builder.wallpaperUri) assets[builder.pack.skin.wallpaper] = builder.wallpaperUri;
+  for (const d of builder.depthLayers) if (d.uri) assets[d.src] = d.uri; // extra parallax layers
   renderPackInto(el, builder.pack, assets, builder.renderer);
 }
 
@@ -1454,6 +1474,8 @@ async function openBuilder() {
   builder.step = 0;
   builder.pack = starterPack();
   builder.wallpaperUri = null;
+  builder.depthLayers = [];
+  builder.parallaxStrength = 1;
   builder.selected = [...DEFAULT_SELECTED];
   builder.layout = 'command';
   builder.compOpts = {};
@@ -1472,6 +1494,7 @@ function closeBuilder() {
 
 async function finishBuilder() {
   builder.pack.props = buildBuilderProps();
+  syncBuilderBackground(); // carry any parallax depth layers into the pack
   $('builder-status').textContent = 'Creating…';
   const out = await aegis.builderCreate(builder.pack, true);
   if (!out.ok) { $('builder-status').textContent = out.error || 'Could not create the pack.'; return; }
@@ -1485,6 +1508,7 @@ async function finishBuilderAndPublish() {
   const st = await aegis.workshopStatus();
   if (!st.available) { $('builder-status').textContent = st.reason || 'Steam Workshop isn’t available (start Steam and sign in).'; return; }
   builder.pack.props = buildBuilderProps();
+  syncBuilderBackground(); // carry any parallax depth layers into the pack
   $('builder-status').textContent = 'Creating…';
   const out = await aegis.builderCreate(builder.pack, false); // don't open the editor
   if (!out.ok) { $('builder-status').textContent = out.error || 'Could not create the pack.'; return; }
@@ -1616,6 +1640,53 @@ function renderBgStep(el) {
       sr.addEventListener('input', () => { builder.pack.skin.wallpaperVideo.playbackRate = Number(sr.value); schedulePreview(); });
       speed.appendChild(sr);
       el.appendChild(speed);
+    }
+
+    // Optional parallax depth layers — extra images/videos in FRONT of the base
+    // wallpaper, each moving with the cursor by its depth. Full per-layer control
+    // (fit, position, opacity, drift) lives in the editor after you create.
+    const depthLabel = document.createElement('span');
+    depthLabel.className = 'b-sublabel';
+    depthLabel.textContent = 'Depth layers (optional)';
+    el.appendChild(depthLabel);
+    const depthNote = document.createElement('p');
+    depthNote.className = 'hint';
+    depthNote.textContent = 'Add layers in front of the wallpaper for a parallax effect — each moves with the cursor by its depth. Fine-tune them in the editor.';
+    el.appendChild(depthNote);
+
+    builder.depthLayers.forEach((d, i) => {
+      const row = bField(`Layer ${i + 2}${/\.(mp4|webm)$/i.test(d.src) ? ' (video)' : ''} · depth`);
+      const dr = document.createElement('input');
+      dr.type = 'range'; dr.min = '0'; dr.max = '1'; dr.step = '0.05';
+      dr.value = String(d.depth);
+      dr.addEventListener('input', () => { d.depth = Number(dr.value); schedulePreview(); });
+      row.appendChild(dr);
+      row.appendChild(libButton('Remove', () => { builder.depthLayers.splice(i, 1); renderBgStep(el); updateBuilderPreview(); }, 'tiny danger'));
+      el.appendChild(row);
+    });
+
+    if (builder.depthLayers.length < 5) {
+      const addDepth = async (importFn) => {
+        const out = await importFn([]);
+        if (out.error === null && !out.ok) return; // cancelled
+        if (!out.ok) { $('builder-status').textContent = out.error; return; }
+        builder.depthLayers.push({ src: out.rel, uri: out.uri, depth: 0.5, driftX: 0 });
+        renderBgStep(el); updateBuilderPreview();
+      };
+      const addRow = bPresetRow();
+      addRow.appendChild(libButton('Add image layer…', () => addDepth(aegis.builderImportImage), 'tiny'));
+      addRow.appendChild(libButton('Add video layer…', () => addDepth(aegis.builderImportVideo), 'tiny'));
+      el.appendChild(addRow);
+    }
+
+    if (builder.depthLayers.length) {
+      const strength = bField('Parallax strength');
+      const pr = document.createElement('input');
+      pr.type = 'range'; pr.min = '0'; pr.max = '2'; pr.step = '0.1';
+      pr.value = String(builder.parallaxStrength);
+      pr.addEventListener('input', () => { builder.parallaxStrength = Number(pr.value); schedulePreview(); });
+      strength.appendChild(pr);
+      el.appendChild(strength);
     }
   }
 }

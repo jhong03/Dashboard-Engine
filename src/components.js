@@ -139,8 +139,27 @@ function backgroundSizeFor(fit) {
 // Reuses the existing elements when the set of sources is unchanged, so a
 // re-render (prop tweak, resume from freeze, fps change) never restarts a video.
 function applyBackground(root, pack, assets, opts) {
-  const spec = (pack.skin.background && Array.isArray(pack.skin.background.layers))
-    ? pack.skin.background : { layers: [], parallax: { strength: 1, axis: 'both' } };
+  // Normally the sanitizer has already normalized wallpaper → layers. But render
+  // defensively: an UNSANITIZED pack (e.g. the from-scratch builder's live
+  // preview) may carry only skin.wallpaper, so synthesize a single depth-0 layer
+  // from it rather than showing nothing.
+  const parallaxDefault = (pack.skin.background && pack.skin.background.parallax) || { strength: 1, axis: 'both' };
+  let spec;
+  if (pack.skin.background && Array.isArray(pack.skin.background.layers) && pack.skin.background.layers.length) {
+    spec = pack.skin.background;
+  } else if (pack.skin.wallpaper) {
+    spec = {
+      layers: [{
+        src: pack.skin.wallpaper, depth: 0, fit: pack.skin.wallpaperFit || 'cover',
+        posX: typeof pack.skin.wallpaperPosX === 'number' ? pack.skin.wallpaperPosX : 50,
+        posY: typeof pack.skin.wallpaperPosY === 'number' ? pack.skin.wallpaperPosY : 50,
+        opacity: 1, drift: { x: 0, y: 0 },
+      }],
+      parallax: parallaxDefault,
+    };
+  } else {
+    spec = { layers: [], parallax: parallaxDefault };
+  }
   const still = (opts && opts.staticAmbience === true)
     || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   // Effective parallax strength = pack strength × the user's global multiplier

@@ -886,43 +886,104 @@ function renderSkinTab(panel) {
     field('Density', rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
   );
 
-  panel.appendChild(sectionLabel('Wallpaper'));
-  const choices = [['', 'None'], ...Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')])];
-  panel.appendChild(field('Source', selectControl(skin.wallpaper || '', choices, (v) => { skin.wallpaper = v || null; renderAll(); })));
-  const importBtn = document.createElement('button');
-  importBtn.className = 'btn tiny';
-  importBtn.textContent = 'Import image…';
-  importBtn.addEventListener('click', async () => {
-    const rel = await importImage();
-    if (rel) { skin.wallpaper = rel; renderAll(); }
-  });
-  panel.appendChild(importBtn);
-  const importVidBtn = document.createElement('button');
-  importVidBtn.className = 'btn tiny';
-  importVidBtn.textContent = 'Import video…';
-  importVidBtn.addEventListener('click', async () => {
-    const rel = await importVideo();
-    if (rel) { skin.wallpaper = rel; renderAll(); }
-  });
-  panel.appendChild(importVidBtn);
+  renderBackgroundSection(panel, skin);
+}
 
-  // Fit & crop — meaningful for both an image and a video wallpaper. Defaults
-  // applied in place so packs authored before these fields gain sane values.
-  if (skin.wallpaper) {
-    if (!skin.wallpaperFit) skin.wallpaperFit = 'cover';
-    if (typeof skin.wallpaperPosX !== 'number') skin.wallpaperPosX = 50;
-    if (typeof skin.wallpaperPosY !== 'number') skin.wallpaperPosY = 50;
-    panel.appendChild(field('Fit', selectControl(skin.wallpaperFit, [['cover', 'Fill (crop)'], ['contain', 'Fit whole'], ['stretch', 'Stretch']], (v) => { skin.wallpaperFit = v; renderAll(); })));
-    if (skin.wallpaperFit !== 'stretch') {
-      // Focal point: which part of a cropped image/video shows.
-      panel.appendChild(field('Position X', rangeControl(skin.wallpaperPosX, 0, 100, 1, (v) => { skin.wallpaperPosX = v; renderAll(); })));
-      panel.appendChild(field('Position Y', rangeControl(skin.wallpaperPosY, 0, 100, 1, (v) => { skin.wallpaperPosY = v; renderAll(); })));
+// Background = a stack of image/video layers (back-to-front) with parallax
+// depth + drift. A single layer is a plain wallpaper; add more for depth. The
+// engine consumes skin.background.layers; the sanitizer keeps skin.wallpaper in
+// sync on save for older engines.
+function renderBackgroundSection(panel, skin) {
+  if (!skin.background || !Array.isArray(skin.background.layers)) {
+    skin.background = { layers: [], parallax: { strength: 1, axis: 'both' } };
+  }
+  const bg = skin.background;
+  panel.appendChild(sectionLabel('Background layers'));
+
+  if (bg.layers.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'ed-empty';
+    empty.textContent = 'No background yet — add an image or video layer. Add several at different depths for a parallax effect.';
+    panel.appendChild(empty);
+  }
+
+  const FIT_CHOICES = [['cover', 'Fill (crop)'], ['contain', 'Fit whole'], ['stretch', 'Stretch']];
+  bg.layers.forEach((layer, i) => {
+    const card = document.createElement('div');
+    card.className = 'ed-bg-layer';
+
+    const head = document.createElement('div');
+    head.className = 'ed-bg-layer-head';
+    const name = document.createElement('span');
+    name.className = 'ed-bg-layer-name';
+    name.textContent = `${i + 1}. ${String(layer.src).replace('assets/', '')}${isVideoRel(layer.src) ? ' (video)' : ''}`;
+    head.appendChild(name);
+    const tools = document.createElement('span');
+    tools.className = 'ed-bg-layer-tools';
+    const mkTool = (glyph, title, enabled, onClick) => {
+      const b = document.createElement('button');
+      b.className = 'btn tiny'; b.textContent = glyph; b.title = title; b.disabled = !enabled;
+      if (enabled) b.addEventListener('click', onClick);
+      return b;
+    };
+    tools.appendChild(mkTool('↑', 'Move back', i > 0, () => { [bg.layers[i - 1], bg.layers[i]] = [bg.layers[i], bg.layers[i - 1]]; renderAll(); }));
+    tools.appendChild(mkTool('↓', 'Move forward', i < bg.layers.length - 1, () => { [bg.layers[i + 1], bg.layers[i]] = [bg.layers[i], bg.layers[i + 1]]; renderAll(); }));
+    tools.appendChild(mkTool('×', 'Remove layer', true, () => { bg.layers.splice(i, 1); renderAll(); }));
+    head.appendChild(tools);
+    card.appendChild(head);
+
+    if (typeof layer.fit !== 'string') layer.fit = 'cover';
+    if (typeof layer.posX !== 'number') layer.posX = 50;
+    if (typeof layer.posY !== 'number') layer.posY = 50;
+    if (typeof layer.depth !== 'number') layer.depth = 0;
+    if (typeof layer.opacity !== 'number') layer.opacity = 1;
+    if (!layer.drift || typeof layer.drift !== 'object') layer.drift = { x: 0, y: 0 };
+
+    card.appendChild(field('Fit', selectControl(layer.fit, FIT_CHOICES, (v) => { layer.fit = v; renderAll(); })));
+    if (layer.fit !== 'stretch') {
+      card.appendChild(field('Position X', rangeControl(layer.posX, 0, 100, 1, (v) => { layer.posX = v; renderAll(); })));
+      card.appendChild(field('Position Y', rangeControl(layer.posY, 0, 100, 1, (v) => { layer.posY = v; renderAll(); })));
     }
-    // Video-only: playback speed. Muting is forced by the engine (no control).
-    if (isVideoRel(skin.wallpaper)) {
-      if (!skin.wallpaperVideo || typeof skin.wallpaperVideo.playbackRate !== 'number') skin.wallpaperVideo = { playbackRate: 1 };
-      panel.appendChild(field('Playback speed', rangeControl(skin.wallpaperVideo.playbackRate, 0.25, 2, 0.05, (v) => { skin.wallpaperVideo.playbackRate = v; renderAll(); })));
-    }
+    // Depth = how much the layer moves with the cursor (0 fixed, 1 full). Opacity
+    // lets a foreground layer blend over the ones behind it.
+    card.appendChild(field('Depth', rangeControl(layer.depth, 0, 1, 0.05, (v) => { layer.depth = v; renderAll(); })));
+    card.appendChild(field('Opacity', rangeControl(layer.opacity, 0.05, 1, 0.05, (v) => { layer.opacity = v; renderAll(); })));
+    card.appendChild(field('Drift X', rangeControl(layer.drift.x, -20, 20, 1, (v) => { layer.drift.x = v; renderAll(); })));
+    card.appendChild(field('Drift Y', rangeControl(layer.drift.y, -20, 20, 1, (v) => { layer.drift.y = v; renderAll(); })));
+    panel.appendChild(card);
+  });
+
+  const addLayer = (rel) => {
+    if (!rel) return;
+    bg.layers.push({ src: rel, depth: bg.layers.length === 0 ? 0 : 0.5, fit: 'cover', posX: 50, posY: 50, opacity: 1, drift: { x: 0, y: 0 } });
+    renderAll();
+  };
+  if (bg.layers.length < 6) {
+    const addImg = document.createElement('button');
+    addImg.className = 'btn tiny';
+    addImg.textContent = 'Add image layer…';
+    addImg.addEventListener('click', async () => addLayer(await importImage()));
+    panel.appendChild(addImg);
+    const addVid = document.createElement('button');
+    addVid.className = 'btn tiny';
+    addVid.textContent = 'Add video layer…';
+    addVid.addEventListener('click', async () => addLayer(await importVideo()));
+    panel.appendChild(addVid);
+  }
+
+  // Video speed is one global knob (schema); show it when any layer is a video.
+  if (bg.layers.some((l) => isVideoRel(l.src))) {
+    if (!skin.wallpaperVideo || typeof skin.wallpaperVideo.playbackRate !== 'number') skin.wallpaperVideo = { playbackRate: 1 };
+    panel.appendChild(field('Video speed', rangeControl(skin.wallpaperVideo.playbackRate, 0.25, 2, 0.05, (v) => { skin.wallpaperVideo.playbackRate = v; renderAll(); })));
+  }
+
+  // Parallax feel — only meaningful once a layer has depth or drift.
+  if (bg.layers.length > 0) {
+    if (!bg.parallax || typeof bg.parallax !== 'object') bg.parallax = { strength: 1, axis: 'both' };
+    if (typeof bg.parallax.strength !== 'number') bg.parallax.strength = 1;
+    panel.appendChild(sectionLabel('Parallax'));
+    panel.appendChild(field('Strength', rangeControl(bg.parallax.strength, 0, 2, 0.1, (v) => { bg.parallax.strength = v; renderAll(); })));
+    panel.appendChild(field('Axis', selectControl(bg.parallax.axis || 'both', [['both', 'Both'], ['x', 'Horizontal'], ['y', 'Vertical']], (v) => { bg.parallax.axis = v; renderAll(); })));
   }
 }
 
