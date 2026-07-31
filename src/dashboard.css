@@ -1032,6 +1032,11 @@ body {
 }
 .bg-layer-video { background: transparent; object-fit: cover; }
 
+/* WebGL effects mode: the GL canvas draws every layer; source videos stay in
+   the DOM (so they keep decoding) but invisible — the canvas shows their pixels. */
+.bg-gl { position: absolute; inset: 0; width: 100%; height: 100%; }
+.bg-gl-src { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; pointer-events: none; }
+
 .ambience-layer {
   position: absolute;
   inset: 0;

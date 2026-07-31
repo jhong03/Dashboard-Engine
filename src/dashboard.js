@@ -199,7 +199,11 @@ async function loadPack(id) {
 
 async function init() {
   // Precedence: dev override (AEGIS_PACK) → persisted active pack → default.
-  const requested = new URLSearchParams(location.search).get('pack');
+  const params = new URLSearchParams(location.search);
+  // DE_NO_GL forces the DOM background path (no WebGL effects) — a reliable
+  // escape hatch for a bad GPU and the way to verify the fail-soft fallback.
+  if (params.get('nogl') === '1') window.__DE_DISABLE_GL = true;
+  const requested = params.get('pack');
   const active = await aegis.activeGet();
   await loadPack(requested || active.id || 'jarvis');
 

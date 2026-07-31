@@ -171,96 +171,145 @@ function applyBackground(root, pack, assets, opts) {
   // Only the resolvable layers (an asset that failed to load is skipped so the
   // void shows through rather than a broken element).
   const layers = spec.layers.filter((l) => l && l.src && assets[l.src]);
-  const sig = layers.map((l) => l.src).join('|');
+
+  // GL mode: any layer declares effects AND WebGL is available (and hasn't been
+  // disabled for this surface after a lost context). Otherwise the DOM path runs
+  // — zero new cost for effect-less packs.
+  const wantEffects = layers.some((l) => Array.isArray(l.effects) && l.effects.length);
+  const useGL = wantEffects && !root.__aegisGlDisabled && window.AegisGL && window.AegisGL.supported();
+  const mode = useGL ? 'gl' : 'dom';
+  const sig = `${mode}::${layers.map((l) => `${l.src}#${useGL ? JSON.stringify(l.effects || []) : ''}`).join('|')}`;
 
   let bg = root.__aegisBg;
   if (!bg || bg.sig !== sig || !bg.stack || !bg.stack.isConnected) {
-    // Rebuild the stack from scratch.
     if (bg) teardownBackground(root);
     const stack = document.createElement('div');
     stack.className = 'bg-stack';
-    const els = layers.map((layer) => {
-      const uri = assets[layer.src];
-      if (isBgVideo(layer.src)) {
-        const v = document.createElement('video');
-        v.className = 'bg-layer bg-layer-video';
-        v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true;
-        v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
-        v.disablePictureInPicture = true; v.setAttribute('disablepictureinpicture', '');
-        v.setAttribute('preload', still ? 'metadata' : 'auto');
-        v.setAttribute('src', uri);
-        v.__still = still;
-        // Decode error → drop just this layer (void/other layers show), never black.
-        v.addEventListener('error', () => { v.style.display = 'none'; });
-        if (still) v.addEventListener('loadeddata', () => { try { v.currentTime = 0; v.pause(); } catch (e) {} }, { once: true });
+    root.insertBefore(stack, root.firstChild); // behind textures/ambience/components
+    bg = root.__aegisBg = {
+      stack, mode, sig, layers: [], els: [], gl: null,
+      pointer: { x: 0, y: 0 }, target: { x: 0, y: 0 },
+      pointerRaw: { x: 0.5, y: 0.5 }, pointerDown: false, pointerCleanup: null,
+    };
+
+    if (mode === 'gl') {
+      // Hidden source videos for texturing (images load inside the GL module).
+      const videos = {};
+      bg.els = layers.map((layer, i) => {
+        if (!isBgVideo(layer.src)) return null;
+        const v = makeBgVideo(assets[layer.src], still, pack);
+        v.classList.add('bg-gl-src'); // invisible; the GL canvas draws the pixels
+        stack.appendChild(v);
+        videos[i] = v;
         return v;
+      });
+      const handle = window.AegisGL.create(stack, layers, assets, {
+        videos, strength, axisX: axis !== 'y', axisY: axis !== 'x', reduced: still,
+        palette: pack.skin.palette,
+        onLost: () => { root.__aegisGlDisabled = true; applyBackground(root, pack, assets, opts); },
+      });
+      if (!handle) { // GL init/shader failed → fall back to DOM for this surface
+        root.__aegisGlDisabled = true;
+        teardownBackground(root);
+        return applyBackground(root, pack, assets, opts);
       }
-      const d = document.createElement('div');
-      d.className = 'bg-layer';
-      d.style.backgroundImage = `url(${uri})`;
-      d.style.backgroundRepeat = 'no-repeat';
-      return d;
+      bg.gl = handle;
+    } else {
+      bg.els = layers.map((layer) => {
+        if (isBgVideo(layer.src)) {
+          const v = makeBgVideo(assets[layer.src], still, pack);
+          v.className = 'bg-layer bg-layer-video';
+          v.addEventListener('error', () => { v.style.display = 'none'; }); // one layer drops, never black
+          return v;
+        }
+        const d = document.createElement('div');
+        d.className = 'bg-layer';
+        d.style.backgroundImage = `url(${assets[layer.src]})`;
+        d.style.backgroundRepeat = 'no-repeat';
+        return d;
+      });
+      bg.els.forEach((el) => stack.appendChild(el)); // DOM order = back-to-front
+    }
+  }
+  bg.mode = mode;
+
+  if (mode === 'gl') {
+    // The GL handle owns rendering; the shared loop just drives it (effects
+    // animate unless reduced, when create() already drew one frame → no loop).
+    bg.needsMotion = !still;
+    setupBackgroundPointer(root, bg, !still);
+  } else {
+    // (Re)apply per-layer look + motion parameters (cheap, idempotent).
+    bg.layers = layers.map((layer, i) => {
+      const el = bg.els[i];
+      const fit = layer.fit || 'cover';
+      const posX = typeof layer.posX === 'number' ? layer.posX : 50;
+      const posY = typeof layer.posY === 'number' ? layer.posY : 50;
+      el.style.opacity = String(typeof layer.opacity === 'number' ? layer.opacity : 1);
+      if (el.tagName === 'VIDEO') {
+        el.style.objectFit = objectFitFor(fit);
+        el.style.objectPosition = `${posX}% ${posY}%`;
+      } else {
+        el.style.backgroundSize = backgroundSizeFor(fit);
+        el.style.backgroundPosition = `${posX}% ${posY}%`;
+      }
+      const depth = typeof layer.depth === 'number' ? layer.depth : 0;
+      const driftX = layer.drift ? layer.drift.x || 0 : 0;
+      const driftY = layer.drift ? layer.drift.y || 0 : 0;
+      const parallaxAmp = PARALLAX_MAX_PCT * depth * strength;
+      const driftAmpX = still ? 0 : DRIFT_MAX_PCT * Math.min(1, Math.abs(driftX) / DRIFT_REF);
+      const driftAmpY = still ? 0 : DRIFT_MAX_PCT * Math.min(1, Math.abs(driftY) / DRIFT_REF);
+      const moving = parallaxAmp > 0 || driftAmpX > 0 || driftAmpY > 0;
+      const overscan = parallaxAmp + Math.max(driftAmpX, driftAmpY) + BG_OVERSCAN_MARGIN;
+      const scale = moving ? 1 + (2 * overscan) / 100 : 1;
+      const rec = {
+        el, depth, scale, moving, parallaxAmp, driftAmpX, driftAmpY,
+        driftSpeedX: (Math.sign(driftX) || 1) * (Math.abs(driftX) / DRIFT_REF) * DRIFT_BASE_FREQ,
+        driftSpeedY: (Math.sign(driftY) || 1) * (Math.abs(driftY) / DRIFT_REF) * DRIFT_BASE_FREQ,
+        driftPhaseX: 0, driftPhaseY: 0,
+      };
+      el.style.transform = moving ? `scale(${scale.toFixed(4)})` : 'none';
+      return rec;
     });
-    els.forEach((el) => stack.appendChild(el)); // DOM order = back-to-front paint
-    root.insertBefore(stack, root.firstChild);   // behind textures/ambience/components
-    bg = root.__aegisBg = { stack, layers: [], sig, pointer: { x: 0, y: 0 }, target: { x: 0, y: 0 }, pointerCleanup: null };
-    bg.els = els;
+    bg.axisX = axis !== 'y';
+    bg.axisY = axis !== 'x';
+    bg.needsMotion = !still && bg.layers.some((l) => l.moving);
+    setupBackgroundPointer(root, bg, !still && bg.layers.some((l) => l.parallaxAmp > 0));
   }
 
-  // (Re)apply per-layer look + motion parameters (cheap, idempotent).
-  bg.layers = layers.map((layer, i) => {
-    const el = bg.els[i];
-    const fit = layer.fit || 'cover';
-    const posX = typeof layer.posX === 'number' ? layer.posX : 50;
-    const posY = typeof layer.posY === 'number' ? layer.posY : 50;
-    el.style.opacity = String(typeof layer.opacity === 'number' ? layer.opacity : 1);
-    if (el.tagName === 'VIDEO') {
-      el.style.objectFit = objectFitFor(fit);
-      el.style.objectPosition = `${posX}% ${posY}%`;
-      const rate = pack.skin.wallpaperVideo && pack.skin.wallpaperVideo.playbackRate;
-      el.playbackRate = typeof rate === 'number' ? rate : 1;
-    } else {
-      el.style.backgroundSize = backgroundSizeFor(fit);
-      el.style.backgroundPosition = `${posX}% ${posY}%`;
-    }
-    const depth = typeof layer.depth === 'number' ? layer.depth : 0;
-    const driftX = layer.drift ? layer.drift.x || 0 : 0;
-    const driftY = layer.drift ? layer.drift.y || 0 : 0;
-    const parallaxAmp = PARALLAX_MAX_PCT * depth * strength;
-    const driftAmpX = still ? 0 : DRIFT_MAX_PCT * Math.min(1, Math.abs(driftX) / DRIFT_REF);
-    const driftAmpY = still ? 0 : DRIFT_MAX_PCT * Math.min(1, Math.abs(driftY) / DRIFT_REF);
-    const moving = parallaxAmp > 0 || driftAmpX > 0 || driftAmpY > 0;
-    // Scale up just enough that parallax + drift never expose an edge; a
-    // motionless layer stays scale 1 → pixel-identical to a plain wallpaper.
-    const overscan = parallaxAmp + Math.max(driftAmpX, driftAmpY) + BG_OVERSCAN_MARGIN;
-    const scale = moving ? 1 + (2 * overscan) / 100 : 1;
-    const rec = {
-      el, depth, scale, moving,
-      parallaxAmp,
-      driftAmpX, driftAmpY,
-      driftSpeedX: (Math.sign(driftX) || 1) * (Math.abs(driftX) / DRIFT_REF) * DRIFT_BASE_FREQ,
-      driftSpeedY: (Math.sign(driftY) || 1) * (Math.abs(driftY) / DRIFT_REF) * DRIFT_BASE_FREQ,
-      driftPhaseX: 0, driftPhaseY: 0,
-    };
-    // Rest position: base scale, no translate (also the reduced-motion frame).
-    el.style.transform = moving ? `scale(${scale.toFixed(4)})` : 'none';
-    return rec;
-  });
+  setWallpaperPlayback(root, true); // start/refresh video layers (source or visible)
+}
 
-  bg.axisX = axis !== 'y';
-  bg.axisY = axis !== 'x';
-  bg.needsMotion = !still && bg.layers.some((l) => l.moving);
-  const wantsPointer = !still && bg.layers.some((l) => l.parallaxAmp > 0);
-  setupBackgroundPointer(root, bg, wantsPointer);
-
-  setWallpaperPlayback(root, true); // start/refresh video layers
+// Create a muted, looping background <video> (a visible DOM layer OR a hidden GL
+// texture source). Always muted — pack audio is out of scope. `still` shows the
+// first frame paused (reduced motion / static thumbnail).
+function makeBgVideo(uri, still, pack) {
+  const v = document.createElement('video');
+  v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true;
+  v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+  v.disablePictureInPicture = true; v.setAttribute('disablepictureinpicture', '');
+  v.setAttribute('preload', still ? 'metadata' : 'auto');
+  v.setAttribute('src', uri);
+  v.__still = still;
+  const rate = pack && pack.skin.wallpaperVideo && pack.skin.wallpaperVideo.playbackRate;
+  v.__rate = typeof rate === 'number' ? rate : 1;
+  if (still) v.addEventListener('loadeddata', () => { try { v.currentTime = 0; v.pause(); } catch (e) {} }, { once: true });
+  return v;
 }
 
 // Advance parallax (lerp toward the pointer) + drift for every moving layer.
-// Called once per frame by the shared ambience raf.
-function stepBackgroundMotion(bg, dt) {
+// Called once per frame by the shared ambience raf. In GL mode it just drives
+// the GL handle (which owns parallax/drift/effects); in DOM mode it sets each
+// layer's transform.
+function stepBackgroundMotion(bg, dt, t) {
   bg.pointer.x += (bg.target.x - bg.pointer.x) * 0.08;
   bg.pointer.y += (bg.target.y - bg.pointer.y) * 0.08;
+  if (bg.gl) {
+    bg.gl.setParallax(bg.pointer.x, bg.pointer.y);
+    bg.gl.setPointer(bg.pointerRaw.x, bg.pointerRaw.y, bg.pointerDown);
+    bg.gl.tick(t);
+    return;
+  }
   for (const l of bg.layers) {
     if (!l.moving) continue;
     let tx = 0, ty = 0;
@@ -285,11 +334,21 @@ function setupBackgroundPointer(root, bg, wanted) {
     const onMove = (e) => {
       const w = win.innerWidth || 1;
       const h = win.innerHeight || 1;
-      bg.target.x = Math.max(-1, Math.min(1, (e.clientX / w - 0.5) * 2));
-      bg.target.y = Math.max(-1, Math.min(1, (e.clientY / h - 0.5) * 2));
+      const nx = e.clientX / w, ny = e.clientY / h;
+      bg.target.x = Math.max(-1, Math.min(1, (nx - 0.5) * 2));
+      bg.target.y = Math.max(-1, Math.min(1, (ny - 0.5) * 2));
+      bg.pointerRaw.x = nx; bg.pointerRaw.y = ny; // raw 0..1 for GL cursor-ripple
     };
+    const onDown = () => { bg.pointerDown = true; };
+    const onUp = () => { bg.pointerDown = false; };
     doc.addEventListener('pointermove', onMove, { passive: true });
-    bg.pointerCleanup = () => doc.removeEventListener('pointermove', onMove);
+    doc.addEventListener('pointerdown', onDown, { passive: true });
+    doc.addEventListener('pointerup', onUp, { passive: true });
+    bg.pointerCleanup = () => {
+      doc.removeEventListener('pointermove', onMove);
+      doc.removeEventListener('pointerdown', onDown);
+      doc.removeEventListener('pointerup', onUp);
+    };
   } else if (!wanted && bg.pointerCleanup) {
     bg.pointerCleanup();
     bg.pointerCleanup = null;
@@ -301,8 +360,9 @@ function teardownBackground(root) {
   const bg = root && root.__aegisBg;
   if (!bg) return;
   if (bg.pointerCleanup) bg.pointerCleanup();
+  if (bg.gl) { try { bg.gl.destroy(); } catch (e) {} bg.gl = null; } // release GL context (1-per-surface budget)
   for (const el of bg.els || []) {
-    if (el.tagName === 'VIDEO') { try { el.pause(); el.removeAttribute('src'); el.load(); } catch (e) {} }
+    if (el && el.tagName === 'VIDEO') { try { el.pause(); el.removeAttribute('src'); el.load(); } catch (e) {} }
   }
   if (bg.stack) bg.stack.remove();
   root.__aegisBg = null;
@@ -315,8 +375,9 @@ function setWallpaperPlayback(root, playing) {
   const bg = root && root.__aegisBg;
   if (!bg) return;
   for (const el of bg.els || []) {
-    if (el.tagName !== 'VIDEO') continue;
+    if (!el || el.tagName !== 'VIDEO') continue; // GL image layers have no element
     if (playing && !el.__still) {
+      if (typeof el.__rate === 'number') el.playbackRate = el.__rate;
       const p = el.play();
       if (p && typeof p.catch === 'function') p.catch(() => {}); // autoplay guard
     } else {
@@ -550,7 +611,7 @@ function applyAmbience(root, pack, opts) {
     const dt = Math.min(t - last, 100) / 1000;
     last = t;
     if (particles) { particles.step(dt, t); particles.draw(t); }
-    if (bgMoving) stepBackgroundMotion(bg, dt);
+    if (bgMoving) stepBackgroundMotion(bg, dt, t);
   };
   state.raf = requestAnimationFrame(loop);
 }

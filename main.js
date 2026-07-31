@@ -286,7 +286,7 @@ async function createDashboardWindow() {
     },
   });
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
-    query: { pack: envFlag('PACK') || '' },
+    query: { pack: envFlag('PACK') || '', nogl: envFlag('NO_GL') ? '1' : '' },
   });
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
   // Push the current power state on first load and every reload/hot-reload, so
