@@ -95,115 +95,214 @@ function applySkin(root, pack, assets, opts) {
   root.classList.toggle('uppercase', typography.uppercase);
   root.classList.toggle('notches', shape.cornerNotches);
   s.backgroundColor = palette.void;
-  const wallpaper = pack.skin.wallpaper;
-  const wallpaperUri = wallpaper && assets[wallpaper];
-  if (wallpaperUri && isVideoWallpaper(wallpaper)) {
-    // A video wallpaper: a muted, looping <video> in the wallpaper slot. No
-    // background image behind it; a prior image/video is torn down below/here.
-    s.backgroundImage = 'none';
-    setupWallpaperVideo(root, wallpaperUri, pack, opts);
-  } else {
-    removeWallpaperVideo(root);
-    if (wallpaperUri) {
-      s.backgroundImage = `url(${wallpaperUri})`;
-      // Fit + focal point let a creator crop/adjust an imported image. Defaults
-      // (cover, centred) apply to packs authored before these fields existed.
-      const fit = pack.skin.wallpaperFit || 'cover';
-      const px = typeof pack.skin.wallpaperPosX === 'number' ? pack.skin.wallpaperPosX : 50;
-      const py = typeof pack.skin.wallpaperPosY === 'number' ? pack.skin.wallpaperPosY : 50;
-      s.backgroundSize = fit === 'contain' ? 'contain' : fit === 'stretch' ? '100% 100%' : 'cover';
-      s.backgroundPosition = `${px}% ${py}%`;
-      s.backgroundRepeat = 'no-repeat';
-    } else {
-      s.backgroundImage = 'none';
-    }
-  }
+  s.backgroundImage = 'none'; // the layer stack owns the wallpaper now
+  applyBackground(root, pack, assets, opts);
 
   applyAmbience(root, pack, opts);
 }
 
-// ── Video wallpapers ─────────────────────────────────────────────────────────
-// A <video> in the wallpaper slot (z-index:0, behind textures/ambience/
-// components — the same layer a background image paints in). ALWAYS muted: pack
-// audio is out of scope, and muted also lets it autoplay everywhere. The source
-// is an opaque depack:// url (main streams it); the renderer never sees a path.
+// ── Layered parallax background ──────────────────────────────────────────────
+// The wallpaper is now a STACK of up to 6 layers (images and/or videos), each
+// with a parallax `depth` and optional `drift`. A legacy single wallpaper is one
+// depth-0 layer (the sanitizer normalizes it), so it renders pixel-identically:
+// a depth-0 layer with no drift gets no scale and no transform.
+//
+// The stack sits in the wallpaper slot (z-index:0, behind textures/ambience/
+// components) and clips its overscanned layers. Parallax follows the pointer;
+// drift is a slow bounded oscillation. Both are advanced by the SHARED ambience
+// raf (stepBackgroundMotion), so they honour the fps cap and freeze exactly like
+// ambience — and a moving layer is scaled up just enough that its translation
+// never exposes an edge. Video layers are ALWAYS muted (pack audio is out of
+// scope) and stream over depack:// (never a filesystem path in the renderer).
 
-const WALLPAPER_VIDEO_EXTS = ['.mp4', '.webm'];
+const BG_VIDEO_EXTS = ['.mp4', '.webm'];
+const PARALLAX_MAX_PCT = 4;   // pointer shift (% of surface) at depth 1 · strength 1
+const DRIFT_MAX_PCT = 3;      // drift oscillation amplitude (% of surface) at |drift| 20
+const DRIFT_REF = 20;         // schema drift magnitude that maps to the max amplitude
+const DRIFT_BASE_FREQ = 0.32; // rad/s at |drift| 20 (~20 s period); scales with |drift|
+const BG_OVERSCAN_MARGIN = 0.5; // % safety so rounding never reveals an edge
 
-function isVideoWallpaper(relPath) {
+function isBgVideo(relPath) {
   if (typeof relPath !== 'string') return false;
   const dot = relPath.lastIndexOf('.');
-  return dot >= 0 && WALLPAPER_VIDEO_EXTS.includes(relPath.slice(dot).toLowerCase());
+  return dot >= 0 && BG_VIDEO_EXTS.includes(relPath.slice(dot).toLowerCase());
 }
 
-// Reduced motion (OS pref) OR a static-thumbnail surface (gallery cards) → show
-// the first frame as a still, never autoplay.
-function wallpaperShouldFreeze(opts) {
-  return (opts && opts.staticAmbience === true)
+function objectFitFor(fit) {
+  return fit === 'stretch' ? 'fill' : fit === 'contain' ? 'contain' : 'cover';
+}
+function backgroundSizeFor(fit) {
+  return fit === 'contain' ? 'contain' : fit === 'stretch' ? '100% 100%' : 'cover';
+}
+
+// Build (or reuse) the layer stack and compute per-layer motion parameters.
+// Reuses the existing elements when the set of sources is unchanged, so a
+// re-render (prop tweak, resume from freeze, fps change) never restarts a video.
+function applyBackground(root, pack, assets, opts) {
+  const spec = (pack.skin.background && Array.isArray(pack.skin.background.layers))
+    ? pack.skin.background : { layers: [], parallax: { strength: 1, axis: 'both' } };
+  const still = (opts && opts.staticAmbience === true)
     || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-}
+  // Effective parallax strength = pack strength × the user's global multiplier
+  // (0 disables it). Reduced motion / a static thumbnail freezes everything.
+  const userMult = opts && typeof opts.parallaxMultiplier === 'number' ? Math.max(0, Math.min(1, opts.parallaxMultiplier)) : 1;
+  const strength = still ? 0 : Math.max(0, Math.min(2, spec.parallax.strength)) * userMult;
+  const axis = spec.parallax.axis || 'both';
 
-function setupWallpaperVideo(root, uri, pack, opts) {
-  const still = wallpaperShouldFreeze(opts);
-  let video = root.__aegisWallpaperVideo;
-  if (!video) {
-    video = document.createElement('video');
-    video.className = 'wallpaper-video';
-    video.muted = true;          // legal/UX boundary: pack video is always silent
-    video.defaultMuted = true;
-    video.loop = true;
-    video.playsInline = true;
-    video.setAttribute('playsinline', '');
-    video.setAttribute('muted', '');
-    video.disablePictureInPicture = true;
-    video.setAttribute('disablepictureinpicture', '');
-    // A decode/network error must never leave a black desktop — drop back to the
-    // palette void (and to any image path on the next applySkin).
-    video.addEventListener('error', () => removeWallpaperVideo(root));
-    root.insertBefore(video, root.firstChild); // behind everything (z-index:0)
-    root.__aegisWallpaperVideo = video;
+  // Only the resolvable layers (an asset that failed to load is skipped so the
+  // void shows through rather than a broken element).
+  const layers = spec.layers.filter((l) => l && l.src && assets[l.src]);
+  const sig = layers.map((l) => l.src).join('|');
+
+  let bg = root.__aegisBg;
+  if (!bg || bg.sig !== sig || !bg.stack || !bg.stack.isConnected) {
+    // Rebuild the stack from scratch.
+    if (bg) teardownBackground(root);
+    const stack = document.createElement('div');
+    stack.className = 'bg-stack';
+    const els = layers.map((layer) => {
+      const uri = assets[layer.src];
+      if (isBgVideo(layer.src)) {
+        const v = document.createElement('video');
+        v.className = 'bg-layer bg-layer-video';
+        v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true;
+        v.setAttribute('playsinline', ''); v.setAttribute('muted', '');
+        v.disablePictureInPicture = true; v.setAttribute('disablepictureinpicture', '');
+        v.setAttribute('preload', still ? 'metadata' : 'auto');
+        v.setAttribute('src', uri);
+        v.__still = still;
+        // Decode error → drop just this layer (void/other layers show), never black.
+        v.addEventListener('error', () => { v.style.display = 'none'; });
+        if (still) v.addEventListener('loadeddata', () => { try { v.currentTime = 0; v.pause(); } catch (e) {} }, { once: true });
+        return v;
+      }
+      const d = document.createElement('div');
+      d.className = 'bg-layer';
+      d.style.backgroundImage = `url(${uri})`;
+      d.style.backgroundRepeat = 'no-repeat';
+      return d;
+    });
+    els.forEach((el) => stack.appendChild(el)); // DOM order = back-to-front paint
+    root.insertBefore(stack, root.firstChild);   // behind textures/ambience/components
+    bg = root.__aegisBg = { stack, layers: [], sig, pointer: { x: 0, y: 0 }, target: { x: 0, y: 0 }, pointerCleanup: null };
+    bg.els = els;
   }
-  // Fit / focal point / rate are cheap to (re)apply every render.
-  const fit = pack.skin.wallpaperFit || 'cover';
-  video.style.objectFit = fit === 'stretch' ? 'fill' : fit === 'contain' ? 'contain' : 'cover';
-  const px = typeof pack.skin.wallpaperPosX === 'number' ? pack.skin.wallpaperPosX : 50;
-  const py = typeof pack.skin.wallpaperPosY === 'number' ? pack.skin.wallpaperPosY : 50;
-  video.style.objectPosition = `${px}% ${py}%`;
-  const rate = pack.skin.wallpaperVideo && pack.skin.wallpaperVideo.playbackRate;
-  video.__rate = typeof rate === 'number' ? rate : 1;
-  video.__still = still;
-  if (video.getAttribute('src') !== uri) {
-    video.setAttribute('preload', still ? 'metadata' : 'auto');
-    video.setAttribute('src', uri);
-    if (still) {
-      // Show frame 0 as a still — decode metadata, seek to start, stay paused.
-      video.addEventListener('loadeddata', () => { try { video.currentTime = 0; video.pause(); } catch (e) {} }, { once: true });
-      video.load();
+
+  // (Re)apply per-layer look + motion parameters (cheap, idempotent).
+  bg.layers = layers.map((layer, i) => {
+    const el = bg.els[i];
+    const fit = layer.fit || 'cover';
+    const posX = typeof layer.posX === 'number' ? layer.posX : 50;
+    const posY = typeof layer.posY === 'number' ? layer.posY : 50;
+    el.style.opacity = String(typeof layer.opacity === 'number' ? layer.opacity : 1);
+    if (el.tagName === 'VIDEO') {
+      el.style.objectFit = objectFitFor(fit);
+      el.style.objectPosition = `${posX}% ${posY}%`;
+      const rate = pack.skin.wallpaperVideo && pack.skin.wallpaperVideo.playbackRate;
+      el.playbackRate = typeof rate === 'number' ? rate : 1;
+    } else {
+      el.style.backgroundSize = backgroundSizeFor(fit);
+      el.style.backgroundPosition = `${posX}% ${posY}%`;
     }
+    const depth = typeof layer.depth === 'number' ? layer.depth : 0;
+    const driftX = layer.drift ? layer.drift.x || 0 : 0;
+    const driftY = layer.drift ? layer.drift.y || 0 : 0;
+    const parallaxAmp = PARALLAX_MAX_PCT * depth * strength;
+    const driftAmpX = still ? 0 : DRIFT_MAX_PCT * Math.min(1, Math.abs(driftX) / DRIFT_REF);
+    const driftAmpY = still ? 0 : DRIFT_MAX_PCT * Math.min(1, Math.abs(driftY) / DRIFT_REF);
+    const moving = parallaxAmp > 0 || driftAmpX > 0 || driftAmpY > 0;
+    // Scale up just enough that parallax + drift never expose an edge; a
+    // motionless layer stays scale 1 → pixel-identical to a plain wallpaper.
+    const overscan = parallaxAmp + Math.max(driftAmpX, driftAmpY) + BG_OVERSCAN_MARGIN;
+    const scale = moving ? 1 + (2 * overscan) / 100 : 1;
+    const rec = {
+      el, depth, scale, moving,
+      parallaxAmp,
+      driftAmpX, driftAmpY,
+      driftSpeedX: (Math.sign(driftX) || 1) * (Math.abs(driftX) / DRIFT_REF) * DRIFT_BASE_FREQ,
+      driftSpeedY: (Math.sign(driftY) || 1) * (Math.abs(driftY) / DRIFT_REF) * DRIFT_BASE_FREQ,
+      driftPhaseX: 0, driftPhaseY: 0,
+    };
+    // Rest position: base scale, no translate (also the reduced-motion frame).
+    el.style.transform = moving ? `scale(${scale.toFixed(4)})` : 'none';
+    return rec;
+  });
+
+  bg.axisX = axis !== 'y';
+  bg.axisY = axis !== 'x';
+  bg.needsMotion = !still && bg.layers.some((l) => l.moving);
+  const wantsPointer = !still && bg.layers.some((l) => l.parallaxAmp > 0);
+  setupBackgroundPointer(root, bg, wantsPointer);
+
+  setWallpaperPlayback(root, true); // start/refresh video layers
+}
+
+// Advance parallax (lerp toward the pointer) + drift for every moving layer.
+// Called once per frame by the shared ambience raf.
+function stepBackgroundMotion(bg, dt) {
+  bg.pointer.x += (bg.target.x - bg.pointer.x) * 0.08;
+  bg.pointer.y += (bg.target.y - bg.pointer.y) * 0.08;
+  for (const l of bg.layers) {
+    if (!l.moving) continue;
+    let tx = 0, ty = 0;
+    if (l.parallaxAmp > 0) {
+      // Background shifts OPPOSITE the cursor for a natural parallax feel.
+      if (bg.axisX) tx += -bg.pointer.x * l.parallaxAmp;
+      if (bg.axisY) ty += -bg.pointer.y * l.parallaxAmp;
+    }
+    if (l.driftAmpX > 0) { l.driftPhaseX += l.driftSpeedX * dt; tx += Math.sin(l.driftPhaseX) * l.driftAmpX; }
+    if (l.driftAmpY > 0) { l.driftPhaseY += l.driftSpeedY * dt; ty += Math.sin(l.driftPhaseY) * l.driftAmpY; }
+    l.el.style.transform = `translate(${tx.toFixed(3)}%, ${ty.toFixed(3)}%) scale(${l.scale.toFixed(4)})`;
   }
-  setWallpaperPlayback(root, true);
 }
 
-function removeWallpaperVideo(root) {
-  const video = root && root.__aegisWallpaperVideo;
-  if (!video) return;
-  try { video.pause(); video.removeAttribute('src'); video.load(); } catch (e) {}
-  video.remove();
-  root.__aegisWallpaperVideo = null;
+// One pointer listener per surface, on the surface's own document. Target is the
+// cursor position normalized to [-1, 1] from the viewport centre; the loop lerps
+// toward it. Removed when the surface has no parallax (or on teardown).
+function setupBackgroundPointer(root, bg, wanted) {
+  if (wanted && !bg.pointerCleanup) {
+    const doc = root.ownerDocument || document;
+    const win = doc.defaultView || window;
+    const onMove = (e) => {
+      const w = win.innerWidth || 1;
+      const h = win.innerHeight || 1;
+      bg.target.x = Math.max(-1, Math.min(1, (e.clientX / w - 0.5) * 2));
+      bg.target.y = Math.max(-1, Math.min(1, (e.clientY / h - 0.5) * 2));
+    };
+    doc.addEventListener('pointermove', onMove, { passive: true });
+    bg.pointerCleanup = () => doc.removeEventListener('pointermove', onMove);
+  } else if (!wanted && bg.pointerCleanup) {
+    bg.pointerCleanup();
+    bg.pointerCleanup = null;
+    bg.target.x = 0; bg.target.y = 0;
+  }
 }
 
-// Pause/resume the wallpaper video WITH the ambience. applySkin calls it (play)
-// and freezeAmbience calls it (pause), so dashboard.js's existing freeze/resume
-// flow drives video playback with no new wiring. Never plays a still surface.
+function teardownBackground(root) {
+  const bg = root && root.__aegisBg;
+  if (!bg) return;
+  if (bg.pointerCleanup) bg.pointerCleanup();
+  for (const el of bg.els || []) {
+    if (el.tagName === 'VIDEO') { try { el.pause(); el.removeAttribute('src'); el.load(); } catch (e) {} }
+  }
+  if (bg.stack) bg.stack.remove();
+  root.__aegisBg = null;
+}
+
+// Pause/resume every video LAYER with the ambience. applyBackground calls it
+// (play) and freezeAmbience calls it (pause), so dashboard.js's freeze/resume
+// drives playback with no new wiring. Never plays a still surface.
 function setWallpaperPlayback(root, playing) {
-  const video = root && root.__aegisWallpaperVideo;
-  if (!video) return;
-  if (playing && !video.__still) {
-    video.playbackRate = video.__rate || 1;
-    const p = video.play();
-    if (p && typeof p.catch === 'function') p.catch(() => {}); // autoplay guard
-  } else {
-    try { video.pause(); } catch (e) {}
+  const bg = root && root.__aegisBg;
+  if (!bg) return;
+  for (const el of bg.els || []) {
+    if (el.tagName !== 'VIDEO') continue;
+    if (playing && !el.__still) {
+      const p = el.play();
+      if (p && typeof p.catch === 'function') p.catch(() => {}); // autoplay guard
+    } else {
+      try { el.pause(); } catch (e) {}
+    }
   }
 }
 
@@ -217,17 +316,14 @@ const AMBIENCE_COLOR_KEY = {
   petals: 'accent', rain: 'accent', sparkle: 'accent',
 };
 
-function applyAmbience(root, pack, opts) {
-  const prev = root.__aegisAmbience;
-  if (prev) {
-    cancelAnimationFrame(prev.raf);
-    prev.observer.disconnect();
-    prev.canvas.remove();
-    root.__aegisAmbience = null;
-  }
+// Build the ambience particle layer (canvas + spawn/step/draw). Returns a handle
+// { canvas, observer, step, draw } that the shared motion loop ticks, or null
+// when the pack has no ambience effect. Does NOT own a raf — applyAmbience runs
+// the single loop that also drives background parallax/drift.
+function setupAmbienceParticles(root, pack, opts, reduced) {
   const ambience = pack.skin.ambience || { effect: 'none', density: 0.5 };
   const effect = ambience.effect;
-  if (!AMBIENCE_COLOR_KEY[effect]) return;
+  if (!AMBIENCE_COLOR_KEY[effect]) return null;
 
   const canvas = document.createElement('canvas');
   canvas.className = 'ambience-layer';
@@ -366,10 +462,8 @@ function applyAmbience(root, pack, opts) {
     }
   };
 
-  // Static thumbnails (gallery cards) get one scattered frame, no loop —
-  // same rendering path the OS reduced-motion preference takes.
-  const reduced = (opts && opts.staticAmbience === true)
-    || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Static thumbnails (gallery cards) + OS reduced-motion get one scattered
+  // frame, no loop (`reduced` is decided by the caller for the whole surface).
   const resize = () => {
     const rect = canvas.getBoundingClientRect();
     // Before layout the canvas can measure 0×0 — bail and let the observer
@@ -384,34 +478,60 @@ function applyAmbience(root, pack, opts) {
     if (reduced) draw(0);
   };
 
-  const state = { canvas, raf: 0, observer: new ResizeObserver(resize) };
-  state.observer.observe(canvas);
-  resize();
-  root.__aegisAmbience = state;
-  if (reduced) return; // static scatter only
+  const observer = new ResizeObserver(resize);
+  observer.observe(canvas);
+  resize(); // draws a static frame when reduced
+  return { canvas, observer, step: stepParticles, draw };
+}
 
-  // Frame budget: the pack/engine can cap the wallpaper's frame rate to be a
-  // good 24/7 citizen (30 fps default — plenty for particle drift).
+// Own the SINGLE motion loop for a surface: ambience particles AND background
+// parallax/drift ride the same raf (never a second one), the same fps cap, and
+// the same freeze. Called by applySkin AFTER applyBackground has built the layer
+// stack (so root.__aegisBg is ready).
+function applyAmbience(root, pack, opts) {
+  const prev = root.__aegisAmbience;
+  if (prev) {
+    cancelAnimationFrame(prev.raf);
+    if (prev.observer) prev.observer.disconnect();
+    if (prev.canvas) prev.canvas.remove();
+    root.__aegisAmbience = null;
+  }
+
+  const reduced = (opts && opts.staticAmbience === true)
+    || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const particles = setupAmbienceParticles(root, pack, opts, reduced);
+  const bg = root.__aegisBg;                       // built by applyBackground
+  const bgMoving = !reduced && !!(bg && bg.needsMotion);
+
+  const state = {
+    raf: 0, paused: false,
+    canvas: particles ? particles.canvas : null,
+    observer: particles ? particles.observer : null,
+  };
+  root.__aegisAmbience = state;
+
+  // Reduced motion → particles already drew one static frame, and every layer
+  // sits at its base transform. No loop. Nothing to animate → also no loop.
+  if (reduced) return;
+  if (!particles && !bgMoving) return;
+
+  // Frame budget: the engine caps fps to be a good 24/7 citizen (30 default).
   const maxFps = opts && opts.maxFps ? Math.max(1, opts.maxFps) : 30;
   const frameInterval = 1000 / maxFps;
   let last = 0;
+  const alive = () => (particles ? particles.canvas.isConnected
+    : (bg && bg.stack ? bg.stack.isConnected : root.isConnected));
   const loop = (t) => {
-    // Frozen by the engine (a full-screen app is up / on battery): stop cold —
-    // resume re-applies the skin and starts a fresh loop. freezeAmbience() also
-    // cancels the pending frame, so this is belt-and-braces.
+    // Frozen by the engine (full-screen app / battery) → stop cold; resume
+    // re-applies the skin and starts fresh. Self-terminate on detached DOM.
     if (state.paused) return;
-    // Self-terminate when the skin root is discarded (gallery re-renders,
-    // preview swaps) — nobody re-applies skins to detached DOM.
-    if (!canvas.isConnected) {
-      state.observer.disconnect();
-      return;
-    }
+    if (!alive()) { if (particles) particles.observer.disconnect(); return; }
     state.raf = requestAnimationFrame(loop);
     if (t - last < frameInterval) return;
     const dt = Math.min(t - last, 100) / 1000;
     last = t;
-    stepParticles(dt, t);
-    draw(t);
+    if (particles) { particles.step(dt, t); particles.draw(t); }
+    if (bgMoving) stepBackgroundMotion(bg, dt);
   };
   state.raf = requestAnimationFrame(loop);
 }

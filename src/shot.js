@@ -34,18 +34,23 @@ const services = {
   notifications: async () => ({ ok: true, granted: true, notifications: [] }),
 };
 
-// A video wallpaper needs its first frame decoded before the capture, or the
-// preview is black. Resolve on loadeddata (readyState >= HAVE_CURRENT_DATA),
-// or after a 5 s cap — proceed regardless so a stuck decode never hangs.
+// A video background layer needs its first frame decoded before the capture, or
+// the preview is black. Wait for every video layer's loadeddata (readyState >=
+// HAVE_CURRENT_DATA), or a 5 s cap — proceed regardless so a stuck decode never
+// hangs.
 function waitForWallpaperVideo(root, timeoutMs) {
-  const video = root && root.__aegisWallpaperVideo;
-  if (!video) return Promise.resolve();
-  if (video.readyState >= 2) return Promise.resolve();
+  const bg = root && root.__aegisBg;
+  const videos = bg && bg.els ? bg.els.filter((el) => el.tagName === 'VIDEO' && el.readyState < 2) : [];
+  if (!videos.length) return Promise.resolve();
   return new Promise((resolve) => {
+    let remaining = videos.length;
     let done = false;
     const finish = () => { if (done) return; done = true; resolve(); };
-    video.addEventListener('loadeddata', finish, { once: true });
-    video.addEventListener('error', finish, { once: true });
+    const one = () => { if (--remaining <= 0) finish(); };
+    for (const v of videos) {
+      v.addEventListener('loadeddata', one, { once: true });
+      v.addEventListener('error', one, { once: true });
+    }
     setTimeout(finish, timeoutMs);
   });
 }
