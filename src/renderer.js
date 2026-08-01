@@ -150,6 +150,12 @@ function syncSlidersFromProfile() {
 
 // ── Voice bank ─────────────────────────────────────────────────────────────
 
+function formatSize(bytes) {
+  if (!bytes || bytes <= 0) return '';
+  if (bytes >= 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  return `${Math.round(bytes / (1024 * 1024))} MB`;
+}
+
 function renderVoices() {
   const list = $('voice-list');
   list.textContent = '';
@@ -163,6 +169,15 @@ function renderVoices() {
     const name = document.createElement('span');
     name.className = 'row-name';
     name.textContent = voice.displayName;
+    // HD voices run on the heavier MeloTTS engine — flag them so a user knows
+    // this is the higher-quality upgrade (and a larger download).
+    if (voice.hd) {
+      const badge = document.createElement('span');
+      badge.className = 'hd-badge';
+      badge.textContent = 'HD';
+      badge.title = 'Higher-quality neural voice — larger download';
+      name.appendChild(badge);
+    }
 
     const meta = document.createElement('span');
     meta.className = `row-meta${voice.installed ? '' : ' warn'}`;
@@ -174,7 +189,9 @@ function renderVoices() {
       const dl = document.createElement('button');
       dl.type = 'button';
       dl.className = 'dl';
-      dl.textContent = 'Get';
+      // HD packs are hundreds of MB — show the size so the download isn't a
+      // surprise; standard Piper voices stay a plain "Get".
+      dl.textContent = voice.hd ? `Upgrade · ${formatSize(voice.sizeBytes)}` : 'Get';
       dl.addEventListener('click', (e) => {
         e.stopPropagation();
         downloadVoice(voice, li, dl);
@@ -202,8 +219,16 @@ async function downloadVoice(voice, li, dlButton) {
   li.appendChild(bar);
 
   const unsubscribe = aegis.onBankProgress((p) => {
-    if (p.id === voice.id) fill.style.width = `${p.pct}%`;
+    if (p.id !== voice.id) return;
+    fill.style.width = `${p.pct}%`;
+    // HD packs download the engine first, then the voice files — name the phase
+    // so a long download reads as progress, not a stall.
+    if (voice.hd) {
+      const what = p.phase === 'engine' ? 'HD engine' : 'HD voice';
+      setStatus(`Downloading ${what}… ${p.pct}%`, 'live');
+    }
   });
+  if (voice.hd) setStatus(`Downloading ${voice.displayName} — this is a large one-time HD download.`, 'live');
   const res = await aegis.bankDownload(voice.id);
   unsubscribe();
   if (!res.ok) {

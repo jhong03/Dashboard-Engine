@@ -46,6 +46,7 @@
       "!CLAUDE.md",
       "!build/gen-icon.js",
       "!scripts/{smoke,voices,calibrate,audition,selftest,packs}.js",
+      "!engine/**",
       "!package-lock.json",
       "!**/.git/**"
     ],

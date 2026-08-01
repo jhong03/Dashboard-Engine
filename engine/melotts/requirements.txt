@@ -1,0 +1,4 @@
+# MeloTTS engine sidecar — build/runtime deps (torch-free).
+# Freeze with PyInstaller (see README.md). Python 3.12.
+sherpa-onnx==1.13.4
+numpy

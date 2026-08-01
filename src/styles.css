@@ -98,6 +98,17 @@ body {
 .row:hover { background: #2b2e33; }
 .row[aria-pressed="true"] { background: #2b2e33; border-color: var(--accent); }
 .row-name { flex: 1 1 auto; font-weight: 600; }
+.hd-badge {
+  margin-left: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 3px;
+  padding: 0 4px;
+  vertical-align: 1px;
+}
 .row-meta { font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
 .row-meta.warn { color: var(--warn); }
 .row .dl {

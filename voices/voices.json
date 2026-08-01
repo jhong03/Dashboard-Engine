@@ -299,8 +299,55 @@
       "sizeBytes": 63201294,
       "sampleRate": 22050,
       "wpmAtScale1": null
+    },
+    {
+      "id": "en_us_hd",
+      "engine": "melotts",
+      "hd": true,
+      "modelDir": "en_us_hd",
+      "sid": 0,
+      "displayName": "English (US) — HD",
+      "sex": "F",
+      "accent": "American",
+      "language": "English",
+      "descriptor": "MeloTTS neural — richer and more natural (HD download)",
+      "licence": "MIT",
+      "licenceUrl": "https://github.com/myshell-ai/MeloTTS/blob/main/LICENSE",
+      "attribution": "MeloTTS by MyShell.ai (MIT); ONNX export MiaoMint/MeloTTS-ONNX",
+      "provenance": "MeloTTS English exported to sherpa-onnx melo-vits format",
+      "files": [
+        {
+          "name": "model.onnx",
+          "url": "https://huggingface.co/MiaoMint/MeloTTS-ONNX/resolve/main/onnx_exports/en_newest/model.onnx",
+          "sha256": "045e74f3399a816b1ddc13cdfd845395fb6a1891e3aa2fabbff720add34d6044",
+          "sizeBytes": 170346705
+        },
+        {
+          "name": "lexicon.txt",
+          "url": "https://huggingface.co/MiaoMint/MeloTTS-ONNX/resolve/main/onnx_exports/en_newest/lexicon.txt",
+          "sha256": "8eae1a826d28bfb1fde2aa0202a43eb244d475d8418cf3ee7724cdf561a63a88",
+          "sizeBytes": 4814775
+        },
+        {
+          "name": "tokens.txt",
+          "url": "https://huggingface.co/MiaoMint/MeloTTS-ONNX/resolve/main/onnx_exports/en_newest/tokens.txt",
+          "sha256": "6e8ef51206fba0b8e2630ab003d9793c0c126221139566a8a16d300293cec0a0",
+          "sizeBytes": 1440
+        }
+      ],
+      "sampleRate": 44100,
+      "wpmAtScale1": null
     }
   ],
+  "engines": {
+    "melotts": {
+      "exe": "melotts-engine.exe",
+      "comment": "Frozen sherpa-onnx sidecar (PyInstaller --onefile). Host this file on a huggingface.co repo and set url; sha256/sizeBytes are already pinned for the build in engine/melotts/. Until hosted, place it at %APPDATA%/dashboard-engine/bin/melotts/ manually.",
+      "url": "https://huggingface.co/PLACEHOLDER/resolve/main/melotts-engine.exe",
+      "sha256": "1f55b2a6117d84f3a1dd5b8e7202fc7a6666bd9efca802ea231c7e93663c9d62",
+      "sizeBytes": 31176035
+    }
+  },
   "excluded": [
     {
       "id": "alan",
