@@ -128,10 +128,19 @@
               <option value="pip">Pip — terse minimalist</option>
             </select>
           </label>
+          <div id="ai-preset-saved" class="ai-preset-saved"></div>
           <label class="cfg-field"><span>System prompt</span>
             <textarea id="ai-persona" rows="4"></textarea>
           </label>
-          <p class="hint">Pick a preset above to fill this in, then tweak it. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name).</p>
+          <p class="hint">Pick a preset above to fill this in, then tweak it — or write your own and save it below. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name).</p>
+          <div class="ai-preset-actions">
+            <button class="btn tiny" id="ai-preset-save" type="button">Save current as a preset…</button>
+          </div>
+          <div class="ai-preset-savebox hidden" id="ai-preset-savebox">
+            <input id="ai-preset-name" type="text" maxlength="40" placeholder="Name this persona (e.g. My coach)" spellcheck="false">
+            <button class="btn tiny primary" id="ai-preset-confirm" type="button">Save</button>
+            <button class="btn tiny" id="ai-preset-cancel" type="button">Cancel</button>
+          </div>
 
           <div class="cfg-actions">
             <button class="btn primary" id="ai-save">Save</button>

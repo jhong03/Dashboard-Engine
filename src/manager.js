@@ -948,6 +948,7 @@ async function renderAssistantCfg() {
   $('ai-baseurl').value = c.baseUrl || '';
   $('ai-model').value = c.model || '';
   $('ai-persona').value = c.persona || '';
+  renderAssistantPresets(c.personaPresets || []);
   $('ai-speak').checked = c.speak !== false;
   $('ai-key').value = '';
   $('ai-key-state').textContent = c.hasKey
@@ -1026,11 +1027,89 @@ function wireAssistantCfg() {
     const saved = await saveAssistant(); // test uses the current fields
     if (!saved.ok) { $('ai-status').textContent = saved.error; return; }
     $('ai-status').textContent = 'Contacting the model…';
-    const out = await aegis.assistantAsk('Reply with one short sentence confirming you are online.');
-    $('ai-status').textContent = out.ok ? `✓ ${out.text}` : `✗ ${out.error}`;
+    // Ask it to introduce itself so the reply reflects the persona you set.
+    const out = await aegis.assistantAsk('Introduce yourself in one short sentence and confirm you are online.');
+    if (out.ok) {
+      $('ai-status').textContent = `✓ ${out.text}`;
+      // Speak the reply so you hear the persona AND the voice — one test proves
+      // the whole chain. Only if "speak replies aloud" is on.
+      if ($('ai-speak').checked) {
+        const spoken = await aegis.assistantSpeak(out.text);
+        if (spoken && spoken.ok) playTestPcm(spoken.pcm, spoken.sampleRate);
+      }
+    } else {
+      $('ai-status').textContent = `✗ ${out.error}`;
+    }
     await aegis.assistantReset(); // don't leave the test in the real conversation
     renderAssistantCfg();
   });
+
+  // Save the current prompt as the user's own named persona.
+  $('ai-preset-save').addEventListener('click', () => {
+    $('ai-preset-savebox').classList.remove('hidden');
+    $('ai-preset-name').focus();
+  });
+  $('ai-preset-cancel').addEventListener('click', () => {
+    $('ai-preset-savebox').classList.add('hidden');
+    $('ai-preset-name').value = '';
+  });
+  $('ai-preset-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('ai-preset-confirm').click(); });
+  $('ai-preset-confirm').addEventListener('click', async () => {
+    const out = await aegis.assistantPresetAdd($('ai-preset-name').value.trim(), $('ai-persona').value.trim());
+    if (!out.ok) { $('ai-status').textContent = out.error; return; }
+    $('ai-preset-name').value = '';
+    $('ai-preset-savebox').classList.add('hidden');
+    $('ai-status').textContent = 'Saved that persona — it’s in "Your saved personas".';
+    renderAssistantCfg();
+  });
+}
+
+// One reused AudioContext for the connection-test reply (the click is the user
+// gesture that unlocks it). Silent on any failure — the text reply is shown too.
+let testAudioCtx = null;
+function playTestPcm(pcm, sampleRate) {
+  try {
+    if (!testAudioCtx) testAudioCtx = new AudioContext();
+    const bytes = pcm instanceof Uint8Array ? pcm : new Uint8Array(pcm);
+    const int16 = new Int16Array(bytes.buffer, bytes.byteOffset, bytes.byteLength >> 1);
+    const floats = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) floats[i] = int16[i] / 32768;
+    const buffer = testAudioCtx.createBuffer(1, floats.length, sampleRate);
+    buffer.copyToChannel(floats, 0);
+    const src = testAudioCtx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(testAudioCtx.destination);
+    src.start();
+  } catch (err) { /* silent — the reply text is already shown */ }
+}
+
+// Render the user's saved personas as clickable chips (fill the box) with a
+// delete ×. Hidden entirely when there are none.
+function renderAssistantPresets(presets) {
+  const box = $('ai-preset-saved');
+  box.textContent = '';
+  if (!Array.isArray(presets) || presets.length === 0) return;
+  const label = document.createElement('span');
+  label.className = 'ai-preset-label';
+  label.textContent = 'Your saved personas:';
+  box.appendChild(label);
+  for (const p of presets) {
+    const chip = document.createElement('span');
+    chip.className = 'ai-preset-chip';
+    const use = document.createElement('button');
+    use.type = 'button'; use.className = 'ai-preset-use'; use.textContent = p.name;
+    use.title = 'Use this persona';
+    use.addEventListener('click', () => { $('ai-persona').value = p.prompt; });
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'ai-preset-del'; del.textContent = '×';
+    del.title = `Delete "${p.name}"`;
+    del.addEventListener('click', async () => {
+      const out = await aegis.assistantPresetRemove(p.name);
+      if (out.ok) renderAssistantCfg(); else $('ai-status').textContent = out.error;
+    });
+    chip.append(use, del);
+    box.appendChild(chip);
+  }
 }
 
 // ── Create tab: the in-app designer hub (guide + reference + actions) ─────────

@@ -158,6 +158,9 @@ const bridge = {
   assistantModels: () => ipcRenderer.invoke('aegis:assistant:models'),
   assistantAsk: (prompt) => ipcRenderer.invoke('aegis:assistant:ask', String(prompt)),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
+  assistantSpeak: (text) => ipcRenderer.invoke('aegis:assistant:speak', String(text)),
+  assistantPresetAdd: (name, prompt) => ipcRenderer.invoke('aegis:assistant:preset:add', { name: String(name), prompt: String(prompt) }),
+  assistantPresetRemove: (name) => ipcRenderer.invoke('aegis:assistant:preset:remove', String(name)),
   voiceProfilesList: () => ipcRenderer.invoke('aegis:profiles:list'),
 };
 

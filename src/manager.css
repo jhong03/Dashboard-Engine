@@ -401,6 +401,18 @@ body {
 .set-weather-row input { flex: 1; min-width: 0; }
 .set-weather-row .btn { width: auto; flex: 0 0 auto; }
 
+/* Assistant: the user's saved personas (chips + delete) and the save box. */
+.ai-preset-saved { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: -2px 0 6px; }
+.ai-preset-label { font-size: 12px; color: var(--text-dim); margin-right: 2px; }
+.ai-preset-chip { display: inline-flex; align-items: stretch; border: 1px solid var(--border); border-radius: 5px; overflow: hidden; }
+.ai-preset-use { border: none; background: var(--panel-2, #1f2226); color: var(--text); font: inherit; font-size: 12px; padding: 2px 8px; cursor: pointer; }
+.ai-preset-use:hover { background: #2b2e33; }
+.ai-preset-del { border: none; border-left: 1px solid var(--border); background: transparent; color: var(--text-dim); font-size: 13px; line-height: 1; padding: 0 7px; cursor: pointer; }
+.ai-preset-del:hover { color: var(--warn, #e0a446); }
+.ai-preset-actions { margin-top: 2px; }
+.ai-preset-savebox { display: flex; gap: 6px; margin-top: 6px; }
+.ai-preset-savebox input { flex: 1; min-width: 0; }
+
 .set-range-row { display: flex; align-items: center; gap: 10px; }
 .set-range-row input[type="range"] { flex: 1; min-width: 0; }
 .set-range-val { flex: 0 0 auto; min-width: 3ch; text-align: right; color: var(--text-dim); font-variant-numeric: tabular-nums; }
