@@ -92,7 +92,7 @@
       '#endif',
       '#ifdef FX_CURSORRIPPLE',
       'uniform vec4 uRings[MAX_RINGS];', // xy=centre, z=age(s), w=active
-      'uniform vec2 uCursor;', // strength, decay
+      'uniform vec3 uCursor;', // strength, decay, speed
       '#endif',
       '#ifdef REGION',
       'uniform vec4 uRegion;',  // x,y,w,h in 0..1
@@ -131,7 +131,15 @@
       '  { float n1=vnoise(vUV*uWarp.y+uTime*uWarp.x); float n2=vnoise(vUV*uWarp.y+5.2+uTime*uWarp.x*0.9); disp += (vec2(n1,n2)-0.5)*0.045; }',
       '#endif',
       '#ifdef FX_CURSORRIPPLE',
-      '  for(int i=0;i<MAX_RINGS;i++){ vec4 r=uRings[i]; if(r.w<0.5) continue; vec2 dd=vUV-r.xy; float dist=length(dd); float w=sin(dist*32.0 - r.z*6.0)*exp(-r.z*uCursor.y)*exp(-dist*3.5); disp += normalize(dd+1e-5)*w*uCursor.x*0.03; }',
+      // A single crisp ring per spawn, expanding at `speed` (uCursor.z) — a
+      // narrow gaussian pulse riding outward, fading with age (uCursor.y). Reads
+      // as a smooth ripple, not a standing distortion.
+      '  for(int i=0;i<MAX_RINGS;i++){ vec4 r=uRings[i]; if(r.w<0.5) continue;',
+      '    vec2 dd=vUV-r.xy; float dist=length(dd);',
+      '    float radius = r.z * uCursor.z * 0.9;',
+      '    float front = (dist - radius) * 20.0;',
+      '    float pulse = exp(-front*front) * exp(-r.z*uCursor.y);',
+      '    disp += normalize(dd+1e-5) * pulse * uCursor.x * 0.045; }',
       '#endif',
       '  vec2 uv = vUV + disp*amt;',
       '  uv = (uv-0.5)/uOverscan + 0.5 + uOffset;',        // overscan + parallax/drift
@@ -389,7 +397,7 @@
           else if (e.type === 'sway') gl.uniform3f(uloc(rec, 'uSway'), e.speed, e.strength, e.direction * Math.PI / 180);
           else if (e.type === 'drift-warp') gl.uniform2f(uloc(rec, 'uWarp'), e.speed, e.scale);
           else if (e.type === 'pulse') { gl.uniform2f(uloc(rec, 'uPulse'), e.speed, e.amount); if (e.paletteKey && opts.palette) { const c = hexToRgb(opts.palette[e.paletteKey]); const l = uloc(rec, 'uPulseColor'); if (l) gl.uniform3f(l, c[0], c[1], c[2]); } }
-          else if (e.type === 'cursor-ripple') gl.uniform2f(uloc(rec, 'uCursor'), e.strength, e.decay);
+          else if (e.type === 'cursor-ripple') gl.uniform3f(uloc(rec, 'uCursor'), e.strength, e.decay, typeof e.speed === 'number' ? e.speed : 1.4);
           if (e.region) {
             const r = e.region;
             const l = uloc(rec, 'uRegion'); if (l) gl.uniform4f(l, r.x / 100, r.y / 100, r.w / 100, r.h / 100);

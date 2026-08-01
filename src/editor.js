@@ -994,7 +994,7 @@ function defaultEffect(type) {
   if (type === 'sway') return { type, speed: 0.5, strength: 0.5, direction: 0 };
   if (type === 'drift-warp') return { type, speed: 0.5, scale: 3 };
   if (type === 'pulse') return { type, speed: 1, amount: 0.3, paletteKey: null };
-  return { type: 'cursor-ripple', strength: 0.5, decay: 1 };
+  return { type: 'cursor-ripple', strength: 0.5, speed: 1.4, decay: 1 };
 }
 
 const EFFECT_ADD_CHOICES = [['', 'Add effect…'], ['ripple', 'Ripple'], ['sway', 'Sway'], ['drift-warp', 'Drift warp'], ['pulse', 'Pulse'], ['cursor-ripple', 'Cursor ripple']];
@@ -1045,7 +1045,7 @@ function renderLayerEffects(card, layer) {
     else if (fx.type === 'sway') { rc('Speed', 'speed', 0, 3, 0.1); rc('Strength', 'strength', 0, 1, 0.05); rc('Direction', 'direction', 0, 360, 5); }
     else if (fx.type === 'drift-warp') { rc('Speed', 'speed', 0, 3, 0.1); rc('Scale', 'scale', 0.5, 8, 0.5); }
     else if (fx.type === 'pulse') { rc('Speed', 'speed', 0, 3, 0.1); rc('Amount', 'amount', 0, 1, 0.05); box.appendChild(field('Tint', selectControl(fx.paletteKey || '', PALETTE_TINT_CHOICES, (v) => { fx.paletteKey = v || null; renderAll(); }))); }
-    else if (fx.type === 'cursor-ripple') { rc('Strength', 'strength', 0, 1, 0.05); rc('Decay', 'decay', 0.2, 3, 0.1); }
+    else if (fx.type === 'cursor-ripple') { rc('Strength', 'strength', 0, 1, 0.05); rc('Speed', 'speed', 0.2, 3, 0.1); rc('Decay', 'decay', 0.2, 3, 0.1); }
 
     renderEffectRegion(box, fx);
     card.appendChild(box);
