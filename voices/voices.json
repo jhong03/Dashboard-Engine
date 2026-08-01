@@ -1,6 +1,6 @@
 {
-  "comment": "Voice bank manifest — the 8-slot bank plus an audit trail of rejected voices. Every licence below was verified by reading the MODEL_CARD in rhasspy/piper-voices (and the dataset licence it points to) on the audit date. licence is NEVER guessed: anything unverifiable goes in `excluded`, and voices the loader flags trigger a startup warning and are never silently shipped. sha256/size come from the Hugging Face LFS metadata and are enforced by the downloader. wpmAtScale1 is measured per-voice by `npm run calibrate` (null = not yet calibrated on this machine's model).",
-  "audited": "2026-07-12",
+  "comment": "Voice bank manifest — 8 English voices + 8 non-English languages (multilingual expansion audited 2026-08-01 for a global audience), plus an audit trail of rejected voices. Every licence below was verified by reading the MODEL_CARD in rhasspy/piper-voices (and the dataset licence it points to) on the audit date. licence is NEVER guessed: anything unverifiable OR non-commercial goes in `excluded`, and voices the loader flags trigger a startup warning and are never silently shipped. NOTE (multilingual): Piper has NO Japanese or Korean voices, and no commercially-licensable Hindi/Mandarin/Arabic/Russian voice was found — all recorded in `excluded`. The shipped non-English set (de/es/fr/pt/vi/tr/uk/pl) is CC0 or CC-BY-4.0 only. sha256/size come from the Hugging Face LFS metadata and are enforced by the downloader (method re-verified 2026-08-01 against a known-good pin). wpmAtScale1 is measured per-voice by `npm run calibrate` (null = not yet calibrated on this machine's model).",
+  "audited": "2026-08-01",
   "auditSource": "https://huggingface.co/rhasspy/piper-voices/tree/v1.0.0",
   "defaultVoice": "northern_english_male",
   "voices": [
@@ -147,6 +147,158 @@
       "sizeBytes": 62950044,
       "sampleRate": 22050,
       "wpmAtScale1": 161
+    },
+    {
+      "id": "de_thorsten",
+      "model": "de_DE-thorsten-medium.onnx",
+      "displayName": "Thorsten — German",
+      "sex": "M",
+      "accent": "German",
+      "language": "German",
+      "descriptor": "clear, neutral",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "Thorsten-Voice dataset (Thorsten Müller), released CC0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/de/de_DE/thorsten/medium/de_DE-thorsten-medium.onnx.json",
+      "sha256": "7e64762d8e5118bb578f2eea6207e1a35a8e0c30595010b666f983fc87bb7819",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "es_davefx",
+      "model": "es_ES-davefx-medium.onnx",
+      "displayName": "Davefx — Spanish",
+      "sex": "M",
+      "accent": "Spanish (Spain)",
+      "language": "Spanish",
+      "descriptor": "even, clear",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "NabuCasa voice-datasets (davefx), released CC0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/es/es_ES/davefx/medium/es_ES-davefx-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/es/es_ES/davefx/medium/es_ES-davefx-medium.onnx.json",
+      "sha256": "6658b03b1a6c316ee4c265a9896abc1393353c2d9e1bca7d66c2c442e222a917",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "fr_siwis",
+      "model": "fr_FR-siwis-medium.onnx",
+      "displayName": "Siwis — French",
+      "sex": "F",
+      "accent": "French",
+      "language": "French",
+      "descriptor": "bright, articulate",
+      "licence": "CC-BY-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "SIWIS French Speech Database, Edinburgh DataShare 10283/2353, CC BY 4.0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/fr/fr_FR/siwis/medium/fr_FR-siwis-medium.onnx.json",
+      "sha256": "641d1ab097da2b81128c076810edb052b385decc8be3381814802a64a73baf99",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "pt_faber",
+      "model": "pt_BR-faber-medium.onnx",
+      "displayName": "Faber — Portuguese",
+      "sex": "M",
+      "accent": "Portuguese (Brazil)",
+      "language": "Portuguese",
+      "descriptor": "warm, steady",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "NabuCasa voice-datasets (faber), released CC0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pt/pt_BR/faber/medium/pt_BR-faber-medium.onnx.json",
+      "sha256": "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "vi_vais1000",
+      "model": "vi_VN-vais1000-medium.onnx",
+      "displayName": "Vais — Vietnamese",
+      "sex": "F",
+      "accent": "Vietnamese",
+      "language": "Vietnamese",
+      "descriptor": "light, precise",
+      "licence": "CC-BY-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "VAIS 1000 Vietnamese Speech Synthesis Corpus (IEEE DataPort), CC BY 4.0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/vi/vi_VN/vais1000/medium/vi_VN-vais1000-medium.onnx.json",
+      "sha256": "ec7c89e2c85f4d1edc24b6120c18aaf1bda614f06b511567eb9c7c0de15e2dab",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "tr_fahrettin",
+      "model": "tr_TR-fahrettin-medium.onnx",
+      "displayName": "Fahrettin — Turkish",
+      "sex": "M",
+      "accent": "Turkish",
+      "language": "Turkish",
+      "descriptor": "grounded, calm",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "NabuCasa voice-datasets (fahrettin), released CC0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/tr/tr_TR/fahrettin/medium/tr_TR-fahrettin-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/tr/tr_TR/fahrettin/medium/tr_TR-fahrettin-medium.onnx.json",
+      "sha256": "39081c47270180e8a0dfac69b07bf329fb6d039fcc1279dbe26c2daf2848b190",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "uk_ukrainian_tts",
+      "model": "uk_UA-ukrainian_tts-medium.onnx",
+      "displayName": "Ukrainian TTS — Ukrainian",
+      "sex": "F",
+      "accent": "Ukrainian",
+      "language": "Ukrainian",
+      "descriptor": "clear, modern",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "NabuCasa voice-datasets (ukrainian_tts), released CC0",
+      "provenance": "trained from scratch",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/uk/uk_UA/ukrainian_tts/medium/uk_UA-ukrainian_tts-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/uk/uk_UA/ukrainian_tts/medium/uk_UA-ukrainian_tts-medium.onnx.json",
+      "sha256": "7920419ac5f6fd8b6450520f24b52ed5a319cb53dd018fbcd71c9e079cbac84f",
+      "sizeBytes": 76735663,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "pl_gosia",
+      "model": "pl_PL-gosia-medium.onnx",
+      "displayName": "Gosia — Polish",
+      "sex": "F",
+      "accent": "Polish",
+      "language": "Polish",
+      "descriptor": "friendly, even",
+      "licence": "CC0",
+      "licenceUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "attribution": "NabuCasa voice-datasets (gosia), released CC0",
+      "provenance": "finetuned from en_US-lessac (medium)",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pl/pl_PL/gosia/medium/pl_PL-gosia-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/v1.0.0/pl/pl_PL/gosia/medium/pl_PL-gosia-medium.onnx.json",
+      "sha256": "38f66464240ed74f186e6b7dc13c6e3b22e023426299f25c2b3cc9dfa9373fbc",
+      "sizeBytes": 63201294,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
     }
   ],
   "excluded": [
@@ -177,6 +329,38 @@
     {
       "id": "kusal",
       "reason": "MODEL_CARD says 'License: See URL' pointing at MycroftAI/mimic2 — licence not stated anywhere verifiable."
+    },
+    {
+      "id": "ja_ko_none",
+      "reason": "Multilingual audit 2026-08-01: rhasspy/piper-voices v1.0.0 has NO Japanese (ja) or Korean (ko) voices at all — Piper doesn't cover them, so we cannot ship them without a different TTS engine (out of scope)."
+    },
+    {
+      "id": "hi_pratham",
+      "reason": "Hindi. Dataset indicnlp_corpus (AI4Bharat) is CC BY-NC-SA 4.0 — non-commercial. Same for hi_IN/priyamvada. No commercially-licensable Hindi voice found in the set."
+    },
+    {
+      "id": "zh_huayan",
+      "reason": "Mandarin (zh_CN's only voice). MODEL_CARD licence is 'Unknown' — unverifiable, so not shipped."
+    },
+    {
+      "id": "ar_kareem",
+      "reason": "Arabic (ar_JO's only voice). MODEL_CARD says 'See URL' (AliMokhammad/arabicttstrain) with no stated licence — unverifiable."
+    },
+    {
+      "id": "it_paola",
+      "reason": "Italian. MODEL_CARD says 'See URL' (paolapersico1 dataset), licence not stated — unverifiable. it_IT/riccardo not audited as clean either."
+    },
+    {
+      "id": "tr_dfki",
+      "reason": "Turkish. marytts dfki-ot-data is CC BY-NC-SA 4.0 — non-commercial. Shipped tr_TR/fahrettin (CC0) instead."
+    },
+    {
+      "id": "ru_none",
+      "reason": "Russian. ru_RU/irina licence 'Unknown'; ru_RU/ruslan is CC BY-NC-SA 4.0 (Ruslan corpus) — non-commercial. No commercially-licensable Russian voice found."
+    },
+    {
+      "id": "sw_lanfrica",
+      "reason": "Swahili. MODEL_CARD says 'See URL' (lanfrica Kiswahili TTS) with no stated licence — unverifiable."
     }
   ]
 }

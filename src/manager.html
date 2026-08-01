@@ -122,18 +122,26 @@
           <label class="cfg-field"><span>Persona — how your assistant behaves</span>
             <select id="ai-persona-preset">
               <option value="">Start from a preset…</option>
-              <option value="jarvis">JARVIS — formal butler (default)</option>
-              <option value="nova">Nova — warm companion</option>
-              <option value="sage">Sage — calm mentor</option>
-              <option value="ace">Ace — hype coach</option>
-              <option value="pip">Pip — terse minimalist</option>
+              <optgroup label="English">
+                <option value="jarvis">JARVIS — formal butler (default)</option>
+                <option value="nova">Nova — warm companion</option>
+                <option value="sage">Sage — calm mentor</option>
+                <option value="ace">Ace — hype coach</option>
+                <option value="pip">Pip — terse minimalist</option>
+              </optgroup>
+              <optgroup label="Other languages (reply + speak in that language)">
+                <option value="es_amigo">Español — asistente cercano</option>
+                <option value="fr_ami">Français — assistant chaleureux</option>
+                <option value="de_assistent">Deutsch — freundlicher Assistent</option>
+                <option value="pt_assistente">Português — assistente acolhedor</option>
+              </optgroup>
             </select>
           </label>
           <div id="ai-preset-saved" class="ai-preset-saved"></div>
           <label class="cfg-field"><span>System prompt</span>
             <textarea id="ai-persona" rows="4"></textarea>
           </label>
-          <p class="hint">Pick a preset above to fill this in, then tweak it — or write your own and save it below. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name).</p>
+          <p class="hint">Pick a preset above to fill this in, then tweak it — or write your own and save it below. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name). <strong>Another language?</strong> Choose a language preset (or write your persona in any language and tell it to reply in that language), then pick a matching voice above — the bank now includes German, Spanish, French, Portuguese, Vietnamese, Turkish, Ukrainian and Polish.</p>
           <div class="ai-preset-actions">
             <button class="btn tiny" id="ai-preset-save" type="button">Save current as a preset…</button>
           </div>
