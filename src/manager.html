@@ -118,9 +118,20 @@
           </label>
           <label class="cfg-check"><input id="ai-speak" type="checkbox"><span>Speak replies aloud (uses your tuned voice)</span></label>
 
-          <label class="cfg-field"><span>Persona (system prompt)</span>
+          <label class="cfg-field"><span>Persona — how your assistant behaves</span>
+            <select id="ai-persona-preset">
+              <option value="">Start from a preset…</option>
+              <option value="jarvis">JARVIS — formal butler (default)</option>
+              <option value="nova">Nova — warm companion</option>
+              <option value="sage">Sage — calm mentor</option>
+              <option value="ace">Ace — hype coach</option>
+              <option value="pip">Pip — terse minimalist</option>
+            </select>
+          </label>
+          <label class="cfg-field"><span>System prompt</span>
             <textarea id="ai-persona" rows="4"></textarea>
           </label>
+          <p class="hint">Pick a preset above to fill this in, then tweak it. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name).</p>
 
           <div class="cfg-actions">
             <button class="btn primary" id="ai-save">Save</button>
