@@ -554,12 +554,14 @@ function scheduleDevShots(dir) {
 // (src/shot.* never touches the user's real stats/apps/notifications). Returns
 // a temp file path (png, or jpg if the png exceeds Steam's ~1 MB cap) or null
 // on any failure — publish then falls back to the pack's wallpaper. Fail-soft.
-function renderPackPreview(packId) {
+function renderPackPreview(packId, sizeOpts) {
+  const width = sizeOpts && sizeOpts.width ? sizeOpts.width : 1280;
+  const height = sizeOpts && sizeOpts.height ? sizeOpts.height : 720;
   return new Promise((resolve) => {
     const fs = require('fs');
     const os = require('os');
     let win = new BrowserWindow({
-      width: 1280, height: 720, show: false, frame: false, skipTaskbar: true,
+      width, height, show: false, frame: false, skipTaskbar: true,
       backgroundColor: '#04080F',
       webPreferences: {
         ...COMMON_WEB_PREFERENCES,
@@ -604,6 +606,73 @@ function renderPackPreview(packId) {
     win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(null); });
     win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId) } });
   });
+}
+
+// ── Library card thumbnails ──────────────────────────────────────────────────
+// A cached STATIC snapshot per pack (rendered offscreen with DEMO data — no
+// personal info) used as the library card image, so cards never live-render.
+// Freshness is by pack.json mtime; a save (which rewrites pack.json) auto-
+// invalidates. Renders are serialized so opening a big library doesn't spawn a
+// swarm of offscreen windows.
+const THUMB_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,47}$/;
+const thumbInFlight = new Map();
+let thumbQueue = Promise.resolve();
+
+function thumbDir() { return path.join(USER_DIR, 'thumbnails'); }
+
+function packManifestMtime(id) {
+  try {
+    const resolved = packs.resolvePackDir(__dirname, USER_DIR, id);
+    if (resolved.origin === 'missing') return -1;
+    return require('fs').statSync(path.join(resolved.dir, 'pack.json')).mtimeMs;
+  } catch { return -1; }
+}
+
+// A fresh cached thumbnail (newer than the pack manifest) as a data URI, or null.
+function cachedThumbUri(id) {
+  const fs = require('fs');
+  const mtime = packManifestMtime(id);
+  if (mtime < 0) return null;
+  for (const ext of ['png', 'jpg']) {
+    const file = path.join(thumbDir(), `${id}.${ext}`);
+    try {
+      const st = fs.statSync(file);
+      if (st.mtimeMs >= mtime) return `data:${ext === 'png' ? 'image/png' : 'image/jpeg'};base64,${fs.readFileSync(file).toString('base64')}`;
+    } catch { /* not cached in this ext */ }
+  }
+  return null;
+}
+
+function queuedThumbRender(id) {
+  const next = thumbQueue.then(() => renderPackPreview(id, { width: 854, height: 480 }).catch(() => null));
+  thumbQueue = next.catch(() => {});
+  return next;
+}
+
+// Return the pack's card thumbnail as a data URI (cached, or rendered + cached
+// on first request). null on any failure — the card then shows its blueprint.
+async function getPackThumbnail(id) {
+  if (!THUMB_ID_PATTERN.test(String(id))) return null;
+  const hit = cachedThumbUri(id);
+  if (hit) return hit;
+  if (thumbInFlight.has(id)) return thumbInFlight.get(id);
+  const job = (async () => {
+    const file = await queuedThumbRender(id);
+    if (!file) return null;
+    const fs = require('fs');
+    try {
+      const ext = path.extname(file).slice(1).toLowerCase() === 'png' ? 'png' : 'jpg';
+      fs.mkdirSync(thumbDir(), { recursive: true });
+      for (const e of ['png', 'jpg']) { try { fs.rmSync(path.join(thumbDir(), `${id}.${e}`)); } catch { /* none */ } }
+      const dest = path.join(thumbDir(), `${id}.${ext}`);
+      fs.copyFileSync(file, dest);
+      try { fs.rmSync(file); } catch { /* tmp cleanup best-effort */ }
+      return `data:${ext === 'png' ? 'image/png' : 'image/jpeg'};base64,${fs.readFileSync(dest).toString('base64')}`;
+    } catch { return null; }
+  })();
+  thumbInFlight.set(id, job);
+  job.finally(() => thumbInFlight.delete(id));
+  return job;
 }
 
 function openFirstWindows() {
@@ -831,6 +900,7 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       },
       // Workshop publish asks for a rendered preview image of the pack.
       renderPreview: (id) => renderPackPreview(id),
+      renderThumbnail: (id) => getPackThumbnail(id),
       // Settings screen: performance changes must reach the live desktop, and
       // the OS login item is owned by main.
       onPerformanceChanged: () => sendDesktopPower(),

@@ -58,11 +58,9 @@ function setActiveIndicator() {
 // telemetry ticks; the detail sidebar preview stays fully live (in motion).
 
 const packCache = new Map();      // id → { pack, assets } | null (load failed)
-const cardPreviews = [];          // frozen-card renderers awaiting cleanup
 let detailPreview = null;         // the one live sidebar renderer
 let detailPreviewEl = null;       // the sidebar preview element (re-rendered on prop changes)
 let displayAspect = null;         // "width / height" of the primary display
-const CARD_FREEZE_MS = 3500;      // enough ticks for bars/sparklines to fill
 
 function previewServices() {
   return {
@@ -103,14 +101,6 @@ function renderPackInto(container, pack, assets, renderer, opts) {
   renderer.render(canvas, pack, assets);
 }
 
-function destroyCardPreviews() {
-  for (const entry of cardPreviews) {
-    clearTimeout(entry.freezeTimer);
-    entry.renderer.destroy();
-  }
-  cardPreviews.length = 0;
-}
-
 function destroyDetailPreview() {
   if (detailPreview) {
     detailPreview.destroy();
@@ -119,19 +109,23 @@ function destroyDetailPreview() {
   detailPreviewEl = null;
 }
 
-// Card thumb: real render, frozen shortly after so N cards don't each keep
-// polling telemetry forever. Ambience keeps drifting — it self-terminates
-// with the DOM. Falls back to the blueprint if the pack can't load.
-async function realThumbInto(thumb, id, fallbackPack) {
-  const loaded = await loadPackFull(id);
-  if (!thumb.isConnected) return; // gallery re-rendered while we loaded
-  if (!loaded) {
-    if (fallbackPack) blueprintInto(thumb, fallbackPack);
-    return;
+// Card thumb: a cached STATIC snapshot rendered in main from DEMO data (no
+// personal info, and no live per-card rendering). A blueprint/monogram shows
+// instantly and stays if the snapshot can't be produced. The snapshot is
+// regenerated whenever the pack is saved (its pack.json mtime moves).
+async function imageThumbInto(thumb, id, fallbackPack) {
+  if (fallbackPack) blueprintInto(thumb, fallbackPack); else monogramInto(thumb, id);
+  const res = await aegis.packThumbnail(id);
+  if (!thumb.isConnected) return; // gallery re-rendered while we rendered
+  if (res && res.ok && res.uri) {
+    thumb.textContent = '';
+    thumb.style.background = 'none';
+    const img = document.createElement('img');
+    img.className = 'thumb-img';
+    img.alt = '';
+    img.src = res.uri;
+    thumb.appendChild(img);
   }
-  const renderer = AegisComponents.createRenderer(previewServices());
-  renderPackInto(thumb, loaded.pack, loaded.assets, renderer, { staticAmbience: true, noGL: true });
-  cardPreviews.push({ renderer, freezeTimer: setTimeout(() => renderer.destroy(), CARD_FREEZE_MS) });
 }
 
 // Sidebar: the actual pack, actually running — clock ticking, history
@@ -335,7 +329,6 @@ function isSelected(kind, key) {
 
 function renderGallery() {
   const gallery = $('gallery');
-  destroyCardPreviews(); // the DOM below is about to be discarded
   gallery.textContent = '';
   $('reg-add').classList.toggle('hidden', library.tab !== 'browse');
   $('planner').classList.toggle('hidden', library.tab !== 'planner');
@@ -385,7 +378,7 @@ function renderGallery() {
           badge: item.id === library.activeId ? 'On desktop' : (origin === 'builtin' ? 'Built-in' : null),
           badgeClass: item.id === library.activeId ? 'badge-active' : null,
           selected: isSelected('local', item.id),
-          buildThumb: (thumb) => realThumbInto(thumb, item.id, item.pack),
+          buildThumb: (thumb) => imageThumbInto(thumb, item.id, item.pack),
           onSelect: () => { library.selected = { kind: 'local', item }; renderGallery(); renderDetail(); },
         }));
       }
@@ -432,7 +425,7 @@ function renderGallery() {
         selected: isSelected('remote', `${url}|${entry.id}`),
         buildThumb: (thumb) => {
           // Installed registry packs exist locally — show the real thing.
-          if (entry.installed) realThumbInto(thumb, entry.id, null);
+          if (entry.installed) imageThumbInto(thumb, entry.id, null);
           else monogramInto(thumb, entry.name);
         },
         onSelect: () => { library.selected = { kind: 'remote', url, entry, update }; renderGallery(); renderDetail(); },

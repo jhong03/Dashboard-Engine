@@ -15,6 +15,7 @@ const bridge = {
   version: '0.4.0',
 
   libraryState: () => ipcRenderer.invoke('aegis:library:state'),
+  packThumbnail: (id) => ipcRenderer.invoke('aegis:pack:thumbnail', String(id)),
   // Live previews render packs through the shared renderer, so the manager
   // needs the same read-only data services the desktop surface has.
   // withProps: the manager's previews show the user's customized pack, matching
