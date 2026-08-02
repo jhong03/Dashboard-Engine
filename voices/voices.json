@@ -362,8 +362,8 @@
         {
           "name": "bert.onnx",
           "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert.onnx",
-          "sha256": "a41cbf27c661716d5d13380f1e7e42735869446482adccd2b6489936fea11b72",
-          "sizeBytes": 97140081
+          "sha256": "53fae75287db59eb6ff1c3d43ec47165cff31499c4b72a1106a57a675c042d11",
+          "sizeBytes": 193197062
         }
       ],
       "sampleRate": 44100,
@@ -396,8 +396,8 @@
         {
           "name": "bert.onnx",
           "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert.onnx",
-          "sha256": "d43f3de122bc13366650843e85422e265cde2cbfa09fb17fbea36722fe883754",
-          "sizeBytes": 104230259
+          "sha256": "fdb8fc810de2b912dacc7f64cd4be2049e4526c5faa28c532e77dfa08da76f47",
+          "sizeBytes": 207377414
         }
       ],
       "sampleRate": 44100,
