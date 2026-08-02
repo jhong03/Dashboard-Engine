@@ -319,13 +319,13 @@
       "files": [
         {
           "name": "model.onnx",
-          "url": "https://huggingface.co/PLACEHOLDER/resolve/main/en_us_hd/model.onnx",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_us_hd/model.onnx",
           "sha256": "43abbf414602da31c9fc53265136bf64d2432029dad47d7cfb7dcc416b5b93aa",
           "sizeBytes": 170579508
         },
         {
           "name": "bert.onnx",
-          "url": "https://huggingface.co/PLACEHOLDER/resolve/main/en_us_hd/bert.onnx",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_us_hd/bert.onnx",
           "sha256": "fcd7a6cca04561bdfd9af00a3b70e08322541ab192585183ba542e90e289bbac",
           "sizeBytes": 95415155
         }
@@ -337,8 +337,8 @@
   "engines": {
     "melotts": {
       "exe": "melotts-engine.exe",
-      "comment": "Frozen torch-free onnx+BERT engine (PyInstaller --onefile; see engine/melotts/README.md). Host on a huggingface.co repo and set url; sha256/sizeBytes are pinned. Until hosted, place at %APPDATA%/dashboard-engine/bin/melotts/ manually.",
-      "url": "https://huggingface.co/PLACEHOLDER/resolve/main/melotts-engine.exe",
+      "comment": "Frozen torch-free onnx+BERT engine (PyInstaller --onefile; see engine/melotts/README.md). Hosted on huggingface.co; sha256/sizeBytes pinned. Until downloaded, place at %APPDATA%/dashboard-engine/bin/melotts/ manually.",
+      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine.exe",
       "sha256": "1ab0bf7ebf80370a5e68a76461789df429c11117dd447c458d8aa738a3aeab28",
       "sizeBytes": 110907060
     }
