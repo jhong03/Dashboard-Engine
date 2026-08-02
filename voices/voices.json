@@ -303,6 +303,8 @@
     {
       "id": "en_us_hd",
       "engine": "melotts",
+      "engineId": "melotts_en",
+      "meloLang": "EN",
       "hd": true,
       "modelDir": "en_us_hd",
       "sid": 0,
@@ -332,15 +334,97 @@
       ],
       "sampleRate": 44100,
       "wpmAtScale1": null
+    },
+    {
+      "id": "ja_hd",
+      "engine": "melotts",
+      "engineId": "melotts_ja",
+      "meloLang": "JP",
+      "hd": true,
+      "modelDir": "jp_hd",
+      "sid": 0,
+      "displayName": "Japanese — HD",
+      "sex": "F",
+      "accent": "Japanese",
+      "language": "Japanese",
+      "descriptor": "MeloTTS neural Japanese (HD download)",
+      "licence": "MIT",
+      "licenceUrl": "https://github.com/myshell-ai/MeloTTS/blob/main/LICENSE",
+      "attribution": "MeloTTS by MyShell.ai (MIT); BERT tohoku-nlp/bert-base-japanese-v3",
+      "provenance": "MeloTTS Japanese (JP) exported to ONNX with BERT; VITS fp32 + BERT int8",
+      "files": [
+        {
+          "name": "model.onnx",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/model.onnx",
+          "sha256": "f04d2ed14254b2011922ac013a3f936d344c41c283d1e8d29e6290184bd149a1",
+          "sizeBytes": 170579508
+        },
+        {
+          "name": "bert.onnx",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert.onnx",
+          "sha256": "a41cbf27c661716d5d13380f1e7e42735869446482adccd2b6489936fea11b72",
+          "sizeBytes": 97140081
+        }
+      ],
+      "sampleRate": 44100,
+      "wpmAtScale1": null
+    },
+    {
+      "id": "ko_hd",
+      "engine": "melotts",
+      "engineId": "melotts_ko",
+      "meloLang": "KR",
+      "hd": true,
+      "modelDir": "kr_hd",
+      "sid": 0,
+      "displayName": "Korean — HD",
+      "sex": "F",
+      "accent": "Korean",
+      "language": "Korean",
+      "descriptor": "MeloTTS neural Korean (HD download)",
+      "licence": "MIT",
+      "licenceUrl": "https://github.com/myshell-ai/MeloTTS/blob/main/LICENSE",
+      "attribution": "MeloTTS by MyShell.ai (MIT); BERT kykim/bert-kor-base",
+      "provenance": "MeloTTS Korean (KR) exported to ONNX with BERT; VITS fp32 + BERT int8",
+      "files": [
+        {
+          "name": "model.onnx",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/model.onnx",
+          "sha256": "a12b2c9bb2f669de0708b89c4eddfe042a12fc62edec0c68323c7faecd138c50",
+          "sizeBytes": 170579508
+        },
+        {
+          "name": "bert.onnx",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert.onnx",
+          "sha256": "d43f3de122bc13366650843e85422e265cde2cbfa09fb17fbea36722fe883754",
+          "sizeBytes": 104230259
+        }
+      ],
+      "sampleRate": 44100,
+      "wpmAtScale1": null
     }
   ],
   "engines": {
-    "melotts": {
+    "melotts_en": {
       "exe": "melotts-engine.exe",
-      "comment": "Frozen torch-free onnx+BERT engine (PyInstaller --onefile; see engine/melotts/README.md). Hosted on huggingface.co; sha256/sizeBytes pinned. Until downloaded, place at %APPDATA%/dashboard-engine/bin/melotts/ manually.",
-      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine.exe",
-      "sha256": "1ab0bf7ebf80370a5e68a76461789df429c11117dd447c458d8aa738a3aeab28",
-      "sizeBytes": 110907060
+      "comment": "Per-language frozen torch-free onnx+BERT engine (see engine/melotts/README.md). Hosted on huggingface.co; sha256/sizeBytes pinned. Until downloaded, place at %APPDATA%/dashboard-engine/bin/melotts_en/ manually.",
+      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-en.exe",
+      "sha256": "edc14afc76e5728359f3a2ec170e01b643456061b5e11d85d95e08788a5af402",
+      "sizeBytes": 185563005
+    },
+    "melotts_ja": {
+      "exe": "melotts-engine.exe",
+      "comment": "Japanese engine (pyopenjtalk + tohoku BERT tokenizer). Place at %APPDATA%/dashboard-engine/bin/melotts_ja/ if not downloaded.",
+      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-ja.exe",
+      "sha256": "43bf0b136fd14c7d7c8c1b5f5ce2cba9b77f2d8e9b0a65129fd045d67b1eb30f",
+      "sizeBytes": 256759891
+    },
+    "melotts_ko": {
+      "exe": "melotts-engine.exe",
+      "comment": "Korean engine (g2pkk + eunjeon + kykim BERT tokenizer). Place at %APPDATA%/dashboard-engine/bin/melotts_ko/ if not downloaded.",
+      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-ko.exe",
+      "sha256": "104cf57c0eb84d17362bf2349071d94d6d3e24bb3db1e90721d88eb91390640a",
+      "sizeBytes": 218252957
     }
   },
   "excluded": [

@@ -2,20 +2,23 @@
 """
 MeloTTS engine sidecar for Dashboard Engine (torch-free, onnxruntime).
 
-A long-lived synthesis worker. The Node side (lib/melotts.js) keeps ONE alive
-and streams requests, so the model loads once and every later clip is fast.
+A long-lived synthesis worker. lib/melotts.js keeps ONE alive per engine and
+streams requests, so the model loads once and every later clip is fast.
 
-Quality note: MeloTTS English relies on BERT for correct pronunciation, so this
-engine runs the FULL pipeline — MeloTTS's own text frontend (g2p), a BERT feature
-model, and the VITS model — all as ONNX via onnxruntime (no PyTorch). A voice's
-model directory holds `model.onnx` (VITS, with BERT inputs) and `bert.onnx`
-(the sentence BERT); the English frontend + BERT tokenizer are bundled with the
-engine.
+Quality note: MeloTTS relies on a sentence BERT for correct pronunciation, so
+this engine runs the FULL pipeline — MeloTTS's own text frontend (g2p), a BERT
+feature model, and the VITS model — all as ONNX via onnxruntime (no PyTorch).
+
+One engine binary serves ONE language (English, Japanese, or Korean): the freeze
+bundles only that language's frontend + BERT tokenizer, keeping each download
+small. A voice's model directory holds `model.onnx` (VITS, with BERT inputs) and
+`bert.onnx` (the language's sentence BERT). The request's `lang` (EN/JP/KR)
+selects the frontend; the process locks to the first language it sees.
 
 Protocol (binary-framed so PCM can't be mangled):
 
   Request  (Node -> sidecar): one line of UTF-8 JSON, newline-terminated:
-      {"modelDir":"…","text":"…","sid":0,
+      {"modelDir":"…","text":"…","lang":"EN","sid":0,
        "speed":1.0,"noiseScale":0.6,"noiseScaleW":0.8}
     Text travels INSIDE the JSON on stdin — never on a command line.
 
@@ -23,12 +26,9 @@ Protocol (binary-framed so PCM can't be mangled):
       byte 0      status   0 = ok, 1 = error
       ok:  uint32 LE sampleRate, uint32 LE pcmLen, then pcmLen bytes s16le mono
       err: uint32 LE msgLen,     then msgLen bytes UTF-8 message
-
-No network, no shell, no eval. It only reads the model files in the directory the
-Node side hands it, and writes audio back. Any single failure returns an error
-frame and the worker keeps running (fail soft).
 """
 
+import importlib
 import json
 import os
 import struct
@@ -37,26 +37,27 @@ import types
 
 import numpy as np
 
+# lang -> (melo.text submodule, HF bert id). For EN/JP/KR the BERT feature goes
+# into the model's ja_bert (768-d) input and the bert (1024-d) input is zeros —
+# that's how MeloTTS routes all three (see get_text_for_tts_infer).
+LANG_CFG = {
+    "EN": ("english", "bert-base-uncased"),
+    "JP": ("japanese", "tohoku-nlp/bert-base-japanese-v3"),
+    "KR": ("korean", "kykim/bert-kor-base"),
+}
 
-# ── Bundled-asset resolution (works frozen or from source) ──────────────────
+
 def _asset_dir():
-    # PyInstaller unpacks bundled data under sys._MEIPASS.
-    base = getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
-    return base
+    return getattr(sys, "_MEIPASS", None) or os.path.dirname(os.path.abspath(__file__))
 
 
 ASSET_DIR = _asset_dir()
-BERT_TOKENIZER_DIR = os.path.join(ASSET_DIR, "bert_tokenizer")
-
-# Keep everything offline: the frontend must never phone home for a tokenizer.
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 try:
-    # inflect (pulled in by g2p_en) decorates functions with typeguard's
-    # @typechecked, which calls inspect.getsource at import — that fails in a
-    # frozen build (no .py source). Neuter it to a no-op before anything imports
-    # inflect; it's only runtime type-checking, not behaviour.
+    # inflect (via g2p_en) uses typeguard's @typechecked, which calls
+    # inspect.getsource at import — that fails in a frozen build. No-op it.
     try:
         import typeguard
 
@@ -72,20 +73,54 @@ try:
     import onnxruntime as ort
     from transformers import AutoTokenizer
 
-    # MeloTTS's english.py loads AutoTokenizer("bert-base-uncased") at import.
-    # Redirect that to the bundled tokenizer so there's no network / cache miss.
-    _orig_from_pretrained = AutoTokenizer.from_pretrained
+    # g2p_en (English) needs nltk corpora; when frozen they ride in the bundle.
+    try:
+        import nltk
+        _nd = os.path.join(ASSET_DIR, "nltk_data")
+        if os.path.isdir(_nd):
+            nltk.data.path.insert(0, _nd)
+    except Exception:
+        pass
+except Exception as exc:  # pragma: no cover
+    import traceback
+    sys.stderr.write(f"melotts-sidecar: base init failed: {exc}\n{traceback.format_exc()}")
+    sys.stderr.flush()
+    sys.exit(3)
 
-    def _patched_from_pretrained(name, *a, **k):
-        if name == "bert-base-uncased":
-            name = BERT_TOKENIZER_DIR
-        return _orig_from_pretrained(name, *a, **k)
 
-    AutoTokenizer.from_pretrained = staticmethod(_patched_from_pretrained)
+# ── Frontend setup (locks to one language) ──────────────────────────────────
+_LANG = None
+_FE = None          # the melo.text.<lang> module
+_TOK = None         # its tokenizer (bert-base-uncased / tohoku / kykim)
 
-    # Stub the Japanese frontend (only distribute_phone is needed by english.py)
-    # so importing the English frontend doesn't drag in pyopenjtalk.
-    _jp = types.ModuleType("melo.text.japanese")
+
+def _patch_tokenizer(bert_id):
+    """In a FROZEN engine, point the frontend's hardcoded AutoTokenizer at the
+    bundled tokenizer (each per-language engine bundles its own, so there's no
+    network). In source mode we deliberately do nothing and let the real
+    language tokenizer load from the HF cache — the bundled dir here would be
+    whatever a build left behind and mustn't be assumed to match the language."""
+    if not getattr(sys, "_MEIPASS", None):
+        return
+    bundled = os.path.join(ASSET_DIR, "bert_tokenizer")
+    if not os.path.isdir(bundled):
+        return
+    _orig = AutoTokenizer.from_pretrained
+
+    def _patched(name, *a, **k):
+        if name == bert_id:
+            name = bundled
+        return _orig(name, *a, **k)
+
+    AutoTokenizer.from_pretrained = staticmethod(_patched)
+
+
+def _stub_japanese():
+    """english.py / korean.py only need distribute_phone from japanese.py; stub
+    it so importing them doesn't drag in pyopenjtalk (used only for JP g2p)."""
+    if "melo.text.japanese" in sys.modules:
+        return
+    jp = types.ModuleType("melo.text.japanese")
 
     def _distribute_phone(n_phone, n_word):
         ppw = [0] * n_word
@@ -94,31 +129,27 @@ try:
             ppw[ppw.index(m)] += 1
         return ppw
 
-    _jp.distribute_phone = _distribute_phone
-    sys.modules["melo.text.japanese"] = _jp
-
-    # g2p_en uses nltk's POS tagger; when frozen, the corpora ride along in the
-    # bundle. Point nltk at them before the frontend imports g2p_en.
-    try:
-        import nltk
-        _nd = os.path.join(ASSET_DIR, "nltk_data")
-        if os.path.isdir(_nd):
-            nltk.data.path.insert(0, _nd)
-    except Exception:
-        pass
-
-    from melo.text import english, cleaned_text_to_sequence
-    BERT_TOKENIZER = AutoTokenizer.from_pretrained(BERT_TOKENIZER_DIR)
-    english.tokenizer = BERT_TOKENIZER
-except Exception as exc:  # pragma: no cover
-    import traceback
-    sys.stderr.write(f"melotts-sidecar: init failed: {exc}\n")
-    sys.stderr.write(traceback.format_exc())
-    sys.stderr.flush()
-    sys.exit(3)
+    jp.distribute_phone = _distribute_phone
+    sys.modules["melo.text.japanese"] = jp
 
 
-# ── Frontend (English) ──────────────────────────────────────────────────────
+def _ensure_lang(lang):
+    global _LANG, _FE, _TOK
+    if _LANG is not None:
+        if _LANG != lang:
+            raise ValueError(f"this engine serves {_LANG}, not {lang}")
+        return
+    if lang not in LANG_CFG:
+        raise ValueError(f"unsupported language {lang}")
+    modname, bert_id = LANG_CFG[lang]
+    _patch_tokenizer(bert_id)
+    if lang != "JP":
+        _stub_japanese()  # english/korean don't need the real japanese module
+    _FE = importlib.import_module(f"melo.text.{modname}")
+    _TOK = _FE.tokenizer
+    _LANG = lang
+
+
 def _intersperse(lst, item=0):
     out = [item] * (len(lst) * 2 + 1)
     out[1::2] = lst
@@ -126,10 +157,11 @@ def _intersperse(lst, item=0):
 
 
 def _frontend(text):
-    """text -> (norm_text, phone_ids, tone_ids, lang_ids, word2ph) with add_blank."""
-    norm = english.text_normalize(text)
-    phones, tones, word2ph = english.g2p(norm)
-    phone_ids, tone_ids, lang_ids = cleaned_text_to_sequence(phones, tones, "EN")
+    """text -> (norm, phone_ids, tone_ids, lang_ids, word2ph) with add_blank."""
+    from melo.text import cleaned_text_to_sequence
+    norm = _FE.text_normalize(text)
+    phones, tones, word2ph = _FE.g2p(norm)
+    phone_ids, tone_ids, lang_ids = cleaned_text_to_sequence(phones, tones, _LANG)
     phone_ids = _intersperse(phone_ids, 0)
     tone_ids = _intersperse(tone_ids, 0)
     lang_ids = _intersperse(lang_ids, 0)
@@ -138,9 +170,9 @@ def _frontend(text):
     return norm, phone_ids, tone_ids, lang_ids, w2p
 
 
-# ── Per-model ONNX sessions (loaded once, cached) ───────────────────────────
+# ── Per-model ONNX sessions ─────────────────────────────────────────────────
 _SESS = {}
-_SESS_LIMIT = 3
+_SESS_LIMIT = 2
 
 
 def _sessions(model_dir):
@@ -165,22 +197,25 @@ def _sessions(model_dir):
 
 
 def _ja_bert(bert_sess, norm, w2p):
-    enc = BERT_TOKENIZER(norm, return_tensors="np")
-    feat = bert_sess.run(["feature"], {
-        "input_ids": enc["input_ids"].astype(np.int64),
-        "attention_mask": enc["attention_mask"].astype(np.int64),
-        "token_type_ids": enc["token_type_ids"].astype(np.int64),
-    })[0][0]  # [seq, 768]
+    enc = _TOK(norm, return_tensors="np")
+    input_ids = enc["input_ids"].astype(np.int64)
+    feeds = {"input_ids": input_ids,
+             "attention_mask": enc["attention_mask"].astype(np.int64)}
+    # Some tokenizers (Japanese) don't emit token_type_ids.
+    tti = enc.get("token_type_ids")
+    feeds["token_type_ids"] = (tti.astype(np.int64) if tti is not None
+                               else np.zeros_like(input_ids))
+    feat = bert_sess.run(["feature"], feeds)[0][0]  # [seq, 768]
     if feat.shape[0] != len(w2p):
-        # Extremely rare tokenization edge; pad/truncate so we still speak.
         n = min(feat.shape[0], len(w2p))
-        feat = feat[:n]
-        w2p = w2p[:n]
+        feat = feat[:n]; w2p = w2p[:n]
     per_phone = np.concatenate([np.tile(feat[i], (w2p[i], 1)) for i in range(len(w2p))], axis=0)
     return per_phone.T.astype(np.float32)  # [768, L]
 
 
 def _synthesize(req):
+    lang = req.get("lang", "EN")
+    _ensure_lang(lang)
     model_dir = req["modelDir"]
     text = req.get("text", "")
     if not isinstance(text, str) or text.strip() == "":
@@ -195,7 +230,6 @@ def _synthesize(req):
     L = len(phone_ids)
     ja_bert = _ja_bert(bert_sess, norm, w2p)
     if ja_bert.shape[1] != L:
-        # Align defensively; the model requires bert seq == phone seq.
         L = min(L, ja_bert.shape[1])
         phone_ids = phone_ids[:L]; tone_ids = tone_ids[:L]; lang_ids = lang_ids[:L]
         ja_bert = ja_bert[:, :L]
@@ -220,18 +254,12 @@ def _synthesize(req):
 
 # ── stdin/stdout protocol ───────────────────────────────────────────────────
 def _write_ok(out, sample_rate, pcm):
-    out.write(b"\x00")
-    out.write(struct.pack("<II", int(sample_rate), len(pcm)))
-    out.write(pcm)
-    out.flush()
+    out.write(b"\x00"); out.write(struct.pack("<II", int(sample_rate), len(pcm))); out.write(pcm); out.flush()
 
 
 def _write_err(out, message):
     data = str(message).encode("utf-8", "replace")
-    out.write(b"\x01")
-    out.write(struct.pack("<I", len(data)))
-    out.write(data)
-    out.flush()
+    out.write(b"\x01"); out.write(struct.pack("<I", len(data))); out.write(data); out.flush()
 
 
 def main():
