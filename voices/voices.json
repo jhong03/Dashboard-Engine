@@ -313,26 +313,21 @@
       "descriptor": "MeloTTS neural — richer and more natural (HD download)",
       "licence": "MIT",
       "licenceUrl": "https://github.com/myshell-ai/MeloTTS/blob/main/LICENSE",
-      "attribution": "MeloTTS by MyShell.ai (MIT); ONNX export MiaoMint/MeloTTS-ONNX",
-      "provenance": "MeloTTS English exported to sherpa-onnx melo-vits format",
+      "attribution": "MeloTTS by MyShell.ai (MIT)",
+      "provenance": "MeloTTS English (EN) exported to ONNX with BERT; VITS fp32 + BERT int8",
+      "comment": "model.onnx + bert.onnx are custom ONNX exports (see engine/melotts/). Host them on a huggingface.co repo and set the urls; sha256/sizeBytes are pinned. Until hosted, place them in %APPDATA%/dashboard-engine/voices/en_us_hd/ by hand.",
       "files": [
         {
           "name": "model.onnx",
-          "url": "https://huggingface.co/MiaoMint/MeloTTS-ONNX/resolve/main/onnx_exports/en_newest/model.onnx",
-          "sha256": "045e74f3399a816b1ddc13cdfd845395fb6a1891e3aa2fabbff720add34d6044",
-          "sizeBytes": 170346705
+          "url": "https://huggingface.co/PLACEHOLDER/resolve/main/en_us_hd/model.onnx",
+          "sha256": "43abbf414602da31c9fc53265136bf64d2432029dad47d7cfb7dcc416b5b93aa",
+          "sizeBytes": 170579508
         },
         {
-          "name": "lexicon.txt",
-          "url": "https://huggingface.co/MiaoMint/MeloTTS-ONNX/resolve/main/onnx_exports/en_newest/lexicon.txt",
-          "sha256": "8eae1a826d28bfb1fde2aa0202a43eb244d475d8418cf3ee7724cdf561a63a88",
-          "sizeBytes": 4814775
-        },
-        {
-          "name": "tokens.txt",
-          "url": "https://huggingface.co/MiaoMint/MeloTTS-ONNX/resolve/main/onnx_exports/en_newest/tokens.txt",
-          "sha256": "6e8ef51206fba0b8e2630ab003d9793c0c126221139566a8a16d300293cec0a0",
-          "sizeBytes": 1440
+          "name": "bert.onnx",
+          "url": "https://huggingface.co/PLACEHOLDER/resolve/main/en_us_hd/bert.onnx",
+          "sha256": "fcd7a6cca04561bdfd9af00a3b70e08322541ab192585183ba542e90e289bbac",
+          "sizeBytes": 95415155
         }
       ],
       "sampleRate": 44100,
@@ -342,10 +337,10 @@
   "engines": {
     "melotts": {
       "exe": "melotts-engine.exe",
-      "comment": "Frozen sherpa-onnx sidecar (PyInstaller --onefile). Host this file on a huggingface.co repo and set url; sha256/sizeBytes are already pinned for the build in engine/melotts/. Until hosted, place it at %APPDATA%/dashboard-engine/bin/melotts/ manually.",
+      "comment": "Frozen torch-free onnx+BERT engine (PyInstaller --onefile; see engine/melotts/README.md). Host on a huggingface.co repo and set url; sha256/sizeBytes are pinned. Until hosted, place at %APPDATA%/dashboard-engine/bin/melotts/ manually.",
       "url": "https://huggingface.co/PLACEHOLDER/resolve/main/melotts-engine.exe",
-      "sha256": "1f55b2a6117d84f3a1dd5b8e7202fc7a6666bd9efca802ea231c7e93663c9d62",
-      "sizeBytes": 31176035
+      "sha256": "1ab0bf7ebf80370a5e68a76461789df429c11117dd447c458d8aa738a3aeab28",
+      "sizeBytes": 110907060
     }
   },
   "excluded": [

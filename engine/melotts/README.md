@@ -1,56 +1,78 @@
 # MeloTTS engine (HD voices)
 
-This is the optional, opt-in **HD voice** engine for Dashboard Engine. Standard
-voices render through Piper (bundled, small); HD voices render through MeloTTS —
-a higher-quality neural TTS — via a small **sherpa-onnx** sidecar that is
-downloaded on demand, exactly like a Piper voice model.
+The optional, opt-in **HD voice** engine for Dashboard Engine. Standard voices
+render through Piper (bundled, small); HD voices render through MeloTTS — a
+higher-quality neural TTS — via a torch-free **onnxruntime** sidecar that is
+downloaded on demand, like a Piper voice model.
 
-Nothing here changes the voice-tuning feature: a profile drives the same
-rate / expressiveness / steadiness, and the ffmpeg DSP chain runs afterwards
-unchanged. See `lib/melotts.js` for the Node side and `lib/voicebank.js` for the
-manifest + downloader.
+Nothing here changes voice tuning: a profile drives the same
+rate / expressiveness / steadiness, mapped to the model's per-call
+`length_scale` / `noise_scale` / `noise_scale_w` inputs, and the ffmpeg DSP
+chain runs afterwards unchanged. See `lib/melotts.js` and `lib/voicebank.js`.
+
+## Why BERT (and why not sherpa-onnx)
+
+MeloTTS English leans on a sentence BERT for correct pronunciation — without it,
+words are mispronounced (a bert-free sherpa-onnx export was tried and rejected on
+listening). So the engine runs the **full pipeline**: MeloTTS's own text frontend
+(g2p) + a BERT feature model + the VITS model, all as ONNX. For English the VITS
+`bert` (1024-d) input is zeros and the real feature goes into `ja_bert` (768-d) —
+that's just how MeloTTS routes English.
 
 ## Pieces
 
-- `melotts_sidecar.py` — the worker. A long-lived process that loads a
-  sherpa-onnx `melo-vits` model once and answers synthesis requests over a
-  binary stdin/stdout protocol (JSON request line in, framed s16le PCM out).
-  User text travels inside the JSON on **stdin** — never on a command line.
-- The **model** (per language) is a directory of `model.onnx` + `lexicon.txt` +
-  `tokens.txt` in sherpa-onnx `melo-vits` format. The English pack is pinned in
-  `voices/voices.json` and hosted on Hugging Face (MiaoMint/MeloTTS-ONNX). It is
-  BERT-free (~167 MB) — the model's `bert`/`ja_bert` inputs were dropped at
-  export, so no separate 500 MB BERT is needed.
-- The **engine binary** is this sidecar frozen with PyInstaller.
+- `melotts_sidecar.py` — the worker. Loads a voice's `model.onnx` + `bert.onnx`
+  once and answers requests over a binary stdin/stdout protocol. The English text
+  frontend and the BERT tokenizer are bundled INTO the engine.
+- The **voice pack** (per language, downloaded): a directory with
+  - `model.onnx` — MeloTTS VITS, exported keeping the BERT inputs (fp32, ~170 MB)
+  - `bert.onnx` — the sentence BERT (`bert-base-uncased`), int8 (~95 MB)
+- The **engine binary** — this sidecar frozen with PyInstaller (~106 MB).
 
-## Building the engine binary
+## Building the models (from the MeloTTS torch model)
 
-Requires Python 3.12 (see `requirements.txt`).
+See the export scripts kept with the spike, in short:
+1. Export `TTS(language="EN").model.infer` to ONNX **keeping** `bert`/`ja_bert`
+   as inputs (legacy tracer: `torch.onnx.export(..., dynamo=False)`).
+2. Export `bert-base-uncased` (AutoModelForMaskedLM) returning `hidden_states[-3]`.
+3. `onnxruntime.quantization.quantize_dynamic(bert.onnx, bert.onnx, QInt8)`.
+   (Leave the VITS model fp32 — quantizing it hurts audio quality.)
+
+## Building the engine binary (Python 3.12, torch-free)
 
 ```bash
-python -m venv .venv && . .venv/Scripts/activate      # or source .venv/bin/activate
-pip install -r engine/melotts/requirements.txt pyinstaller
+python -m venv .venv && . .venv/Scripts/activate
+pip install onnxruntime numpy transformers tokenizers g2p_en nltk inflect \
+    unidecode anyascii eng_to_ipa num2words pyinstaller
+pip install --no-deps "git+https://github.com/myshell-ai/MeloTTS.git"   # frontend only
+python -c "import nltk; [nltk.download(p) for p in ('averaged_perceptron_tagger','averaged_perceptron_tagger_eng','cmudict')]"
+
 pyinstaller --noconfirm --onefile --name melotts-engine \
-    --collect-all sherpa_onnx engine/melotts/melotts_sidecar.py
-# -> dist/melotts-engine.exe  (~31 MB, single file, no Python needed to run)
+  --collect-all onnxruntime --collect-submodules melo --collect-data melo \
+  --collect-all g2p_en --collect-submodules transformers --collect-data transformers \
+  --collect-data tokenizers --collect-submodules tokenizers \
+  --add-data "engine/melotts/bert_tokenizer;bert_tokenizer" \
+  --add-data "<nltk_data>/taggers;nltk_data/taggers" \
+  --add-data "<nltk_data>/corpora;nltk_data/corpora" \
+  --exclude-module torch --exclude-module torchaudio --exclude-module scipy \
+  --exclude-module librosa --exclude-module matplotlib --exclude-module pandas \
+  engine/melotts/melotts_sidecar.py
 ```
 
-The result is a single, self-contained `melotts-engine.exe` (Windows).
+Notes: build with `NLTK_DISABLE_IMPORT_SECURITY=1` set (nltk's CWD guard breaks
+the PyInstaller nltk hook otherwise). `inflect`'s typeguard decorators are neutered
+at runtime by the sidecar so `inspect.getsource` isn't called in the frozen app.
 
 ## Delivery
 
-The binary is **not** committed (see `.gitignore` `bin/`) and **not** bundled in
-the installer. It is fetched on demand into
-`%APPDATA%/dashboard-engine/bin/melotts/` the first time a user installs an HD
-voice — the same place and mechanism as Piper.
+Neither the engine binary nor the voice pack is committed (`bin/` is gitignored)
+or bundled in the installer. Host `melotts-engine.exe` and the pack
+(`model.onnx`, `bert.onnx`) on a `huggingface.co` repo and set the `url`s in
+`voices/voices.json` (`engines.melotts` + the `en_us_hd` files; sha256/sizes are
+pinned). Until hosted, drop them in `%APPDATA%/dashboard-engine/bin/melotts/`
+and `%APPDATA%/dashboard-engine/voices/en_us_hd/` by hand and HD voices work.
 
-To enable that download, host `melotts-engine.exe` on a `huggingface.co` repo and
-set the `engines.melotts.url` field in `voices/voices.json` (the `sha256` and
-`sizeBytes` are already pinned for the build committed here). Until it's hosted,
-drop the file into `%APPDATA%/dashboard-engine/bin/melotts/melotts-engine.exe`
-by hand and HD voices work immediately.
-
-## Protocol (for reference)
+## Protocol
 
 Request (Node → sidecar), one UTF-8 JSON line, newline-terminated:
 

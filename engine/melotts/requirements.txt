@@ -1,4 +1,14 @@
-# MeloTTS engine sidecar — build/runtime deps (torch-free).
-# Freeze with PyInstaller (see README.md). Python 3.12.
-sherpa-onnx==1.13.4
+# MeloTTS engine sidecar — torch-free runtime/build deps (Python 3.12).
+# The frontend comes from MeloTTS installed with --no-deps (see README.md).
+# Freeze with PyInstaller. NO torch / torchaudio / librosa / scipy.
+onnxruntime
 numpy
+transformers
+tokenizers
+g2p_en
+nltk
+inflect
+unidecode
+anyascii
+eng_to_ipa
+num2words
