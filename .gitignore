@@ -20,3 +20,4 @@ out/
 
 # Atomic-write leftovers (saveProfile, voice downloads)
 *.tmp
+__pycache__/
