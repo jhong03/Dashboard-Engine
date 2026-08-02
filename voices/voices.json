@@ -303,33 +303,62 @@
     {
       "id": "en_us_hd",
       "engine": "melotts",
-      "engineId": "melotts_en",
+      "engineId": "melotts_full",
       "meloLang": "EN",
       "hd": true,
-      "modelDir": "en_us_hd",
+      "modelDir": "en_hd",
       "sid": 0,
       "displayName": "English (US) — HD",
       "sex": "F",
       "accent": "American",
       "language": "English",
-      "descriptor": "MeloTTS neural — richer and more natural (HD download)",
+      "descriptor": "MeloTTS neural (HD download)",
       "licence": "MIT",
       "licenceUrl": "https://github.com/myshell-ai/MeloTTS/blob/main/LICENSE",
       "attribution": "MeloTTS by MyShell.ai (MIT)",
-      "provenance": "MeloTTS English (EN) exported to ONNX with BERT; VITS fp32 + BERT int8",
-      "comment": "model.onnx + bert.onnx are custom ONNX exports (see engine/melotts/). Host them on a huggingface.co repo and set the urls; sha256/sizeBytes are pinned. Until hosted, place them in %APPDATA%/dashboard-engine/voices/en_us_hd/ by hand.",
+      "provenance": "Full MeloTTS (PyTorch) checkpoint + BERT",
       "files": [
         {
-          "name": "model.onnx",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_us_hd/model.onnx",
-          "sha256": "43abbf414602da31c9fc53265136bf64d2432029dad47d7cfb7dcc416b5b93aa",
-          "sizeBytes": 170579508
+          "name": "checkpoint.pth",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/checkpoint.pth",
+          "sha256": "acd278040eaf9536908e2b965273df5a731c44d8f0da66cc5fed7972772ed23c",
+          "sizeBytes": 207860748
         },
         {
-          "name": "bert.onnx",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_us_hd/bert.onnx",
-          "sha256": "fcd7a6cca04561bdfd9af00a3b70e08322541ab192585183ba542e90e289bbac",
-          "sizeBytes": 95415155
+          "name": "config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/config.json",
+          "sha256": "039116c927c70eaa4458d315ea83aaaa99e1fca1c621b50c8ca56b4a5700eb77",
+          "sizeBytes": 3488
+        },
+        {
+          "name": "bert/config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/config.json",
+          "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20",
+          "sizeBytes": 570
+        },
+        {
+          "name": "bert/model.safetensors",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/model.safetensors",
+          "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3",
+          "sizeBytes": 440449768
+        },
+        {
+          "name": "bert/tokenizer.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/tokenizer.json",
+          "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98",
+          "sizeBytes": 466062
+        },
+        {
+          "name": "bert/tokenizer_config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/tokenizer_config.json",
+          "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10",
+          "sizeBytes": 48
+        },
+        {
+          "name": "bert/vocab.txt",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/vocab.txt",
+          "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
+          "sizeBytes": 231508
         }
       ],
       "sampleRate": 44100,
@@ -338,7 +367,7 @@
     {
       "id": "ja_hd",
       "engine": "melotts",
-      "engineId": "melotts_ja",
+      "engineId": "melotts_full",
       "meloLang": "JP",
       "hd": true,
       "modelDir": "jp_hd",
@@ -347,23 +376,47 @@
       "sex": "F",
       "accent": "Japanese",
       "language": "Japanese",
-      "descriptor": "MeloTTS neural Japanese (HD download)",
+      "descriptor": "MeloTTS neural (HD download)",
       "licence": "MIT",
       "licenceUrl": "https://github.com/myshell-ai/MeloTTS/blob/main/LICENSE",
-      "attribution": "MeloTTS by MyShell.ai (MIT); BERT tohoku-nlp/bert-base-japanese-v3",
-      "provenance": "MeloTTS Japanese (JP) exported to ONNX with BERT; VITS fp32 + BERT int8",
+      "attribution": "MeloTTS by MyShell.ai (MIT)",
+      "provenance": "Full MeloTTS (PyTorch) checkpoint + BERT",
       "files": [
         {
-          "name": "model.onnx",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/model.onnx",
-          "sha256": "f04d2ed14254b2011922ac013a3f936d344c41c283d1e8d29e6290184bd149a1",
-          "sizeBytes": 170579508
+          "name": "checkpoint.pth",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/checkpoint.pth",
+          "sha256": "96ae783e6ec0177aa810e2a645aec5d136a6f4992fdea26ee92b7b04d9688ad0",
+          "sizeBytes": 207860748
         },
         {
-          "name": "bert.onnx",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert.onnx",
-          "sha256": "53fae75287db59eb6ff1c3d43ec47165cff31499c4b72a1106a57a675c042d11",
-          "sizeBytes": 193197062
+          "name": "config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/config.json",
+          "sha256": "207def0d31bf7623e20f4a5e690f217747661bf495319c0139303122b6debcc3",
+          "sizeBytes": 3431
+        },
+        {
+          "name": "bert/config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/config.json",
+          "sha256": "2a86800f7f45c980d14cbb0f22a71e4f42642fad8c4b2b658fb98b65dfa9e527",
+          "sizeBytes": 472
+        },
+        {
+          "name": "bert/pytorch_model.bin",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/pytorch_model.bin",
+          "sha256": "e172862e0674054d65e0ba40d67df2a4687982f589db44aa27091c386e5450a4",
+          "sizeBytes": 447406217
+        },
+        {
+          "name": "bert/tokenizer_config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/tokenizer_config.json",
+          "sha256": "d40f1e84b9a179a96b5e143ac54151158bb8c703b5134da4ea98a3faf4643ce8",
+          "sizeBytes": 251
+        },
+        {
+          "name": "bert/vocab.txt",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/vocab.txt",
+          "sha256": "5e9a696b0191b833cfdf8eefada01f41f23ccbd7e7746946864260b1cdd0a784",
+          "sizeBytes": 231026
         }
       ],
       "sampleRate": 44100,
@@ -372,7 +425,7 @@
     {
       "id": "ko_hd",
       "engine": "melotts",
-      "engineId": "melotts_ko",
+      "engineId": "melotts_full",
       "meloLang": "KR",
       "hd": true,
       "modelDir": "kr_hd",
@@ -381,23 +434,47 @@
       "sex": "F",
       "accent": "Korean",
       "language": "Korean",
-      "descriptor": "MeloTTS neural Korean (HD download)",
+      "descriptor": "MeloTTS neural (HD download)",
       "licence": "MIT",
       "licenceUrl": "https://github.com/myshell-ai/MeloTTS/blob/main/LICENSE",
-      "attribution": "MeloTTS by MyShell.ai (MIT); BERT kykim/bert-kor-base",
-      "provenance": "MeloTTS Korean (KR) exported to ONNX with BERT; VITS fp32 + BERT int8",
+      "attribution": "MeloTTS by MyShell.ai (MIT)",
+      "provenance": "Full MeloTTS (PyTorch) checkpoint + BERT",
       "files": [
         {
-          "name": "model.onnx",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/model.onnx",
-          "sha256": "a12b2c9bb2f669de0708b89c4eddfe042a12fc62edec0c68323c7faecd138c50",
-          "sizeBytes": 170579508
+          "name": "checkpoint.pth",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/checkpoint.pth",
+          "sha256": "48e3ff3fd0b5348e095f0468e60ae727507564100f58142ef3a922ead6e0a4d0",
+          "sizeBytes": 207860748
         },
         {
-          "name": "bert.onnx",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert.onnx",
-          "sha256": "fdb8fc810de2b912dacc7f64cd4be2049e4526c5faa28c532e77dfa08da76f47",
-          "sizeBytes": 207377414
+          "name": "config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/config.json",
+          "sha256": "74543376976dfadde45ba34336fa79c7e95509f43a7c2e701b22c0f71fd7695c",
+          "sizeBytes": 3405
+        },
+        {
+          "name": "bert/config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/config.json",
+          "sha256": "c37ae92c39e3600e7c9645148e406286d44c9863cb8a237196ac6ad35bc47749",
+          "sizeBytes": 725
+        },
+        {
+          "name": "bert/pytorch_model.bin",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/pytorch_model.bin",
+          "sha256": "ae43a392e533ccb9fd38e5c65130aeee50381b87e81e795f9d90469accd78236",
+          "sizeBytes": 475782997
+        },
+        {
+          "name": "bert/tokenizer_config.json",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/tokenizer_config.json",
+          "sha256": "cac5808f517ce8a9706e7e18f29a45bc819a316c4f3222294a2a7db49490cf1b",
+          "sizeBytes": 80
+        },
+        {
+          "name": "bert/vocab.txt",
+          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/vocab.txt",
+          "sha256": "25a329a892130c73f7dffd6aafa0382d713f93633ef320e49ea54a449096a089",
+          "sizeBytes": 344259
         }
       ],
       "sampleRate": 44100,
@@ -405,26 +482,12 @@
     }
   ],
   "engines": {
-    "melotts_en": {
+    "melotts_full": {
       "exe": "melotts-engine.exe",
-      "comment": "Per-language frozen torch-free onnx+BERT engine (see engine/melotts/README.md). Hosted on huggingface.co; sha256/sizeBytes pinned. Until downloaded, place at %APPDATA%/dashboard-engine/bin/melotts_en/ manually.",
-      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-en.exe",
-      "sha256": "edc14afc76e5728359f3a2ec170e01b643456061b5e11d85d95e08788a5af402",
-      "sizeBytes": 185563005
-    },
-    "melotts_ja": {
-      "exe": "melotts-engine.exe",
-      "comment": "Japanese engine (pyopenjtalk + tohoku BERT tokenizer). Place at %APPDATA%/dashboard-engine/bin/melotts_ja/ if not downloaded.",
-      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-ja.exe",
-      "sha256": "43bf0b136fd14c7d7c8c1b5f5ce2cba9b77f2d8e9b0a65129fd045d67b1eb30f",
-      "sizeBytes": 256759891
-    },
-    "melotts_ko": {
-      "exe": "melotts-engine.exe",
-      "comment": "Korean engine (g2pkk + eunjeon + kykim BERT tokenizer). Place at %APPDATA%/dashboard-engine/bin/melotts_ko/ if not downloaded.",
-      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-ko.exe",
-      "sha256": "104cf57c0eb84d17362bf2349071d94d6d3e24bb3db1e90721d88eb91390640a",
-      "sizeBytes": 218252957
+      "comment": "Full MeloTTS (PyTorch) engine, all languages. Frozen PyInstaller --onefile. Host on huggingface.co; sha256/sizeBytes pinned once built. Until downloaded, place at %APPDATA%/dashboard-engine/bin/melotts_full/.",
+      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-torch.exe",
+      "sha256": "d2bc387411d4d0e740b8dbf1ebe3109c648d392bb387f6c70cd5563b78ecb988",
+      "sizeBytes": 546896761
     }
   },
   "excluded": [

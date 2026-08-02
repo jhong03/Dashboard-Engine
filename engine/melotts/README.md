@@ -1,89 +1,80 @@
-# MeloTTS engine (HD voices)
+# MeloTTS engine (HD voices) — full MeloTTS / PyTorch
 
-The optional, opt-in **HD voice** engine for Dashboard Engine. Standard voices
-render through Piper (bundled, small); HD voices render through MeloTTS — a
-higher-quality neural TTS — via a torch-free **onnxruntime** sidecar that is
-downloaded on demand, like a Piper voice model.
+The optional, opt-in **HD voice** engine. Standard voices render through Piper
+(bundled, small); HD voices render through **real MeloTTS (PyTorch)** — so the
+audio is exactly MeloTTS quality. (An onnx conversion was tried first; it was a
+touch below MeloTTS and was rejected for ja/ko, so we ship the real thing.)
 
-Nothing here changes voice tuning: a profile drives the same
-rate / expressiveness / steadiness, mapped to the model's per-call
-`length_scale` / `noise_scale` / `noise_scale_w` inputs, and the ffmpeg DSP
-chain runs afterwards unchanged. See `lib/melotts.js` and `lib/voicebank.js`.
-
-## Why BERT (and why not sherpa-onnx)
-
-MeloTTS English leans on a sentence BERT for correct pronunciation — without it,
-words are mispronounced (a bert-free sherpa-onnx export was tried and rejected on
-listening). So the engine runs the **full pipeline**: MeloTTS's own text frontend
-(g2p) + a BERT feature model + the VITS model, all as ONNX. For English the VITS
-`bert` (1024-d) input is zeros and the real feature goes into `ja_bert` (768-d) —
-that's just how MeloTTS routes English.
+Voice tuning is unchanged: a profile's rate / expressiveness / steadiness map to
+MeloTTS's `speed` / `noise_scale` / `noise_scale_w`, and the ffmpeg DSP chain runs
+afterwards. See `lib/melotts.js` and `lib/voicebank.js`.
 
 ## Pieces
 
-- `melotts_sidecar.py` — the worker. Loads a voice's `model.onnx` + `bert.onnx`
-  once and answers requests over a binary stdin/stdout protocol. The English text
-  frontend and the BERT tokenizer are bundled INTO the engine.
-- The **voice pack** (per language, downloaded): a directory with
-  - `model.onnx` — MeloTTS VITS, exported keeping the BERT inputs (fp32, ~170 MB)
-  - `bert.onnx` — the sentence BERT (`bert-base-uncased`), int8 (~95 MB)
-- The **engine binary** — this sidecar frozen with PyInstaller (~106 MB).
+- `melotts_sidecar.py` — a long-lived worker. On a request it loads that
+  language's MeloTTS from the pack and calls `tts.tts_to_file(text, sid, None, …)`
+  (MeloTTS splits sentences itself — this is the full quality). It **locks to one
+  language per process**; `lib/melotts.js` keys the warm process by engine+language
+  so switching language respawns. The sidecar stubs the non-target `melo.text`
+  frontends so a frozen/offline engine never loads models it won't use.
+- **One engine binary** for all languages (`engineId: melotts_full`) — this
+  sidecar frozen with PyInstaller `--onefile` (~520 MB, bundles torch + MeloTTS +
+  the en/ja/ko frontends). `PYTORCH_JIT=0` is required (a frozen build has no .py
+  source for TorchScript) — set both here and by `lib/melotts.js` when spawning.
+- **Per-language pack** (downloaded): a directory with
+  - `checkpoint.pth` — MeloTTS VITS checkpoint (~208 MB)
+  - `config.json` — MeloTTS config
+  - `bert/` — that language's sentence-BERT (config + pytorch_model.bin/safetensors
+    + tokenizer). EN bert-base-uncased, JP tohoku-nlp/bert-base-japanese-v3,
+    KR kykim/bert-kor-base. ~620–650 MB/pack.
 
-## Building the models (from the MeloTTS torch model)
-
-See the export scripts kept with the spike, in short:
-1. Export `TTS(language="EN").model.infer` to ONNX **keeping** `bert`/`ja_bert`
-   as inputs (legacy tracer: `torch.onnx.export(..., dynamo=False)`).
-2. Export `bert-base-uncased` (AutoModelForMaskedLM) returning `hidden_states[-3]`.
-3. `onnxruntime.quantization.quantize_dynamic(bert.onnx, bert.onnx, QInt8)`.
-   (Leave the VITS model fp32 — quantizing it hurts audio quality.)
-
-## Building the engine binary (Python 3.12, torch-free)
+## Building the engine (Python 3.12)
 
 ```bash
 python -m venv .venv && . .venv/Scripts/activate
-pip install onnxruntime numpy transformers tokenizers g2p_en nltk inflect \
-    unidecode anyascii eng_to_ipa num2words pyinstaller
-pip install --no-deps "git+https://github.com/myshell-ai/MeloTTS.git"   # frontend only
+pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+pip install --no-deps "git+https://github.com/myshell-ai/MeloTTS.git"
+pip install -r engine/melotts/requirements.txt pyinstaller
 python -c "import nltk; [nltk.download(p) for p in ('averaged_perceptron_tagger','averaged_perceptron_tagger_eng','cmudict')]"
 
 pyinstaller --noconfirm --onefile --name melotts-engine \
-  --collect-all onnxruntime --collect-submodules melo --collect-data melo \
-  --collect-all g2p_en --collect-submodules transformers --collect-data transformers \
-  --collect-data tokenizers --collect-submodules tokenizers \
-  --add-data "engine/melotts/bert_tokenizer;bert_tokenizer" \
-  --add-data "<nltk_data>/taggers;nltk_data/taggers" \
-  --add-data "<nltk_data>/corpora;nltk_data/corpora" \
-  --exclude-module torch --exclude-module torchaudio --exclude-module scipy \
-  --exclude-module librosa --exclude-module matplotlib --exclude-module pandas \
+  --collect-all torch --collect-all torchaudio \
+  --collect-submodules melo --collect-data melo --collect-all librosa \
+  --collect-all g2p_en \
+  --collect-all pyopenjtalk --collect-all fugashi --collect-all unidic_lite --collect-all mecab \
+  --collect-all g2pkk --collect-all eunjeon --collect-all jamo --collect-all pykakasi --collect-submodules jaconv \
+  --collect-submodules transformers --collect-data transformers --collect-submodules tokenizers --collect-data tokenizers \
+  --collect-submodules num2words --hidden-import pkg_resources --collect-submodules pkg_resources \
+  --add-data "<nltk_data>/corpora;nltk_data/corpora" --add-data "<nltk_data>/taggers;nltk_data/taggers" \
+  --exclude-module matplotlib --exclude-module tkinter --exclude-module gruut --exclude-module jieba --exclude-module cn2an --exclude-module pypinyin \
   engine/melotts/melotts_sidecar.py
 ```
 
-Notes: build with `NLTK_DISABLE_IMPORT_SECURITY=1` set (nltk's CWD guard breaks
-the PyInstaller nltk hook otherwise). `inflect`'s typeguard decorators are neutered
-at runtime by the sidecar so `inspect.getsource` isn't called in the frozen app.
+Build with `NLTK_DISABLE_IMPORT_SECURITY=1` set (nltk's CWD guard breaks the
+PyInstaller nltk hook otherwise). gruut/jieba/cn2an are excluded because the
+sidecar stubs the fr/es/zh frontends that would use them.
+
+## Building a pack
+
+Point MeloTTS at the language once so it downloads to the HF cache, then copy
+`checkpoint.pth` + `config.json` from `myshell-ai/MeloTTS-<Language>` and the
+BERT snapshot (config + model weights + tokenizer files) into `<lang>_hd/bert/`.
 
 ## Delivery
 
-Neither the engine binary nor the voice pack is committed (`bin/` is gitignored)
-or bundled in the installer. Host `melotts-engine.exe` and the pack
-(`model.onnx`, `bert.onnx`) on a `huggingface.co` repo and set the `url`s in
-`voices/voices.json` (`engines.melotts` + the `en_us_hd` files; sha256/sizes are
-pinned). Until hosted, drop them in `%APPDATA%/dashboard-engine/bin/melotts/`
-and `%APPDATA%/dashboard-engine/voices/en_us_hd/` by hand and HD voices work.
+Neither the engine nor packs are committed (`bin/` gitignored) or bundled. Host
+the engine (`melotts-engine-torch.exe`) and each pack folder on a `huggingface.co`
+repo and set the urls in `voices/voices.json` (sha256/sizes pinned). Until
+downloaded, place the engine at `%APPDATA%/dashboard-engine/bin/melotts_full/` and
+packs at `%APPDATA%/dashboard-engine/voices/<lang>_hd/`.
 
 ## Protocol
 
-Request (Node → sidecar), one UTF-8 JSON line, newline-terminated:
+Request (Node → sidecar), one UTF-8 JSON line:
 
 ```json
-{"modelDir":"…","text":"…","sid":0,"speed":1.0,"noiseScale":0.6,"noiseScaleW":0.8}
+{"modelDir":"…","text":"…","lang":"EN","sid":0,"speed":1.0,"noiseScale":0.6,"noiseScaleW":0.8}
 ```
 
-Response (sidecar → Node), one binary frame:
-
-```
-byte 0      status   0 = ok, 1 = error
-ok:  uint32 LE sampleRate, uint32 LE pcmLen, then pcmLen bytes s16le mono
-err: uint32 LE msgLen,     then msgLen bytes UTF-8 message
-```
+Response (sidecar → Node): `status` byte (0 ok / 1 err); ok → uint32 LE sampleRate,
+uint32 LE pcmLen, then s16le mono PCM; err → uint32 LE msgLen, then UTF-8 message.

@@ -1,10 +1,17 @@
-# MeloTTS engine sidecar — torch-free runtime/build deps (Python 3.12).
-# The frontend comes from MeloTTS installed with --no-deps (see README.md).
-# Freeze with PyInstaller. NO torch / torchaudio / librosa / scipy.
-onnxruntime
-numpy
+# MeloTTS engine sidecar — FULL MeloTTS (PyTorch) build. Python 3.12.
+# The engine bundles real MeloTTS so ja/ko/en are exactly MeloTTS quality (an
+# onnx conversion was a touch below and was rejected). Freeze with PyInstaller
+# --onefile (see README.md). Big (~520 MB compressed onefile).
+#
+# Install torch CPU from the pytorch index:
+#   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
+# MeloTTS itself (frontend + model code), no-deps then hand-add its deps:
+#   pip install --no-deps git+https://github.com/myshell-ai/MeloTTS.git
+# Runtime deps the sidecar/melo need (en/ja/ko frontends only):
 transformers
 tokenizers
+librosa
+soundfile
 g2p_en
 nltk
 inflect
@@ -12,3 +19,13 @@ unidecode
 anyascii
 eng_to_ipa
 num2words
+pyopenjtalk-plus
+fugashi
+unidic-lite
+mecab-python3
+jaconv
+pykakasi
+g2pkk
+jamo
+eunjeon
+"setuptools<81"
