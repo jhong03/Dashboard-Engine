@@ -14,6 +14,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 
 const piper = require('../lib/piper');
+const melotts = require('../lib/melotts');
 const dsp = require('../lib/dsp');
 const analyze = require('../lib/analyze');
 const bank = require('../lib/voicebank');
@@ -53,23 +54,38 @@ async function main() {
   if (!bank.isInstalled(APP_ROOT, voice)) {
     throw new Error(`Voice "${voice.id}" is not installed. Run: npm run voices -- download ${voice.id}`);
   }
-  const modelPath = bank.modelPathFor(APP_ROOT, voice);
   // Calibrated per-voice rate baseline; null until `npm run calibrate --write`.
   const baselineWpm = voice.wpmAtScale1 || undefined;
 
-  const piperPath = piper.findPiper(APP_ROOT);
+  // The bank is all-MeloTTS now, but keep the smoke test engine-agnostic (it
+  // mirrors the app's synthClip dispatch) so a Piper voice would still work.
+  const isMelo = bank.engineOf(voice) === 'melotts';
   const ffmpegPath = dsp.findFfmpeg();
-  console.log(`piper     : ${piperPath}`);
+
+  let enginePath;
+  if (isMelo) {
+    enginePath = melotts.findEngine(APP_ROOT, voice.engineId);
+    if (!enginePath) {
+      throw new Error(`HD voice engine "${voice.engineId}" is not installed. Download the HD voice, or place the engine at %APPDATA%/dashboard-engine/bin/${voice.engineId}/.`);
+    }
+  } else {
+    enginePath = piper.findPiper(APP_ROOT);
+  }
+  console.log(`engine    : ${enginePath} (${isMelo ? `melotts ${voice.meloLang}` : 'piper'})`);
   console.log(`ffmpeg    : ${ffmpegPath}`);
   console.log(`voice     : ${voice.id} (${voice.licence}) baseline ${baselineWpm || 'uncalibrated'}`);
   console.log('');
 
-  // 1. Synthesize
+  // 1. Synthesize (first MeloTTS clip is slow — the frozen engine cold-starts).
   const t0 = Date.now();
-  const { pcm: rawPcm, sampleRate } = await piper.synthesize(TEST_SENTENCE, BUTLER, modelPath, piperPath, { baselineWpm });
+  const { pcm: rawPcm, sampleRate } = isMelo
+    ? await melotts.synthesize(TEST_SENTENCE, BUTLER, bank.resolveModelDir(APP_ROOT, voice), enginePath, { baselineWpm, sid: voice.sid || 0, lang: voice.meloLang })
+    : await piper.synthesize(TEST_SENTENCE, BUTLER, bank.modelPathFor(APP_ROOT, voice), enginePath, { baselineWpm });
   const tSynth = Date.now() - t0;
-  console.log(`[1/3] piper synthesis  : ${rawPcm.length} bytes PCM @ ${sampleRate} Hz (${tSynth} ms)`);
-  console.log(`      piper flags      : ${piper.piperArgsForProfile(BUTLER, '<model>', baselineWpm).join(' ')}`);
+  console.log(`[1/3] ${isMelo ? 'melotts' : 'piper'} synthesis  : ${rawPcm.length} bytes PCM @ ${sampleRate} Hz (${tSynth} ms)`);
+  if (!isMelo) {
+    console.log(`      piper flags      : ${piper.piperArgsForProfile(BUTLER, '<model>', baselineWpm).join(' ')}`);
+  }
 
   // 2. DSP
   const graph = dsp.buildFilterGraph(BUTLER, sampleRate);
@@ -106,6 +122,9 @@ async function main() {
   //    never a red smoke test. Once a clip exists, the assertions are hard.
   console.log('');
   videoWallpaperCheck(ffmpegPath);
+
+  // Release the warm MeloTTS sidecar so the script can exit.
+  melotts.shutdown();
 
   console.log('');
   console.log('Smoke test PASSED.');
@@ -173,5 +192,6 @@ function videoWallpaperCheck(ffmpegPath) {
 main().catch((err) => {
   console.error('');
   console.error(`Smoke test FAILED: ${err.message}`);
+  try { melotts.shutdown(); } catch { /* ignore */ }
   process.exitCode = 1;
 });

@@ -29,20 +29,44 @@ import types
 
 import numpy as np
 
-# lang -> (MeloTTS language code, melo.text frontend module, the BERT model id
-# that frontend loads).
+# Per-language config. melo.text.get_bert() imports EVERY language's frontend AND
+# its *_bert helper on each call, and MANY load a tokenizer / gruut data AT IMPORT
+# (the english/spanish/french frontends + the english_bert/spanish_bert/french_bert
+# helpers each `AutoTokenizer.from_pretrained(<hub id>)` at module top; chinese_mix
+# loads bert-base-multilingual and imports the english + chinese frontends). A
+# frozen, OFFLINE engine synthesizes ONE language, so we KEEP only the modules that
+# language actually touches and STUB the rest — otherwise those module-top loads
+# reach for the network / a HF cache the user's machine doesn't have and CRASH.
+#
+# Each entry: (MeloTTS language string, [frontend modules to keep],
+#              [*_bert loader modules to keep], [(hf_bert_id, pack_subdir)] redirects)
+#
+# Subtleties learned the hard way:
+#  - KR: get_bert imports the feature from the korean FRONTEND, but that delegates
+#    to japanese_bert.get_bert_feature (the generic loader) with Korean's model_id.
+#  - ZH: MeloTTS remaps language "ZH" -> "ZH_MIX_EN" (api.py), so the real frontend
+#    is chinese_mix (NOT chinese). chinese_mix imports the english + chinese
+#    frontends and loads bert-base-multilingual-uncased (via chinese_bert), NOT the
+#    roberta. english's module-top tokenizer (bert-base-uncased) is redirected to
+#    the SAME multilingual dir so its subword counts match chinese_bert's — keeping
+#    them consistent AND meaning the pack ships just one bert dir.
 LANG_CFG = {
-    "EN": ("EN", "english", "bert-base-uncased"),
-    "JP": ("JP", "japanese", "tohoku-nlp/bert-base-japanese-v3"),
-    "KR": ("KR", "korean", "kykim/bert-kor-base"),
+    "EN": ("EN", ["english"], ["english_bert"],
+           [("bert-base-uncased", "bert")]),
+    "ES": ("ES", ["spanish"], ["spanish_bert"],
+           [("dccuchile/bert-base-spanish-wwm-uncased", "bert")]),
+    "FR": ("FR", ["french"], ["french_bert"],
+           [("dbmdz/bert-base-french-europeana-cased", "bert")]),
+    "ZH": ("ZH", ["chinese_mix", "chinese", "english"], ["chinese_bert"],
+           [("bert-base-multilingual-uncased", "bert"), ("bert-base-uncased", "bert")]),
+    "JP": ("JP", ["japanese"], ["japanese_bert"],
+           [("tohoku-nlp/bert-base-japanese-v3", "bert")]),
+    "KR": ("KR", ["korean"], ["japanese_bert"],
+           [("kykim/bert-kor-base", "bert")]),
 }
 
-# MeloTTS's cleaner.py eagerly imports EVERY language frontend, and several load a
-# tokenizer / gruut data at import (chinese_mix -> bert-base-multilingual-uncased,
-# french/spanish -> gruut, chinese -> jieba). We only synthesize EN/JP/KR, so stub
-# the others so a frozen, offline engine never tries to load models it will never
-# use. The japanese stub keeps distribute_phone because english.py imports it.
-_ALL_FRONTENDS = ["chinese", "japanese", "english", "chinese_mix", "korean", "french", "spanish"]
+_FRONTENDS = ["chinese", "japanese", "english", "chinese_mix", "korean", "french", "spanish"]
+_BERT_MODULES = ["chinese_bert", "japanese_bert", "english_bert", "french_bert", "spanish_bert"]
 
 
 def _distribute_phone(n_phone, n_word):
@@ -57,20 +81,24 @@ def _stub_dummy(*a, **k):
     raise NotImplementedError("a stubbed MeloTTS frontend was called")
 
 
-def _stub_frontends(keep):
-    for name in _ALL_FRONTENDS:
-        if name == keep:
+def _stub_frontends(keep_names):
+    """Stub every frontend + *_bert helper EXCEPT the ones the target language
+    needs (keep_names), so a frozen/offline engine never loads a model it won't
+    use."""
+    keep = set(keep_names)
+    for name in _FRONTENDS + _BERT_MODULES:
+        if name in keep:
             continue
         key = f"melo.text.{name}"
         if key in sys.modules:
             continue
         mod = types.ModuleType(key)
-        # melo/text/__init__.get_bert does `from .<frontend> import get_bert_feature`
-        # for EVERY frontend; return a never-called dummy for any such name so those
-        # imports succeed. The target language's real frontend is used at runtime.
+        # get_bert does `from .<name> import get_bert_feature` for every language;
+        # a dummy for any attribute makes those imports succeed. Only the kept
+        # target module's real get_bert_feature is ever CALLED.
         mod.__getattr__ = lambda attr: _stub_dummy
         if name == "japanese":
-            mod.distribute_phone = _distribute_phone  # real: english.g2p actually calls it
+            mod.distribute_phone = _distribute_phone  # english.g2p imports + calls it
         sys.modules[key] = mod
 
 
@@ -123,17 +151,24 @@ _LANG = None
 _TTS = None
 
 
-def _redirect_bert(bert_id, bert_dir):
-    """Point MeloTTS's frontend BERT + tokenizer loads at the bundled copy in the
-    pack (so nothing phones home)."""
-    if not os.path.isdir(bert_dir):
+def _redirect_bert(redirects, model_dir):
+    """Point MeloTTS's BERT + tokenizer loads at the bundled copies in the pack (so
+    nothing phones home). `redirects` is a list of (hf_bert_id, pack_subdir); more
+    than one id can map to the same dir (e.g. ZH points both the multilingual bert
+    and the english tokenizer at bert/)."""
+    mapping = {}
+    for bert_id, subdir in redirects:
+        d = os.path.join(model_dir, subdir)
+        if os.path.isdir(d):
+            mapping[bert_id] = d
+    if not mapping:
         return
     for cls in (AutoModelForMaskedLM, AutoTokenizer):
         _orig = cls.from_pretrained
 
-        def _patched(name, *a, __orig=_orig, **k):
-            if name == bert_id:
-                name = bert_dir
+        def _patched(name, *a, __orig=_orig, __map=mapping, **k):
+            if name in __map:
+                name = __map[name]
             return __orig(name, *a, **k)
 
         cls.from_pretrained = staticmethod(_patched)
@@ -147,9 +182,9 @@ def _ensure(lang, model_dir):
         return _TTS
     if lang not in LANG_CFG:
         raise ValueError(f"unsupported language {lang}")
-    melo_lang, frontend, bert_id = LANG_CFG[lang]
-    _redirect_bert(bert_id, os.path.join(model_dir, "bert"))
-    _stub_frontends(keep=frontend)
+    melo_lang, keep_frontends, keep_berts, redirects = LANG_CFG[lang]
+    _redirect_bert(redirects, model_dir)
+    _stub_frontends(keep_frontends + keep_berts)
     from melo.api import TTS
     ckpt = os.path.join(model_dir, "checkpoint.pth")
     cfg = os.path.join(model_dir, "config.json")

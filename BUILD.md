@@ -68,6 +68,33 @@ CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist
 - **Code signing.** Unsigned builds trigger SmartScreen on first run. A real
   release wants an Authenticode cert (and, for Steam, Steam's own trust).
 
+## Bundling English HD in the Steam depot (first-run voice)
+
+The voice bank is all-MeloTTS (en/es/fr/zh/ja/ko). By default NOTHING voice-wise
+is packaged — the engine (~600 MB) and each voice pack download at runtime into
+`%APPDATA%/dashboard-engine/`. That means a fresh install has no HD voice until a
+download (it falls back to the Windows system voice, which is fine).
+
+To ship an **instant** first-run HD voice, bundle the engine + English pack in the
+Steam depot (Steam is the CDN + paywall, nothing personal). The code already
+resolves a bundled copy from the app dir — `lib/melotts.findEngine` checks
+`appRoot/bin/<engineId>/` and `lib/voicebank.resolveModelDir` checks
+`appRoot/voices/<modelDir>/` — so you only need the build to include them:
+
+1. Stage the two large artifacts into the repo (they're gitignored, like `bin/piper`):
+   - engine → `bin/melotts_full/melotts-engine.exe`
+   - English pack → `voices/en_hd/` (checkpoint.pth + config.json + bert/)
+2. In `package.json` → `build.files`, AFTER the `!bin/**` and `!voices/**` lines,
+   add includes so only these survive the exclude:
+   `"bin/melotts_full/**"`, `"voices/en_hd/**"`.
+3. `npm run pack` and upload `dist/win-unpacked/` to the depot as usual. (This adds
+   ~730 MB to the depot; `npm run dist`'s NSIS installer grows by the same amount,
+   so prefer `pack`/the depot for distribution.)
+
+Leave es/fr/zh/ja/ko as on-demand downloads. Host them (and the engine, for
+non-Steam installs) on a NEUTRAL account — an HF *organization* or Cloudflare R2 —
+NOT a personal HF repo; update the URLs in `voices/voices.json` when you migrate.
+
 ## Real Steam release checklist (business + build)
 
 1. Steam Direct ($100) → **create your app** in Steamworks, get its **AppID**,

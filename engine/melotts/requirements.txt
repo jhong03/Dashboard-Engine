@@ -1,13 +1,14 @@
 # MeloTTS engine sidecar — FULL MeloTTS (PyTorch) build. Python 3.12.
-# The engine bundles real MeloTTS so ja/ko/en are exactly MeloTTS quality (an
-# onnx conversion was a touch below and was rejected). Freeze with PyInstaller
-# --onefile (see README.md). Big (~520 MB compressed onefile).
+# The engine bundles real MeloTTS so every language is exactly MeloTTS quality
+# (an onnx conversion was a touch below and was rejected). Freeze with
+# PyInstaller --onefile (see README.md). Big (~600-700 MB compressed onefile,
+# now that the es/fr/zh frontends are included).
 #
 # Install torch CPU from the pytorch index:
 #   pip install torch torchaudio --index-url https://download.pytorch.org/whl/cpu
 # MeloTTS itself (frontend + model code), no-deps then hand-add its deps:
 #   pip install --no-deps git+https://github.com/myshell-ai/MeloTTS.git
-# Runtime deps the sidecar/melo need (en/ja/ko frontends only):
+# Runtime deps the sidecar/melo need for ALL SIX languages (en/es/fr/zh/ja/ko):
 transformers
 tokenizers
 librosa
@@ -19,13 +20,25 @@ unidecode
 anyascii
 eng_to_ipa
 num2words
+cached_path
+txtsplit
+# Japanese
 pyopenjtalk-plus
 fugashi
 unidic-lite
 mecab-python3
 jaconv
 pykakasi
+# Korean
 g2pkk
 jamo
 eunjeon
+# Spanish + French (es/fr frontends phonemize via gruut)
+gruut
+gruut-lang-es
+gruut-lang-fr
+# Chinese (zh frontend)
+jieba
+cn2an
+pypinyin
 "setuptools<81"

@@ -5,9 +5,9 @@
   "author": "AEGIS",
   "created": "2026-07-12T00:00:00.000Z",
   "base": {
-    "engine": "piper",
-    "voice": "northern_english_male",
-    "fallback": { "engine": "system", "match": "United Kingdom" }
+    "engine": "melotts",
+    "voice": "en_us_hd",
+    "fallback": { "engine": "system", "match": "United States" }
   },
   "prosody": {
     "pitchShift": -2.0,
