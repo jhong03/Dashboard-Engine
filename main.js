@@ -256,10 +256,15 @@ function attachToDesktop(win, monitorIndex = -1) {
 
 async function createDashboardWindow() {
   if (dashboardWindow) return;
-  const { display, explicit } = chosenDisplay();
-  // Only hand the attach script a monitor index when the user explicitly pinned
-  // a display; the default/primary path stays byte-for-byte what shipped before.
-  const monitorIndex = explicit ? rankedDisplays().findIndex((d) => d.id === display.id) : -1;
+  const { display } = chosenDisplay();
+  // The wallpaper always renders on a DEFINITE monitor. When no display is pinned,
+  // chosenDisplay() already defaults to the primary; either way, hand the attach
+  // that monitor's INDEX so it positions the window with DPI-safe PHYSICAL pixel
+  // rects. The old path passed -1 when unpinned ("leave Electron's DIP bounds"),
+  // which could land the wallpaper not-quite-fullscreen on a high-DPI monitor.
+  // (We deliberately do NOT persist a pin here — a null displayId is the valid
+  // "Auto / follow primary" choice, and pinning would fight it.)
+  const monitorIndex = rankedDisplays().findIndex((d) => d.id === display.id);
 
   dashboardWindow = new BrowserWindow({
     x: display.bounds.x,
@@ -297,9 +302,17 @@ async function createDashboardWindow() {
   dashboardWindow.showInactive(); // visible, but don't grab focus on launch
 
   if (!NO_DESKTOP) {
-    const attached = await attachToDesktop(dashboardWindow, monitorIndex);
+    // The shell's wallpaper WorkerW may not exist the instant we launch (common
+    // on quiet-launch-at-login, before explorer has finished spawning it), so a
+    // single attach can miss and drop us to a taskbar window. Retry a few times
+    // with a short delay before giving up.
+    let attached = false;
+    for (let attempt = 0; attempt < 5 && !attached; attempt++) {
+      attached = await attachToDesktop(dashboardWindow, monitorIndex);
+      if (!attached && attempt < 4) await new Promise((resolve) => setTimeout(resolve, 600));
+    }
     if (attached) return;
-    console.warn('[desktop] could not attach to the wallpaper layer; falling back to a normal window.');
+    console.warn('[desktop] could not attach to the wallpaper layer after retries; falling back to a normal window.');
   }
   // Fallback (non-Windows, RDP, or a shell change): a normal resizable
   // window instead of a hidden fullscreen one lurking behind everything.
