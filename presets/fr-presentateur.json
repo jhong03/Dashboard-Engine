@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "preset-fr-presentateur",
+  "name": "French · Présentateur",
+  "author": "Dashboard Engine",
+  "created": "2026-08-03T00:00:00.000Z",
+  "base": {
+    "engine": "melotts",
+    "voice": "fr_hd",
+    "fallback": {
+      "engine": "system",
+      "match": "French"
+    }
+  },
+  "prosody": {
+    "pitchShift": 0,
+    "rate": 178,
+    "expressiveness": 0.9,
+    "steadiness": 0.68,
+    "pauseSentence": 280,
+    "pauseComma": 90
+  },
+  "timbre": {
+    "warmth": 1.5,
+    "brightness": 1,
+    "presence": 2.5,
+    "sibilance": -1.5,
+    "breath": 0
+  },
+  "character": {
+    "compression": 0.55,
+    "radioFilter": 0,
+    "reverb": {
+      "mix": 0.04,
+      "size": 0.3
+    },
+    "bitcrush": 0,
+    "chorus": 0
+  }
+}

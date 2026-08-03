@@ -82,7 +82,8 @@ resolves a bundled copy from the app dir — `lib/melotts.findEngine` checks
 `appRoot/voices/<modelDir>/` — so you only need the build to include them:
 
 1. Stage the two large artifacts into the repo (they're gitignored, like `bin/piper`):
-   - engine → `bin/melotts_full/melotts-engine.exe`
+   - engine → the UNPACKED `--onedir` bundle at `bin/melotts_full/` (i.e.
+     `bin/melotts_full/melotts-engine.exe` + `bin/melotts_full/_internal/`)
    - English pack → `voices/en_hd/` (checkpoint.pth + config.json + bert/)
 2. In `package.json` → `build.files`, AFTER the `!bin/**` and `!voices/**` lines,
    add includes so only these survive the exclude:

@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "id": "preset-broadcast-anchor",
-  "name": "Broadcast Anchor",
-  "author": "AEGIS",
-  "created": "2026-07-12T00:00:00.000Z",
+  "id": "preset-en-us-anchor",
+  "name": "English (US) · Anchor",
+  "author": "Dashboard Engine",
+  "created": "2026-08-03T00:00:00.000Z",
   "base": {
     "engine": "melotts",
     "voice": "en_us_hd",
@@ -14,21 +14,21 @@
   },
   "prosody": {
     "pitchShift": 0,
-    "rate": 190,
-    "expressiveness": 0.7,
-    "steadiness": 0.65,
-    "pauseSentence": 260,
-    "pauseComma": 80
+    "rate": 178,
+    "expressiveness": 0.9,
+    "steadiness": 0.68,
+    "pauseSentence": 280,
+    "pauseComma": 90
   },
   "timbre": {
-    "warmth": 0.5,
-    "brightness": 1.5,
-    "presence": 3.5,
+    "warmth": 1,
+    "brightness": 2,
+    "presence": 2.5,
     "sibilance": -1.5,
     "breath": 0
   },
   "character": {
-    "compression": 0.75,
+    "compression": 0.55,
     "radioFilter": 0,
     "reverb": {
       "mix": 0,

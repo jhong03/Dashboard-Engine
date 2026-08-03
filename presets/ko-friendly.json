@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "preset-ko-friendly",
+  "name": "Korean · Friendly",
+  "author": "Dashboard Engine",
+  "created": "2026-08-03T00:00:00.000Z",
+  "base": {
+    "engine": "melotts",
+    "voice": "ko_hd",
+    "fallback": {
+      "engine": "system",
+      "match": "Korean"
+    }
+  },
+  "prosody": {
+    "pitchShift": -0.5,
+    "rate": 150,
+    "expressiveness": 1.1,
+    "steadiness": 0.52,
+    "pauseSentence": 360,
+    "pauseComma": 120
+  },
+  "timbre": {
+    "warmth": 3.2,
+    "brightness": -2.5,
+    "presence": 0.5,
+    "sibilance": -2.5,
+    "breath": 0
+  },
+  "character": {
+    "compression": 0.25,
+    "radioFilter": 0,
+    "reverb": {
+      "mix": 0.1,
+      "size": 0.3
+    },
+    "bitcrush": 0,
+    "chorus": 0
+  }
+}

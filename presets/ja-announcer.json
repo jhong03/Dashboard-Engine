@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "preset-ja-announcer",
+  "name": "Japanese · Announcer",
+  "author": "Dashboard Engine",
+  "created": "2026-08-03T00:00:00.000Z",
+  "base": {
+    "engine": "melotts",
+    "voice": "ja_hd",
+    "fallback": {
+      "engine": "system",
+      "match": "Japanese"
+    }
+  },
+  "prosody": {
+    "pitchShift": 0.5,
+    "rate": 178,
+    "expressiveness": 0.9,
+    "steadiness": 0.68,
+    "pauseSentence": 280,
+    "pauseComma": 90
+  },
+  "timbre": {
+    "warmth": 1,
+    "brightness": 2.5,
+    "presence": 2.5,
+    "sibilance": -1.5,
+    "breath": 0
+  },
+  "character": {
+    "compression": 0.55,
+    "radioFilter": 0,
+    "reverb": {
+      "mix": 0,
+      "size": 0.3
+    },
+    "bitcrush": 0,
+    "chorus": 0
+  }
+}

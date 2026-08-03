@@ -5,12 +5,15 @@
   "author": "AEGIS",
   "created": "2026-07-12T00:00:00.000Z",
   "base": {
-    "engine": "piper",
-    "voice": "jenny_dioco",
-    "fallback": { "engine": "system", "match": "English" }
+    "engine": "melotts",
+    "voice": "en_us_hd",
+    "fallback": {
+      "engine": "system",
+      "match": "United States"
+    }
   },
   "prosody": {
-    "pitchShift": 1.0,
+    "pitchShift": 1,
     "rate": 210,
     "expressiveness": 1.3,
     "steadiness": 0.35,
@@ -18,16 +21,19 @@
     "pauseComma": 70
   },
   "timbre": {
-    "warmth": 0.0,
-    "brightness": 2.0,
-    "presence": 1.0,
-    "sibilance": -1.0,
-    "breath": 0.0
+    "warmth": 0,
+    "brightness": 2,
+    "presence": 1,
+    "sibilance": -1,
+    "breath": 0
   },
   "character": {
     "compression": 0.35,
-    "radioFilter": 0.0,
-    "reverb": { "mix": 0.0, "size": 0.3 },
+    "radioFilter": 0,
+    "reverb": {
+      "mix": 0,
+      "size": 0.3
+    },
     "bitcrush": 0.25,
     "chorus": 0.3
   }

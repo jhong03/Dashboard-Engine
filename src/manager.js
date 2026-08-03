@@ -989,17 +989,40 @@ async function renderAssistantCfg() {
   def.value = '';
   def.textContent = 'Default voice';
   select.appendChild(def);
-  const voices = await aegis.voiceProfilesList();
-  if (voices.ok) {
-    for (const p of voices.profiles) {
-      const opt = document.createElement('option');
-      opt.value = p.file;
-      opt.textContent = `${p.name} (${p.voice})`;
-      select.appendChild(opt);
-    }
+  // Factory presets (a curated voice per language + character presets) come
+  // first, then the user's own saved profiles. Presets carry a "preset:" prefix
+  // so main resolves them from presets/ and they never collide with a user file.
+  const [presetList, voices] = await Promise.all([aegis.voicePresetsList(), aegis.voiceProfilesList()]);
+  const addOption = (group, value, voiceId, label) => {
+    const opt = document.createElement('option');
+    opt.value = value;
+    opt.dataset.voice = voiceId; // lets us pre-warm the right HD voice on pick
+    opt.textContent = label;
+    group.appendChild(opt);
+  };
+  if (presetList && presetList.ok && presetList.presets.length) {
+    const g = document.createElement('optgroup');
+    g.label = 'Presets';
+    for (const p of presetList.presets) addOption(g, `preset:${p.file}`, p.profile.base.voice, `${p.profile.name} (${p.profile.base.voice})`);
+    select.appendChild(g);
+  }
+  if (voices.ok && voices.profiles.length) {
+    const g = document.createElement('optgroup');
+    g.label = 'Your profiles';
+    for (const p of voices.profiles) addOption(g, p.file, p.voice, `${p.name} (${p.voice})`);
+    select.appendChild(g);
   }
   select.value = c.voiceProfile || '';
+  prewarmSelectedVoice(); // HD engine loads in the background while you read/type
   assistantCfg.loaded = true;
+}
+
+// Fire-and-forget: warm the engine for the currently-selected assistant voice so
+// the first "Test" (or reply) isn't a cold-start wait. No-op for the system voice.
+function prewarmSelectedVoice() {
+  const opt = $('ai-voice').selectedOptions[0];
+  const voiceId = opt && opt.dataset ? opt.dataset.voice : '';
+  if (voiceId) aegis.voicePrewarm(voiceId);
 }
 
 async function saveAssistant() {
@@ -1025,6 +1048,9 @@ function wireAssistantCfg() {
     if (preset) $('ai-persona').value = preset;
     e.target.value = '';
   });
+
+  // Picking a voice pre-warms its HD engine so the Test below is snappy.
+  $('ai-voice').addEventListener('change', prewarmSelectedVoice);
 
   $('ai-save').addEventListener('click', async () => {
     const out = await saveAssistant();

@@ -162,6 +162,8 @@ const bridge = {
   assistantPresetAdd: (name, prompt) => ipcRenderer.invoke('aegis:assistant:preset:add', { name: String(name), prompt: String(prompt) }),
   assistantPresetRemove: (name) => ipcRenderer.invoke('aegis:assistant:preset:remove', String(name)),
   voiceProfilesList: () => ipcRenderer.invoke('aegis:profiles:list'),
+  voicePresetsList: () => ipcRenderer.invoke('aegis:presets:list'),
+  voicePrewarm: (voiceId) => ipcRenderer.invoke('aegis:voice:prewarm', String(voiceId)),
 };
 
 if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

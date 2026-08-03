@@ -362,10 +362,11 @@
   "engines": {
     "melotts_full": {
       "exe": "melotts-engine.exe",
-      "comment": "Full MeloTTS (PyTorch) engine, all six languages (en/es/fr/zh/ja/ko). Frozen PyInstaller --onefile. Hosted on huggingface.co; sha256/sizeBytes pinned. Until downloaded, place at %APPDATA%/dashboard-engine/bin/melotts_full/.",
-      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine-torch.exe",
-      "sha256": "2c6feeede9d6efeaa877c8d27f1253fa0ae1acb2c5ec2e2e3f3bdbd1fcc17dcf",
-      "sizeBytes": 622288963
+      "archive": "zip",
+      "comment": "Full MeloTTS (PyTorch) engine, all six languages (en/es/fr/zh/ja/ko). PyInstaller --onedir bundle, zipped (no per-spawn self-extraction). Downloaded then Expand-Archived to %APPDATA%/dashboard-engine/bin/melotts_full/. sha256/sizeBytes are of the ZIP. Hosted on huggingface.co.",
+      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine.zip",
+      "sha256": "7cf23c3f9e2d07b08cf4431427b9b48f53dbe4517a01ca11b14e01a0f3a90ec5",
+      "sizeBytes": 627847685
     }
   },
   "excluded": [

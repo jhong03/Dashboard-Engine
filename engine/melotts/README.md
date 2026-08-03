@@ -19,10 +19,16 @@ afterwards. See `lib/melotts.js` and `lib/voicebank.js`.
   language per process**; `lib/melotts.js` keys the warm process by engine+language
   so switching language respawns. The sidecar stubs the non-target `melo.text`
   frontends so a frozen/offline engine never loads models it won't use.
-- **One engine binary** for all languages (`engineId: melotts_full`) — this
-  sidecar frozen with PyInstaller `--onefile` (~520 MB, bundles torch + MeloTTS +
-  the en/ja/ko frontends). `PYTORCH_JIT=0` is required (a frozen build has no .py
-  source for TorchScript) — set both here and by `lib/melotts.js` when spawning.
+- **One engine bundle** for all languages (`engineId: melotts_full`) — this
+  sidecar frozen with PyInstaller **`--onedir`** (a folder: `melotts-engine.exe` +
+  `_internal/`, ~2 GB unpacked, bundles torch + MeloTTS + all six frontends).
+  onedir (not onefile) means there is **no ~40 s self-extraction on every spawn** —
+  the files ship already unpacked, so cold-start is model-load time only (~13 s,
+  then ~1 s/clip warm). For hosting it is zipped (`melotts-engine.zip`, ~630 MB);
+  the download side (`lib/voicebank.downloadEngine`, `archive: "zip"`) fetches the
+  zip and Expand-Archives it into the engine dir. `PYTORCH_JIT=0` is required (a
+  frozen build has no .py source for TorchScript) — set both here and by
+  `lib/melotts.js` when spawning.
 - **Per-language pack** (downloaded): a directory with
   - `checkpoint.pth` — MeloTTS VITS checkpoint (~208 MB)
   - `config.json` — MeloTTS config
@@ -42,7 +48,7 @@ pip install --no-deps "git+https://github.com/myshell-ai/MeloTTS.git"
 pip install -r engine/melotts/requirements.txt pyinstaller
 python -c "import nltk; [nltk.download(p) for p in ('averaged_perceptron_tagger','averaged_perceptron_tagger_eng','cmudict')]"
 
-pyinstaller --noconfirm --onefile --name melotts-engine \
+pyinstaller --noconfirm --onedir --name melotts-engine \
   --collect-all torch --collect-all torchaudio \
   --collect-submodules melo --collect-data melo --collect-all librosa \
   --collect-all g2p_en \
@@ -59,8 +65,9 @@ pyinstaller --noconfirm --onefile --name melotts-engine \
 
 Build with `NLTK_DISABLE_IMPORT_SECURITY=1` set (nltk's CWD guard breaks the
 PyInstaller nltk hook otherwise). gruut (es/fr) and jieba/cn2an/pypinyin (zh) are
-now bundled — the engine synthesizes all six languages. `scripts/freeze_engine.sh`
-in the build tree runs exactly this command.
+now bundled — the engine synthesizes all six languages. `freeze_engine.sh` in the
+build tree runs exactly this command, then self-checks that the bundle starts and
+zips it (`melotts-engine.zip`, root = the folder's contents) for hosting.
 
 ## Building a pack
 
@@ -71,10 +78,13 @@ BERT snapshot (config + model weights + tokenizer files) into `<lang>_hd/bert/`.
 ## Delivery
 
 Neither the engine nor packs are committed (`bin/` gitignored) or bundled. Host
-the engine (`melotts-engine-torch.exe`) and each pack folder on a `huggingface.co`
-repo and set the urls in `voices/voices.json` (sha256/sizes pinned). Until
-downloaded, place the engine at `%APPDATA%/dashboard-engine/bin/melotts_full/` and
-packs at `%APPDATA%/dashboard-engine/voices/<lang>_hd/`.
+the engine **zip** (`melotts-engine.zip`) and each pack folder on a
+`huggingface.co` repo and set the urls in `voices/voices.json` (sha256/sizes
+pinned; the engine entry is `archive: "zip"` and its sha256/size are of the ZIP).
+The app downloads the zip and Expand-Archives it. Until downloaded, place the
+UNPACKED engine (`melotts-engine.exe` + `_internal/`) at
+`%APPDATA%/dashboard-engine/bin/melotts_full/` and packs at
+`%APPDATA%/dashboard-engine/voices/<lang>_hd/`.
 
 ## Protocol
 
