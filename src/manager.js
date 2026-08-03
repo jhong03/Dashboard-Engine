@@ -937,17 +937,28 @@ const ASSISTANT_PRESETS = {
     + 'Never use markdown, lists, or emoji; reply in plain spoken sentences, as your words are read aloud.',
   pip: 'You are Pip, a brief, matter-of-fact assistant. Answer in as few plain words as possible — usually one short sentence, no frills. '
     + 'Never use markdown, lists, or emoji, since your words are read aloud.',
-  // Localized starters — reply AND speak in the user's language (pair with a
-  // matching voice in Voice tuning). Examples; write your own in any language.
+  // Localized starters — reply AND speak in the user's language. These match the
+  // shipped HD voices (es/fr/zh/ja/ko); pair each with that language's voice in
+  // Manager → Assistant → Voice. Examples; write your own in any language.
   es_amigo: 'Eres un asistente cercano y servicial. Responde siempre en español, en frases habladas claras y breves (una o dos frases). '
     + 'Nunca uses markdown, listas ni emojis, porque tus respuestas se leen en voz alta.',
   fr_ami: 'Tu es un assistant chaleureux et serviable. Réponds toujours en français, en phrases parlées claires et brèves (une ou deux phrases). '
     + 'N’utilise jamais de markdown, de listes ni d’émojis, car tes réponses sont lues à voix haute.',
-  de_assistent: 'Du bist ein freundlicher, hilfsbereiter Assistent. Antworte immer auf Deutsch, in klaren, kurzen gesprochenen Sätzen (ein bis zwei Sätze). '
-    + 'Verwende niemals Markdown, Listen oder Emojis, da deine Antworten vorgelesen werden.',
-  pt_assistente: 'Você é um assistente acolhedor e prestativo. Responda sempre em português, em frases faladas claras e curtas (uma ou duas frases). '
-    + 'Nunca use markdown, listas ou emojis, pois suas respostas são lidas em voz alta.',
+  zh_zhushou: '你是一个热情、乐于助人的助手。请始终用中文回答，用清晰、简短的口语句子（一到两句）。'
+    + '不要使用 markdown、列表或表情符号，因为你的回答会被朗读出来。',
+  ja_hisho: 'あなたは親切で頼りになるアシスタントです。常に日本語で、はっきりとした短い話し言葉（一〜二文）で答えてください。'
+    + '回答は音声で読み上げられるので、マークダウン、箇条書き、絵文字は使わないでください。',
+  ko_biseo: '당신은 친절하고 도움이 되는 어시스턴트입니다. 항상 한국어로, 명확하고 짧은 구어체 문장(한두 문장)으로 대답하세요. '
+    + '답변은 소리 내어 읽히므로 마크다운, 목록, 이모지를 사용하지 마세요.',
 };
+
+// Turn an assistant:speak failure code into a plain, actionable reason so the
+// Test button never silently produces no sound.
+function speakHint(err) {
+  if (err === 'busy') return 'the voice engine is busy, try again in a moment';
+  if (err === 'voice-unavailable') return 'download this voice first, or wait for the HD engine to finish installing';
+  return err || 'the voice engine did not respond';
+}
 
 const assistantCfg = { loaded: false };
 
@@ -1070,8 +1081,21 @@ function wireAssistantCfg() {
       // Speak the reply so you hear the persona AND the voice — one test proves
       // the whole chain. Only if "speak replies aloud" is on.
       if ($('ai-speak').checked) {
-        const spoken = await aegis.assistantSpeak(out.text);
-        if (spoken && spoken.ok) playTestPcm(spoken.pcm, spoken.sampleRate);
+        $('ai-status').textContent = `✓ ${out.text}  ·  speaking…`;
+        let spoken = await aegis.assistantSpeak(out.text);
+        // A transient "busy" (a pre-warm or a prior clip still finishing) clears
+        // fast — one quiet retry saves the user a manual re-test.
+        if (spoken && !spoken.ok && spoken.error === 'busy') {
+          await new Promise((r) => setTimeout(r, 1500));
+          spoken = await aegis.assistantSpeak(out.text);
+        }
+        if (spoken && spoken.ok) {
+          playTestPcm(spoken.pcm, spoken.sampleRate);
+          $('ai-status').textContent = `✓ ${out.text}`;
+        } else {
+          // Text came back but the voice didn't — say WHY instead of going silent.
+          $('ai-status').textContent = `✓ ${out.text}  ·  (no voice — ${speakHint(spoken && spoken.error)})`;
+        }
       }
     } else {
       $('ai-status').textContent = `✗ ${out.error}`;
