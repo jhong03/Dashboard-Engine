@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "preset-jarvis",
+  "name": "JARVIS (Male, cinematic)",
+  "author": "Dashboard Engine",
+  "created": "2026-08-04T00:00:00.000Z",
+  "base": {
+    "engine": "piper",
+    "voice": "en_male",
+    "fallback": { "engine": "system", "match": "United Kingdom" }
+  },
+  "prosody": { "pitchShift": 0, "rate": 185, "expressiveness": 0.9, "steadiness": 0.62, "pauseSentence": 300, "pauseComma": 90 },
+  "timbre": { "warmth": 1, "brightness": 2, "presence": 1.5, "sibilance": -1, "breath": 0 },
+  "character": { "compression": 0.5, "radioFilter": 0, "reverb": { "mix": 0, "size": 0.3 }, "bitcrush": 0, "chorus": 0.55 }
+}

@@ -955,7 +955,7 @@ const ASSISTANT_PRESETS = {
 // Each persona preset speaks a language; map it to the HD voice that language
 // needs so picking a persona also sets a matching voice (see the change handler).
 const PERSONA_VOICE = {
-  jarvis: 'en_us_hd', nova: 'en_us_hd', sage: 'en_us_hd', ace: 'en_us_hd', pip: 'en_us_hd',
+  jarvis: 'en_male', nova: 'en_us_hd', sage: 'en_us_hd', ace: 'en_us_hd', pip: 'en_us_hd',
   es_amigo: 'es_hd', fr_ami: 'fr_hd', zh_zhushou: 'zh_hd', ja_hisho: 'ja_hd', ko_biseo: 'ko_hd',
 };
 

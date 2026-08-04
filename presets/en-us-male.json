@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "preset-en-us-male",
+  "name": "English (US) · Male",
+  "author": "Dashboard Engine",
+  "created": "2026-08-04T00:00:00.000Z",
+  "base": {
+    "engine": "piper",
+    "voice": "en_male",
+    "fallback": { "engine": "system", "match": "United Kingdom" }
+  },
+  "prosody": { "pitchShift": 0, "rate": 170, "expressiveness": 1.0, "steadiness": 0.55, "pauseSentence": 320, "pauseComma": 100 },
+  "timbre": { "warmth": 1.5, "brightness": 0, "presence": 1, "sibilance": -1, "breath": 0 },
+  "character": { "compression": 0.3, "radioFilter": 0, "reverb": { "mix": 0, "size": 0.3 }, "bitcrush": 0, "chorus": 0 }
+}

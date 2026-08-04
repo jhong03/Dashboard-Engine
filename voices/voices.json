@@ -357,6 +357,26 @@
       ],
       "sampleRate": 44100,
       "wpmAtScale1": null
+    },
+    {
+      "id": "en_male",
+      "model": "en_GB-vctk-medium.onnx",
+      "speaker": 95,
+      "sex": "M",
+      "accent": "British (Surrey)",
+      "language": "English",
+      "displayName": "English — Male",
+      "descriptor": "British male (Piper VCTK p226)",
+      "licence": "CC-BY-4.0",
+      "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "CSTR VCTK Corpus (speaker p226), CC BY 4.0",
+      "provenance": "Piper multi-speaker VCTK model",
+      "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/vctk/medium/en_GB-vctk-medium.onnx",
+      "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/vctk/medium/en_GB-vctk-medium.onnx.json",
+      "sha256": "4e9fc85ab9009385319fc6bae7f55577f8a2d7ee77fd9159a5500eb6531f41e6",
+      "sizeBytes": 76952753,
+      "sampleRate": 22050,
+      "wpmAtScale1": null
     }
   ],
   "engines": {
