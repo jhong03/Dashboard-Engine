@@ -2081,6 +2081,7 @@ function createRenderer(services) {
   const chat = {
     panel: null, log: null, input: null, sendBtn: null,
     built: false, busy: false, audioCtx: null, anchor: null, moved: false,
+    stream: null, // { el, id, buf } for the reply currently streaming in
   };
 
   // One reused AudioContext for spoken replies. Reusing a single context (the
@@ -2139,7 +2140,11 @@ function createRenderer(services) {
     if (hint) hint.remove();
     addChatMsg('you', text);
     const reply = addChatMsg('bot', '…');
+    // Tokens streamed from main (via onStream) append here while we await; the
+    // resolved result is authoritative and reconciles any streaming artifact.
+    chat.stream = { el: reply, id: null, buf: '' };
     const res = await services.assistant.ask(text);
+    chat.stream = null;
     if (!res || !res.ok) {
       reply.textContent = (res && res.error) || 'Something went wrong.';
       reply.classList.add('ac-err');
@@ -2260,6 +2265,25 @@ function createRenderer(services) {
       chat.moved = true;
     });
     document.addEventListener('mouseup', () => { drag = null; });
+
+    // Live reply streaming: append tokens to the pending bot bubble as they
+    // arrive from main. The panel enforces single-in-flight (input disabled
+    // while busy), so any delta belongs to the current reply; the id is a
+    // belt-and-braces guard against a stale one.
+    if (services.assistant && services.assistant.onStream) {
+      services.assistant.onStream((msg) => {
+        if (!msg || !chat.stream) return;
+        if (msg.start) { if (chat.stream.id == null) chat.stream.id = msg.id; return; }
+        if (chat.stream.id != null && msg.id != null && msg.id !== chat.stream.id) return;
+        if (typeof msg.delta === 'string' && msg.delta) {
+          chat.stream.buf += msg.delta;
+          // Trim only leading whitespace (a stripped leading <think> leaves a
+          // space); interior text streams verbatim. `done` sets the trimmed final.
+          chat.stream.el.textContent = chat.stream.buf.replace(/^\s+/, '');
+          chat.log.scrollTop = chat.log.scrollHeight;
+        }
+      });
+    }
     // Deliberately NO live.disposer: the panel is a persistent singleton that
     // must outlive component re-renders (that's what keeps the chat from
     // vanishing). It's rebuilt only if the whole window reloads.

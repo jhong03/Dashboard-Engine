@@ -39,6 +39,7 @@ const renderer = AegisComponents.createRenderer({
     config: () => aegis.assistantConfig(),
     history: () => aegis.assistantHistory(),
     reset: () => aegis.assistantReset(),
+    onStream: (cb) => aegis.onAssistantStream(cb),
   },
   // Now playing (Windows media session) — desktop only, so editor/manager
   // previews render the nowplaying component as a static placeholder.

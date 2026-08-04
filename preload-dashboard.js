@@ -63,6 +63,8 @@ const bridge = {
   assistantConfig: () => ipcRenderer.invoke('aegis:assistant:config:get'),
   assistantHistory: () => ipcRenderer.invoke('aegis:assistant:history'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
+  onAssistantStream: subscription('aegis:assistant:stream'), // live reply tokens
+
   // Background music (configured in Manager → Settings; played here). The
   // desktop only READS the library and hears about changes — it works in opaque
   // track ids, streamed by main over demusic://. Main holds the real paths.
