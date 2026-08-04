@@ -203,6 +203,16 @@ def _synthesize(req):
     if not isinstance(text, str) or text.strip() == "":
         raise ValueError("empty text")
     sid = int(req.get("sid", 0))
+    # A single-speaker MeloTTS model may NOT put its speaker at id 0 — MeloTTS-
+    # Chinese uses id 1 ({"ZH": 1}). Synthesizing with an id that isn't in the
+    # model's speaker map produces a garbage speaker embedding = gibberish, so map
+    # an out-of-range request to a real speaker id.
+    try:
+        valid_ids = sorted(set(tts.hps.data.spk2id.values()))
+        if valid_ids and sid not in valid_ids:
+            sid = valid_ids[0]
+    except Exception:
+        pass
     speed = max(0.3, min(3.0, float(req.get("speed", 1.0))))
     noise_scale = float(req.get("noiseScale", 0.6))
     noise_scale_w = float(req.get("noiseScaleW", 0.8))
