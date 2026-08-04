@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "preset-es-male",
+  "name": "Spanish · Male",
+  "author": "Dashboard Engine",
+  "created": "2026-08-04T00:00:00.000Z",
+  "base": {
+    "engine": "piper",
+    "voice": "es_male",
+    "fallback": { "engine": "system", "match": "Spanish" }
+  },
+  "prosody": { "pitchShift": 0, "rate": 172, "expressiveness": 1.0, "steadiness": 0.6, "pauseSentence": 300, "pauseComma": 95 },
+  "timbre": { "warmth": 1.5, "brightness": 0.5, "presence": 1, "sibilance": -1, "breath": 0 },
+  "character": { "compression": 0.3, "radioFilter": 0, "reverb": { "mix": 0, "size": 0.3 }, "bitcrush": 0, "chorus": 0 }
+}

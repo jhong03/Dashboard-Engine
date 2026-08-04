@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "id": "preset-fr-male",
+  "name": "French · Male",
+  "author": "Dashboard Engine",
+  "created": "2026-08-04T00:00:00.000Z",
+  "base": {
+    "engine": "piper",
+    "voice": "fr_male",
+    "fallback": { "engine": "system", "match": "French" }
+  },
+  "prosody": { "pitchShift": 0, "rate": 170, "expressiveness": 0.9, "steadiness": 0.62, "pauseSentence": 300, "pauseComma": 95 },
+  "timbre": { "warmth": 1.5, "brightness": 0.5, "presence": 1, "sibilance": -1, "breath": 0 },
+  "character": { "compression": 0.3, "radioFilter": 0, "reverb": { "mix": 0.03, "size": 0.3 }, "bitcrush": 0, "chorus": 0 }
+}
