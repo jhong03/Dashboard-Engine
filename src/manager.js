@@ -952,6 +952,29 @@ const ASSISTANT_PRESETS = {
     + '답변은 소리 내어 읽히므로 마크다운, 목록, 이모지를 사용하지 마세요.',
 };
 
+// Each persona preset speaks a language; map it to the HD voice that language
+// needs so picking a persona also sets a matching voice (see the change handler).
+const PERSONA_VOICE = {
+  jarvis: 'en_us_hd', nova: 'en_us_hd', sage: 'en_us_hd', ace: 'en_us_hd', pip: 'en_us_hd',
+  es_amigo: 'es_hd', fr_ami: 'fr_hd', zh_zhushou: 'zh_hd', ja_hisho: 'ja_hd', ko_biseo: 'ko_hd',
+};
+
+// Select the assistant voice that matches a persona preset's language. Prefers a
+// factory preset for that voice, else any option using it. No-op if the language
+// has no voice option yet (the user can still pick one manually).
+function autoSelectVoiceForPersona(personaKey) {
+  const wantVoice = PERSONA_VOICE[personaKey];
+  if (!wantVoice) return;
+  const select = $('ai-voice');
+  const opts = Array.from(select.options);
+  const match = opts.find((o) => o.dataset.voice === wantVoice && o.value.startsWith('preset:'))
+    || opts.find((o) => o.dataset.voice === wantVoice);
+  if (match && select.value !== match.value) {
+    select.value = match.value;
+    prewarmSelectedVoice();
+  }
+}
+
 // Turn an assistant:speak failure code into a plain, actionable reason so the
 // Test button never silently produces no sound.
 function speakHint(err) {
@@ -1055,8 +1078,16 @@ function wireAssistantCfg() {
   // persistent state), so reset the dropdown after applying so the user can
   // pick again or keep editing the text.
   $('ai-persona-preset').addEventListener('change', (e) => {
-    const preset = ASSISTANT_PRESETS[e.target.value];
-    if (preset) $('ai-persona').value = preset;
+    const key = e.target.value;
+    const preset = ASSISTANT_PRESETS[key];
+    if (preset) {
+      $('ai-persona').value = preset;
+      // Point the VOICE at the persona's language too. The persona sets the
+      // REPLY language; the voice sets the SPEAKING language — if they mismatch,
+      // the English voice mangles Chinese into gibberish and reads Spanish with
+      // an English accent. Auto-selecting a matching voice keeps them in step.
+      autoSelectVoiceForPersona(key);
+    }
     e.target.value = '';
   });
 
