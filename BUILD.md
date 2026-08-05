@@ -68,33 +68,54 @@ CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist
 - **Code signing.** Unsigned builds trigger SmartScreen on first run. A real
   release wants an Authenticode cert (and, for Steam, Steam's own trust).
 
-## Bundling English HD in the Steam depot (first-run voice)
+## Bundling the engine + English voices in the Steam depot (first-run voice)
 
-The voice bank is all-MeloTTS (en/es/fr/zh/ja/ko). By default NOTHING voice-wise
-is packaged — the engine (~600 MB) and each voice pack download at runtime into
-`%APPDATA%/dashboard-engine/`. That means a fresh install has no HD voice until a
-download (it falls back to the Windows system voice, which is fine).
+DECIDED 2026-08-05: bundle the MeloTTS engine + BOTH English voices in the depot so a
+fresh install speaks with a real neural voice **instantly** (the default JARVIS pack is
+fully voiced), while the other five languages stay on-demand. Steam is the CDN + paywall.
 
-To ship an **instant** first-run HD voice, bundle the engine + English pack in the
-Steam depot (Steam is the CDN + paywall, nothing personal). The code already
-resolves a bundled copy from the app dir — `lib/melotts.findEngine` checks
-`appRoot/bin/<engineId>/` and `lib/voicebank.resolveModelDir` checks
-`appRoot/voices/<modelDir>/` — so you only need the build to include them:
+By default NOTHING voice-wise is packaged — the engine and each voice pack download at
+runtime into `%APPDATA%/dashboard-engine/`; a fresh install falls back to the Windows
+system voice until then (fine, never silent).
 
-1. Stage the two large artifacts into the repo (they're gitignored, like `bin/piper`):
-   - engine → the UNPACKED `--onedir` bundle at `bin/melotts_full/` (i.e.
-     `bin/melotts_full/melotts-engine.exe` + `bin/melotts_full/_internal/`)
-   - English pack → `voices/en_hd/` (checkpoint.pth + config.json + bert/)
-2. In `package.json` → `build.files`, AFTER the `!bin/**` and `!voices/**` lines,
-   add includes so only these survive the exclude:
-   `"bin/melotts_full/**"`, `"voices/en_hd/**"`.
-3. `npm run pack` and upload `dist/win-unpacked/` to the depot as usual. (This adds
-   ~730 MB to the depot; `npm run dist`'s NSIS installer grows by the same amount,
-   so prefer `pack`/the depot for distribution.)
+The runtime already resolves a BUNDLED copy from the app dir (`appRoot` = the packaged
+app root, i.e. `__dirname`), so you only need the build to include the files — a
+downloaded copy in `%APPDATA%` always wins, the depot copy is the fallback (verified by
+a resolution test):
+- engine — `lib/melotts.findEngine` checks `appRoot/bin/melotts_full/`
+- English **female** (MeloTTS) — `lib/voicebank.resolveModelDir` checks `appRoot/voices/en_hd/`
+- English **male** (Piper) — `lib/voicebank.resolvePiperModelPath` checks `appRoot/voices/<model>`
+- Piper binary — `lib/piper.findPiper` checks `appRoot/bin/piper/`
 
-Leave es/fr/zh/ja/ko as on-demand downloads. Host them (and the engine, for
-non-Steam installs) on a NEUTRAL account — an HF *organization* or Cloudflare R2 —
-NOT a personal HF repo; update the URLs in `voices/voices.json` when you migrate.
+Steps:
+1. Stage these (gitignored, like `bin/piper`) into the repo before building:
+   - `bin/melotts_full/` — the UNPACKED `--onedir` engine (`melotts-engine.exe` +
+     `_internal/`), ~2 GB
+   - `voices/en_hd/` — the English female pack (checkpoint.pth + config.json + bert/), ~650 MB
+   - `voices/en_GB-vctk-medium.onnx` + `.onnx.json` — the English male, ~77 MB
+   - `bin/piper/` — the Piper binary + espeak-ng-data (needed to run the male), ~30 MB
+2. `package.json` → `build.files` already un-excludes exactly these (after `!bin/**` /
+   `!voices/**`): `voices/en_hd/**`, `voices/en_GB-vctk-medium.onnx(.json)`,
+   `bin/melotts_full/**`, `bin/piper/**`. Files absent at build time are simply skipped
+   (non-breaking) — a build without them just ships the on-demand app.
+3. `npm run pack` → upload `dist/win-unpacked/` to the depot. Adds ~2.7 GB to the depot
+   (and to the NSIS installer, so prefer the depot/`pack` for distribution).
+
+LICENCE NOTE: bundling `bin/piper/` ships **espeak-ng-data (GPLv3)** in your depot — YOU
+then distribute GPLv3 material, so include espeak-ng's licence + a written offer of its
+source (piper itself is MIT; MeloTTS + en_hd are MIT/permissive, no such obligation). If
+you'd rather not take that on for launch, drop the male: remove the `bin/piper/**` and
+`en_GB-vctk-*` lines from `build.files` and the English male downloads its ~100 MB on
+first use instead — the female HD still bundles clean.
+
+## On-demand hosting — migrate off the personal repo
+
+DECIDED 2026-08-05: host the on-demand voices (es/fr/zh/ja/ko + the es/fr males + the
+engine, for non-Steam installs) on a **neutral HuggingFace organization**, NOT the
+personal `jh03` repo. Because the downloader validates sha256, the host is
+interchangeable: create the org, upload the packs + `melotts-engine.zip`, then update the
+URLs in `voices/voices.json` (a find/replace of the `jh03/dashboard-engine-hd` base).
+Cloudflare R2 is the upgrade path if download volume gets heavy.
 
 ## Real Steam release checklist (business + build)
 
