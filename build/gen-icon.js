@@ -12,6 +12,16 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 
+// The project now ships REAL icon art (build/icon.png, ~500 KB). This procedural
+// generator only ever made a PLACEHOLDER ring — refuse to overwrite real art so
+// `npm run icon` can't destroy it. To regenerate icon.ico from the real PNG,
+// see BUILD.md (resize to 256/64/48/32/16 + wrap as PNG-in-ICO).
+const REAL_PNG = path.join(__dirname, 'icon.png');
+if (fs.existsSync(REAL_PNG) && fs.statSync(REAL_PNG).size > 100 * 1024) {
+  console.log('build/icon.png is real art (>100 KB) — refusing to overwrite. Delete it first to regenerate the placeholder.');
+  process.exit(0);
+}
+
 const SIZE = 256;
 
 // Palette (brand): void background, cyan ring, brighter core.

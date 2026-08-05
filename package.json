@@ -34,6 +34,7 @@
       "buildResources": "build"
     },
     "asar": false,
+    "afterPack": "build/after-pack.js",
     "files": [
       "**/*",
       "!out/**",
@@ -50,6 +51,7 @@
       "!steam_appid.txt",
       "!CLAUDE.md",
       "!build/gen-icon.js",
+      "!build/after-pack.js",
       "!scripts/{smoke,voices,calibrate,audition,selftest,packs}.js",
       "!engine/**",
       "!package-lock.json",
