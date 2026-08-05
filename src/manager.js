@@ -338,7 +338,7 @@ function renderGallery() {
   $('settings-cfg').classList.toggle('hidden', library.tab !== 'settings');
   const nonGallery = ['planner', 'launcher', 'assistant', 'create', 'settings'].includes(library.tab);
   gallery.classList.toggle('hidden', nonGallery);
-  for (const t of ['installed', 'browse', 'create', 'planner', 'launcher', 'assistant', 'settings']) {
+  for (const t of ['installed', 'browse', 'published', 'create', 'planner', 'launcher', 'assistant', 'settings']) {
     $(`tab-${t}`).setAttribute('aria-selected', String(library.tab === t));
   }
   if (library.tab === 'planner') {
@@ -383,6 +383,11 @@ function renderGallery() {
         }));
       }
     }
+    return;
+  }
+
+  if (library.tab === 'published') {
+    renderPublishedSection(gallery);
     return;
   }
 
@@ -437,6 +442,118 @@ function renderGallery() {
 // ── Steam Workshop (consume side): browse / subscribe / import ───────────────
 
 const ws = { available: null, items: [], search: '', sort: 'trend', loaded: false, loading: false, error: null, testApp: false, filters: {} };
+
+// ── Published: your Steam Workshop dashboards (creator management) ────────────
+// Machine-portable: Steam is the durable store, so on any computer signed into
+// the same account this lists the items you've published and can pull an
+// editable copy back down. Loaded lazily, like the Browse tab.
+const mine = { available: null, items: [], loaded: false, loading: false, error: null, testApp: false };
+
+function reloadMine() { mine.loaded = false; mine.loading = false; renderGallery(); }
+
+function loadMine() {
+  mine.loading = true;
+  aegis.workshopStatus().then(async (st) => {
+    mine.available = !!st.available;
+    mine.error = st.available ? null : (st.reason || 'Steam Workshop is unavailable.');
+    if (mine.available) {
+      const res = await aegis.workshopMine();
+      if (res.ok) { mine.items = res.items; mine.testApp = !!res.testApp; mine.error = null; }
+      else { mine.items = []; mine.error = res.error; }
+    } else mine.items = [];
+    mine.loading = false;
+    mine.loaded = true;
+    if (library.tab === 'published') renderGallery();
+  });
+}
+
+function renderPublishedSection(gallery) {
+  const controls = document.createElement('div');
+  controls.className = 'ws-controls';
+  controls.append(
+    libButton('Refresh', () => reloadMine(), 'tiny'),
+    libButton('Open Workshop', () => aegis.workshopOpen(), 'tiny'),
+  );
+  gallery.appendChild(sectionLabel(`Your published dashboards${mine.testApp ? ' — test app (Spacewar)' : ''}`, [controls]));
+
+  if (!mine.loaded && !mine.loading) loadMine();
+  if (mine.loading) { gallery.appendChild(hintP('Loading your published dashboards…')); return; }
+  if (!mine.available) { gallery.appendChild(hintP(mine.error || 'Start Steam and sign in to see the dashboards you’ve published.')); return; }
+  if (mine.error) { gallery.appendChild(hintP(mine.error)); return; }
+  if (mine.items.length === 0) {
+    gallery.appendChild(hintP('You haven’t published any dashboards yet. Build one from scratch (Create → Start from scratch), then use “Publish to Workshop…” from its detail panel. Anything you publish shows up here — on any computer you sign into with this Steam account.'));
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'workshop-grid';
+  for (const item of mine.items) grid.appendChild(publishedCard(item));
+  gallery.appendChild(grid);
+}
+
+// One published item. Actions adapt to whether an editable copy exists here:
+// a local copy → Edit / Update / View; none → Get editable copy / View.
+function publishedCard(item) {
+  const card = document.createElement('div');
+  card.className = 'ws-card';
+  const thumb = document.createElement('div');
+  thumb.className = 'ws-thumb';
+  if (item.previewUrl) {
+    aegis.workshopPreview(item.previewUrl).then((res) => {
+      if (res && res.ok && thumb.isConnected) { const img = document.createElement('img'); img.alt = ''; img.src = res.uri; thumb.appendChild(img); }
+      else thumb.classList.add('ws-noimg');
+    });
+  } else thumb.classList.add('ws-noimg');
+
+  const body = document.createElement('div');
+  body.className = 'ws-body';
+  const title = document.createElement('div');
+  title.className = 'ws-title';
+  title.textContent = item.title;
+  const meta = document.createElement('div');
+  meta.className = 'ws-meta';
+  const bits = [`▲ ${item.votesUp}`];
+  if (item.visibility && item.visibility !== 'public') bits.push(item.visibility);
+  if (item.tags.length) bits.push(item.tags.slice(0, 3).join(', '));
+  meta.textContent = bits.join(' · ');
+
+  const status = document.createElement('div');
+  status.className = 'ws-cardstatus';
+  const actions = document.createElement('div');
+  actions.className = 'ws-actions';
+
+  const localPack = item.localPackId ? library.localPacks.find((p) => p.id === item.localPackId) : null;
+  if (localPack) {
+    actions.append(
+      libButton('Edit', () => aegis.openEditor(localPack.id), 'tiny'),
+      libButton('Update', async () => {
+        const st = await aegis.workshopStatus();
+        if (!st.available) return libStatus(st.reason || 'Steam Workshop isn’t available.', true);
+        openPublishDialog(localPack);
+      }, 'tiny primary'),
+      libButton('View', () => aegis.workshopOpenItem(item.url), 'tiny'),
+    );
+  } else {
+    status.textContent = 'No editable copy on this computer yet.';
+    const getBtn = libButton('Get editable copy', async () => {
+      getBtn.disabled = true; getBtn.textContent = 'Downloading…';
+      status.textContent = 'Downloading your dashboard from Steam…';
+      const out = await aegis.workshopGetEditable(item.itemId);
+      if (out.ok) {
+        status.textContent = 'Downloaded — opening it in the editor.';
+        await refreshLibrary();
+        reloadMine();
+      } else {
+        status.textContent = out.error || 'Could not get an editable copy.';
+        getBtn.disabled = false; getBtn.textContent = 'Get editable copy';
+      }
+    }, 'tiny primary');
+    actions.append(getBtn, libButton('View', () => aegis.workshopOpenItem(item.url), 'tiny'));
+  }
+
+  body.append(title, meta, actions, status);
+  card.append(thumb, body);
+  return card;
+}
 
 // Sidebar facet groups: [display label, DE_TAGS key]. The four content groups
 // plus the auto-derived Compatibility group. (DE_TAGS is defined later; read at
@@ -1518,7 +1635,7 @@ function autoLayout(types, layoutKey, optOverrides) {
 function starterPack() {
   return {
     schema: 2, name: 'My Pack', author: '',
-    persona: { name: 'AEGIS', tagline: '', lines: [] },
+    persona: { name: 'Dashboard', tagline: '', lines: [] },
     skin: {
       palette: { ...BUILDER_PALETTES[0].p },
       typography: { display: 'rajdhani', uppercase: true, letterSpacing: 0.2 },
@@ -2628,7 +2745,7 @@ function openPublishDialog(item) {
 
   const hint = document.createElement('p');
   hint.className = 'detail-line';
-  hint.textContent = 'A preview image is rendered from the dashboard automatically (demo data — no personal info). Description supports Steam formatting ([b], [h1], [i]). Prototype: uploads to Steam’s Spacewar (480) test app; only pack.json + assets are published.';
+  hint.textContent = 'A preview image is rendered from the dashboard automatically (demo data — no personal info). Description supports Steam formatting ([b], [h1], [i]). Only pack.json + assets are published — never your personal data.';
   card.appendChild(hint);
 
   const actions = document.createElement('div');
@@ -2737,11 +2854,32 @@ async function renderDetail() {
       const out = await aegis.exportPack(item.id);
       libStatus(out.ok ? `Exported to ${out.file}` : out.error || '', !out.ok && out.error);
     }));
-    detail.appendChild(libButton('Publish to Workshop…', async () => {
-      const st = await aegis.workshopStatus();
-      if (!st.available) return libStatus(st.reason || 'Steam Workshop isn’t available.', true);
-      openPublishDialog(item);
-    }));
+    // Publish / Update — STRICT gate: only original work (from-scratch builder
+    // packs, or your own re-downloaded Workshop items) may reach the Workshop.
+    // Seeds, forks of them, and imports from other creators show a disabled,
+    // explained button. The gate is also enforced in main (renderer is hostile).
+    if (item.publishable) {
+      const already = !!item.publishedItemId;
+      detail.appendChild(libButton(already ? 'Update on Workshop…' : 'Publish to Workshop…', async () => {
+        const st = await aegis.workshopStatus();
+        if (!st.available) return libStatus(st.reason || 'Steam Workshop isn’t available.', true);
+        openPublishDialog(item);
+      }));
+      if (already) {
+        detail.appendChild(detailLine('Published on Workshop ✓'));
+        detail.appendChild(libButton('View on Steam', () => aegis.workshopOpenItem(`https://steamcommunity.com/sharedfiles/filedetails/?id=${item.publishedItemId}`), 'tiny'));
+      }
+    } else {
+      const why = item.origin === 'builtin'
+        ? 'built-in packs can’t be published'
+        : (item.meta && item.meta.origin === 'fork')
+          ? 'forks of other packs can’t be published'
+          : 'packs imported from other creators can’t be published';
+      const blocked = libButton('Publish to Workshop…', () => {});
+      blocked.disabled = true;
+      blocked.title = `Only dashboards you built from scratch (or your own re-downloaded Workshop items) can be published — ${why}.`;
+      detail.appendChild(blocked);
+    }
     if (item.origin === 'installed') {
       detail.appendChild(libButton('Uninstall', async () => {
         const out = await aegis.uninstallPack(item.id);
@@ -2859,6 +2997,7 @@ async function init() {
   $('btn-panel').addEventListener('click', () => aegis.openPanel());
   $('tab-installed').addEventListener('click', () => { library.tab = 'installed'; renderGallery(); });
   $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
+  $('tab-published').addEventListener('click', () => { library.tab = 'published'; renderGallery(); });
   $('tab-create').addEventListener('click', () => { library.tab = 'create'; renderGallery(); });
   $('tab-planner').addEventListener('click', () => { library.tab = 'planner'; renderGallery(); });
   $('tab-launcher').addEventListener('click', () => { library.tab = 'launcher'; renderGallery(); });
@@ -2889,7 +3028,7 @@ async function init() {
   });
 
   const view = new URLSearchParams(location.search).get('view');
-  if (['browse', 'planner', 'launcher', 'assistant'].includes(view)) library.tab = view;
+  if (['browse', 'published', 'planner', 'launcher', 'assistant'].includes(view)) library.tab = view;
   await refreshLibrary();
 
   // First launch ever: greet the user once. Only when they didn't ask for a

@@ -1081,7 +1081,7 @@ function renderPersonaTab(panel) {
   const persona = state.pack.persona;
   panel.append(
     sectionLabel('Persona'),
-    field('Name', textControl(persona.name, (v) => { persona.name = v.slice(0, 40) || 'AEGIS'; renderAll(); })),
+    field('Name', textControl(persona.name, (v) => { persona.name = v.slice(0, 40) || 'Dashboard'; renderAll(); })),
     field('Tagline', textControl(persona.tagline, (v) => { persona.tagline = v.slice(0, 80); renderAll(); })),
   );
   const area = document.createElement('textarea');

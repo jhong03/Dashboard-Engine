@@ -2,7 +2,7 @@
   "schema": 1,
   "id": "preset-glitch-courier",
   "name": "Glitch Courier",
-  "author": "AEGIS",
+  "author": "Dashboard Engine",
   "created": "2026-07-12T00:00:00.000Z",
   "base": {
     "engine": "melotts",

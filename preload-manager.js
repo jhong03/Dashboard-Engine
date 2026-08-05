@@ -48,6 +48,10 @@ const bridge = {
   workshopSubscribe: (itemId) => ipcRenderer.invoke('aegis:workshop:subscribe', String(itemId)),
   workshopPreview: (url) => ipcRenderer.invoke('aegis:workshop:preview', String(url)),
   workshopOpen: () => ipcRenderer.invoke('aegis:workshop:open'),
+  // Creator management: your published items, and getting an editable copy back.
+  workshopMine: () => ipcRenderer.invoke('aegis:workshop:mine'),
+  workshopGetEditable: (itemId) => ipcRenderer.invoke('aegis:workshop:getEditable', String(itemId)),
+  workshopOpenItem: (url) => ipcRenderer.invoke('aegis:workshop:openItem', String(url)),
 
   registryAdd: (url) => ipcRenderer.invoke('aegis:registry:add', String(url)),
   registryRemove: (url) => ipcRenderer.invoke('aegis:registry:remove', String(url)),
