@@ -24,43 +24,43 @@
       "files": [
         {
           "name": "checkpoint.pth",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/checkpoint.pth",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/en_hd/checkpoint.pth",
           "sha256": "acd278040eaf9536908e2b965273df5a731c44d8f0da66cc5fed7972772ed23c",
           "sizeBytes": 207860748
         },
         {
           "name": "config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/en_hd/config.json",
           "sha256": "039116c927c70eaa4458d315ea83aaaa99e1fca1c621b50c8ca56b4a5700eb77",
           "sizeBytes": 3488
         },
         {
           "name": "bert/config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/en_hd/bert/config.json",
           "sha256": "7160e1553ad2ca51d8c1cb066be533db31826e12d173824c1bb0cb1a4f187d20",
           "sizeBytes": 570
         },
         {
           "name": "bert/model.safetensors",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/model.safetensors",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/en_hd/bert/model.safetensors",
           "sha256": "68d45e234eb4a928074dfd868cead0219ab85354cc53d20e772753c6bb9169d3",
           "sizeBytes": 440449768
         },
         {
           "name": "bert/tokenizer.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/tokenizer.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/en_hd/bert/tokenizer.json",
           "sha256": "ce64fce797c24f68df90b40a3f74f579b336a493db14bd583fd520ea0d8c9a98",
           "sizeBytes": 466062
         },
         {
           "name": "bert/tokenizer_config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/tokenizer_config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/en_hd/bert/tokenizer_config.json",
           "sha256": "a025160ef0431f1a392f6f050c1310f4c5d9fb6f275932dbccba73c4d214bf10",
           "sizeBytes": 48
         },
         {
           "name": "bert/vocab.txt",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/en_hd/bert/vocab.txt",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/en_hd/bert/vocab.txt",
           "sha256": "07eced375cec144d27c900241f3e339478dec958f92fddbc551f295c992038a3",
           "sizeBytes": 231508
         }
@@ -88,37 +88,37 @@
       "files": [
         {
           "name": "checkpoint.pth",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/es_hd/checkpoint.pth",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/es_hd/checkpoint.pth",
           "sha256": "9077a7e7e5fd8e42f3f922641c401f1936971c08465a3e7ccb19d57a659e72ae",
           "sizeBytes": 207860748
         },
         {
           "name": "config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/es_hd/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/es_hd/config.json",
           "sha256": "54488d922a2983f4d6a7f57158cc5f2714ea117994e1b22147a8579791554221",
           "sizeBytes": 3431
         },
         {
           "name": "bert/config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/es_hd/bert/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/es_hd/bert/config.json",
           "sha256": "2eba96af8702031b5365115eda2f1178473f0f5439e07efe95e1ffb534f62705",
           "sizeBytes": 806
         },
         {
           "name": "bert/model.safetensors",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/es_hd/bert/model.safetensors",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/es_hd/bert/model.safetensors",
           "sha256": "b05b30b40c51bfc4692eab79be0a5b29305ade7bff20e94228e5f00337651a0d",
           "sizeBytes": 439557376
         },
         {
           "name": "bert/tokenizer.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/es_hd/bert/tokenizer.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/es_hd/bert/tokenizer.json",
           "sha256": "37bbe3b096fe1852607ee109ace4e29f6467ae0291dfa2cb88af05b7b19c7976",
           "sizeBytes": 735280
         },
         {
           "name": "bert/tokenizer_config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/es_hd/bert/tokenizer_config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/es_hd/bert/tokenizer_config.json",
           "sha256": "1be254fed705396b18755303ca118ce387d6951593ec781e67d5ba07fc07e710",
           "sizeBytes": 421
         }
@@ -146,37 +146,37 @@
       "files": [
         {
           "name": "checkpoint.pth",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/fr_hd/checkpoint.pth",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/fr_hd/checkpoint.pth",
           "sha256": "b3743bb3c584176b34caf0956c4432e1cd5a7c90b8825f08a2829731f807a1c9",
           "sizeBytes": 207860748
         },
         {
           "name": "config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/fr_hd/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/fr_hd/config.json",
           "sha256": "361e84109451acb2f0331c2c9f3c5437e9a502380bbf8741b02545e41b062139",
           "sizeBytes": 3405
         },
         {
           "name": "bert/config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/fr_hd/bert/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/fr_hd/bert/config.json",
           "sha256": "30885cb253f21f79e5e60553efc07bf740cc1b8d00924348941db88ea0c9fafc",
           "sizeBytes": 740
         },
         {
           "name": "bert/model.safetensors",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/fr_hd/bert/model.safetensors",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/fr_hd/bert/model.safetensors",
           "sha256": "b4d29ba955fb129262d7440b3cac5a38d53ff6f0c3fb3ac9b8aee8f1b4acac71",
           "sizeBytes": 442627224
         },
         {
           "name": "bert/tokenizer.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/fr_hd/bert/tokenizer.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/fr_hd/bert/tokenizer.json",
           "sha256": "f8c9c29597ba8c70fdc56a6b5a1971199d19afa43228f668b9b2a6a0bc1778e6",
           "sizeBytes": 730665
         },
         {
           "name": "bert/tokenizer_config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/fr_hd/bert/tokenizer_config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/fr_hd/bert/tokenizer_config.json",
           "sha256": "62708bb94febdb0dee32fcf3b369e28b6dfb50b73b5231dde06dd8e95d0a11e7",
           "sizeBytes": 387
         }
@@ -204,37 +204,37 @@
       "files": [
         {
           "name": "checkpoint.pth",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/zh_hd/checkpoint.pth",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/zh_hd/checkpoint.pth",
           "sha256": "a74e9eadffff065c75eb6dfa040efa72cad23e72cfea70d39190bc174fb97093",
           "sizeBytes": 207770124
         },
         {
           "name": "config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/zh_hd/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/zh_hd/config.json",
           "sha256": "d58b5acdab89ad2bbd65325affab309ae3cb964834b02f9a60587474e81c8bb9",
           "sizeBytes": 2296
         },
         {
           "name": "bert/config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/zh_hd/bert/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/zh_hd/bert/config.json",
           "sha256": "26680c92678416e0cf087b015e1c7730adad18d4b2bab433a153de4a86dde278",
           "sizeBytes": 902
         },
         {
           "name": "bert/model.safetensors",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/zh_hd/bert/model.safetensors",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/zh_hd/bert/model.safetensors",
           "sha256": "9c5040254d32b182ed5c033b2547557baaf65daf8b81d4c7b32a833329eb766a",
           "sizeBytes": 669879012
         },
         {
           "name": "bert/tokenizer.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/zh_hd/bert/tokenizer.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/zh_hd/bert/tokenizer.json",
           "sha256": "11aaf894a4ccf3d95e8830e27c0f8152791fbbff2b988e29a265580b86edd216",
           "sizeBytes": 2563370
         },
         {
           "name": "bert/tokenizer_config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/zh_hd/bert/tokenizer_config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/zh_hd/bert/tokenizer_config.json",
           "sha256": "71cd48543bec670f50e0c9c3556df16b1f58ea720ead6a1b4675f08870c60b17",
           "sizeBytes": 366
         }
@@ -262,37 +262,37 @@
       "files": [
         {
           "name": "checkpoint.pth",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/checkpoint.pth",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/jp_hd/checkpoint.pth",
           "sha256": "96ae783e6ec0177aa810e2a645aec5d136a6f4992fdea26ee92b7b04d9688ad0",
           "sizeBytes": 207860748
         },
         {
           "name": "config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/jp_hd/config.json",
           "sha256": "207def0d31bf7623e20f4a5e690f217747661bf495319c0139303122b6debcc3",
           "sizeBytes": 3431
         },
         {
           "name": "bert/config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/jp_hd/bert/config.json",
           "sha256": "2a86800f7f45c980d14cbb0f22a71e4f42642fad8c4b2b658fb98b65dfa9e527",
           "sizeBytes": 472
         },
         {
           "name": "bert/pytorch_model.bin",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/pytorch_model.bin",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/jp_hd/bert/pytorch_model.bin",
           "sha256": "e172862e0674054d65e0ba40d67df2a4687982f589db44aa27091c386e5450a4",
           "sizeBytes": 447406217
         },
         {
           "name": "bert/tokenizer_config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/tokenizer_config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/jp_hd/bert/tokenizer_config.json",
           "sha256": "d40f1e84b9a179a96b5e143ac54151158bb8c703b5134da4ea98a3faf4643ce8",
           "sizeBytes": 251
         },
         {
           "name": "bert/vocab.txt",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/jp_hd/bert/vocab.txt",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/jp_hd/bert/vocab.txt",
           "sha256": "5e9a696b0191b833cfdf8eefada01f41f23ccbd7e7746946864260b1cdd0a784",
           "sizeBytes": 231026
         }
@@ -320,37 +320,37 @@
       "files": [
         {
           "name": "checkpoint.pth",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/checkpoint.pth",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/kr_hd/checkpoint.pth",
           "sha256": "48e3ff3fd0b5348e095f0468e60ae727507564100f58142ef3a922ead6e0a4d0",
           "sizeBytes": 207860748
         },
         {
           "name": "config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/kr_hd/config.json",
           "sha256": "74543376976dfadde45ba34336fa79c7e95509f43a7c2e701b22c0f71fd7695c",
           "sizeBytes": 3405
         },
         {
           "name": "bert/config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/kr_hd/bert/config.json",
           "sha256": "c37ae92c39e3600e7c9645148e406286d44c9863cb8a237196ac6ad35bc47749",
           "sizeBytes": 725
         },
         {
           "name": "bert/pytorch_model.bin",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/pytorch_model.bin",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/kr_hd/bert/pytorch_model.bin",
           "sha256": "ae43a392e533ccb9fd38e5c65130aeee50381b87e81e795f9d90469accd78236",
           "sizeBytes": 475782997
         },
         {
           "name": "bert/tokenizer_config.json",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/tokenizer_config.json",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/kr_hd/bert/tokenizer_config.json",
           "sha256": "cac5808f517ce8a9706e7e18f29a45bc819a316c4f3222294a2a7db49490cf1b",
           "sizeBytes": 80
         },
         {
           "name": "bert/vocab.txt",
-          "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/kr_hd/bert/vocab.txt",
+          "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/kr_hd/bert/vocab.txt",
           "sha256": "25a329a892130c73f7dffd6aafa0382d713f93633ef320e49ea54a449096a089",
           "sizeBytes": 344259
         }
@@ -423,7 +423,7 @@
       "exe": "melotts-engine.exe",
       "archive": "zip",
       "comment": "Full MeloTTS (PyTorch) engine, all six languages (en/es/fr/zh/ja/ko). PyInstaller --onedir bundle, zipped (no per-spawn self-extraction). Downloaded then Expand-Archived to %APPDATA%/dashboard-engine/bin/melotts_full/. sha256/sizeBytes are of the ZIP. Hosted on huggingface.co.",
-      "url": "https://huggingface.co/jh03/dashboard-engine-hd/resolve/main/melotts-engine.zip",
+      "url": "https://huggingface.co/dashboard-engine/dashboard-engine-hd/resolve/main/melotts-engine.zip",
       "sha256": "7cf23c3f9e2d07b08cf4431427b9b48f53dbe4517a01ca11b14e01a0f3a90ec5",
       "sizeBytes": 627847685
     }
