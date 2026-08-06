@@ -2691,8 +2691,13 @@ function openPublishDialog(item) {
   const card = document.createElement('div');
   card.className = 'event-card publish-card';
   scrim.appendChild(card);
-  const escHandler = (e) => { if (e.key === 'Escape') close(); };
+  // While a publish is in flight, block every dismiss path (Cancel, Esc, backdrop
+  // click) so the user can't accidentally close mid-upload thinking it stalled —
+  // the progress is shown inside the dialog instead.
+  let publishing = false;
+  const escHandler = (e) => { if (e.key === 'Escape') tryClose(); };
   const close = () => { scrim.remove(); document.removeEventListener('keydown', escHandler); };
+  const tryClose = () => { if (!publishing) close(); };
 
   const heading = document.createElement('h3');
   heading.textContent = `Publish “${item.name}” to Steam Workshop`;
@@ -2748,13 +2753,22 @@ function openPublishDialog(item) {
   hint.textContent = 'A preview image is rendered from the dashboard automatically (demo data — no personal info). Description supports Steam formatting ([b], [h1], [i]). Only pack.json + assets are published — never your personal data.';
   card.appendChild(hint);
 
+  // Progress + result live INSIDE the dialog (right where the user is looking),
+  // not only in the manager's status line at the window edge — so "Publishing…"
+  // and the final URL aren't missed.
+  const dstatus = document.createElement('p');
+  dstatus.className = 'detail-line';
+
   const actions = document.createElement('div');
   actions.className = 'event-actions';
   const spacer = document.createElement('div'); spacer.className = 'event-spacer';
-  const cancel = libButton('Cancel', close);
+  const cancel = libButton('Cancel', tryClose);
   const submit = libButton('Publish', async () => {
+    publishing = true;
     submit.disabled = true;
-    libStatus(`Publishing “${title.value || item.name}” to Workshop…`);
+    cancel.disabled = true;
+    dstatus.style.color = '';
+    dstatus.textContent = `Publishing “${title.value || item.name}” to Workshop… this can take up to a minute — keep this window open.`;
     const out = await aegis.workshopPublish({
       packId: item.id,
       title: title.value,
@@ -2763,18 +2777,29 @@ function openPublishDialog(item) {
       tags: [...new Set([...selectedTags, ...tags.value.split(',').map((t) => t.trim()).filter(Boolean)])].slice(0, 10),
       visibility: vis.value,
     });
-    submit.disabled = false;
-    if (!out.ok) return libStatus(out.error || 'Publish failed.', true);
-    close();
+    publishing = false;
+    cancel.disabled = false;
+    if (!out.ok) {
+      submit.disabled = false;
+      dstatus.style.color = 'var(--warn, #e0a446)';
+      dstatus.textContent = out.error || 'Publish failed.';
+      return;
+    }
     const parts = [`${out.updated ? 'Updated' : 'Published'}! ${out.url}`];
     if (out.needsToAcceptAgreement) parts.push('Accept the Workshop Legal Agreement on the item’s Steam page to make it visible.');
     if (out.note) parts.push(out.note);
+    // Keep the dialog up showing the result; Cancel becomes Close. Mirror it to
+    // the manager status line too, so the URL persists after the dialog closes.
+    dstatus.style.color = '';
+    dstatus.textContent = parts.join(' — ');
+    submit.disabled = true;
+    cancel.textContent = 'Close';
     libStatus(parts.join(' — '));
   }, 'primary');
   actions.append(cancel, spacer, submit);
-  card.appendChild(actions);
+  card.append(dstatus, actions);
 
-  scrim.addEventListener('click', (e) => { if (e.target === scrim) close(); });
+  scrim.addEventListener('click', (e) => { if (e.target === scrim) tryClose(); });
   document.addEventListener('keydown', escHandler);
   document.body.appendChild(scrim);
   title.focus();
