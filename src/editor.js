@@ -709,13 +709,71 @@ function optionFields(component, panel) {
     date.addEventListener('change', () => { o.target = date.value || null; renderAll(); });
     panel.append(field('Target date', date), field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Countdown')));
   } else if (type === 'weather') {
+    // Location by CITY NAME (geocoded to lat/lon) — friendlier than raw coords,
+    // and it fills the display name so the widget shows the city, not "Weather".
+    // Empty = follow the user's Settings weather location.
+    const cityInput = document.createElement('input');
+    cityInput.type = 'text';
+    cityInput.placeholder = 'e.g. Penang — empty = user’s Settings location';
+    cityInput.value = o.place || '';
+    cityInput.style.flex = '1';
+    cityInput.style.minWidth = '0';
+    const lookupBtn = document.createElement('button');
+    lookupBtn.type = 'button';
+    lookupBtn.className = 'btn tiny';
+    lookupBtn.textContent = 'Set';
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '6px';
+    row.append(cityInput, lookupBtn);
+
+    const status = document.createElement('p');
+    status.className = 'ed-empty';
+    const showStatus = () => {
+      const hasCoords = Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lon)) && !(Number(o.lat) === 0 && Number(o.lon) === 0);
+      status.textContent = hasCoords
+        ? `Showing ${o.place || 'this location'} (${Number(o.lat).toFixed(2)}, ${Number(o.lon).toFixed(2)}).`
+        : 'No location set — follows the user’s Settings weather location.';
+    };
+    showStatus();
+
+    const doLookup = async () => {
+      const q = cityInput.value.trim();
+      if (!q) { o.lat = 0; o.lon = 0; o.place = null; renderAll(); showStatus(); return; } // cleared → Settings location
+      lookupBtn.disabled = true;
+      status.textContent = 'Looking up…';
+      const res = await aegis.weatherGeocode(q);
+      lookupBtn.disabled = false;
+      if (!res.ok) { status.textContent = res.error || 'Location not found.'; return; }
+      o.lat = res.lat; o.lon = res.lon; o.place = res.place;
+      cityInput.value = res.place;
+      renderAll();
+      showStatus();
+    };
+    lookupBtn.addEventListener('click', doLookup);
+    cityInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doLookup(); } });
+
     panel.append(
-      field('Latitude', numberControl(o.lat, -90, 90, 0.0001, set('lat'))),
-      field('Longitude', numberControl(o.lon, -180, 180, 0.0001, set('lon'))),
-      field('Place label', textControl(o.place, (v) => { o.place = v || null; renderAll(); }, 'Weather')),
+      field('Location (city)', row),
+      status,
       checkControl('Hi/lo + wind line', o.details !== false, set('details')),
       checkControl('Compact strip (one line)', o.compact === true, set('compact')),
     );
+
+    // Advanced: exact coordinates + manual display-name override, tucked away so
+    // the common path is just "type a city".
+    const adv = document.createElement('details');
+    adv.style.marginTop = '8px';
+    const sum = document.createElement('summary');
+    sum.textContent = 'Coordinates (advanced)';
+    sum.style.cursor = 'pointer';
+    adv.appendChild(sum);
+    adv.append(
+      field('Latitude', numberControl(o.lat, -90, 90, 0.0001, (v) => { o.lat = v; renderAll(); showStatus(); })),
+      field('Longitude', numberControl(o.lon, -180, 180, 0.0001, (v) => { o.lon = v; renderAll(); showStatus(); })),
+      field('Display name', textControl(o.place, (v) => { o.place = v || null; cityInput.value = v || ''; renderAll(); showStatus(); }, 'auto from lookup')),
+    );
+    panel.appendChild(adv);
   } else if (type === 'launcher') {
     panel.append(
       checkControl('Pinned apps', o.pinned !== false, set('pinned')),

@@ -21,6 +21,7 @@ const bridge = {
   stats: () => ipcRenderer.invoke('aegis:stats'),
   display: () => ipcRenderer.invoke('aegis:display'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),
+  weatherGeocode: (query) => ipcRenderer.invoke('aegis:weather:geocode', String(query)),
   remindersList: (window) => ipcRenderer.invoke('aegis:reminders:list',   // read-only here
     window && window.from && window.to ? { from: String(window.from), to: String(window.to) } : undefined),
   // Preview only: the editor renders launcher tiles but cannot launch.

@@ -1536,7 +1536,7 @@ const STARTER_OPTS = {
   stats: { cpu: true, mem: true, disk: true },
   cores: {}, sysinfo: { memory: true, disk: true, uptime: true },
   meter: { bind: 'cpu', variant: 'ring' }, sparkline: { bind: 'cpu' },
-  weather: { compact: true, place: 'Weather' },
+  weather: { compact: true },
   calendar: {}, agenda: { days: 7, limit: 6 }, notifications: { limit: 5 },
   launcher: { pinned: true, recent: true }, status: {}, assistant: {},
   nowplaying: { showArt: true, showControls: true },
