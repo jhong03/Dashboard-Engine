@@ -203,6 +203,7 @@ function renderVoices() {
       state.profile.base.voice = voice.id;
       renderVoices();
       setStatus(`Base voice: ${voice.displayName}`, 'live');
+      prewarmCurrentVoice(); // warm the newly picked voice's engine now
     });
 
     li.appendChild(row);
@@ -252,6 +253,17 @@ async function refreshBank() {
 
 // ── Presets & saved profiles ───────────────────────────────────────────────
 
+// Warm the neural HD engine in the background as soon as we know which voice is
+// active, so the FIRST Synthesize isn't a ~13 s cold start — it loads while the
+// user is reading the panel / editing the clip text. No-op for a non-HD or
+// not-installed voice (main's prewarm handler guards those). Cheap to call often.
+function prewarmCurrentVoice() {
+  try {
+    const voiceId = state.profile && state.profile.base && state.profile.base.voice;
+    if (voiceId && aegis.voicePrewarm) aegis.voicePrewarm(voiceId);
+  } catch { /* best effort — prewarm must never block the UI */ }
+}
+
 function applyProfile(profile, presetFile) {
   state.profile = structuredClone(profile);
   state.activePresetFile = presetFile || null;
@@ -260,6 +272,7 @@ function applyProfile(profile, presetFile) {
   syncSlidersFromProfile();
   renderVoices();
   renderPresets();
+  prewarmCurrentVoice(); // panel open + preset/profile load both flow through here
 }
 
 function renderPresets() {

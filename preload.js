@@ -29,4 +29,6 @@ contextBridge.exposeInMainWorld('aegis', {
 
   synthesize: (profile, text) => ipcRenderer.invoke('aegis:test:synthesize', { profile, text: String(text) }),
   speakFallback: (text, voiceHint) => ipcRenderer.invoke('aegis:test:fallback', { text: String(text), voiceHint: String(voiceHint || '') }),
+  // Warm the neural HD engine in the background so the first Synthesize isn't a cold start.
+  voicePrewarm: (voiceId) => ipcRenderer.invoke('aegis:voice:prewarm', String(voiceId)),
 });
