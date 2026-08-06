@@ -101,7 +101,7 @@ function defaultOptions(type, assets) {
     'hud-clock': { format: '24h', seconds: true, showDate: true },
     'ring-clock': { style: 'minimal', format: '24h', seconds: true, showDate: true },
     'cores': { label: null },
-    'sysinfo': { memory: true, disk: true, uptime: true, host: false, statusText: null },
+    'sysinfo': { memory: true, disk: true, uptime: true, host: false, statusText: null, health: true },
     'assistant': { label: null, button: null },
     'nowplaying': { showArt: true, showControls: true, label: null },
     'visualizer': { style: 'bars' },
@@ -577,8 +577,13 @@ function optionFields(component, panel) {
       checkControl('Disk free', o.disk !== false, set('disk')),
       checkControl('Uptime', o.uptime !== false, set('uptime')),
       checkControl('Host name', o.host === true, set('host')),
+      checkControl('Live health alerts', o.health === true, set('health')),
       field('Status line', textControl(o.statusText, (v) => { o.statusText = v || null; renderAll(); }, 'ALL SYSTEMS NOMINAL')),
     );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = 'With Live health alerts on, the status line shows your text when all is well and switches to the worst reading (e.g. “CPU 96%”) under high CPU/memory/disk or low battery — amber past 85%, red when critical.';
+    panel.appendChild(note);
   } else if (type === 'analog-clock') {
     panel.append(
       field('Numerals', selectControl(o.numerals ?? 'quarters', [['quarters', '12 · 3 · 6 · 9'], ['all', 'All twelve'], ['none', 'None']], set('numerals'))),

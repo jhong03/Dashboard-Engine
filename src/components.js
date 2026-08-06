@@ -905,6 +905,56 @@ function createRenderer(services) {
     return value >= METER_HOT_HIGH;
   }
 
+  // Live health line (sysinfo): per-metric thresholds. cpu/mem/disk alarm when
+  // HIGH; battery alarms when LOW. Two levels — warn (amber) and critical (red).
+  const HEALTH_METRICS = [
+    { key: 'cpu', label: 'CPU', warn: 85, crit: 95, high: true },
+    { key: 'mem', label: 'MEM', warn: 85, crit: 93, high: true },
+    { key: 'disk', label: 'DISK', warn: 85, crit: 93, high: true },
+    { key: 'battery', label: 'BATTERY', warn: 20, crit: 10, high: false },
+  ];
+  const HEALTH_TRIP_SAMPLES = 3; // must hold past a threshold this many ticks before alerting (debounce)
+  const HEALTH_CLEAR_MARGIN = 5; // hysteresis: step down only once the value clears the line by this much
+
+  // A per-component monitor with its own debounce + hysteresis, so a momentary
+  // spike doesn't flap the line and a reading must genuinely recover to clear.
+  // Returns { severity: 0|1|2, alerts: [{sev,label,v}] } — worst first.
+  function makeHealthMonitor() {
+    const latched = {}; // key -> currently shown severity (0|1|2)
+    const rising = {};  // key -> consecutive ticks the raw level has exceeded the latched one
+    const rawSev = (m, v) => {
+      if (typeof v !== 'number') return 0;
+      return m.high ? (v >= m.crit ? 2 : v >= m.warn ? 1 : 0) : (v <= m.crit ? 2 : v <= m.warn ? 1 : 0);
+    };
+    const cleared = (m, v, level) => {
+      const line = level === 2 ? m.crit : m.warn;
+      return m.high ? v < line - HEALTH_CLEAR_MARGIN : v > line + HEALTH_CLEAR_MARGIN;
+    };
+    return (values) => {
+      const alerts = [];
+      let worst = 0;
+      for (const m of HEALTH_METRICS) {
+        // Only a real discharging battery counts — not an AC desktop or none present.
+        if (m.key === 'battery' && values.batteryText !== `${values.battery} %`) { latched[m.key] = 0; continue; }
+        const v = values[m.key];
+        const raw = rawSev(m, v);
+        const cur = latched[m.key] || 0;
+        if (raw > cur) {
+          rising[m.key] = (rising[m.key] || 0) + 1;
+          if (rising[m.key] >= HEALTH_TRIP_SAMPLES) { latched[m.key] = raw; rising[m.key] = 0; }
+        } else if (raw < cur && (typeof v !== 'number' || cleared(m, v, cur))) {
+          latched[m.key] = raw; rising[m.key] = 0;
+        } else {
+          rising[m.key] = 0;
+        }
+        const sev = latched[m.key] || 0;
+        if (sev > 0) { worst = Math.max(worst, sev); alerts.push({ sev, label: m.label, v }); }
+      }
+      alerts.sort((a, b) => b.sev - a.sev);
+      return { severity: worst, alerts };
+    };
+  }
+
   // ── Builders ──────────────────────────────────────────────────────────────
 
   function buildStatus(component, el, ctx) {
@@ -1351,9 +1401,41 @@ function createRenderer(services) {
     if (component.options.disk) addRow('Disk free', 'diskFreeText');
     if (component.options.uptime) addRow('Uptime', 'uptimeText');
     if (component.options.host) addRow('Host', 'hostname');
-    if (component.options.statusText) addRow('Status', null, component.options.statusText);
+    // Status line: either a static motto, OR a LIVE health readout that shows the
+    // idle text when everything's nominal and the worst offender(s) when a metric
+    // crosses a threshold (debounced + colour-coded by severity).
+    let healthCell = null;
+    let healthIdle = '';
+    if (component.options.health) {
+      healthIdle = component.options.statusText || 'ALL SYSTEMS NOMINAL';
+      const row = document.createElement('div');
+      row.className = 'ds-row';
+      const key = document.createElement('span');
+      key.className = 'ds-key display-case';
+      key.textContent = 'Status';
+      healthCell = document.createElement('span');
+      healthCell.className = 'ds-value ds-ok';
+      healthCell.textContent = healthIdle;
+      row.append(key, healthCell);
+      el.appendChild(row);
+    } else if (component.options.statusText) {
+      addRow('Status', null, component.options.statusText);
+    }
+
+    const monitor = healthCell ? makeHealthMonitor() : null;
     live.telemetry.subscribers.push((values) => {
       for (const row of rows) row.value.textContent = values[row.valueKey] ?? '—';
+      if (!healthCell) return;
+      const { severity, alerts } = monitor(values);
+      if (severity === 0) {
+        healthCell.textContent = healthIdle;
+        healthCell.style.color = '';
+        healthCell.style.fontWeight = '';
+      } else {
+        healthCell.textContent = alerts.slice(0, 2).map((a) => `${a.label} ${Math.round(a.v)}%`).join(' · ');
+        healthCell.style.color = severity === 2 ? 'var(--danger, #ff5a5a)' : 'var(--warn, #ffb23e)';
+        healthCell.style.fontWeight = severity === 2 ? '700' : '';
+      }
     });
   }
 

@@ -1534,7 +1534,7 @@ const STARTER_OPTS = {
   'ring-clock': { style: 'minimal', format: '24h', seconds: true, showDate: true },
   'analog-clock': { seconds: true, numerals: 'quarters', minuteTicks: true },
   stats: { cpu: true, mem: true, disk: true },
-  cores: {}, sysinfo: { memory: true, disk: true, uptime: true },
+  cores: {}, sysinfo: { memory: true, disk: true, uptime: true, health: true },
   meter: { bind: 'cpu', variant: 'ring' }, sparkline: { bind: 'cpu' },
   weather: { compact: true },
   calendar: {}, agenda: { days: 7, limit: 6 }, notifications: { limit: 5 },
