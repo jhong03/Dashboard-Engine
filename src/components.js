@@ -1423,6 +1423,7 @@ function createRenderer(services) {
     }
 
     const monitor = healthCell ? makeHealthMonitor() : null;
+    let lastSpokenSev = 0;
     live.telemetry.subscribers.push((values) => {
       for (const row of rows) row.value.textContent = values[row.valueKey] ?? '—';
       if (!healthCell) return;
@@ -1436,6 +1437,13 @@ function createRenderer(services) {
         healthCell.style.color = severity === 2 ? 'var(--danger, #ff5a5a)' : 'var(--warn, #ffb23e)';
         healthCell.style.fontWeight = severity === 2 ? '700' : '';
       }
+      // Voice: announce only when severity ESCALATES (nominal→warn, warn→crit)
+      // through the desktop's gated speakHealthAlert (absent in editor/manager,
+      // so previews never speak). Main gates on the setting + rate-limits.
+      if (severity > lastSpokenSev && alerts.length && services.speakHealthAlert) {
+        services.speakHealthAlert(alerts[0].label, severity, alerts[0].v);
+      }
+      lastSpokenSev = severity;
     });
   }
 

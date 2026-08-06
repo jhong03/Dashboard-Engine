@@ -64,6 +64,13 @@ const bridge = {
   assistantHistory: () => ipcRenderer.invoke('aegis:assistant:history'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
   onAssistantStream: subscription('aegis:assistant:stream'), // live reply tokens
+  // Spoken system-health alerts (JARVIS-style). Main gates on the opt-in setting
+  // + rate-limits, and returns PCM to play (or a skipped result).
+  healthAlert: (payload) => ipcRenderer.invoke('aegis:health:alert', {
+    metric: String(payload.metric || ''),
+    severity: Number(payload.severity) || 1,
+    value: Number(payload.value) || 0,
+  }),
 
   // Background music (configured in Manager → Settings; played here). The
   // desktop only READS the library and hears about changes — it works in opaque

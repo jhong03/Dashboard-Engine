@@ -15,6 +15,26 @@
 let localReminderEditAt = 0;
 function markLocalReminderEdit() { localReminderEditAt = Date.now(); }
 
+// JARVIS-style spoken health alerts play through their own AudioContext (short
+// clips, independent of the assistant panel and music). Main does the real
+// gating + rate-limiting; this local guard just avoids redundant IPC on a burst.
+let alertAudioCtx = null;
+let lastAlertRequestAt = 0;
+function playAlertPcm(pcm, sampleRate) {
+  try {
+    if (!alertAudioCtx) alertAudioCtx = new AudioContext();
+    const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength >> 1);
+    const floats = new Float32Array(int16.length);
+    for (let i = 0; i < int16.length; i++) floats[i] = int16[i] / 32768;
+    const buffer = alertAudioCtx.createBuffer(1, floats.length, sampleRate || 22050);
+    buffer.copyToChannel(floats, 0);
+    const src = alertAudioCtx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(alertAudioCtx.destination);
+    src.start();
+  } catch { /* audio unavailable — the visual health line still shows the alert */ }
+}
+
 const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
   weather: (opts) => aegis.weather(opts),
@@ -47,6 +67,18 @@ const renderer = AegisComponents.createRenderer({
     state: () => aegis.mediaState(),
     control: (action) => aegis.mediaControl(action),
     onChange: (cb) => aegis.onMediaChanged(cb),
+  },
+  // JARVIS-style spoken health alerts. Present ONLY on the desktop, so editor /
+  // manager previews never speak. Main gates on the opt-in setting + rate-limits;
+  // here we just play the returned PCM (with a light local throttle so a burst of
+  // component transitions doesn't spam the IPC).
+  speakHealthAlert: (metric, severity, value) => {
+    const now = Date.now();
+    if (now - lastAlertRequestAt < 20000) return;
+    lastAlertRequestAt = now;
+    aegis.healthAlert({ metric, severity, value }).then((out) => {
+      if (out && out.ok && out.pcm) playAlertPcm(out.pcm, out.sampleRate);
+    }).catch(() => {});
   },
 });
 

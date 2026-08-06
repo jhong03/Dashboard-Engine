@@ -2330,6 +2330,10 @@ async function renderSettingsCfg() {
       : 'Start-with-the-OS isn’t available on this platform.';
   }
 
+  // Spoken health alerts (opt-in — a talking wallpaper).
+  const hv = await aegis.healthVoiceGet();
+  if (hv.ok) $('set-healthvoice').checked = hv.enabled;
+
   // Weather location.
   const wloc = await aegis.weatherLocationGet();
   const wcur = $('set-weather-current');
@@ -2426,6 +2430,10 @@ function wireSettingsCfg() {
     const out = await aegis.autoStartSet(e.target.checked);
     if (!out.ok) { $('set-status').textContent = out.error; e.target.checked = !e.target.checked; return; }
     e.target.checked = out.enabled; // reflect what the OS actually did
+    settingsSaved();
+  });
+  $('set-healthvoice').addEventListener('change', async (e) => {
+    await aegis.healthVoiceSet(e.target.checked);
     settingsSaved();
   });
   $('set-fullscreen').addEventListener('change', async (e) => {
