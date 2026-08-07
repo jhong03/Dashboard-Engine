@@ -276,6 +276,7 @@ function applyProfile(profile, presetFile) {
   syncSlidersFromProfile();
   renderVoices();
   renderPresets();
+  updatePublishButton(); // a loaded imported voice can't be republished
   prewarmCurrentVoice(); // panel open + preset/profile load both flow through here
 }
 
@@ -346,7 +347,141 @@ async function saveProfile() {
   syncProfileMeta();
   const res = await aegis.profileSave(state.profile);
   $('profile-status').textContent = res.ok ? `Saved to profiles/${res.file}` : res.error;
-  if (res.ok) await refreshSaved();
+  // Keep the working profile's provenance in step with what was written (a fresh
+  // save stamps 'scratch'), so the publish button reflects it immediately.
+  if (res.ok && res.profile) { state.profile = res.profile; updatePublishButton(); await refreshSaved(); }
+}
+
+// A voice imported from another creator can be used and tuned, but not published
+// as the user's own — reflect that on the Share button (the gate is enforced in
+// main regardless).
+function updatePublishButton() {
+  const btn = $('btn-publish');
+  if (!btn) return;
+  const imported = state.profile && state.profile.origin === 'imported';
+  btn.disabled = !!imported;
+  btn.title = imported
+    ? 'This voice was imported from another creator, so it can’t be republished as your own.'
+    : 'Share this voice profile on the Steam Workshop (parameters only — never audio).';
+}
+
+// Save the current tuning, then open the Workshop publish dialog for it. Sharing
+// publishes the auditory PROFILE only (a base-voice reference + your tuning) —
+// never any audio (the project's hard legal boundary).
+async function publishVoiceFlow() {
+  if (state.profile && state.profile.origin === 'imported') {
+    $('profile-status').textContent = 'This voice was imported from another creator, so it can’t be published as your own.';
+    return;
+  }
+  syncProfileMeta();
+  const saved = await aegis.profileSave(state.profile);
+  if (!saved.ok) { $('profile-status').textContent = saved.error; return; }
+  if (saved.profile) { state.profile = saved.profile; updatePublishButton(); }
+  await refreshSaved();
+
+  const st = await aegis.workshopStatus();
+  if (!st.available) {
+    $('profile-status').textContent = st.reason || 'Steam isn’t available — start Steam and sign in, then try again.';
+    return;
+  }
+  openVoicePublishDialog(saved.file, saved.profile || state.profile);
+}
+
+function voiceField(labelText, control) {
+  const wrap = document.createElement('div');
+  wrap.className = 'field';
+  const label = document.createElement('label');
+  label.textContent = labelText;
+  wrap.append(label, control);
+  return wrap;
+}
+
+// A compact publish dialog for the tuning panel (the manager has its own richer
+// dashboard dialog; a voice needs far fewer fields). Blocks dismissal while an
+// upload is in flight so the user can't close it thinking it stalled.
+function openVoicePublishDialog(file, profile) {
+  const scrim = document.createElement('div');
+  scrim.className = 'tp-scrim';
+  const dialog = document.createElement('div');
+  dialog.className = 'tp-dialog';
+  scrim.appendChild(dialog);
+
+  let publishing = false;
+  const escHandler = (e) => { if (e.key === 'Escape') tryClose(); };
+  const close = () => { scrim.remove(); document.removeEventListener('keydown', escHandler); };
+  const tryClose = () => { if (!publishing) close(); };
+
+  const heading = document.createElement('h3');
+  heading.textContent = `Share “${profile.name}” to the Workshop`;
+  const sub = document.createElement('p');
+  sub.className = 'tp-sub';
+  sub.textContent = `Publishes the voice PROFILE only — the base voice (${profile.base.voice}) plus your tuning. No audio is ever uploaded. People who add it and don’t have the base voice will download it on demand.`;
+  dialog.append(heading, sub);
+
+  const title = document.createElement('input');
+  title.type = 'text'; title.maxLength = 128; title.value = profile.name || '';
+  const desc = document.createElement('textarea');
+  desc.maxLength = 8000;
+  desc.value = `A custom voice for Dashboard Engine.\nBase voice: ${profile.base.voice}.`;
+  const tags = document.createElement('input');
+  tags.type = 'text'; tags.placeholder = 'tags, comma-separated (optional) — e.g. calm, deep, narrator';
+  const vis = document.createElement('select');
+  for (const [v, label] of [['unlisted', 'Unlisted (link only)'], ['public', 'Public'], ['friends', 'Friends only'], ['private', 'Private']]) {
+    const opt = document.createElement('option'); opt.value = v; opt.textContent = label; vis.appendChild(opt);
+  }
+  dialog.append(
+    voiceField('Title', title),
+    voiceField('Description', desc),
+    voiceField('Tags', tags),
+    voiceField('Visibility', vis),
+  );
+
+  const status = document.createElement('p');
+  status.className = 'tp-status';
+
+  const actions = document.createElement('div');
+  actions.className = 'tp-actions';
+  const cancel = document.createElement('button');
+  cancel.className = 'btn'; cancel.textContent = 'Cancel';
+  cancel.addEventListener('click', tryClose);
+  const spacer = document.createElement('div'); spacer.className = 'tp-spacer';
+  const submit = document.createElement('button');
+  submit.className = 'btn primary'; submit.textContent = 'Publish';
+  submit.addEventListener('click', async () => {
+    publishing = true;
+    submit.disabled = true; cancel.disabled = true;
+    status.style.color = '';
+    status.textContent = 'Publishing to the Workshop… this can take up to a minute — keep this window open.';
+    const out = await aegis.voicePublish({
+      profileFile: file,
+      title: title.value,
+      description: desc.value,
+      tags: tags.value.split(',').map((t) => t.trim()).filter(Boolean),
+      visibility: vis.value,
+    });
+    publishing = false; cancel.disabled = false;
+    if (!out.ok) {
+      submit.disabled = false;
+      status.style.color = 'var(--warn)';
+      status.textContent = out.error || 'Publish failed.';
+      return;
+    }
+    const parts = [`${out.updated ? 'Updated' : 'Published'}! ${out.url}`];
+    if (out.needsToAcceptAgreement) parts.push('Accept the Workshop Legal Agreement on the item’s Steam page to make it visible.');
+    if (out.note) parts.push(out.note);
+    status.style.color = '';
+    status.textContent = parts.join(' — ');
+    submit.disabled = true;
+    cancel.textContent = 'Close';
+    $('profile-status').textContent = parts.join(' — ');
+  });
+  actions.append(cancel, spacer, submit);
+  dialog.append(status, actions);
+
+  scrim.addEventListener('click', (e) => { if (e.target === scrim) tryClose(); });
+  document.addEventListener('keydown', escHandler);
+  document.body.appendChild(scrim);
+  title.focus();
 }
 
 // ── Synthesis, playback, readouts ──────────────────────────────────────────
@@ -509,6 +644,8 @@ async function init() {
   });
   $('btn-fallback').addEventListener('click', speakFallback);
   $('btn-save').addEventListener('click', saveProfile);
+  $('btn-publish').addEventListener('click', publishVoiceFlow);
+  updatePublishButton();
 
   // Ctrl/Cmd+Enter in the textarea synthesizes — the tune-listen loop lives
   // on the keyboard.

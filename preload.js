@@ -31,4 +31,17 @@ contextBridge.exposeInMainWorld('aegis', {
   speakFallback: (text, voiceHint) => ipcRenderer.invoke('aegis:test:fallback', { text: String(text), voiceHint: String(voiceHint || '') }),
   // Warm the neural HD engine in the background so the first Synthesize isn't a cold start.
   voicePrewarm: (voiceId) => ipcRenderer.invoke('aegis:voice:prewarm', String(voiceId)),
+
+  // Publish the SAVED voice profile to the Steam Workshop (auditory profile only —
+  // parameters, never audio). workshopStatus gates the button; voicePublishable
+  // refuses factory presets / imported voices.
+  workshopStatus: () => ipcRenderer.invoke('aegis:workshop:status'),
+  voicePublishable: (file) => ipcRenderer.invoke('aegis:voice:publishable', String(file)),
+  voicePublish: (req) => ipcRenderer.invoke('aegis:voice:publish', {
+    profileFile: String(req.profileFile),
+    title: String(req.title || ''),
+    description: String(req.description || ''),
+    tags: Array.isArray(req.tags) ? req.tags.map(String) : [],
+    visibility: String(req.visibility || 'unlisted'),
+  }),
 });

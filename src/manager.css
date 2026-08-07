@@ -763,6 +763,19 @@ body {
 .ws-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .ws-actions .btn { width: auto; flex: 1 1 auto; }
 
+/* A voice card's base-voice dependency line (what it needs to actually speak). */
+.ws-dep { font-size: 11px; color: var(--text-dim); line-height: 1.4; }
+
+/* Dashboards | Voices segmented toggle at the top of the Browse workshop section. */
+.browse-toggle { display: inline-flex; gap: 0; margin-bottom: 12px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.browse-toggle-btn {
+  padding: 6px 16px; font-size: 12.5px; background: var(--bg-input); color: var(--text-dim);
+  border: none; border-right: 1px solid var(--border); cursor: pointer;
+}
+.browse-toggle-btn:last-child { border-right: none; }
+.browse-toggle-btn.on { background: var(--accent); color: #fff; }
+.browse-toggle-btn:hover:not(.on) { color: var(--text); }
+
 /* Workshop tag chips in the publish dialog. */
 .tag-groups { display: flex; flex-direction: column; gap: 8px; }
 .tag-group { display: flex; flex-direction: column; gap: 4px; }

@@ -227,3 +227,32 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 @media (prefers-reduced-motion: reduce) {
   .progress > span { transition: none; }
 }
+
+/* ── Share-to-Workshop dialog (engine chrome register) ──────────────────── */
+
+.tp-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.tp-dialog {
+  width: min(520px, 92vw);
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 22px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+}
+.tp-dialog h3 { margin: 0 0 4px; font-size: 16px; }
+.tp-dialog .tp-sub { margin: 0 0 14px; font-size: 12px; color: var(--text-dim); }
+.tp-dialog .field { margin-bottom: 12px; }
+.tp-dialog textarea { min-height: 90px; resize: vertical; }
+.tp-dialog .tp-status { font-size: 12.5px; margin: 10px 0 0; min-height: 18px; }
+.tp-actions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.tp-actions .tp-spacer { flex: 1; }

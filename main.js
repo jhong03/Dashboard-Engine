@@ -15,6 +15,7 @@ const { spawn } = require('child_process');
 const { createPresenceMonitor } = require('./lib/presence');
 const { createMediaMonitor } = require('./lib/media');
 const voicebank = require('./lib/voicebank');
+const profiles = require('./lib/profiles');
 const packs = require('./lib/packs');
 const music = require('./lib/music');
 const videostore = require('./lib/videostore');
@@ -621,6 +622,127 @@ function renderPackPreview(packId, sizeOpts) {
   });
 }
 
+// Render a Workshop preview CARD for a voice profile, off-screen. The card shows
+// ONLY the voice's name, its base voice (language · sex · accent), and a few
+// tuning bars — never any personal data (a voice profile has no telemetry, apps,
+// or messages). Returns a temp png/jpg path, or null on any failure (publish
+// then uploads with no image). Fail-soft, like renderPackPreview.
+function renderVoicePreview(profileFile) {
+  return new Promise((resolve) => {
+    const fs = require('fs');
+    const os = require('os');
+    let cardHtml;
+    let htmlFile;
+    try {
+      if (!profiles.PROFILE_FILE_PATTERN.test(String(profileFile))) return resolve(null);
+      const full = path.join(profiles.profilesDir(__dirname), profileFile);
+      if (!fs.existsSync(full)) return resolve(null);
+      const { profile } = profiles.loadProfile(full);
+      const voice = voicebank.voiceById(voicebank.loadManifest(__dirname), profile.base.voice);
+      cardHtml = buildVoiceCardHtml(profile, voice);
+      htmlFile = path.join(os.tmpdir(), `de-voicecard-${Date.now()}.html`);
+      fs.writeFileSync(htmlFile, cardHtml, 'utf8');
+    } catch (err) {
+      return resolve(null);
+    }
+
+    let win = new BrowserWindow({
+      width: 640, height: 360, show: false, frame: false, skipTaskbar: true,
+      backgroundColor: '#04080F',
+      webPreferences: { offscreen: true, backgroundThrottling: false, sandbox: true, contextIsolation: true, nodeIntegration: false },
+    });
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (win && !win.isDestroyed()) win.destroy();
+      win = null;
+      try { if (htmlFile) fs.rmSync(htmlFile, { force: true }); } catch (e) { /* temp cleanup */ }
+      resolve(result);
+    };
+    const guard = setTimeout(() => finish(null), 8000);
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        await new Promise((r) => setTimeout(r, 350)); // let fonts/layout settle
+        const image = await win.webContents.capturePage();
+        const png = image.toPNG();
+        const useJpeg = png.length > 1024 * 1024;
+        const buffer = useJpeg ? image.toJPEG(88) : png;
+        const file = path.join(os.tmpdir(), `de-voicepreview-${Date.now()}.${useJpeg ? 'jpg' : 'png'}`);
+        fs.writeFileSync(file, buffer);
+        clearTimeout(guard);
+        finish(file);
+      } catch (err) {
+        clearTimeout(guard);
+        finish(null);
+      }
+    });
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(null); });
+    win.loadFile(htmlFile);
+  });
+}
+
+// Build the self-contained HTML for a voice preview card. Everything is inline
+// (no external fonts/scripts) so it renders identically off-screen with no
+// network. Uses the pack-content holographic register — this is a showcase image.
+function buildVoiceCardHtml(profile, voice) {
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const name = esc(profile.name || 'Voice');
+  const baseBits = voice
+    ? [voice.language, voice.sex, voice.accent].filter(Boolean).map(esc)
+    : [esc(profile.base.voice)];
+  const hd = voice && voice.hd;
+  // A handful of the most audible tunings, each normalized 0..1 for a bar.
+  const norm = (dotted) => {
+    const range = profiles.PARAM_RANGES[dotted];
+    if (!range) return 0.5;
+    const v = profiles.getByPath(profile, dotted);
+    const n = typeof v === 'number' ? v : range.default;
+    return Math.max(0, Math.min(1, (n - range.min) / (range.max - range.min)));
+  };
+  const bars = [
+    ['Pitch', norm('prosody.pitchShift')],
+    ['Speed', norm('prosody.rate')],
+    ['Warmth', norm('timbre.warmth')],
+    ['Brightness', norm('timbre.brightness')],
+    ['Reverb', norm('character.reverb.mix')],
+  ];
+  const barRows = bars.map(([label, v]) => `
+    <div class="bar-row">
+      <span class="bar-label">${label}</span>
+      <span class="bar-track"><span class="bar-fill" style="width:${Math.round(v * 100)}%"></span></span>
+    </div>`).join('');
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    :root { --cyan:#3FD8FF; --bright:#7FE9FF; --steel:#5A7E93; }
+    * { margin:0; box-sizing:border-box; }
+    html,body { width:640px; height:360px; }
+    body { background:radial-gradient(120% 120% at 20% 0%, #0a1622 0%, #04080F 70%); color:#dbeaf2;
+      font-family: 'Segoe UI', system-ui, sans-serif; padding:38px 44px; position:relative; overflow:hidden; }
+    .glow { position:absolute; inset:0; background:radial-gradient(60% 60% at 85% 90%, rgba(63,216,255,.10), transparent 70%); }
+    .kicker { text-transform:uppercase; letter-spacing:.28em; font-size:13px; color:var(--steel); }
+    h1 { font-size:44px; font-weight:600; line-height:1.05; margin:10px 0 6px; color:#fff;
+      text-shadow:0 0 24px rgba(63,216,255,.25); }
+    .base { font-size:16px; color:var(--bright); letter-spacing:.02em; }
+    .base .hd { display:inline-block; margin-left:10px; padding:1px 8px; border:1px solid var(--cyan);
+      border-radius:4px; font-size:11px; letter-spacing:.15em; color:var(--cyan); vertical-align:2px; }
+    .bars { position:absolute; left:44px; right:44px; bottom:64px; }
+    .bar-row { display:flex; align-items:center; gap:14px; margin:9px 0; }
+    .bar-label { width:92px; font-size:13px; color:var(--steel); text-transform:uppercase; letter-spacing:.12em; }
+    .bar-track { flex:1; height:6px; background:rgba(90,126,147,.22); border-radius:3px; overflow:hidden; }
+    .bar-fill { display:block; height:100%; background:linear-gradient(90deg, var(--cyan), var(--bright)); }
+    .foot { position:absolute; left:44px; bottom:30px; font-size:12px; letter-spacing:.22em;
+      text-transform:uppercase; color:var(--steel); }
+    .foot b { color:var(--cyan); font-weight:600; }
+  </style></head><body>
+    <div class="glow"></div>
+    <div class="kicker">Voice profile</div>
+    <h1>${name}</h1>
+    <div class="base">${baseBits.join(' · ')}${hd ? '<span class="hd">HD</span>' : ''}</div>
+    <div class="bars">${barRows}</div>
+    <div class="foot">◗ <b>Dashboard&nbsp;Engine</b> voice</div>
+  </body></html>`;
+}
+
 // ── Library card thumbnails ──────────────────────────────────────────────────
 // A cached STATIC snapshot per pack (rendered offscreen with DEMO data — no
 // personal info) used as the library card image, so cards never live-render.
@@ -913,6 +1035,9 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       },
       // Workshop publish asks for a rendered preview image of the pack.
       renderPreview: (id) => renderPackPreview(id),
+      // Publishing a VOICE renders a small preview card (name + base voice +
+      // tuning bars; no personal data).
+      renderVoicePreview: (file) => renderVoicePreview(file),
       renderThumbnail: (id) => getPackThumbnail(id),
       // Settings screen: performance changes must reach the live desktop, and
       // the OS login item is owned by main.

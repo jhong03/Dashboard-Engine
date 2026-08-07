@@ -449,6 +449,21 @@ const ws = { available: null, items: [], search: '', sort: 'trend', loaded: fals
 // editable copy back down. Loaded lazily, like the Browse tab.
 const mine = { available: null, items: [], loaded: false, loading: false, error: null, testApp: false };
 
+// ── Voices on the Workshop (a separate item type) ────────────────────────────
+// The Browse tab toggles between dashboards and voices; the Published tab lists
+// both. Voice profiles are ~1 KB (base-voice ref + tuning), never audio.
+let browseMode = 'dashboards';   // 'dashboards' | 'voices' — the Browse-tab toggle
+const voiceWs = { items: [], loaded: false, loading: false, error: null, available: null, testApp: false, search: '', sort: 'trend' };
+const voiceMine = { items: [], loaded: false, loading: false, error: null, available: null, testApp: false };
+
+// Human-friendly download size for a base voice (hundreds of MB each).
+function fmtMB(bytes) {
+  const n = Number(bytes) || 0;
+  if (n <= 0) return '';
+  if (n >= 1024 * 1024 * 1024) return `${(n / (1024 * 1024 * 1024)).toFixed(1)} GB`;
+  return `${Math.round(n / (1024 * 1024))} MB`;
+}
+
 function reloadMine() { mine.loaded = false; mine.loading = false; renderGallery(); }
 
 function loadMine() {
@@ -468,10 +483,16 @@ function loadMine() {
 }
 
 function renderPublishedSection(gallery) {
+  renderPublishedDashboards(gallery);
+  // Voices are a separate item type — listed in their own section below.
+  renderPublishedVoicesSection(gallery);
+}
+
+function renderPublishedDashboards(gallery) {
   const controls = document.createElement('div');
   controls.className = 'ws-controls';
   controls.append(
-    libButton('Refresh', () => reloadMine(), 'tiny'),
+    libButton('Refresh', () => { reloadMine(); reloadVoiceMine(); }, 'tiny'),
     libButton('Open Workshop', () => aegis.workshopOpen(), 'tiny'),
   );
   gallery.appendChild(sectionLabel(`Your published dashboards${mine.testApp ? ' — test app (Spacewar)' : ''}`, [controls]));
@@ -642,8 +663,25 @@ async function loadWorkshop() {
 
 function reloadWorkshop() { ws.loaded = false; ws.loading = false; renderGallery(); }
 
+// A segmented Dashboards | Voices toggle shared by the Browse workshop section.
+function browseModeToggle(onChange) {
+  const wrap = document.createElement('div');
+  wrap.className = 'browse-toggle';
+  for (const [mode, label] of [['dashboards', 'Dashboards'], ['voices', 'Voices']]) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'browse-toggle-btn' + (browseMode === mode ? ' on' : '');
+    btn.textContent = label;
+    btn.addEventListener('click', () => { if (browseMode !== mode) { browseMode = mode; onChange(); } });
+    wrap.appendChild(btn);
+  }
+  return wrap;
+}
+
 function renderWorkshopSection(box) {
   box.textContent = '';
+  box.appendChild(browseModeToggle(() => renderGallery()));
+  if (browseMode === 'voices') { renderVoiceBrowse(box); return; }
   // Header + controls.
   const controls = document.createElement('div');
   controls.className = 'ws-controls';
@@ -748,6 +786,247 @@ function workshopCard(item, inLibrary) {
   }
 
   body.append(title, meta, action, status);
+  card.append(thumb, body);
+  return card;
+}
+
+// ── Voices on the Workshop: browse / add / manage ────────────────────────────
+
+async function loadVoiceBrowse() {
+  voiceWs.loading = true;
+  const st = await aegis.workshopStatus();
+  voiceWs.available = !!st.available;
+  voiceWs.error = st.available ? null : (st.reason || 'Steam Workshop is unavailable.');
+  if (voiceWs.available) {
+    const res = await aegis.voiceBrowse({ search: voiceWs.search, sort: voiceWs.sort });
+    if (res.ok) { voiceWs.items = res.items; voiceWs.testApp = !!res.testApp; voiceWs.error = null; }
+    else { voiceWs.items = []; voiceWs.error = res.error; }
+  } else voiceWs.items = [];
+  voiceWs.loading = false;
+  voiceWs.loaded = true;
+  if (library.tab === 'browse' && browseMode === 'voices') renderGallery();
+}
+
+function reloadVoiceBrowse() { voiceWs.loaded = false; voiceWs.loading = false; renderGallery(); }
+
+function renderVoiceBrowse(box) {
+  const controls = document.createElement('div');
+  controls.className = 'ws-controls';
+  const searchInput = document.createElement('input');
+  searchInput.type = 'search';
+  searchInput.className = 'lib-search';
+  searchInput.placeholder = 'Search voices';
+  searchInput.value = voiceWs.search;
+  searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { voiceWs.search = searchInput.value.trim(); reloadVoiceBrowse(); } });
+  const sortSel = document.createElement('select');
+  for (const [v, l] of [['trend', 'Trending'], ['newest', 'Newest'], ['top', 'Most subscribed'], ['updated', 'Recently updated']]) {
+    const o = document.createElement('option'); o.value = v; o.textContent = l; sortSel.appendChild(o);
+  }
+  sortSel.value = voiceWs.sort;
+  sortSel.addEventListener('change', () => { voiceWs.sort = sortSel.value; reloadVoiceBrowse(); });
+  controls.append(searchInput, sortSel,
+    libButton('Refresh', () => reloadVoiceBrowse(), 'tiny'),
+    libButton('Open on Steam', () => aegis.workshopOpen(), 'tiny'));
+  box.appendChild(sectionLabel(`Community voices${voiceWs.testApp ? ' — test app (Spacewar)' : ''}`, [controls]));
+
+  if (!voiceWs.loaded && !voiceWs.loading) loadVoiceBrowse();
+  if (voiceWs.loading) { box.appendChild(hintP('Loading community voices…')); return; }
+  if (!voiceWs.available) { box.appendChild(hintP(voiceWs.error || 'Start Steam and sign in to browse community voices.')); return; }
+  if (voiceWs.error) { box.appendChild(hintP(voiceWs.error)); return; }
+  if (voiceWs.items.length === 0) {
+    box.appendChild(hintP('No community voices yet. Tune one in Voice tuning (tray → Voice tuning), then “Share to Workshop…”.'));
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'workshop-grid';
+  for (const item of voiceWs.items) grid.appendChild(voiceCard(item));
+  box.appendChild(grid);
+}
+
+// Fill a .ws-thumb with the item's remote preview (fetched main-side as a data
+// URI so the strict CSP never loads a remote host). Shared by the voice cards.
+function wsThumbInto(thumb, previewUrl) {
+  if (previewUrl) {
+    aegis.workshopPreview(previewUrl).then((res) => {
+      if (res && res.ok && thumb.isConnected) { const img = document.createElement('img'); img.alt = ''; img.src = res.uri; thumb.appendChild(img); }
+      else thumb.classList.add('ws-noimg');
+    });
+  } else thumb.classList.add('ws-noimg');
+}
+
+// The base-voice line: what a voice needs, and whether it's installed here.
+function voiceDepLine(item) {
+  const dep = document.createElement('div');
+  dep.className = 'ws-dep';
+  if (!item.baseVoice) { dep.textContent = ''; return dep; }
+  const label = item.baseName || item.baseVoice;
+  dep.textContent = item.baseInstalled
+    ? `Base voice: ${label} ✓`
+    : `Needs base voice: ${label}${item.baseSizeBytes ? ` · ${fmtMB(item.baseSizeBytes)} download` : ''}`;
+  return dep;
+}
+
+// Download a voice's required base voice, streaming progress into the button.
+async function downloadBaseVoice(item, btn) {
+  const original = btn.textContent;
+  btn.disabled = true;
+  const unsub = aegis.onBankProgress((p) => {
+    if (p && p.id === item.baseVoice && typeof p.pct === 'number') btn.textContent = `Downloading base voice… ${p.pct}%`;
+  });
+  let out;
+  try { out = await aegis.bankDownload(item.baseVoice); } finally { unsub(); }
+  if (out && out.ok) { item.baseInstalled = true; btn.textContent = 'Base voice ready ✓'; }
+  else { btn.disabled = false; btn.textContent = original; }
+  return out;
+}
+
+function voiceCard(item) {
+  const card = document.createElement('div');
+  card.className = 'ws-card';
+  const thumb = document.createElement('div');
+  thumb.className = 'ws-thumb';
+  wsThumbInto(thumb, item.previewUrl);
+
+  const body = document.createElement('div');
+  body.className = 'ws-body';
+  const title = document.createElement('div');
+  title.className = 'ws-title';
+  title.textContent = item.title;
+  const meta = document.createElement('div');
+  meta.className = 'ws-meta';
+  meta.textContent = `▲ ${item.votesUp}${item.tags.length ? ' · ' + item.tags.slice(0, 3).join(', ') : ''}`;
+  const dep = voiceDepLine(item);
+  const status = document.createElement('div');
+  status.className = 'ws-cardstatus';
+  const actions = document.createElement('div');
+  actions.className = 'ws-actions';
+
+  // Offer a base-voice download whenever it's missing (before or after adding).
+  const maybeBaseButton = () => {
+    if (item.baseVoice && !item.baseInstalled) {
+      const dl = libButton(`Download base voice · ${fmtMB(item.baseSizeBytes) || 'get'}`, () => downloadBaseVoice(item, dl), 'tiny');
+      actions.appendChild(dl);
+    }
+  };
+
+  const action = document.createElement('button');
+  action.className = 'btn tiny';
+  const setBtn = (label, disabled) => { action.textContent = label; action.disabled = !!disabled; };
+  if (item.subscribed) {
+    setBtn('Add voice');
+    status.textContent = 'Subscribed — click Add once Steam finishes downloading it.';
+    action.addEventListener('click', async () => {
+      setBtn('Adding…', true);
+      const out = await aegis.voiceImport(item.itemId);
+      if (out.ok) {
+        item.baseInstalled = !!out.baseInstalled;
+        status.textContent = `Added “${out.name}” — it’s now a voice you can pick in Assistant → Voice.${out.baseInstalled ? '' : ' Download its base voice below to hear it.'}`;
+        setBtn('Added ✓', true);
+        dep.replaceWith(voiceDepLine({ ...item }));
+        maybeBaseButton();
+      } else { status.textContent = out.error || 'Not downloaded yet — let Steam finish, then retry.'; setBtn('Add voice'); }
+    });
+  } else {
+    setBtn('Subscribe');
+    action.addEventListener('click', async () => {
+      setBtn('Subscribing…', true);
+      const out = await aegis.workshopSubscribe(item.itemId);
+      if (out.ok) { item.subscribed = true; renderGallery(); }
+      else { status.textContent = out.error || 'Subscribe failed.'; setBtn('Subscribe'); }
+    });
+  }
+  actions.appendChild(action);
+
+  body.append(title, meta, dep, actions, status);
+  card.append(thumb, body);
+  return card;
+}
+
+// ── Published voices (creator management, machine-portable) ───────────────────
+
+function reloadVoiceMine() { voiceMine.loaded = false; voiceMine.loading = false; renderGallery(); }
+
+function loadVoiceMine() {
+  voiceMine.loading = true;
+  aegis.workshopStatus().then(async (st) => {
+    voiceMine.available = !!st.available;
+    voiceMine.error = st.available ? null : (st.reason || 'Steam Workshop is unavailable.');
+    if (voiceMine.available) {
+      const res = await aegis.voiceMine();
+      if (res.ok) { voiceMine.items = res.items; voiceMine.testApp = !!res.testApp; voiceMine.error = null; }
+      else { voiceMine.items = []; voiceMine.error = res.error; }
+    } else voiceMine.items = [];
+    voiceMine.loading = false;
+    voiceMine.loaded = true;
+    if (library.tab === 'published') renderGallery();
+  });
+}
+
+function renderPublishedVoicesSection(gallery) {
+  gallery.appendChild(sectionLabel('Your published voices'));
+  if (!voiceMine.loaded && !voiceMine.loading) loadVoiceMine();
+  if (voiceMine.loading) { gallery.appendChild(hintP('Loading your published voices…')); return; }
+  // The dashboards section above already explains Steam being unavailable.
+  if (!voiceMine.available) return;
+  if (voiceMine.error) { gallery.appendChild(hintP(voiceMine.error)); return; }
+  if (voiceMine.items.length === 0) {
+    gallery.appendChild(hintP('No published voices yet. Tune a voice in Voice tuning (tray → Voice tuning), then use “Share to Workshop…”. Anything you publish appears here — on any computer signed into this Steam account.'));
+    return;
+  }
+  const grid = document.createElement('div');
+  grid.className = 'workshop-grid';
+  for (const item of voiceMine.items) grid.appendChild(publishedVoiceCard(item));
+  gallery.appendChild(grid);
+}
+
+function publishedVoiceCard(item) {
+  const card = document.createElement('div');
+  card.className = 'ws-card';
+  const thumb = document.createElement('div');
+  thumb.className = 'ws-thumb';
+  wsThumbInto(thumb, item.previewUrl);
+
+  const body = document.createElement('div');
+  body.className = 'ws-body';
+  const title = document.createElement('div');
+  title.className = 'ws-title';
+  title.textContent = item.title;
+  const meta = document.createElement('div');
+  meta.className = 'ws-meta';
+  const bits = [`▲ ${item.votesUp}`];
+  if (item.visibility && item.visibility !== 'public') bits.push(item.visibility);
+  if (item.baseVoice) bits.push(item.baseName || item.baseVoice);
+  meta.textContent = bits.join(' · ');
+
+  const status = document.createElement('div');
+  status.className = 'ws-cardstatus';
+  const actions = document.createElement('div');
+  actions.className = 'ws-actions';
+
+  if (item.localProfileFile) {
+    status.textContent = 'Editable copy on this computer. Adjust it in Voice tuning, then “Share to Workshop…” to update.';
+    actions.append(
+      libButton('Open Voice tuning', () => aegis.openPanel(), 'tiny primary'),
+      libButton('View', () => aegis.workshopOpenItem(item.url), 'tiny'),
+    );
+  } else {
+    status.textContent = 'No editable copy on this computer yet.';
+    const getBtn = libButton('Get editable copy', async () => {
+      getBtn.disabled = true; getBtn.textContent = 'Downloading…';
+      status.textContent = 'Downloading your voice from Steam…';
+      const out = await aegis.voiceGetEditable(item.itemId);
+      if (out.ok) {
+        status.textContent = 'Downloaded — opening Voice tuning. It’s in your saved profiles.';
+        reloadVoiceMine();
+      } else {
+        status.textContent = out.error || 'Could not get an editable copy.';
+        getBtn.disabled = false; getBtn.textContent = 'Get editable copy';
+      }
+    }, 'tiny primary');
+    actions.append(getBtn, libButton('View', () => aegis.workshopOpenItem(item.url), 'tiny'));
+  }
+
+  body.append(title, meta, actions, status);
   card.append(thumb, body);
   return card;
 }

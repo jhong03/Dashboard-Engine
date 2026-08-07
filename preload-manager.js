@@ -53,6 +53,27 @@ const bridge = {
   workshopGetEditable: (itemId) => ipcRenderer.invoke('aegis:workshop:getEditable', String(itemId)),
   workshopOpenItem: (url) => ipcRenderer.invoke('aegis:workshop:openItem', String(url)),
 
+  // Voice profiles on the Workshop (a separate item type). Publish/manage happens
+  // mainly in the tuning panel; the manager browses + consumes + manages them.
+  voiceBrowse: (opts) => ipcRenderer.invoke('aegis:voice:browse', opts || {}),
+  voiceMine: () => ipcRenderer.invoke('aegis:voice:mine'),
+  voiceGetEditable: (itemId) => ipcRenderer.invoke('aegis:voice:getEditable', String(itemId)),
+  voiceImport: (itemId) => ipcRenderer.invoke('aegis:voice:import', String(itemId)),
+  voicePublish: (req) => ipcRenderer.invoke('aegis:voice:publish', {
+    profileFile: String(req.profileFile),
+    title: String(req.title || ''),
+    description: String(req.description || ''),
+    tags: Array.isArray(req.tags) ? req.tags.map(String) : [],
+    visibility: String(req.visibility || 'unlisted'),
+  }),
+  // Download a base voice a subscribed voice depends on (reuses the voice bank).
+  bankDownload: (voiceId) => ipcRenderer.invoke('aegis:bank:download', String(voiceId)),
+  onBankProgress: (callback) => {
+    const handler = (_event, data) => callback(data);
+    ipcRenderer.on('aegis:bank:progress', handler);
+    return () => ipcRenderer.removeListener('aegis:bank:progress', handler);
+  },
+
   registryAdd: (url) => ipcRenderer.invoke('aegis:registry:add', String(url)),
   registryRemove: (url) => ipcRenderer.invoke('aegis:registry:remove', String(url)),
   registryBrowse: (url) => ipcRenderer.invoke('aegis:registry:browse', String(url)),
