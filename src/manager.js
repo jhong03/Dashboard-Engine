@@ -1326,7 +1326,7 @@ function renderAssistantPresets(presets) {
 // guide (PACKS.md) opens on demand.
 
 const CREATE_STEPS = [
-  ['Open a pack in the editor', 'Start from any pack — the JARVIS reference is the quality floor. Editing a built-in makes your own copy on save; the original is never touched.'],
+  ['Open a pack in the editor', 'Start from any pack — the built-in packs are the quality floor. Editing a built-in makes your own copy on save; the original is never touched.'],
   ['Arrange the canvas', 'Drag, resize, layer, and duplicate components on a percent-based canvas at your display’s real aspect ratio. What you see is exactly what the desktop renders.'],
   ['Style the skin', 'Set the palette, fonts, textures, ambience particles, and per-component overrides in the inspector.'],
   ['Add Customize knobs', 'Optionally expose a few user-adjustable properties (colours, particles, density) so subscribers can tweak your pack without editing it.'],

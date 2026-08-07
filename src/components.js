@@ -1129,7 +1129,7 @@ function createRenderer(services) {
   }
 
   // HUD clock — the "arc reactor": counter-rotating ring layers drawn from
-  // the original JARVIS geometry (400-unit viewBox, outer radius 186),
+  // the original HUD-clock geometry (400-unit viewBox, outer radius 186),
   // digital time + date in the centre. Ring alphas are fixed to the original
   // design so pack border settings don't wash the reactor out.
   function buildHudClock(component, el) {
@@ -1365,7 +1365,7 @@ function createRenderer(services) {
     live.timers.push(setInterval(tick, reduced ? 1000 : 250));
   }
 
-  // Per-core CPU load bars (the JARVIS "core load" strip).
+  // Per-core CPU load bars (the "core load" strip).
   function buildCores(component, el) {
     const label = document.createElement('span');
     label.className = 'comp-label';

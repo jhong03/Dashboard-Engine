@@ -15,7 +15,7 @@
 let localReminderEditAt = 0;
 function markLocalReminderEdit() { localReminderEditAt = Date.now(); }
 
-// JARVIS-style spoken health alerts play through their own AudioContext (short
+// Spoken health alerts play through their own AudioContext (short
 // clips, independent of the assistant panel and music). Main does the real
 // gating + rate-limiting; this local guard just avoids redundant IPC on a burst.
 let alertAudioCtx = null;
@@ -68,7 +68,7 @@ const renderer = AegisComponents.createRenderer({
     control: (action) => aegis.mediaControl(action),
     onChange: (cb) => aegis.onMediaChanged(cb),
   },
-  // JARVIS-style spoken health alerts. Present ONLY on the desktop, so editor /
+  // Spoken health alerts. Present ONLY on the desktop, so editor /
   // manager previews never speak. Main gates on the opt-in setting + rate-limits;
   // here we just play the returned PCM (with a light local throttle so a burst of
   // component transitions doesn't spam the IPC).
