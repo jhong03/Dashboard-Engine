@@ -13,37 +13,40 @@ function signed(v, digits) {
   return (v > 0 ? '+' : '') + v.toFixed(digits);
 }
 
+// Each control shows a PLAIN-language hint ("what you'll hear") so a user can
+// picture the change; the original engineer term rides along as `tech` and shows
+// on hover (row title) for anyone who wants it.
 const GROUPS = [
   {
     container: 'group-prosody',
     params: [
-      { path: 'prosody.pitchShift', label: 'Pitch shift', hint: 'semitones', step: 0.5, fmt: (v) => `${signed(v, 1)} st` },
-      { path: 'prosody.rate', label: 'Rate', hint: 'words / min', step: 5, fmt: (v) => `${v.toFixed(0)} wpm` },
-      { path: 'prosody.expressiveness', label: 'Expressiveness', hint: 'pitch variance', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'prosody.steadiness', label: 'Steadiness', hint: 'timing variance', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'prosody.pauseSentence', label: 'Sentence pause', hint: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms` },
-      { path: 'prosody.pauseComma', label: 'Comma pause', hint: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms`, reserved: 'Not wired' },
+      { path: 'prosody.pitchShift', label: 'Pitch', hint: 'higher or lower voice', tech: 'pitch shift · semitones', step: 0.5, fmt: (v) => `${signed(v, 1)} st` },
+      { path: 'prosody.rate', label: 'Speed', hint: 'how fast it talks', tech: 'rate · words per minute', step: 5, fmt: (v) => `${v.toFixed(0)} wpm` },
+      { path: 'prosody.expressiveness', label: 'Expressiveness', hint: 'lively vs flat and monotone', tech: 'pitch variance', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'prosody.steadiness', label: 'Steadiness', hint: 'even vs natural, human timing', tech: 'timing variance', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'prosody.pauseSentence', label: 'Sentence pause', hint: 'gap between sentences', tech: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms` },
+      { path: 'prosody.pauseComma', label: 'Comma pause', hint: 'gap at commas', tech: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms`, reserved: 'Not wired' },
     ],
   },
   {
     container: 'group-timbre',
     params: [
-      { path: 'timbre.warmth', label: 'Warmth', hint: 'low shelf · 180 Hz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.brightness', label: 'Brightness', hint: 'high shelf · 5.5 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.presence', label: 'Presence', hint: 'bell · 2.8 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.sibilance', label: 'Sibilance', hint: 'cut · 7 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.breath', label: 'Breath', hint: 'noise mix', step: 0.05, fmt: (v) => v.toFixed(2), reserved: 'Reserved' },
+      { path: 'timbre.warmth', label: 'Warmth', hint: 'fuller, deeper low end', tech: 'low shelf · 180 Hz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.brightness', label: 'Brightness', hint: 'crisp, airy highs', tech: 'high shelf · 5.5 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.presence', label: 'Presence', hint: 'up-front vs distant', tech: 'bell · 2.8 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.sibilance', label: 'Harshness', hint: 'tame hissy “s” and “t” sounds', tech: 'de-ess · 7 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.breath', label: 'Breath', hint: 'breathy texture', tech: 'noise mix', step: 0.05, fmt: (v) => v.toFixed(2), reserved: 'Reserved' },
     ],
   },
   {
     container: 'group-character',
     params: [
-      { path: 'character.compression', label: 'Compression', hint: 'broadcast squash', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.radioFilter', label: 'Radio filter', hint: 'comms band', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.reverb.mix', label: 'Reverb mix', hint: 'room level', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.reverb.size', label: 'Reverb size', hint: 'room size', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.bitcrush', label: 'Bitcrush', hint: 'digital decimation', step: 0.05, fmt: (v) => v.toFixed(2) },
-      { path: 'character.chorus', label: 'Chorus', hint: 'detuned ensemble', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.compression', label: 'Compression', hint: 'steadier, punchier loudness', tech: 'broadcast squash', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.radioFilter', label: 'Radio filter', hint: 'tinny walkie-talkie sound', tech: 'comms band', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.reverb.mix', label: 'Reverb', hint: 'how much echo', tech: 'reverb mix · room level', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.reverb.size', label: 'Room size', hint: 'small booth to big hall', tech: 'reverb size', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.bitcrush', label: 'Lo-fi grit', hint: 'gritty, crunchy, digital', tech: 'bitcrush · digital decimation', step: 0.05, fmt: (v) => v.toFixed(2) },
+      { path: 'character.chorus', label: 'Chorus', hint: 'shimmery, doubled voice', tech: 'detuned ensemble', step: 0.05, fmt: (v) => v.toFixed(2) },
     ],
   },
 ];
@@ -95,6 +98,7 @@ function buildSliders() {
 
       const row = document.createElement('div');
       row.className = `param${meta.reserved ? ' disabled' : ''}`;
+      if (meta.tech) row.title = meta.tech; // the engineer term, on hover, for anyone who wants it
 
       const label = document.createElement('label');
       label.className = 'param-label';
