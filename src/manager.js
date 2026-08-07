@@ -2613,6 +2613,17 @@ async function renderSettingsCfg() {
   const hv = await aegis.healthVoiceGet();
   if (hv.ok) $('set-healthvoice').checked = hv.enabled;
 
+  // About & third-party licenses — populated once (the notices don't change).
+  const licBox = $('set-licenses');
+  if (licBox && !licBox.dataset.loaded) {
+    licBox.dataset.loaded = '1';
+    aegis.licensesGet().then((res) => {
+      if (!res || !res.ok) return;
+      if (res.version) $('set-about-version').textContent = `Dashboard Engine — version ${res.version}`;
+      licBox.textContent = res.text || '';
+    });
+  }
+
   // Weather location.
   const wloc = await aegis.weatherLocationGet();
   const wcur = $('set-weather-current');
@@ -2741,6 +2752,10 @@ function wireSettingsCfg() {
   $('set-logs').addEventListener('click', async () => {
     const out = await aegis.openLogs();
     if (!out.ok) $('set-status').textContent = out.error || 'Could not open the logs folder.';
+  });
+  $('set-licenses-open').addEventListener('click', async () => {
+    const out = await aegis.licensesOpen();
+    if (!out.ok) $('set-status').textContent = out.error || 'Could not open the notices file.';
   });
   const setWeather = async () => {
     const q = $('set-weather').value.trim();
@@ -3340,7 +3355,7 @@ async function init() {
   });
 
   const view = new URLSearchParams(location.search).get('view');
-  if (['browse', 'published', 'planner', 'launcher', 'assistant'].includes(view)) library.tab = view;
+  if (['browse', 'published', 'planner', 'launcher', 'assistant', 'create', 'settings'].includes(view)) library.tab = view;
   await refreshLibrary();
 
   // First launch ever: greet the user once. Only when they didn't ask for a

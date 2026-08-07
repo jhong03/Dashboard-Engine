@@ -107,6 +107,9 @@ const bridge = {
   weatherLocationSet: (query) => ipcRenderer.invoke('aegis:settings:weather:set', query === null ? null : { query: String(query) }),
   openLogs: () => ipcRenderer.invoke('aegis:logs:open'),
   openGuide: () => ipcRenderer.invoke('aegis:guide:open'),
+  // App version + bundled third-party license notices (Settings → About).
+  licensesGet: () => ipcRenderer.invoke('aegis:licenses:get'),
+  licensesOpen: () => ipcRenderer.invoke('aegis:licenses:open'),
 
   // Background music — the user's own local files, played on the desktop. Main
   // holds the real paths; here we only ever pass opaque track ids.

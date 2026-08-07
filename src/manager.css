@@ -397,6 +397,14 @@ body {
 .settings-cfg > .cfg-group-title:first-child { margin-top: 0; }
 .settings-cfg .cfg-field { max-width: 220px; }
 .set-help-row { display: flex; gap: 8px; flex-wrap: wrap; }
+/* Scrollable, read-only third-party license notices in Settings → About. */
+.set-licenses {
+  max-height: 220px; overflow: auto; margin: 8px 0;
+  padding: 10px 12px; background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: var(--radius); color: var(--text-dim);
+  font-family: Consolas, ui-monospace, monospace; font-size: 11.5px; line-height: 1.5;
+  white-space: pre-wrap; word-break: break-word;
+}
 .set-weather-row { display: flex; gap: 6px; }
 .set-weather-row input { flex: 1; min-width: 0; }
 .set-weather-row .btn { width: auto; flex: 0 0 auto; }
