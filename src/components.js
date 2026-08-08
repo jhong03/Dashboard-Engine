@@ -3034,6 +3034,21 @@ function createRenderer(services) {
   return { render, destroy: cleanup };
 }
 
-window.AegisComponents = { FONT_STACKS, rgba, applySkin, createRenderer, freezeAmbience, setWallpaperPlayback };
+// Neutral SAMPLE notifications for PREVIEW/DESIGN surfaces (editor stage, manager
+// detail preview, Workshop preview render) — never real toasts, so those windows
+// stay privacy-safe to share/screenshot. The live DESKTOP surface still shows the
+// user's real notifications. Times are recomputed each call so the panel always
+// looks fresh. All content is invented — no personal data.
+function demoNotifications() {
+  const ago = (mins) => new Date(Date.now() - mins * 60000).toISOString();
+  return [
+    { app: 'Calendar', title: 'Design review', body: 'Today at 3:00 PM', time: ago(6) },
+    { app: 'Messages', title: 'Alex', body: 'Sounds good — see you then!', time: ago(24) },
+    { app: 'System', title: 'Backup complete', body: 'All your files are up to date.', time: ago(95) },
+    { app: 'Mail', title: 'Weekly digest', body: 'Your summary is ready to read.', time: ago(180) },
+  ];
+}
+
+window.AegisComponents = { FONT_STACKS, rgba, applySkin, createRenderer, freezeAmbience, setWallpaperPlayback, demoNotifications };
 
 })();

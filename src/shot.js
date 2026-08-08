@@ -31,7 +31,9 @@ const services = {
   weather: async () => DEMO_WEATHER,
   reminders: async () => ({ ok: true, reminders: [], occurrences: [] }),
   launcher: { state: async () => ({ ok: true, pins: [], recent: [], running: [] }) },
-  notifications: async () => ({ ok: true, granted: true, notifications: [] }),
+  // Neutral sample toasts (shared) so the notifications panel looks alive in a
+  // preview/store render — never real data.
+  notifications: async () => ({ ok: true, granted: true, notifications: window.AegisComponents.demoNotifications() }),
 };
 
 // A video background layer needs its first frame decoded before the capture, or

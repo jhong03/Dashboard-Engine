@@ -551,9 +551,19 @@ function scheduleDevShots(dir) {
         // Occluded windows are compositor-throttled and capture empty —
         // wake them without stealing the user's focus.
         win.webContents.setBackgroundThrottling(false);
+        // DE_SHOT_SIZE=WxH: force a consistent capture size (e.g. 1920x1080 for
+        // marketing/store shots), letting the responsive UI reflow before capture.
+        const shotSize = envFlag('SHOT_SIZE');
+        let resized = false;
+        if (shotSize) {
+          const [w, h] = shotSize.split('x').map((n) => parseInt(n, 10));
+          // setBounds (not setContentSize) so the window fills the whole display,
+          // dodging the work-area/taskbar clamp that would truncate the capture.
+          if (w > 0 && h > 0) { try { win.setBounds({ x: 0, y: 0, width: w, height: h }); resized = true; } catch (e) { /* not resizable */ } }
+        }
         win.showInactive();
         win.moveTop();
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, resized ? 800 : 500));
         const image = await win.webContents.capturePage();
         fs.writeFileSync(path.join(dir, `${name}.png`), image.toPNG());
       } catch (err) {
@@ -571,11 +581,14 @@ function scheduleDevShots(dir) {
 function renderPackPreview(packId, sizeOpts) {
   const width = sizeOpts && sizeOpts.width ? sizeOpts.width : 1280;
   const height = sizeOpts && sizeOpts.height ? sizeOpts.height : 720;
+  const forcePng = !!(sizeOpts && sizeOpts.png); // store shots want crisp PNG
   return new Promise((resolve) => {
     const fs = require('fs');
     const os = require('os');
     let win = new BrowserWindow({
-      width, height, show: false, frame: false, skipTaskbar: true,
+      width, height, useContentSize: true, // width/height = the captured CONTENT area (exact)
+      enableLargerThanScreen: true,        // don't clamp to the display work area (taskbar)
+      show: false, frame: false, skipTaskbar: true,
       backgroundColor: '#04080F',
       webPreferences: {
         ...COMMON_WEB_PREFERENCES,
@@ -584,6 +597,12 @@ function renderPackPreview(packId, sizeOpts) {
         backgroundThrottling: false,
       },
     });
+    // Windows clamps a normal window to the display WORK AREA (screen minus the
+    // taskbar), which truncates a 1080-tall offscreen capture to ~1032. Forcing
+    // the bounds to cover the full display (taskbar included) restores the exact
+    // requested height for store/marketing shots. Best-effort — a clamp just
+    // yields a slightly shorter image, never a failure.
+    if (forcePng) { try { win.setBounds({ x: 0, y: 0, width, height }); } catch (e) { /* clamped */ } }
     let settled = false;
     const finish = (result) => {
       if (settled) return;
@@ -606,7 +625,7 @@ function renderPackPreview(packId, sizeOpts) {
         await new Promise((r) => setTimeout(r, 300));
         const image = await win.webContents.capturePage();
         const png = image.toPNG();
-        const useJpeg = png.length > 1024 * 1024;
+        const useJpeg = !forcePng && png.length > 1024 * 1024;
         const buffer = useJpeg ? image.toJPEG(85) : png;
         const file = path.join(os.tmpdir(), `de-preview-${Date.now()}.${useJpeg ? 'jpg' : 'png'}`);
         fs.writeFileSync(file, buffer);
@@ -1104,6 +1123,27 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         } catch (err) { console.warn(`[preview] ${err.message}`); }
         app.quit();
       });
+    }
+    // DE_STORESHOTS=<dir>: dev/marketing utility — render each pack in DE_PACKS
+    // (comma-separated; default jarvis,sakura,neon-cyberpunk) at DE_STORESIZE
+    // (WxH, default 1920x1080) with DEMO data only (no personal info), writing
+    // <dir>/<id>.png, then quit. Reuses the Workshop preview renderer.
+    if (envFlag('STORESHOTS')) {
+      const fs = require('fs');
+      const dir = envFlag('STORESHOTS');
+      const ids = (envFlag('PACKS') || 'jarvis,sakura,neon-cyberpunk').split(',').map((s) => s.trim()).filter(Boolean);
+      const [sw, sh] = (envFlag('STORESIZE') || '1920x1080').split('x').map((n) => parseInt(n, 10));
+      (async () => {
+        try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { /* best-effort */ }
+        for (const id of ids) {
+          try {
+            const file = await renderPackPreview(id, { width: sw || 1920, height: sh || 1080, png: true });
+            if (file) { fs.copyFileSync(file, path.join(dir, `${id}.png`)); try { fs.rmSync(file); } catch (e) { /* tmp */ } console.log(`[storeshot] ${id} -> ${id}.png`); }
+            else console.warn(`[storeshot] ${id}: render failed`);
+          } catch (err) { console.warn(`[storeshot] ${id}: ${err.message}`); }
+        }
+        app.quit();
+      })();
     }
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openFirstWindows();

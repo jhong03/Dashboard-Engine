@@ -129,7 +129,9 @@ const renderer = AegisComponents.createRenderer({
   reminders: (window) => aegis.remindersList(window),
   // Preview only — no launch() means tiles render inert on the stage.
   launcher: { state: (opts) => aegis.launcherState(opts) },
-  notifications: () => aegis.notifications(),
+  // Sample toasts, never the user's real notifications — the editor stage is a
+  // design surface people screenshot/stream, so it must not leak private data.
+  notifications: () => Promise.resolve({ ok: true, granted: true, notifications: AegisComponents.demoNotifications() }),
 });
 
 function setStatus(text, warn) {

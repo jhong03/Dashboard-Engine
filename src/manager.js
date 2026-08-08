@@ -68,7 +68,8 @@ function previewServices() {
     weather: (opts) => aegis.weather(opts),
     reminders: (window) => aegis.remindersList(window),
     launcher: { state: (opts) => aegis.launcherState(opts) }, // no launch() → tiles inert
-    notifications: () => aegis.notifications(),
+    // Sample toasts, never real notifications — the manager preview is shareable.
+    notifications: () => Promise.resolve({ ok: true, granted: true, notifications: AegisComponents.demoNotifications() }),
   };
 }
 
