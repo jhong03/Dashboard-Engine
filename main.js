@@ -20,6 +20,7 @@ const packs = require('./lib/packs');
 const music = require('./lib/music');
 const videostore = require('./lib/videostore');
 const settings = require('./lib/settings');
+const achievements = require('./lib/achievements');
 const logger = require('./lib/logger');
 const { registerIpcHandlers } = require('./lib/ipc');
 const { createAlertScheduler } = require('./lib/alerts');
@@ -335,6 +336,7 @@ function notifyActivePack(id) {
 
 function setActivePackFromTray(id) {
   settings.setActivePack(USER_DIR, id);
+  achievements.unlock('ACH_FIRST_LIGHT');
   notifyActivePack(id);
 }
 
