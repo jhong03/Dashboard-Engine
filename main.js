@@ -762,6 +762,80 @@ function buildVoiceCardHtml(profile, voice) {
   </body></html>`;
 }
 
+// Capture an ANIMATED clip of a pack's shot render (demo data) as a PNG frame
+// sequence for a store trailer — offscreen, no personal data. Drives a synthetic
+// cursor so parallax + cursor-ripple react, and bakes an on-brand caption. The
+// frames are encoded to MP4 externally with ffmpeg. Dev/marketing utility.
+function captureTrailerClip(packId, outDir, opts) {
+  const fs = require('fs');
+  const seconds = (opts && opts.seconds) || 6;
+  const fps = (opts && opts.fps) || 30;
+  // Capture a touch under 1080p so the per-frame JPEG encode is cheap; ffmpeg
+  // upscales the ~1.2x back to 1080 with negligible softening.
+  const W = (opts && opts.width) || 1600;
+  const H = (opts && opts.height) || 900;
+  return new Promise((resolve) => {
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e) { /* exists */ }
+    let win = new BrowserWindow({
+      width: W, height: H, useContentSize: true, enableLargerThanScreen: true,
+      show: false, frame: false, skipTaskbar: true, backgroundColor: '#04080F',
+      webPreferences: {
+        ...COMMON_WEB_PREFERENCES,
+        preload: path.join(__dirname, 'preload-dashboard.js'),
+        offscreen: true, backgroundThrottling: false,
+      },
+    });
+    try { win.setBounds({ x: 0, y: 0, width: W, height: H }); } catch (e) { /* clamp */ }
+    let settled = false;
+    let frame = 0;
+    const finish = (n) => {
+      if (settled) return;
+      settled = true;
+      if (win && !win.isDestroyed()) win.destroy();
+      win = null;
+      resolve(n);
+    };
+    const total = Math.max(1, Math.round(seconds * fps));
+    const guard = setTimeout(() => finish(frame), (total * 0.4 + 40) * 1000);
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(frame); });
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        const start = Date.now();
+        while (Date.now() - start < 12000) {
+          const ready = await win.webContents.executeJavaScript('window.__shotReady === true').catch(() => false);
+          if (ready) break;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+        // DETERMINISTIC capture: advance the virtual clock (capture-clock.js) a
+        // fixed 1/fps per frame and grab it — so the output is a perfect `fps`
+        // regardless of how slowly the off-screen compositor paints. Captions are
+        // NOT baked here; they're composited later in ffmpeg (banner lower-third).
+        const buffers = [];
+        for (let i = 0; i < total; i++) {
+          const vt = (i * 1000) / fps;
+          const t = i / total;
+          const px = Math.round(W / 2 + W * 0.41 * Math.sin(t * 6.283));
+          const py = Math.round(H / 2 + H * 0.36 * Math.sin(t * 12.566 + 1));
+          await win.webContents.executeJavaScript('window.__cap && window.__cap.step(' + vt + ',' + px + ',' + py + ')').catch(() => {});
+          await new Promise((r) => setTimeout(r, 16)); // let the compositor paint the stepped frame
+          const img = await win.webContents.capturePage();
+          buffers.push(img.toJPEG(90));
+        }
+        clearTimeout(guard);
+        for (let j = 0; j < buffers.length; j++) {
+          try { fs.writeFileSync(path.join(outDir, 'f' + String(j + 1).padStart(4, '0') + '.jpg'), buffers[j]); } catch (e) { /* skip */ }
+        }
+        frame = buffers.length;
+        finish(frame);
+      } catch (e) {
+        clearTimeout(guard);
+        finish(frame);
+      }
+    });
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), capture: '1' } });
+  });
+}
+
 // ── Library card thumbnails ──────────────────────────────────────────────────
 // A cached STATIC snapshot per pack (rendered offscreen with DEMO data — no
 // personal info) used as the library card image, so cards never live-render.
@@ -1141,6 +1215,23 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
             if (file) { fs.copyFileSync(file, path.join(dir, `${id}.png`)); try { fs.rmSync(file); } catch (e) { /* tmp */ } console.log(`[storeshot] ${id} -> ${id}.png`); }
             else console.warn(`[storeshot] ${id}: render failed`);
           } catch (err) { console.warn(`[storeshot] ${id}: ${err.message}`); }
+        }
+        app.quit();
+      })();
+    }
+    // DE_TRAILER=<dir>: capture animated PNG frame sequences (demo data) for a
+    // store trailer. DE_PACKS=a,b,c · DE_TRAILER_SECS=<n> · DE_CAPTIONS="a|b|c"
+    // (per-pack, baked on-brand). Frames land in <dir>/<id>/fNNNN.png; encode to
+    // MP4 externally with ffmpeg.
+    if (envFlag('TRAILER')) {
+      const dir = envFlag('TRAILER');
+      const ids = (envFlag('PACKS') || 'jarvis').split(',').map((s) => s.trim()).filter(Boolean);
+      const secs = Number(envFlag('TRAILER_SECS')) || 6;
+      const caps = (envFlag('CAPTIONS') || '').split('|');
+      (async () => {
+        for (let k = 0; k < ids.length; k++) {
+          const n = await captureTrailerClip(ids[k], path.join(dir, ids[k]), { seconds: secs, caption: (caps[k] || '').trim() });
+          console.log(`[trailer] ${ids[k]}: ${n} frames`);
         }
         app.quit();
       })();

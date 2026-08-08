@@ -16,6 +16,10 @@
   <main class="canvas-outer" aria-label="Pack preview">
     <div class="canvas" id="canvas"></div>
   </main>
+  <!-- capture-clock installs a deterministic virtual clock ONLY with ?capture=1
+       (the trailer recorder); it's a no-op for normal preview renders. Must load
+       first so the renderer's rAF + clock reads use it. -->
+  <script src="capture-clock.js"></script>
   <script src="gl-background.js"></script>
   <script src="components.js"></script>
   <script src="shot.js"></script>
