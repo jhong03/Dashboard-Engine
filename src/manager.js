@@ -1693,7 +1693,12 @@ function createSection(title) {
   return h;
 }
 
-function refTable(headers, rows) {
+// `codeCols` = column indices whose cells are literal config identifiers (option
+// keys, values) — rendered as <code> chips so they read as code, NOT as
+// untranslated prose. They stay in English in every language because a creator
+// types them verbatim into pack.json. Other columns are plain (translatable) text.
+function refTable(headers, rows, codeCols = [0]) {
+  const codeSet = new Set(codeCols);
   const table = document.createElement('table');
   table.className = 'create-table';
   const thead = document.createElement('thead');
@@ -1710,8 +1715,16 @@ function refTable(headers, rows) {
     const tr = document.createElement('tr');
     row.forEach((cell, i) => {
       const td = document.createElement('td');
-      if (i === 0) { const code = document.createElement('code'); code.textContent = cell; td.appendChild(code); }
-      else td.textContent = cell;
+      if (codeSet.has(i) && cell && cell !== '—') {
+        // A comma-separated list of identifiers → one <code> chip each.
+        const parts = String(cell).split(', ');
+        parts.forEach((part, idx) => {
+          const code = document.createElement('code');
+          code.textContent = part;
+          td.appendChild(code);
+          if (idx < parts.length - 1) td.appendChild(document.createTextNode(', '));
+        });
+      } else td.textContent = cell;
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1766,7 +1779,8 @@ function renderCreate() {
   // columns stay literal; the prose "What it shows"/"Effect" cells translate.
   root.appendChild(createSection(t('create.section.components')));
   const compRows = CREATE_COMPONENTS.map(([type, , opts]) => [type, t(`create.comp.${type}.shows`), opts]);
-  root.appendChild(refTable([t('create.table.type'), t('create.table.shows'), t('create.table.options')], compRows));
+  // Cols 0 (type id) and 2 (option keys) are literal identifiers → code chips.
+  root.appendChild(refTable([t('create.table.type'), t('create.table.shows'), t('create.table.options')], compRows, [0, 2]));
 
   root.appendChild(createSection(t('create.section.skin')));
   const skinList = document.createElement('div');
@@ -1792,7 +1806,8 @@ function renderCreate() {
   propsNote.textContent = t('create.propsNote');
   root.appendChild(propsNote);
   const propRows = CREATE_PROPS.map(([ctrl, binds], i) => [ctrl, binds, t(`create.prop.${i}.effect`)]);
-  root.appendChild(refTable([t('create.table.control'), t('create.table.binds'), t('create.table.effect')], propRows));
+  // Cols 0 (control type) and 1 (bind path) are literal identifiers → code chips.
+  root.appendChild(refTable([t('create.table.control'), t('create.table.binds'), t('create.table.effect')], propRows, [0, 1]));
 }
 
 // ── From-scratch pack builder (the guided "sandwich order") ──────────────────
