@@ -85,6 +85,7 @@
   "manager.assistant.keyRemoved": "Saved key removed.",
   "manager.assistant.keyRemoveError": "Could not remove the key.",
   "manager.assistant.defaultVoice": "Default voice",
+  "manager.assistant.notAvailable": "not available",
   "manager.assistant.groupPresets": "Presets",
   "manager.assistant.groupYourProfiles": "Your profiles",
   "manager.assistant.contacting": "Contacting the model…",

@@ -83,6 +83,7 @@
   "manager.assistant.keyRemoved": "Clave guardada eliminada.",
   "manager.assistant.keyRemoveError": "No se pudo quitar la clave.",
   "manager.assistant.defaultVoice": "Voz predeterminada",
+  "manager.assistant.notAvailable": "no disponible",
   "manager.assistant.groupPresets": "Ejemplos",
   "manager.assistant.groupYourProfiles": "Tus perfiles",
   "manager.assistant.contacting": "Contactando con el modelo…",

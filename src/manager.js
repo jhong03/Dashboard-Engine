@@ -1453,12 +1453,21 @@ async function renderAssistantCfg() {
   // Factory presets (a curated voice per language + character presets) come
   // first, then the user's own saved profiles. Presets carry a "preset:" prefix
   // so main resolves them from presets/ and they never collide with a user file.
-  const [presetList, voices] = await Promise.all([aegis.voicePresetsList(), aegis.voiceProfilesList()]);
+  // bankList tells us which voice packs are installed: a preset/profile whose
+  // voice isn't downloaded is shown "not available" and disabled — picking it
+  // would only fall back or stay silent (see the assistant speak path).
+  const [presetList, voices, bankRes] = await Promise.all([
+    aegis.voicePresetsList(), aegis.voiceProfilesList(), aegis.bankList(),
+  ]);
+  const installed = new Set((bankRes && bankRes.ok ? bankRes.voices : []).filter((v) => v.installed).map((v) => v.id));
+  const notAvail = t('manager.assistant.notAvailable');
   const addOption = (group, value, voiceId, label) => {
     const opt = document.createElement('option');
     opt.value = value;
     opt.dataset.voice = voiceId; // lets us pre-warm the right HD voice on pick
-    opt.textContent = label;
+    const avail = !voiceId || installed.has(voiceId);
+    opt.textContent = avail ? label : `${label} — ${notAvail}`;
+    opt.disabled = !avail;
     group.appendChild(opt);
   };
   if (presetList && presetList.ok && presetList.presets.length) {
@@ -1474,6 +1483,27 @@ async function renderAssistantCfg() {
     select.appendChild(g);
   }
   select.value = c.voiceProfile || '';
+
+  // Gate the persona presets the same way: a language persona auto-selects that
+  // language's voice, so if its voice isn't installed, disable it + mark it "not
+  // available". English personas map to bundled voices, so they stay available.
+  const personaSel = $('ai-persona-preset');
+  for (const opt of personaSel.options) {
+    const want = PERSONA_VOICE[opt.value];
+    if (!want) continue; // "Start from a preset…" / unknown
+    const avail = installed.has(want);
+    opt.disabled = !avail;
+    if (!avail) {
+      // The non-English persona labels are static (no data-i18n), so capturing
+      // the base once + rebuilding is safe across UI-language switches.
+      if (!opt.dataset.baseLabel) opt.dataset.baseLabel = opt.textContent;
+      opt.textContent = `${opt.dataset.baseLabel} — ${notAvail}`;
+    } else if (opt.dataset.baseLabel) {
+      opt.textContent = opt.dataset.baseLabel; // voice was downloaded — restore
+      delete opt.dataset.baseLabel;
+    }
+  }
+
   prewarmSelectedVoice(); // HD engine loads in the background while you read/type
   assistantCfg.loaded = true;
 }
