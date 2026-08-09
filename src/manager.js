@@ -3152,8 +3152,9 @@ function openPublishDialog(item, opts = {}) {
   // click) so the user can't accidentally close mid-upload thinking it stalled —
   // the progress is shown inside the dialog instead.
   let publishing = false;
+  let cooldownTimer = null; // live "try again in M:SS" countdown after a rate-limit
   const escHandler = (e) => { if (e.key === 'Escape') tryClose(); };
-  const close = () => { scrim.remove(); document.removeEventListener('keydown', escHandler); };
+  const close = () => { clearInterval(cooldownTimer); scrim.remove(); document.removeEventListener('keydown', escHandler); };
   const tryClose = () => { if (!publishing) close(); };
 
   const heading = document.createElement('h3');
@@ -3270,6 +3271,8 @@ function openPublishDialog(item, opts = {}) {
     publishing = false;
     cancel.disabled = false;
     if (!out.ok) {
+      // Steam upload throttle: show a live countdown instead of a dead-end error.
+      if (out.rateLimited) { startCooldown(out.retryAfterMs || 10 * 60 * 1000); return; }
       submit.disabled = false;
       dstatus.style.color = 'var(--warn, #e0a446)';
       dstatus.textContent = out.error || 'Publish failed.';
@@ -3286,6 +3289,34 @@ function openPublishDialog(item, opts = {}) {
     cancel.textContent = 'Close';
     libStatus(parts.join(' — '));
   }, 'primary');
+
+  // Live "try again in M:SS" countdown after Steam rate-limits an upload (its API
+  // gives no exact retry-after, so this is a conservative local pacing timer that
+  // also stops rapid re-hammering). Publish is disabled until it elapses.
+  const fmtCooldown = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+  const startCooldown = (ms) => {
+    clearInterval(cooldownTimer);
+    const until = Date.now() + Math.max(0, ms || 0);
+    const tick = () => {
+      const rem = until - Date.now();
+      if (rem <= 0) {
+        clearInterval(cooldownTimer); cooldownTimer = null;
+        submit.disabled = false; submit.style.opacity = ''; submit.style.cursor = '';
+        dstatus.textContent = ''; dstatus.style.color = '';
+        return;
+      }
+      submit.disabled = true;
+      submit.style.opacity = '0.5';
+      submit.style.cursor = 'default';
+      dstatus.style.color = 'var(--warn, #e0a446)';
+      dstatus.textContent = `Too many publishes in a short time — you can try again in ${fmtCooldown(rem)}.`;
+    };
+    tick();
+    cooldownTimer = setInterval(tick, 1000);
+  };
+  // If a recent publish was throttled (even across restarts), resume the countdown.
+  aegis.workshopRetryAfter().then((r) => { if (r && r.ok && r.retryAfterMs > 0) startCooldown(r.retryAfterMs); }).catch(() => {});
+
   actions.append(cancel, spacer, submit);
   card.append(dstatus, actions);
 
