@@ -86,7 +86,7 @@
           <div id="pin-list"></div>
         </div>
         <div class="assistant-cfg hidden" id="assistant-cfg">
-          <p class="hint">The assistant connects to any OpenAI-compatible endpoint you choose — pick one below.
+          <p class="hint" data-i18n-html="manager.assistant.introHint">The assistant connects to any OpenAI-compatible endpoint you choose — pick one below.
             <b>Free options exist:</b> a local model (Ollama / LM Studio — no key, fully offline), or a free-tier key
             from OpenRouter or Groq. Or use your own OpenAI key. A key you enter is optional (local servers need none),
             stored encrypted on this PC, and never included in a pack or export.</p>
@@ -94,21 +94,21 @@
           <!-- BYO OpenAI-compatible: endpoint + optional key + model id -->
           <label class="cfg-field" id="ai-baseurl-field"><span data-i18n="manager.assistant.baseUrl">Base URL</span>
             <input id="ai-baseurl" type="text" placeholder="https://openrouter.ai/api/v1" spellcheck="false">
-            <span class="hint cfg-hint">The address of an OpenAI-compatible API — it usually ends in <code>/v1</code>. Common ones:
+            <span class="hint cfg-hint" data-i18n-html="manager.assistant.baseUrlHint">The address of an OpenAI-compatible API — it usually ends in <code>/v1</code>. Common ones:
               OpenRouter <code>https://openrouter.ai/api/v1</code> · Groq <code>https://api.groq.com/openai/v1</code> ·
               local Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>.
               Leave blank to use OpenAI (<code>api.openai.com</code>).</span>
           </label>
           <label class="cfg-field" id="ai-key-field"><span data-i18n="manager.assistant.apiKey">API key</span>
-            <input id="ai-key" type="password" placeholder="Paste your key — or leave blank for a local server" spellcheck="false" autocomplete="off">
-            <span class="hint cfg-hint">Needed for hosted providers: make a free account at OpenRouter or Groq (or your OpenAI account)
+            <input id="ai-key" type="password" placeholder="Paste your key — or leave blank for a local server" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder:manager.assistant.keyPlaceholder">
+            <span class="hint cfg-hint" data-i18n-html="manager.assistant.apiKeyHint">Needed for hosted providers: make a free account at OpenRouter or Groq (or your OpenAI account)
               and paste the key it gives you (usually starts with <code>sk-</code>). <b>Not</b> needed for a local Ollama/LM Studio —
               leave it blank. Your key is stored encrypted on this PC and never goes into a pack or export.</span>
             <span class="hint hint-key" id="ai-key-state"></span>
           </label>
           <label class="cfg-field" id="ai-model-field"><span data-i18n="manager.assistant.modelId">Model id</span>
             <input id="ai-model" type="text" placeholder="e.g. google/gemini-2.0-flash-exp:free" spellcheck="false">
-            <span class="hint cfg-hint">The exact model name your provider expects — copy it from their models page. Examples:
+            <span class="hint cfg-hint" data-i18n-html="manager.assistant.modelIdHint">The exact model name your provider expects — copy it from their models page. Examples:
               OpenRouter <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-chat</code> ·
               Groq <code>llama-3.3-70b-versatile</code> · Ollama/LM Studio the local name like <code>llama3.1</code> or <code>qwen2.5</code> ·
               OpenAI <code>gpt-4o-mini</code>.</span>
@@ -117,18 +117,18 @@
           <label class="cfg-field"><span data-i18n="manager.assistant.voiceForReplies">Voice for spoken replies</span>
             <select id="ai-voice"></select>
           </label>
-          <p class="hint">Pick the voice that matches your persona's <strong>language</strong> — a Chinese persona spoken by an English voice comes out garbled. Presets for each language are listed here, and picking a language persona above auto-selects a matching one. To switch between a female and a male voice, pick that language's preset — <strong>male voices</strong> are available for English, Spanish and French (the “· Male” presets); Chinese, Japanese and Korean are female-only for now. Your own <strong>Voice tuning</strong> profiles appear here too. “Default voice” is English and does <em>not</em> follow your tuning.</p>
+          <p class="hint" data-i18n-html="manager.assistant.voiceHint">Pick the voice that matches your persona's <strong>language</strong> — a Chinese persona spoken by an English voice comes out garbled. Presets for each language are listed here, and picking a language persona above auto-selects a matching one. To switch between a female and a male voice, pick that language's preset — <strong>male voices</strong> are available for English, Spanish and French (the “· Male” presets); Chinese, Japanese and Korean are female-only for now. Your own <strong>Voice tuning</strong> profiles appear here too. “Default voice” is English and does <em>not</em> follow your tuning.</p>
           <label class="cfg-check"><input id="ai-speak" type="checkbox"><span data-i18n="manager.assistant.speakAloud">Speak replies aloud (in the voice picked above)</span></label>
 
           <label class="cfg-field"><span data-i18n="manager.assistant.persona">Persona — how your assistant behaves</span>
             <select id="ai-persona-preset">
               <option value="" data-i18n="manager.assistant.startFromPreset">Start from a preset…</option>
               <optgroup label="English" data-i18n-attr="label:manager.assistant.group.english">
-                <option value="jarvis">JARVIS — formal butler (default)</option>
-                <option value="nova">Nova — warm companion</option>
-                <option value="sage">Sage — calm mentor</option>
-                <option value="ace">Ace — hype coach</option>
-                <option value="pip">Pip — terse minimalist</option>
+                <option value="jarvis" data-i18n="manager.assistant.persona.jarvis">JARVIS — formal butler (default)</option>
+                <option value="nova" data-i18n="manager.assistant.persona.nova">Nova — warm companion</option>
+                <option value="sage" data-i18n="manager.assistant.persona.sage">Sage — calm mentor</option>
+                <option value="ace" data-i18n="manager.assistant.persona.ace">Ace — hype coach</option>
+                <option value="pip" data-i18n="manager.assistant.persona.pip">Pip — terse minimalist</option>
               </optgroup>
               <optgroup label="Other languages (reply + speak in that language)" data-i18n-attr="label:manager.assistant.group.other">
                 <option value="es_amigo">Español — asistente cercano</option>
@@ -143,7 +143,7 @@
           <label class="cfg-field"><span data-i18n="manager.assistant.systemPrompt">System prompt</span>
             <textarea id="ai-persona" rows="4"></textarea>
           </label>
-          <p class="hint">Pick a preset above to fill this in, then tweak it — or write your own and save it below. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name). <strong>Another language?</strong> Choose a language preset (or write your persona in any language and tell it to reply in that language), then pick a matching voice above — the bank now includes German, Spanish, French, Portuguese, Vietnamese, Turkish, Ukrainian and Polish.</p>
+          <p class="hint" data-i18n-html="manager.assistant.personaHint">Pick a preset above to fill this in, then tweak it — or write your own and save it below. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name). <strong>Another language?</strong> Choose a language preset (or write your persona in any language and tell it to reply in that language), then pick a matching voice above — the bank includes English, Spanish, French, Chinese, Japanese and Korean.</p>
           <div class="ai-preset-actions">
             <button class="btn tiny" id="ai-preset-save" type="button" data-i18n="manager.assistant.savePreset">Save current as a preset…</button>
           </div>

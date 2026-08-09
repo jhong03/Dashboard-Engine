@@ -13,6 +13,10 @@ const $ = (id) => document.getElementById(id);
 // is fail-soft so a missing runtime just yields the key's English fallback.
 const t = (key, params) => (window.t ? window.t(key, params) : key);
 
+// The active UI language for Intl date formatting (month names, weekdays), so
+// the calendar matches the chosen interface language. undefined = OS locale.
+const uiLang = () => (window.I18n && window.I18n.lang) || undefined;
+
 const library = {
   tab: 'installed',
   search: '',
@@ -370,17 +374,17 @@ function renderGallery() {
   if (library.tab === 'installed') {
     for (const origin of ['installed', 'builtin']) {
       const items = library.localPacks.filter((p) => p.origin === origin && matchesSearch(p.name + p.id + (p.author || '')));
-      gallery.appendChild(sectionLabel(origin === 'installed' ? 'Installed' : 'Built-in'));
+      gallery.appendChild(sectionLabel(origin === 'installed' ? t('manager.installed.sectionInstalled') : t('manager.installed.sectionBuiltin')));
       if (items.length === 0 && origin === 'installed') {
         const empty = document.createElement('p');
         empty.className = 'hint';
-        empty.textContent = 'Nothing installed yet. Browse a registry or install a pack from file.';
+        empty.textContent = t('manager.installed.empty');
         gallery.appendChild(empty);
       }
       for (const item of items) {
         gallery.appendChild(makeCard({
           name: item.name,
-          badge: item.id === library.activeId ? 'On desktop' : (origin === 'builtin' ? 'Built-in' : null),
+          badge: item.id === library.activeId ? t('manager.installed.onDesktop') : (origin === 'builtin' ? t('manager.installed.builtin') : null),
           badgeClass: item.id === library.activeId ? 'badge-active' : null,
           selected: isSelected('local', item.id),
           buildThumb: (thumb) => imageThumbInto(thumb, item.id, item.pack),
@@ -406,13 +410,13 @@ function renderGallery() {
   if (library.registries.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'hint';
-    empty.textContent = 'No registries yet. Anyone can host one — it’s a static index.json on any https server (see PACKS.md).';
+    empty.textContent = t('manager.browse.noRegistries');
     gallery.appendChild(empty);
   }
   for (const url of library.registries) {
     const index = library.indexes.get(url);
-    const refresh = libButton('Refresh', () => browseRegistry(url), 'tiny');
-    const remove = libButton('Remove', async () => {
+    const refresh = libButton(t('manager.refresh'), () => browseRegistry(url), 'tiny');
+    const remove = libButton(t('common.remove'), async () => {
       await aegis.registryRemove(url);
       await refreshLibrary();
     }, 'tiny danger');
@@ -430,7 +434,7 @@ function renderGallery() {
       const update = index.updates.find((u) => u.id === entry.id);
       gallery.appendChild(makeCard({
         name: entry.name,
-        badge: update ? 'Update' : entry.installed ? 'Installed' : null,
+        badge: update ? t('manager.browse.badgeUpdate') : entry.installed ? t('manager.browse.badgeInstalled') : null,
         badgeClass: update ? 'badge-active' : null,
         selected: isSelected('remote', `${url}|${entry.id}`),
         buildThumb: (thumb) => {
@@ -497,17 +501,17 @@ function renderPublishedDashboards(gallery) {
   const controls = document.createElement('div');
   controls.className = 'ws-controls';
   controls.append(
-    libButton('Refresh', () => { reloadMine(); reloadVoiceMine(); }, 'tiny'),
-    libButton('Open Workshop', () => aegis.workshopOpen(), 'tiny'),
+    libButton(t('manager.refresh'), () => { reloadMine(); reloadVoiceMine(); }, 'tiny'),
+    libButton(t('manager.published.openWorkshop'), () => aegis.workshopOpen(), 'tiny'),
   );
-  gallery.appendChild(sectionLabel(`Your published dashboards${mine.testApp ? ' — test app (Spacewar)' : ''}`, [controls]));
+  gallery.appendChild(sectionLabel(`${t('manager.published.yourDashboards')}${mine.testApp ? t('manager.published.testApp') : ''}`, [controls]));
 
   if (!mine.loaded && !mine.loading) loadMine();
-  if (mine.loading) { gallery.appendChild(hintP('Loading your published dashboards…')); return; }
-  if (!mine.available) { gallery.appendChild(hintP(mine.error || 'Start Steam and sign in to see the dashboards you’ve published.')); return; }
+  if (mine.loading) { gallery.appendChild(hintP(t('manager.published.loadingDashboards'))); return; }
+  if (!mine.available) { gallery.appendChild(hintP(mine.error || t('manager.published.signInDashboards'))); return; }
   if (mine.error) { gallery.appendChild(hintP(mine.error)); return; }
   if (mine.items.length === 0) {
-    gallery.appendChild(hintP('You haven’t published any dashboards yet. Build one from scratch (Create → Start from scratch), then use “Publish to Workshop…” from its detail panel. Anything you publish shows up here — on any computer you sign into with this Steam account.'));
+    gallery.appendChild(hintP(t('manager.published.emptyDashboards')));
     return;
   }
   const grid = document.createElement('div');
@@ -550,30 +554,30 @@ function publishedCard(item) {
   const localPack = item.localPackId ? library.localPacks.find((p) => p.id === item.localPackId) : null;
   if (localPack) {
     actions.append(
-      libButton('Edit', () => aegis.openEditor(localPack.id), 'tiny'),
-      libButton('Update', async () => {
+      libButton(t('manager.published.edit'), () => aegis.openEditor(localPack.id), 'tiny'),
+      libButton(t('manager.published.update'), async () => {
         const st = await aegis.workshopStatus();
-        if (!st.available) return libStatus(st.reason || 'Steam Workshop isn’t available.', true);
+        if (!st.available) return libStatus(st.reason || t('manager.detail.workshopUnavailable'), true);
         openPublishDialog(localPack);
       }, 'tiny primary'),
-      libButton('View', () => aegis.workshopOpenItem(item.url), 'tiny'),
+      libButton(t('manager.published.view'), () => aegis.workshopOpenItem(item.url), 'tiny'),
     );
   } else {
-    status.textContent = 'No editable copy on this computer yet.';
-    const getBtn = libButton('Get editable copy', async () => {
-      getBtn.disabled = true; getBtn.textContent = 'Downloading…';
-      status.textContent = 'Downloading your dashboard from Steam…';
+    status.textContent = t('manager.published.noEditableCopy');
+    const getBtn = libButton(t('manager.published.getEditable'), async () => {
+      getBtn.disabled = true; getBtn.textContent = t('manager.published.downloading');
+      status.textContent = t('manager.published.downloadingFromSteam');
       const out = await aegis.workshopGetEditable(item.itemId);
       if (out.ok) {
-        status.textContent = 'Downloaded — opening it in the editor.';
+        status.textContent = t('manager.published.downloadedOpening');
         await refreshLibrary();
         reloadMine();
       } else {
-        status.textContent = out.error || 'Could not get an editable copy.';
-        getBtn.disabled = false; getBtn.textContent = 'Get editable copy';
+        status.textContent = out.error || t('manager.published.couldNotGet');
+        getBtn.disabled = false; getBtn.textContent = t('manager.published.getEditable');
       }
     }, 'tiny primary');
-    actions.append(getBtn, libButton('View', () => aegis.workshopOpenItem(item.url), 'tiny'));
+    actions.append(getBtn, libButton(t('manager.published.view'), () => aegis.workshopOpenItem(item.url), 'tiny'));
   }
 
   body.append(title, meta, actions, status);
@@ -1064,7 +1068,7 @@ function plannerDayTitle(iso) {
   if (iso === todayIso) return 'Today';
   if (iso === shiftIso(todayIso, 1)) return 'Tomorrow';
   const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  return new Date(y, m - 1, d).toLocaleDateString(uiLang(), { weekday: 'long', day: 'numeric', month: 'long' });
 }
 
 function currentMonth() {
@@ -1101,7 +1105,7 @@ async function renderPlanner() {
   const occurrences = res.occurrences || [];
 
   $('cal-title').textContent = new Date(year, month1 - 1, 1)
-    .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    .toLocaleDateString(uiLang(), { month: 'long', year: 'numeric' });
   renderMonthGrid(occurrences, todayIso);
   renderUpcoming(occurrences, todayIso);
 }
@@ -1112,10 +1116,11 @@ function renderMonthGrid(occurrences, todayIso) {
   const { month1 } = currentMonth();
   const { start, end } = gridRange();
 
-  for (const name of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) {
+  // Localized short weekday names, Monday-first (2024-01-01 was a Monday).
+  for (let i = 0; i < 7; i++) {
     const head = document.createElement('div');
     head.className = 'cal-m-head';
-    head.textContent = name;
+    head.textContent = new Date(2024, 0, 1 + i).toLocaleDateString(uiLang(), { weekday: 'short' });
     grid.appendChild(head);
   }
 
@@ -1132,7 +1137,7 @@ function renderMonthGrid(occurrences, todayIso) {
     if (d.getMonth() + 1 !== month1) cell.classList.add('outside');
     cell.tabIndex = 0;
     cell.setAttribute('role', 'button');
-    cell.setAttribute('aria-label', `Add event on ${iso}`);
+    cell.setAttribute('aria-label', t('manager.planner.addEventOn', { date: iso }));
 
     const num = document.createElement('span');
     num.className = `cal-m-num${iso === todayIso ? ' today' : ''}`;
@@ -1146,7 +1151,7 @@ function renderMonthGrid(occurrences, todayIso) {
     if (dayEvents.length > MAX_CHIPS_PER_DAY) {
       const more = document.createElement('span');
       more.className = 'cal-m-more';
-      more.textContent = `+${dayEvents.length - MAX_CHIPS_PER_DAY} more`;
+      more.textContent = t('manager.planner.moreCount', { n: dayEvents.length - MAX_CHIPS_PER_DAY });
       cell.appendChild(more);
     }
 
@@ -1161,7 +1166,7 @@ function eventChip(occurrence) {
   const chip = document.createElement('button');
   chip.type = 'button';
   chip.className = `ev-chip${occurrence.done ? ' done' : ''}`;
-  chip.title = `${occurrence.time ? `${occurrence.time} · ` : ''}${occurrence.text}${occurrence.repeat !== 'none' ? ` (repeats ${occurrence.repeat})` : ''}`;
+  chip.title = `${occurrence.time ? `${occurrence.time} · ` : ''}${occurrence.text}${occurrence.repeat !== 'none' ? ` ${t('manager.planner.repeatsSuffix', { repeat: t('manager.event.repeat.' + occurrence.repeat) })}` : ''}`;
   const label = document.createElement('span');
   label.className = 'ev-chip-text';
   label.textContent = `${occurrence.time ? `${occurrence.time} ` : ''}${occurrence.repeat !== 'none' ? '↻ ' : ''}${occurrence.text}`;
@@ -1182,7 +1187,7 @@ function renderUpcoming(occurrences, todayIso) {
   if (upcoming.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'hint';
-    empty.textContent = 'Nothing planned. Click a day on the calendar to add an event — timed events raise a desktop notification.';
+    empty.textContent = t('manager.planner.nothingPlanned');
     list.appendChild(empty);
     return;
   }
@@ -1379,9 +1384,9 @@ function autoSelectVoiceForPersona(personaKey) {
 // Turn an assistant:speak failure code into a plain, actionable reason so the
 // Test button never silently produces no sound.
 function speakHint(err) {
-  if (err === 'busy') return 'the voice engine is busy, try again in a moment';
-  if (err === 'voice-unavailable') return 'download this voice first, or wait for the HD engine to finish installing';
-  return err || 'the voice engine did not respond';
+  if (err === 'busy') return t('manager.assistant.hintBusy');
+  if (err === 'voice-unavailable') return t('manager.assistant.hintUnavailable');
+  return err || t('manager.assistant.hintNoResponse');
 }
 
 const assistantCfg = { loaded: false };
@@ -1397,8 +1402,8 @@ async function renderAssistantCfg() {
   $('ai-speak').checked = c.speak !== false;
   $('ai-key').value = '';
   $('ai-key-state').textContent = c.hasKey
-    ? 'A key is saved (encrypted). Leave blank to keep it, or type a new one to replace it.'
-    : 'No key saved — needed for hosted providers; leave blank for a local model.';
+    ? t('manager.assistant.keySaved')
+    : t('manager.assistant.keyNotSaved');
   // A blank password field can't mean "remove" unambiguously, so removal is an
   // explicit action (only shown when there's a key to remove).
   const keyField = $('ai-key-field');
@@ -1408,10 +1413,10 @@ async function renderAssistantCfg() {
     const rm = document.createElement('button');
     rm.type = 'button';
     rm.className = 'btn tiny ai-remove-key';
-    rm.textContent = 'Remove saved key';
+    rm.textContent = t('manager.assistant.removeKey');
     rm.addEventListener('click', async () => {
       const out = await aegis.assistantConfigSet({ apiKey: '' });
-      $('ai-status').textContent = out.ok ? 'Saved key removed.' : (out.error || 'Could not remove the key.');
+      $('ai-status').textContent = out.ok ? t('manager.assistant.keyRemoved') : (out.error || t('manager.assistant.keyRemoveError'));
       if (out.ok) renderAssistantCfg();
     });
     keyField.appendChild(rm);
@@ -1422,7 +1427,7 @@ async function renderAssistantCfg() {
   select.textContent = '';
   const def = document.createElement('option');
   def.value = '';
-  def.textContent = 'Default voice';
+  def.textContent = t('manager.assistant.defaultVoice');
   select.appendChild(def);
   // Factory presets (a curated voice per language + character presets) come
   // first, then the user's own saved profiles. Presets carry a "preset:" prefix
@@ -1437,13 +1442,13 @@ async function renderAssistantCfg() {
   };
   if (presetList && presetList.ok && presetList.presets.length) {
     const g = document.createElement('optgroup');
-    g.label = 'Presets';
+    g.label = t('manager.assistant.groupPresets');
     for (const p of presetList.presets) addOption(g, `preset:${p.file}`, p.profile.base.voice, `${p.profile.name} (${p.profile.base.voice})`);
     select.appendChild(g);
   }
   if (voices.ok && voices.profiles.length) {
     const g = document.createElement('optgroup');
-    g.label = 'Your profiles';
+    g.label = t('manager.assistant.groupYourProfiles');
     for (const p of voices.profiles) addOption(g, p.file, p.voice, `${p.name} (${p.voice})`);
     select.appendChild(g);
   }
@@ -1498,14 +1503,14 @@ function wireAssistantCfg() {
   $('ai-save').addEventListener('click', async () => {
     const out = await saveAssistant();
     if (!out.ok) { $('ai-status').textContent = out.error; return; }
-    $('ai-status').textContent = 'Saved.';
+    $('ai-status').textContent = t('common.saved');
     renderAssistantCfg();
   });
 
   $('ai-test').addEventListener('click', async () => {
     const saved = await saveAssistant(); // test uses the current fields
     if (!saved.ok) { $('ai-status').textContent = saved.error; return; }
-    $('ai-status').textContent = 'Contacting the model…';
+    $('ai-status').textContent = t('manager.assistant.contacting');
     // Ask it to introduce itself so the reply reflects the persona you set.
     const out = await aegis.assistantAsk('Introduce yourself in one short sentence and confirm you are online.');
     if (out.ok) {
@@ -1513,7 +1518,7 @@ function wireAssistantCfg() {
       // Speak the reply so you hear the persona AND the voice — one test proves
       // the whole chain. Only if "speak replies aloud" is on.
       if ($('ai-speak').checked) {
-        $('ai-status').textContent = `✓ ${out.text}  ·  speaking…`;
+        $('ai-status').textContent = `✓ ${out.text}  ·  ${t('manager.assistant.speaking')}`;
         let spoken = await aegis.assistantSpeak(out.text);
         // A transient "busy" (a pre-warm or a prior clip still finishing) clears
         // fast — one quiet retry saves the user a manual re-test.
@@ -1526,7 +1531,7 @@ function wireAssistantCfg() {
           $('ai-status').textContent = `✓ ${out.text}`;
         } else {
           // Text came back but the voice didn't — say WHY instead of going silent.
-          $('ai-status').textContent = `✓ ${out.text}  ·  (no voice — ${speakHint(spoken && spoken.error)})`;
+          $('ai-status').textContent = `✓ ${out.text}  ·  (${t('manager.assistant.noVoice', { reason: speakHint(spoken && spoken.error) })})`;
         }
       }
     } else {
@@ -1551,7 +1556,7 @@ function wireAssistantCfg() {
     if (!out.ok) { $('ai-status').textContent = out.error; return; }
     $('ai-preset-name').value = '';
     $('ai-preset-savebox').classList.add('hidden');
-    $('ai-status').textContent = 'Saved that persona — it’s in "Your saved personas".';
+    $('ai-status').textContent = t('manager.assistant.personaSaved');
     renderAssistantCfg();
   });
 }
@@ -1583,18 +1588,18 @@ function renderAssistantPresets(presets) {
   if (!Array.isArray(presets) || presets.length === 0) return;
   const label = document.createElement('span');
   label.className = 'ai-preset-label';
-  label.textContent = 'Your saved personas:';
+  label.textContent = t('manager.assistant.savedPersonas');
   box.appendChild(label);
   for (const p of presets) {
     const chip = document.createElement('span');
     chip.className = 'ai-preset-chip';
     const use = document.createElement('button');
     use.type = 'button'; use.className = 'ai-preset-use'; use.textContent = p.name;
-    use.title = 'Use this persona';
+    use.title = t('manager.assistant.usePersona');
     use.addEventListener('click', () => { $('ai-persona').value = p.prompt; });
     const del = document.createElement('button');
     del.type = 'button'; del.className = 'ai-preset-del'; del.textContent = '×';
-    del.title = `Delete "${p.name}"`;
+    del.title = t('manager.assistant.deletePersona', { name: p.name });
     del.addEventListener('click', async () => {
       const out = await aegis.assistantPresetRemove(p.name);
       if (out.ok) renderAssistantCfg(); else $('ai-status').textContent = out.error;
@@ -1701,67 +1706,72 @@ function renderCreate() {
   const intro = document.createElement('div');
   intro.className = 'create-intro';
   const h = document.createElement('h2');
-  h.textContent = 'Design your own dashboard pack';
+  h.textContent = t('create.title');
   const p = document.createElement('p');
   p.className = 'hint';
-  p.textContent = 'A pack is a skin, a layout, a persona, and a voice — everything the wallpaper needs to think and speak. '
-    + 'Build one in the editor, then share it on Steam Workshop. No account, no code required (though you can add sandboxed code if you want).';
+  p.textContent = t('create.intro');
   intro.append(h, p);
   root.appendChild(intro);
 
   // Actions.
   const actions = document.createElement('div');
   actions.className = 'create-actions';
-  actions.appendChild(libButton('Start from scratch', () => openBuilder(), 'primary'));
-  actions.appendChild(libButton('Open the editor', () => {
+  actions.appendChild(libButton(t('create.startScratch'), () => openBuilder(), 'primary'));
+  actions.appendChild(libButton(t('create.openEditor'), () => {
     aegis.openEditor(library.activeId || 'jarvis');
   }));
-  actions.appendChild(libButton('Read the full guide', async () => {
+  actions.appendChild(libButton(t('create.readGuide'), async () => {
     const out = await aegis.openGuide();
-    if (!out.ok) libStatus(out.error || 'Could not open the guide.', true);
+    if (!out.ok) libStatus(out.error || t('create.guideError'), true);
   }));
   root.appendChild(actions);
 
-  // How it works.
-  root.appendChild(createSection('How it works'));
+  // How it works. The English title/body in CREATE_STEPS is the dev fallback;
+  // en.json carries the canonical strings translators localize.
+  root.appendChild(createSection(t('create.section.howItWorks')));
   const steps = document.createElement('ol');
   steps.className = 'create-steps';
-  for (const [title, body] of CREATE_STEPS) {
+  CREATE_STEPS.forEach((_, i) => {
     const li = document.createElement('li');
     const b = document.createElement('b');
-    b.textContent = title + '. ';
+    b.textContent = t(`create.step.${i}.title`) + '. ';
     li.appendChild(b);
-    li.appendChild(document.createTextNode(body));
+    li.appendChild(document.createTextNode(t(`create.step.${i}.body`)));
     steps.appendChild(li);
-  }
+  });
   root.appendChild(steps);
 
-  // Reference.
-  root.appendChild(createSection('Components'));
-  root.appendChild(refTable(['Type', 'What it shows', 'Options'], CREATE_COMPONENTS));
+  // Reference. Column 0 (type/control) and the identifier-heavy Options/Binds
+  // columns stay literal; the prose "What it shows"/"Effect" cells translate.
+  root.appendChild(createSection(t('create.section.components')));
+  const compRows = CREATE_COMPONENTS.map(([type, , opts]) => [type, t(`create.comp.${type}.shows`), opts]);
+  root.appendChild(refTable([t('create.table.type'), t('create.table.shows'), t('create.table.options')], compRows));
 
-  root.appendChild(createSection('Skin & ambience'));
+  root.appendChild(createSection(t('create.section.skin')));
   const skinList = document.createElement('div');
   skinList.className = 'create-deflist';
-  for (const [term, def] of CREATE_SKIN) {
+  const SKIN_SLUGS = ['palette', 'fonts', 'ambience', 'textures', 'wallpaper', 'layers', 'effects'];
+  CREATE_SKIN.forEach((_, i) => {
+    const slug = SKIN_SLUGS[i];
     const row = document.createElement('div');
     row.className = 'create-def';
     const dt = document.createElement('span');
     dt.className = 'create-dt';
-    dt.textContent = term;
+    dt.textContent = t(`create.skin.${slug}.term`);
     const dd = document.createElement('span');
-    dd.textContent = def;
+    dd.textContent = t(`create.skin.${slug}.def`);
     row.append(dt, dd);
     skinList.appendChild(row);
-  }
+  });
   root.appendChild(skinList);
 
-  root.appendChild(createSection('User properties (Customize knobs)'));
+  root.appendChild(createSection(t('create.section.props')));
   const propsNote = document.createElement('p');
   propsNote.className = 'hint';
-  propsNote.textContent = 'Declare a few of these in your pack so subscribers can adjust it without editing. Values live in their user data, never in your pack.';
+  propsNote.textContent = t('create.propsNote');
   root.appendChild(propsNote);
-  root.appendChild(refTable(['Control', 'Binds to', 'Effect'], CREATE_PROPS));
+  const propRows = CREATE_PROPS.map(([ctrl, binds], i) => [ctrl, binds, t(`create.prop.${i}.effect`)]);
+  root.appendChild(refTable([t('create.table.control'), t('create.table.binds'), t('create.table.effect')], propRows));
 }
 
 // ── From-scratch pack builder (the guided "sandwich order") ──────────────────

@@ -29,14 +29,54 @@
     return s;
   }
 
+  // A rich-text translation ([data-i18n-html]) may contain a FEW inline
+  // formatting tags — but a community-supplied locale file is untrusted, so we
+  // never assign it via innerHTML. Instead we parse it inertly and rebuild it
+  // keeping ONLY these tags, with NO attributes: no script, no handlers, no
+  // remote content can survive.
+  var HTML_WHITELIST = { B: 1, STRONG: 1, I: 1, EM: 1, CODE: 1, KBD: 1, SMALL: 1, U: 1, BR: 1 };
+
+  function sanitizeChildrenInto(sourceNode, destNode) {
+    var kids = sourceNode.childNodes;
+    for (var i = 0; i < kids.length; i++) {
+      var node = kids[i];
+      if (node.nodeType === 3) { // text
+        destNode.appendChild(document.createTextNode(node.nodeValue));
+      } else if (node.nodeType === 1) { // element
+        if (HTML_WHITELIST[node.tagName]) {
+          var clean = document.createElement(node.tagName.toLowerCase()); // no attributes copied
+          sanitizeChildrenInto(node, clean);
+          destNode.appendChild(clean);
+        } else {
+          // Disallowed element -> keep only its (sanitized) text/children.
+          sanitizeChildrenInto(node, destNode);
+        }
+      }
+    }
+  }
+
+  // Replace `el`'s content with a sanitized render of the (possibly-formatted)
+  // translation string. <template> parses inertly (scripts never run).
+  function setHtml(el, html) {
+    var tpl = document.createElement('template');
+    tpl.innerHTML = String(html == null ? '' : html);
+    el.textContent = '';
+    sanitizeChildrenInto(tpl.content, el);
+  }
+
   // Fill translatable markup under `root` (default: document):
   //   [data-i18n="key"]                     -> textContent
+  //   [data-i18n-html="key"]                -> sanitized inline HTML (b/i/em/code/…)
   //   [data-i18n-attr="attr:key;attr2:key"] -> setAttribute(attr, t(key))
   function applyDom(root) {
     root = root || document;
     var els = root.querySelectorAll('[data-i18n]');
     for (var i = 0; i < els.length; i++) {
       els[i].textContent = t(els[i].getAttribute('data-i18n'));
+    }
+    var htmlEls = root.querySelectorAll('[data-i18n-html]');
+    for (var h = 0; h < htmlEls.length; h++) {
+      setHtml(htmlEls[h], t(htmlEls[h].getAttribute('data-i18n-html')));
     }
     var attrEls = root.querySelectorAll('[data-i18n-attr]');
     for (var j = 0; j < attrEls.length; j++) {
@@ -66,6 +106,7 @@
   window.I18n = {
     t: t,
     applyDom: applyDom,
+    setHtml: setHtml,
     setDict: setDict,
     lang: payload.lang || 'en',
     available: Array.isArray(payload.available) ? payload.available : ['en'],
