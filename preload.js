@@ -7,8 +7,21 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+// UI language dictionary, fetched SYNCHRONOUSLY so the page has it before it
+// renders (no flash of untranslated text). Exposed read-only to the page world;
+// src/i18n.js reads window.__i18n. Fail-soft: if unavailable, pages fall back to
+// English keys.
+try {
+  contextBridge.exposeInMainWorld('__i18n', ipcRenderer.sendSync('aegis:i18n:get'));
+} catch (e) { /* i18n unavailable — English fallback */ }
+
 contextBridge.exposeInMainWorld('aegis', {
   version: '0.4.0',
+
+  // UI language (i18n): list available locales, and set the active one (the
+  // renderer reloads to apply the new dictionary).
+  i18nList: () => ipcRenderer.invoke('aegis:i18n:list'),
+  i18nSet: (code) => ipcRenderer.invoke('aegis:i18n:set', code),
 
   ranges: () => ipcRenderer.invoke('aegis:ranges'),
   env: () => ipcRenderer.invoke('aegis:env'),

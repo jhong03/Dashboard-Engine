@@ -6,12 +6,26 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+// UI language dictionary, fetched SYNCHRONOUSLY so the page has it before it
+// renders (no flash of untranslated text). Exposed read-only to the page world;
+// src/i18n.js reads window.__i18n. Fail-soft: if unavailable, pages fall back to
+// English keys.
+try {
+  contextBridge.exposeInMainWorld('__i18n', ipcRenderer.sendSync('aegis:i18n:get'));
+} catch (e) { /* i18n unavailable — English fallback */ }
+
 // SECURITY: preloads run in every frame, including a module component's
 // sandboxed <iframe> shown in the stage preview. Only the top frame (the real
 // editor UI) may reach this bridge — never a pack's untrusted module code, which
 // otherwise could call editorSave/importImage/activeSet. See preload-dashboard.js.
 const bridge = {
   version: '0.4.0',
+
+  // UI language (i18n): list available locales, and set the active one (the
+  // renderer reloads to apply the new dictionary).
+  i18nList: () => ipcRenderer.invoke('aegis:i18n:list'),
+  i18nSet: (code) => ipcRenderer.invoke('aegis:i18n:set', code),
+
   packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id)),
   assetsAll: (id) => ipcRenderer.invoke('aegis:packs:assetsAll', String(id)),
   editorSave: (baseId, pack) => ipcRenderer.invoke('aegis:editor:save', { baseId: String(baseId), pack }),

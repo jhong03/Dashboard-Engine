@@ -21,29 +21,29 @@
   <header class="topbar">
     <div class="brand">
       <h1>Dashboard Engine</h1>
-      <p class="sub">On your desktop: <span id="active-name">—</span></p>
+      <p class="sub"><span data-i18n="manager.topbar.onDesktop">On your desktop:</span> <span id="active-name">—</span></p>
     </div>
     <div class="controls">
-      <button class="btn" id="btn-panel">Voice tuning</button>
+      <button class="btn" id="btn-panel" data-i18n="manager.topbar.voiceTuning">Voice tuning</button>
     </div>
   </header>
 
   <section class="library" aria-label="Pack library">
     <header class="library-head">
       <div class="lib-tabs" role="tablist">
-        <button class="tab" id="tab-installed" role="tab" aria-selected="true">Installed</button>
-        <button class="tab" id="tab-browse" role="tab" aria-selected="false">Browse</button>
-        <button class="tab" id="tab-published" role="tab" aria-selected="false">Published</button>
-        <button class="tab" id="tab-create" role="tab" aria-selected="false">Create</button>
-        <button class="tab" id="tab-planner" role="tab" aria-selected="false">Planner</button>
-        <button class="tab" id="tab-launcher" role="tab" aria-selected="false">Launcher</button>
-        <button class="tab" id="tab-assistant" role="tab" aria-selected="false">Assistant</button>
-        <button class="tab" id="tab-settings" role="tab" aria-selected="false">Settings</button>
+        <button class="tab" id="tab-installed" role="tab" aria-selected="true" data-i18n="manager.tab.installed">Installed</button>
+        <button class="tab" id="tab-browse" role="tab" aria-selected="false" data-i18n="manager.tab.browse">Browse</button>
+        <button class="tab" id="tab-published" role="tab" aria-selected="false" data-i18n="manager.tab.published">Published</button>
+        <button class="tab" id="tab-create" role="tab" aria-selected="false" data-i18n="manager.tab.create">Create</button>
+        <button class="tab" id="tab-planner" role="tab" aria-selected="false" data-i18n="manager.tab.planner">Planner</button>
+        <button class="tab" id="tab-launcher" role="tab" aria-selected="false" data-i18n="manager.tab.launcher">Launcher</button>
+        <button class="tab" id="tab-assistant" role="tab" aria-selected="false" data-i18n="manager.tab.assistant">Assistant</button>
+        <button class="tab" id="tab-settings" role="tab" aria-selected="false" data-i18n="manager.tab.settings">Settings</button>
       </div>
-      <label class="visually-hidden" for="lib-search">Search packs</label>
-      <input id="lib-search" type="search" class="lib-search" placeholder="Search packs" spellcheck="false">
+      <label class="visually-hidden" for="lib-search" data-i18n="manager.search.label">Search packs</label>
+      <input id="lib-search" type="search" class="lib-search" placeholder="Search packs" spellcheck="false" data-i18n-attr="placeholder:manager.search.placeholder">
       <div class="btn-row">
-        <button class="btn" id="btn-install-file">Install from file…</button>
+        <button class="btn" id="btn-install-file" data-i18n="manager.installFromFile">Install from file…</button>
       </div>
     </header>
     <p class="status-line-app" id="library-status" role="status" aria-live="polite"></p>
@@ -51,37 +51,37 @@
     <div class="library-main">
       <div class="library-gallery">
         <div class="reg-add hidden" id="reg-add">
-          <label class="visually-hidden" for="reg-url">Registry URL</label>
-          <input id="reg-url" placeholder="Registry URL (https://…/index.json)" spellcheck="false">
-          <button class="btn" id="btn-reg-add">Subscribe</button>
+          <label class="visually-hidden" for="reg-url" data-i18n="manager.registry.label">Registry URL</label>
+          <input id="reg-url" placeholder="Registry URL (https://…/index.json)" spellcheck="false" data-i18n-attr="placeholder:manager.registry.placeholder">
+          <button class="btn" id="btn-reg-add" data-i18n="manager.registry.subscribe">Subscribe</button>
         </div>
         <div class="planner hidden" id="planner">
           <div class="planner-cal">
             <header class="cal-toolbar">
               <div class="cal-nav">
-                <button class="btn tiny" id="cal-prev" aria-label="Previous month">‹</button>
-                <button class="btn tiny" id="cal-today">Today</button>
-                <button class="btn tiny" id="cal-next" aria-label="Next month">›</button>
+                <button class="btn tiny" id="cal-prev" aria-label="Previous month" data-i18n-attr="aria-label:manager.planner.prevMonth">‹</button>
+                <button class="btn tiny" id="cal-today" data-i18n="manager.planner.today">Today</button>
+                <button class="btn tiny" id="cal-next" aria-label="Next month" data-i18n-attr="aria-label:manager.planner.nextMonth">›</button>
               </div>
               <h2 class="cal-title" id="cal-title">—</h2>
-              <button class="btn primary" id="cal-add">Add event</button>
+              <button class="btn primary" id="cal-add" data-i18n="manager.planner.addEvent">Add event</button>
             </header>
             <div class="cal-month" id="cal-month"></div>
           </div>
           <aside class="planner-side">
-            <h3 class="planner-side-title">Upcoming</h3>
+            <h3 class="planner-side-title" data-i18n="manager.planner.upcoming">Upcoming</h3>
             <div id="planner-list"></div>
           </aside>
         </div>
         <div class="launcher-cfg hidden" id="launcher-cfg">
-          <p class="hint">Pins appear on any pack with a launcher component (drop one in via the editor).
+          <p class="hint" data-i18n="manager.launcher.hint">Pins appear on any pack with a launcher component (drop one in via the editor).
             Your pins and recents are personal — they never leave this PC or enter a pack.</p>
           <div class="pin-actions">
-            <label class="visually-hidden" for="pin-app-select">App to pin</label>
+            <label class="visually-hidden" for="pin-app-select" data-i18n="manager.launcher.appToPin">App to pin</label>
             <select id="pin-app-select"></select>
-            <button class="btn" id="btn-pin-app">Pin app</button>
-            <button class="btn" id="btn-pin-file">Pin a file…</button>
-            <button class="btn" id="btn-pin-folder">Pin a folder…</button>
+            <button class="btn" id="btn-pin-app" data-i18n="manager.launcher.pinApp">Pin app</button>
+            <button class="btn" id="btn-pin-file" data-i18n="manager.launcher.pinFile">Pin a file…</button>
+            <button class="btn" id="btn-pin-folder" data-i18n="manager.launcher.pinFolder">Pin a folder…</button>
           </div>
           <div id="pin-list"></div>
         </div>
@@ -92,21 +92,21 @@
             stored encrypted on this PC, and never included in a pack or export.</p>
 
           <!-- BYO OpenAI-compatible: endpoint + optional key + model id -->
-          <label class="cfg-field" id="ai-baseurl-field"><span>Base URL</span>
+          <label class="cfg-field" id="ai-baseurl-field"><span data-i18n="manager.assistant.baseUrl">Base URL</span>
             <input id="ai-baseurl" type="text" placeholder="https://openrouter.ai/api/v1" spellcheck="false">
             <span class="hint cfg-hint">The address of an OpenAI-compatible API — it usually ends in <code>/v1</code>. Common ones:
               OpenRouter <code>https://openrouter.ai/api/v1</code> · Groq <code>https://api.groq.com/openai/v1</code> ·
               local Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>.
               Leave blank to use OpenAI (<code>api.openai.com</code>).</span>
           </label>
-          <label class="cfg-field" id="ai-key-field"><span>API key</span>
+          <label class="cfg-field" id="ai-key-field"><span data-i18n="manager.assistant.apiKey">API key</span>
             <input id="ai-key" type="password" placeholder="Paste your key — or leave blank for a local server" spellcheck="false" autocomplete="off">
             <span class="hint cfg-hint">Needed for hosted providers: make a free account at OpenRouter or Groq (or your OpenAI account)
               and paste the key it gives you (usually starts with <code>sk-</code>). <b>Not</b> needed for a local Ollama/LM Studio —
               leave it blank. Your key is stored encrypted on this PC and never goes into a pack or export.</span>
             <span class="hint hint-key" id="ai-key-state"></span>
           </label>
-          <label class="cfg-field" id="ai-model-field"><span>Model id</span>
+          <label class="cfg-field" id="ai-model-field"><span data-i18n="manager.assistant.modelId">Model id</span>
             <input id="ai-model" type="text" placeholder="e.g. google/gemini-2.0-flash-exp:free" spellcheck="false">
             <span class="hint cfg-hint">The exact model name your provider expects — copy it from their models page. Examples:
               OpenRouter <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-chat</code> ·
@@ -114,23 +114,23 @@
               OpenAI <code>gpt-4o-mini</code>.</span>
           </label>
 
-          <label class="cfg-field"><span>Voice for spoken replies</span>
+          <label class="cfg-field"><span data-i18n="manager.assistant.voiceForReplies">Voice for spoken replies</span>
             <select id="ai-voice"></select>
           </label>
           <p class="hint">Pick the voice that matches your persona's <strong>language</strong> — a Chinese persona spoken by an English voice comes out garbled. Presets for each language are listed here, and picking a language persona above auto-selects a matching one. To switch between a female and a male voice, pick that language's preset — <strong>male voices</strong> are available for English, Spanish and French (the “· Male” presets); Chinese, Japanese and Korean are female-only for now. Your own <strong>Voice tuning</strong> profiles appear here too. “Default voice” is English and does <em>not</em> follow your tuning.</p>
-          <label class="cfg-check"><input id="ai-speak" type="checkbox"><span>Speak replies aloud (in the voice picked above)</span></label>
+          <label class="cfg-check"><input id="ai-speak" type="checkbox"><span data-i18n="manager.assistant.speakAloud">Speak replies aloud (in the voice picked above)</span></label>
 
-          <label class="cfg-field"><span>Persona — how your assistant behaves</span>
+          <label class="cfg-field"><span data-i18n="manager.assistant.persona">Persona — how your assistant behaves</span>
             <select id="ai-persona-preset">
-              <option value="">Start from a preset…</option>
-              <optgroup label="English">
+              <option value="" data-i18n="manager.assistant.startFromPreset">Start from a preset…</option>
+              <optgroup label="English" data-i18n-attr="label:manager.assistant.group.english">
                 <option value="jarvis">JARVIS — formal butler (default)</option>
                 <option value="nova">Nova — warm companion</option>
                 <option value="sage">Sage — calm mentor</option>
                 <option value="ace">Ace — hype coach</option>
                 <option value="pip">Pip — terse minimalist</option>
               </optgroup>
-              <optgroup label="Other languages (reply + speak in that language)">
+              <optgroup label="Other languages (reply + speak in that language)" data-i18n-attr="label:manager.assistant.group.other">
                 <option value="es_amigo">Español — asistente cercano</option>
                 <option value="fr_ami">Français — assistant chaleureux</option>
                 <option value="zh_zhushou">中文 — 贴心的助手</option>
@@ -140,93 +140,99 @@
             </select>
           </label>
           <div id="ai-preset-saved" class="ai-preset-saved"></div>
-          <label class="cfg-field"><span>System prompt</span>
+          <label class="cfg-field"><span data-i18n="manager.assistant.systemPrompt">System prompt</span>
             <textarea id="ai-persona" rows="4"></textarea>
           </label>
           <p class="hint">Pick a preset above to fill this in, then tweak it — or write your own and save it below. Replies are read <em>aloud</em>, so keep it plain and short — no lists or emoji. Give it a name and a personality, and say how it should address you (for example, by your name). <strong>Another language?</strong> Choose a language preset (or write your persona in any language and tell it to reply in that language), then pick a matching voice above — the bank now includes German, Spanish, French, Portuguese, Vietnamese, Turkish, Ukrainian and Polish.</p>
           <div class="ai-preset-actions">
-            <button class="btn tiny" id="ai-preset-save" type="button">Save current as a preset…</button>
+            <button class="btn tiny" id="ai-preset-save" type="button" data-i18n="manager.assistant.savePreset">Save current as a preset…</button>
           </div>
           <div class="ai-preset-savebox hidden" id="ai-preset-savebox">
-            <input id="ai-preset-name" type="text" maxlength="40" placeholder="Name this persona (e.g. My coach)" spellcheck="false">
-            <button class="btn tiny primary" id="ai-preset-confirm" type="button">Save</button>
-            <button class="btn tiny" id="ai-preset-cancel" type="button">Cancel</button>
+            <input id="ai-preset-name" type="text" maxlength="40" placeholder="Name this persona (e.g. My coach)" spellcheck="false" data-i18n-attr="placeholder:manager.assistant.presetNamePlaceholder">
+            <button class="btn tiny primary" id="ai-preset-confirm" type="button" data-i18n="common.save">Save</button>
+            <button class="btn tiny" id="ai-preset-cancel" type="button" data-i18n="common.cancel">Cancel</button>
           </div>
 
           <div class="cfg-actions">
-            <button class="btn primary" id="ai-save">Save</button>
-            <button class="btn" id="ai-test">Test connection</button>
+            <button class="btn primary" id="ai-save" data-i18n="common.save">Save</button>
+            <button class="btn" id="ai-test" data-i18n="manager.assistant.testConnection">Test connection</button>
             <span class="status-line-app" id="ai-status"></span>
           </div>
         </div>
         <div class="create-cfg hidden" id="create-cfg"></div>
         <div class="settings-cfg hidden" id="settings-cfg">
+          <h3 class="cfg-group-title" data-i18n="settings.language.title">Language</h3>
+          <p class="hint" data-i18n="settings.language.help">Choose the interface language. Community translations added to the locales folder appear here automatically. Untranslated text falls back to English.</p>
+          <label class="cfg-field"><span data-i18n="settings.language.label">Interface language</span>
+            <select id="set-language"></select>
+          </label>
+
           <div id="set-display-group" class="hidden">
-            <h3 class="cfg-group-title">Display</h3>
-            <p class="hint">Choose which monitor shows the animated wallpaper. It moves right away.</p>
-            <label class="cfg-field"><span>Show wallpaper on</span>
+            <h3 class="cfg-group-title" data-i18n="manager.settings.display.title">Display</h3>
+            <p class="hint" data-i18n="manager.settings.display.help">Choose which monitor shows the animated wallpaper. It moves right away.</p>
+            <label class="cfg-field"><span data-i18n="manager.settings.display.showOn">Show wallpaper on</span>
               <select id="set-display"></select>
             </label>
           </div>
 
-          <h3 class="cfg-group-title">Startup</h3>
-          <label class="cfg-check"><input id="set-autostart" type="checkbox"><span>Start Dashboard Engine when Windows starts</span></label>
-          <p class="hint cfg-hint" id="set-autostart-hint">The engine launches quietly to the tray when you sign in, so your desktop is already alive — no window to open.</p>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.startup.title">Startup</h3>
+          <label class="cfg-check"><input id="set-autostart" type="checkbox"><span data-i18n="manager.settings.startup.autostart">Start Dashboard Engine when Windows starts</span></label>
+          <p class="hint cfg-hint" id="set-autostart-hint" data-i18n="manager.settings.startup.autostartHint">The engine launches quietly to the tray when you sign in, so your desktop is already alive — no window to open.</p>
 
-          <h3 class="cfg-group-title">Voice alerts</h3>
-          <label class="cfg-check"><input id="set-healthvoice" type="checkbox"><span>Speak system-health alerts aloud</span></label>
-          <p class="hint cfg-hint">Your assistant voice announces when CPU, memory or disk run high, or the battery gets low. Needs a “System info” component with Live health alerts on, and speaks with the voice from Assistant → Voice.</p>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.voiceAlerts.title">Voice alerts</h3>
+          <label class="cfg-check"><input id="set-healthvoice" type="checkbox"><span data-i18n="manager.settings.voiceAlerts.speak">Speak system-health alerts aloud</span></label>
+          <p class="hint cfg-hint" data-i18n="manager.settings.voiceAlerts.help">Your assistant voice announces when CPU, memory or disk run high, or the battery gets low. Needs a “System info” component with Live health alerts on, and speaks with the voice from Assistant → Voice.</p>
 
-          <h3 class="cfg-group-title">Performance</h3>
-          <p class="hint">The animated wallpaper pauses and throttles like Wallpaper Engine so it stays a good background citizen. These are the same controls as the tray’s Performance menu.</p>
-          <label class="cfg-check"><input id="set-fullscreen" type="checkbox"><span>Pause when a full-screen app covers the screen</span></label>
-          <label class="cfg-check"><input id="set-battery" type="checkbox"><span>Pause on battery power</span></label>
-          <label class="cfg-field"><span>Frame-rate cap</span>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.performance.title">Performance</h3>
+          <p class="hint" data-i18n="manager.settings.performance.help">The animated wallpaper pauses and throttles like Wallpaper Engine so it stays a good background citizen. These are the same controls as the tray’s Performance menu.</p>
+          <label class="cfg-check"><input id="set-fullscreen" type="checkbox"><span data-i18n="manager.settings.performance.pauseFullscreen">Pause when a full-screen app covers the screen</span></label>
+          <label class="cfg-check"><input id="set-battery" type="checkbox"><span data-i18n="manager.settings.performance.pauseBattery">Pause on battery power</span></label>
+          <label class="cfg-field"><span data-i18n="manager.settings.performance.fpsCap">Frame-rate cap</span>
             <select id="set-fps"></select>
           </label>
 
-          <h3 class="cfg-group-title">Background motion</h3>
-          <p class="hint">Scales the parallax and depth drift on layered pack backgrounds — turn it down, or off, if you find the movement distracting. It doesn’t affect performance.</p>
-          <label class="cfg-field"><span>Parallax &amp; drift</span>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.bgMotion.title">Background motion</h3>
+          <p class="hint" data-i18n="manager.settings.bgMotion.help">Scales the parallax and depth drift on layered pack backgrounds — turn it down, or off, if you find the movement distracting. It doesn’t affect performance.</p>
+          <label class="cfg-field"><span data-i18n="manager.settings.bgMotion.parallax">Parallax &amp; drift</span>
             <span class="set-range-row">
               <input id="set-bgmotion" type="range" min="0" max="1" step="0.05">
               <span id="set-bgmotion-val" class="set-range-val"></span>
             </span>
           </label>
 
-          <h3 class="cfg-group-title">Weather</h3>
-          <label class="cfg-field"><span>Your location</span>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.weather.title">Weather</h3>
+          <label class="cfg-field"><span data-i18n="manager.settings.weather.yourLocation">Your location</span>
             <span class="set-weather-row">
-              <input id="set-weather" type="text" placeholder="Type a city, e.g. Kyoto" spellcheck="false">
-              <button class="btn" id="set-weather-go" type="button">Set</button>
+              <input id="set-weather" type="text" placeholder="Type a city, e.g. Kyoto" spellcheck="false" data-i18n-attr="placeholder:manager.settings.weather.placeholder">
+              <button class="btn" id="set-weather-go" type="button" data-i18n="manager.settings.weather.set">Set</button>
             </span>
-            <span class="hint cfg-hint">Any pack whose weather has no location of its own uses this. <span id="set-weather-current"></span></span>
+            <span class="hint cfg-hint"><span data-i18n="manager.settings.weather.help">Any pack whose weather has no location of its own uses this.</span> <span id="set-weather-current"></span></span>
           </label>
 
-          <h3 class="cfg-group-title">Background music</h3>
-          <p class="hint">Play your own music on the desktop. Files stay on your PC and are never saved into a pack or shared — the wallpaper just plays them, looping through the list.</p>
-          <label class="cfg-check"><input id="set-music-on" type="checkbox"><span>Play background music</span></label>
-          <label class="cfg-field"><span>Volume <span id="set-music-vol-val" class="cfg-value"></span></span>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.music.title">Background music</h3>
+          <p class="hint" data-i18n="manager.settings.music.help">Play your own music on the desktop. Files stay on your PC and are never saved into a pack or shared — the wallpaper just plays them, looping through the list.</p>
+          <label class="cfg-check"><input id="set-music-on" type="checkbox"><span data-i18n="manager.settings.music.play">Play background music</span></label>
+          <label class="cfg-field"><span><span data-i18n="manager.settings.music.volume">Volume</span> <span id="set-music-vol-val" class="cfg-value"></span></span>
             <input id="set-music-vol" type="range" min="0" max="1" step="0.01">
           </label>
           <div class="set-music-tracks" id="set-music-tracks"></div>
-          <button class="btn" id="set-music-add" type="button">Add music files…</button>
+          <button class="btn" id="set-music-add" type="button" data-i18n="manager.settings.music.add">Add music files…</button>
 
-          <h3 class="cfg-group-title">Help</h3>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.help.title">Help</h3>
           <div class="set-help-row">
-            <button class="btn" id="set-welcome" type="button">Show the welcome guide</button>
-            <button class="btn" id="set-logs" type="button">Open logs folder</button>
+            <button class="btn" id="set-welcome" type="button" data-i18n="manager.settings.help.welcome">Show the welcome guide</button>
+            <button class="btn" id="set-logs" type="button" data-i18n="manager.settings.help.logs">Open logs folder</button>
           </div>
-          <p class="hint cfg-hint">If something goes wrong, the logs folder holds a diagnostic log
+          <p class="hint cfg-hint" data-i18n="manager.settings.help.hint">If something goes wrong, the logs folder holds a diagnostic log
             (and any crash dumps) you can share when reporting a problem. It contains no personal data.</p>
 
-          <h3 class="cfg-group-title">About &amp; licenses</h3>
+          <h3 class="cfg-group-title" data-i18n="manager.settings.about.title">About &amp; licenses</h3>
           <p class="hint cfg-hint" id="set-about-version">Dashboard Engine</p>
-          <p class="hint cfg-hint">Dashboard Engine includes open-source software and voices from other
+          <p class="hint cfg-hint" data-i18n="manager.settings.about.help">Dashboard Engine includes open-source software and voices from other
             creators. The notice below lists them with their licenses and required attributions.</p>
-          <pre class="set-licenses" id="set-licenses" tabindex="0" aria-label="Third-party licenses"></pre>
+          <pre class="set-licenses" id="set-licenses" tabindex="0" aria-label="Third-party licenses" data-i18n-attr="aria-label:manager.settings.about.licensesLabel"></pre>
           <div class="set-help-row">
-            <button class="btn" id="set-licenses-open" type="button">Open as a file</button>
+            <button class="btn" id="set-licenses-open" type="button" data-i18n="manager.settings.about.openFile">Open as a file</button>
           </div>
 
           <p class="status-line-app" id="set-status" role="status" aria-live="polite"></p>
@@ -234,30 +240,30 @@
         <div class="gallery" id="gallery"></div>
       </div>
       <aside class="library-detail" id="lib-detail" aria-label="Pack details">
-        <p class="hint" id="detail-empty">Select a pack to see its details.</p>
+        <p class="hint" id="detail-empty" data-i18n="manager.detail.empty">Select a pack to see its details.</p>
       </aside>
     </div>
   </section>
 
   <!-- From-scratch pack builder: a guided, full-screen overlay. -->
-  <div class="builder-overlay hidden" id="builder-overlay" role="dialog" aria-modal="true" aria-label="New pack builder">
+  <div class="builder-overlay hidden" id="builder-overlay" role="dialog" aria-modal="true" aria-label="New pack builder" data-i18n-attr="aria-label:manager.builder.ariaLabel">
     <header class="builder-top">
-      <h2 class="builder-title">New pack</h2>
-      <button class="btn" id="builder-close" type="button">Cancel</button>
+      <h2 class="builder-title" data-i18n="manager.builder.title">New pack</h2>
+      <button class="btn" id="builder-close" type="button" data-i18n="common.cancel">Cancel</button>
     </header>
     <div class="builder-body">
-      <nav class="builder-rail" id="builder-rail" aria-label="Steps"></nav>
+      <nav class="builder-rail" id="builder-rail" aria-label="Steps" data-i18n-attr="aria-label:manager.builder.steps"></nav>
       <section class="builder-main">
         <div class="builder-step" id="builder-step"></div>
         <footer class="builder-nav">
-          <button class="btn" id="builder-back" type="button">Back</button>
+          <button class="btn" id="builder-back" type="button" data-i18n="common.back">Back</button>
           <span class="builder-spacer"></span>
           <span class="status-line-app" id="builder-status"></span>
-          <button class="btn primary" id="builder-next" type="button">Next</button>
+          <button class="btn primary" id="builder-next" type="button" data-i18n="common.next">Next</button>
         </footer>
       </section>
       <aside class="builder-preview-wrap">
-        <span class="builder-preview-label">Live preview</span>
+        <span class="builder-preview-label" data-i18n="manager.builder.livePreview">Live preview</span>
         <div class="builder-preview" id="builder-preview"></div>
       </aside>
     </div>
@@ -266,8 +272,8 @@
   <!-- First-run welcome: shown once, until "Get started" is clicked. -->
   <div class="modal-scrim hidden" id="welcome-scrim">
     <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="welcome-title">
-      <h2 id="welcome-title">Welcome to Dashboard Engine</h2>
-      <p class="welcome-lead">Your desktop is now a live dashboard — it renders straight onto the wallpaper,
+      <h2 id="welcome-title" data-i18n="manager.welcome.title">Welcome to Dashboard Engine</h2>
+      <p class="welcome-lead" data-i18n="manager.welcome.lead">Your desktop is now a live dashboard — it renders straight onto the wallpaper,
         behind your icons. Here's what you can do from here.</p>
       <ul class="welcome-points">
         <li><b>Browse &amp; switch packs.</b> Eight built-in designs are installed. Pick one in
@@ -280,10 +286,10 @@
           full-screen apps. Close this window anytime — the wallpaper keeps running.</li>
       </ul>
       <label class="cfg-check welcome-autostart"><input id="welcome-autostart" type="checkbox">
-        <span>Start Dashboard Engine when Windows starts</span></label>
+        <span data-i18n="manager.settings.startup.autostart">Start Dashboard Engine when Windows starts</span></label>
       <div class="welcome-actions">
-        <button class="btn" id="welcome-assistant">Set up the assistant</button>
-        <button class="btn primary" id="welcome-start">Get started</button>
+        <button class="btn" id="welcome-assistant" data-i18n="manager.welcome.setupAssistant">Set up the assistant</button>
+        <button class="btn primary" id="welcome-start" data-i18n="manager.welcome.getStarted">Get started</button>
       </div>
     </div>
   </div>
@@ -291,48 +297,51 @@
   <!-- Event editor: opens from a day cell (quick-add) or an event chip (edit). -->
   <div class="modal-scrim hidden" id="event-scrim">
     <form class="event-card" id="event-form">
-      <h3 id="event-heading">New event</h3>
-      <label class="visually-hidden" for="ev-text">Event</label>
-      <input type="text" id="ev-text" maxlength="120" placeholder="What's happening?" required>
+      <h3 id="event-heading" data-i18n="manager.event.new">New event</h3>
+      <label class="visually-hidden" for="ev-text" data-i18n="manager.event.eventLabel">Event</label>
+      <input type="text" id="ev-text" maxlength="120" placeholder="What's happening?" required data-i18n-attr="placeholder:manager.event.textPlaceholder">
       <div class="event-row">
-        <label class="event-field">Date
+        <label class="event-field"><span data-i18n="manager.event.date">Date</span>
           <input type="date" id="ev-date" required>
         </label>
-        <label class="event-field">Time
+        <label class="event-field"><span data-i18n="manager.event.time">Time</span>
           <input type="time" id="ev-time">
         </label>
       </div>
       <div class="event-row">
-        <label class="event-field">Repeats
+        <label class="event-field"><span data-i18n="manager.event.repeats">Repeats</span>
           <select id="ev-repeat">
-            <option value="none">Does not repeat</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-            <option value="monthly">Monthly</option>
-            <option value="yearly">Yearly</option>
+            <option value="none" data-i18n="manager.event.repeat.none">Does not repeat</option>
+            <option value="daily" data-i18n="manager.event.repeat.daily">Daily</option>
+            <option value="weekly" data-i18n="manager.event.repeat.weekly">Weekly</option>
+            <option value="monthly" data-i18n="manager.event.repeat.monthly">Monthly</option>
+            <option value="yearly" data-i18n="manager.event.repeat.yearly">Yearly</option>
           </select>
         </label>
-        <label class="event-field">Alert
+        <label class="event-field"><span data-i18n="manager.event.alert">Alert</span>
           <select id="ev-lead">
-            <option value="0">At event time</option>
-            <option value="5">5 min before</option>
-            <option value="10">10 min before</option>
-            <option value="30">30 min before</option>
-            <option value="60">1 hour before</option>
-            <option value="1440">1 day before</option>
+            <option value="0" data-i18n="manager.event.lead.0">At event time</option>
+            <option value="5" data-i18n="manager.event.lead.5">5 min before</option>
+            <option value="10" data-i18n="manager.event.lead.10">10 min before</option>
+            <option value="30" data-i18n="manager.event.lead.30">30 min before</option>
+            <option value="60" data-i18n="manager.event.lead.60">1 hour before</option>
+            <option value="1440" data-i18n="manager.event.lead.1440">1 day before</option>
           </select>
         </label>
       </div>
       <p class="hint" id="ev-hint"></p>
       <div class="event-actions">
-        <button type="button" class="btn danger hidden" id="ev-delete">Delete</button>
+        <button type="button" class="btn danger hidden" id="ev-delete" data-i18n="common.delete">Delete</button>
         <span class="event-spacer"></span>
-        <button type="button" class="btn" id="ev-cancel">Cancel</button>
-        <button type="submit" class="btn primary">Save</button>
+        <button type="button" class="btn" id="ev-cancel" data-i18n="common.cancel">Cancel</button>
+        <button type="submit" class="btn primary" data-i18n="common.save">Save</button>
       </div>
     </form>
   </div>
 
+  <!-- i18n.js FIRST: it defines window.t / I18n.applyDom and translates the
+       static [data-i18n] markup before the app scripts run. -->
+  <script src="i18n.js"></script>
   <script src="gl-background.js"></script>
   <script src="components.js"></script>
   <script src="manager.js"></script>

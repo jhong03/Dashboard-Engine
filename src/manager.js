@@ -9,6 +9,10 @@
 
 const $ = (id) => document.getElementById(id);
 
+// UI localization shortcut. i18n.js (loaded first) defines window.t; this alias
+// is fail-soft so a missing runtime just yields the key's English fallback.
+const t = (key, params) => (window.t ? window.t(key, params) : key);
+
 const library = {
   tab: 'installed',
   search: '',
@@ -2575,6 +2579,29 @@ function wireBuilder() {
 let settingsFpsBuilt = false;
 
 async function renderSettingsCfg() {
+  // Language picker: available locales (bundled + community drop-ins). Rebuilt
+  // each render so a newly dropped-in locale file shows up. Changing it reloads
+  // the window, since the dictionary is handed to the page at load.
+  try {
+    const langRes = await aegis.i18nList();
+    if (langRes && langRes.ok) {
+      const langSel = $('set-language');
+      langSel.textContent = '';
+      const autoOpt = document.createElement('option');
+      autoOpt.value = 'auto';
+      autoOpt.textContent = t('settings.language.auto');
+      langSel.appendChild(autoOpt);
+      for (const loc of langRes.locales) {
+        const opt = document.createElement('option');
+        opt.value = loc.code;
+        opt.textContent = loc.name;
+        langSel.appendChild(opt);
+      }
+      // `explicit` is null when following the OS locale — reflect that as Auto.
+      langSel.value = langRes.explicit || 'auto';
+    }
+  } catch (e) { /* i18n unavailable — leave the picker as-is (English) */ }
+
   // Display picker: only meaningful with more than one monitor. Rebuilt each
   // render so hot-plugged displays show up.
   const disp = await aegis.displayGet();
@@ -2585,12 +2612,12 @@ async function renderSettingsCfg() {
     sel.textContent = '';
     const auto = document.createElement('option');
     auto.value = 'auto';
-    auto.textContent = 'Primary display (default)';
+    auto.textContent = t('manager.settings.display.primary');
     sel.appendChild(auto);
     for (const d of disp.displays) {
       const opt = document.createElement('option');
       opt.value = String(d.id);
-      opt.textContent = `${d.label} — ${d.width}×${d.height}${d.primary ? ' · primary' : ''}`;
+      opt.textContent = `${d.label} — ${d.width}×${d.height}${d.primary ? ` · ${t('manager.settings.display.primaryTag')}` : ''}`;
       sel.appendChild(opt);
     }
     sel.value = disp.selectedId == null ? 'auto' : String(disp.selectedId);
@@ -2606,8 +2633,8 @@ async function renderSettingsCfg() {
     autoBox.checked = auto.enabled;
     autoBox.disabled = !auto.supported;
     $('set-autostart-hint').textContent = auto.supported
-      ? 'The engine launches quietly to the tray when you sign in, so your desktop is already alive — no window to open.'
-      : 'Start-with-the-OS isn’t available on this platform.';
+      ? t('manager.settings.startup.autostartHint')
+      : t('manager.settings.startup.unsupported');
   }
 
   // Spoken health alerts (opt-in — a talking wallpaper).
@@ -2620,7 +2647,7 @@ async function renderSettingsCfg() {
     licBox.dataset.loaded = '1';
     aegis.licensesGet().then((res) => {
       if (!res || !res.ok) return;
-      if (res.version) $('set-about-version').textContent = `Dashboard Engine — version ${res.version}`;
+      if (res.version) $('set-about-version').textContent = t('manager.settings.about.version', { version: res.version });
       licBox.textContent = res.text || '';
     });
   }
@@ -2629,7 +2656,9 @@ async function renderSettingsCfg() {
   const wloc = await aegis.weatherLocationGet();
   const wcur = $('set-weather-current');
   if (wloc.ok) {
-    wcur.textContent = wloc.location ? `Currently: ${wloc.location.place || `${wloc.location.lat.toFixed(2)}, ${wloc.location.lon.toFixed(2)}`}.` : 'Not set yet.';
+    wcur.textContent = wloc.location
+      ? t('manager.settings.weather.current', { place: wloc.location.place || `${wloc.location.lat.toFixed(2)}, ${wloc.location.lon.toFixed(2)}` })
+      : t('manager.settings.weather.notSet');
   }
 
   const perf = await aegis.performanceGet();
@@ -2642,7 +2671,9 @@ async function renderSettingsCfg() {
       for (const choice of perf.fpsChoices) {
         const opt = document.createElement('option');
         opt.value = String(choice);
-        opt.textContent = `${choice} fps${choice === 30 ? ' (recommended)' : ''}`;
+        opt.textContent = choice === 30
+          ? t('manager.settings.performance.fpsRecommended', { n: choice })
+          : t('manager.settings.performance.fps', { n: choice });
         fps.appendChild(opt);
       }
       settingsFpsBuilt = true;
@@ -2677,7 +2708,7 @@ async function renderMusicSettings() {
   if (res.tracks.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'hint cfg-hint';
-    empty.textContent = 'No music added yet — add some audio files below.';
+    empty.textContent = t('manager.settings.music.empty');
     list.appendChild(empty);
     return;
   }
@@ -2689,7 +2720,7 @@ async function renderMusicSettings() {
     name.textContent = track.name;
     const rm = document.createElement('button');
     rm.className = 'btn tiny danger';
-    rm.textContent = 'Remove';
+    rm.textContent = t('common.remove');
     rm.addEventListener('click', async () => { await aegis.musicRemove(track.id); renderMusicSettings(); });
     row.append(name, rm);
     list.appendChild(row);
@@ -2698,18 +2729,26 @@ async function renderMusicSettings() {
 
 function settingsSaved() {
   const status = $('set-status');
-  status.textContent = 'Saved.';
+  status.textContent = t('common.saved');
   // Brief confirmation; the change is already applied to the live desktop.
   clearTimeout(settingsSaved.timer);
   settingsSaved.timer = setTimeout(() => { status.textContent = ''; }, 1600);
 }
 
 function wireSettingsCfg() {
+  // Language: persist the choice, then reload so the whole window re-reads its
+  // dictionary (handed to the page at load). 'auto' clears the explicit setting.
+  $('set-language').addEventListener('change', async (e) => {
+    const val = e.target.value;
+    $('set-status').textContent = t('settings.language.applying');
+    try { await aegis.i18nSet(val === 'auto' ? null : val); } catch (err) { /* fail-soft */ }
+    location.reload();
+  });
   $('set-display').addEventListener('change', async (e) => {
     const val = e.target.value;
     const out = await aegis.displaySet(val === 'auto' ? null : Number(val));
     if (!out.ok) { $('set-status').textContent = out.error; return; }
-    $('set-status').textContent = 'Moved the wallpaper to the selected display.';
+    $('set-status').textContent = t('manager.settings.display.moved');
     clearTimeout(settingsSaved.timer);
     settingsSaved.timer = setTimeout(() => { $('set-status').textContent = ''; }, 2400);
   });
@@ -2752,21 +2791,21 @@ function wireSettingsCfg() {
   });
   $('set-logs').addEventListener('click', async () => {
     const out = await aegis.openLogs();
-    if (!out.ok) $('set-status').textContent = out.error || 'Could not open the logs folder.';
+    if (!out.ok) $('set-status').textContent = out.error || t('manager.settings.help.logsError');
   });
   $('set-licenses-open').addEventListener('click', async () => {
     const out = await aegis.licensesOpen();
-    if (!out.ok) $('set-status').textContent = out.error || 'Could not open the notices file.';
+    if (!out.ok) $('set-status').textContent = out.error || t('manager.settings.about.openError');
   });
   const setWeather = async () => {
     const q = $('set-weather').value.trim();
     if (!q) return;
-    $('set-status').textContent = 'Finding location…';
+    $('set-status').textContent = t('manager.settings.weather.finding');
     const out = await aegis.weatherLocationSet(q);
-    if (!out.ok) { $('set-status').textContent = out.error || 'Could not find that place.'; return; }
+    if (!out.ok) { $('set-status').textContent = out.error || t('manager.settings.weather.notFound'); return; }
     $('set-weather').value = '';
-    $('set-weather-current').textContent = `Currently: ${out.location.place}.`;
-    $('set-status').textContent = `Weather location set to ${out.location.place}.`;
+    $('set-weather-current').textContent = t('manager.settings.weather.current', { place: out.location.place });
+    $('set-status').textContent = t('manager.settings.weather.setTo', { place: out.location.place });
   };
   $('set-weather-go').addEventListener('click', setWeather);
   $('set-weather').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); setWeather(); } });
@@ -2824,7 +2863,7 @@ function wireWelcome() {
 function openEventEditor({ id, date }) {
   const entry = id ? planner.reminders.find((r) => r.id === id) : null;
   planner.editing = entry ? entry.id : null;
-  $('event-heading').textContent = entry ? 'Edit event' : 'New event';
+  $('event-heading').textContent = entry ? t('manager.event.edit') : t('manager.event.new');
   $('ev-text').value = entry ? entry.text : '';
   $('ev-date').value = entry ? entry.date : (date || localIso(new Date()));
   $('ev-time').value = entry && entry.time ? entry.time : '';
@@ -2847,9 +2886,9 @@ function syncEventHint() {
   const repeating = $('ev-repeat').value !== 'none';
   const parts = [];
   parts.push(timed
-    ? 'A desktop notification fires at the alert time (the engine runs in the tray).'
-    : 'Give the event a time to get a desktop notification.');
-  if (repeating) parts.push('Repeating events edit as a whole series.');
+    ? t('manager.event.hint.timed')
+    : t('manager.event.hint.untimed'));
+  if (repeating) parts.push(t('manager.event.hint.repeating'));
   $('ev-hint').textContent = parts.join(' ');
 }
 
@@ -3125,7 +3164,7 @@ async function renderDetail() {
   if (!s) {
     const empty = document.createElement('p');
     empty.className = 'hint';
-    empty.textContent = 'Select a pack to see its details.';
+    empty.textContent = t('manager.detail.empty');
     detail.appendChild(empty);
     return;
   }

@@ -60,6 +60,9 @@
     available: Array.isArray(payload.available) ? payload.available : ['en'],
   };
 
+  // Reflect the active language on <html lang> for accessibility/spellcheck.
+  try { document.documentElement.lang = window.I18n.lang; } catch (e) { /* no-op */ }
+
   // Translate the static markup as soon as the DOM is ready.
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { applyDom(document); });
