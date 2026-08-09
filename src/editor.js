@@ -489,7 +489,7 @@ function field(labelText, control, onClear) {
     const clear = document.createElement('button');
     clear.className = 'clear';
     clear.type = 'button';
-    clear.textContent = '[inherit]';
+    clear.textContent = t('editor.insp.clearBtn');
     clear.addEventListener('click', onClear);
     label.appendChild(clear);
   }
@@ -558,8 +558,28 @@ function sectionLabel(text) {
   return el;
 }
 
-const BIND_CHOICES = [['cpu', 'CPU'], ['mem', 'Memory'], ['disk', 'Disk'], ['battery', 'Battery']];
-const FONT_CHOICES = [['rajdhani', 'Rajdhani'], ['system-sans', 'System sans'], ['system-serif', 'Serif'], ['mono', 'Mono']];
+// Telemetry binds + font stacks: the value ids are frozen (they map to pack
+// fields), only the display text is localized. Helpers rebuild the pairs at
+// render time so the labels follow the active language.
+const BIND_KEYS = ['cpu', 'mem', 'disk', 'battery'];
+function bindChoices() {
+  return BIND_KEYS.map((k) => [k, t(`editor.insp.bind.${k}`)]);
+}
+function fontChoices() {
+  // Rajdhani is a proper font name — never translated; the rest are descriptive.
+  return [['rajdhani', 'Rajdhani'], ['system-sans', t('editor.insp.font.systemSans')], ['system-serif', t('editor.insp.font.serif')], ['mono', t('editor.insp.font.mono')]];
+}
+
+// Standard skin field names → localized labels. Custom pack keys fall back to
+// prettyKey (author-defined, so left as written).
+const SKIN_PALETTE_KEYS = new Set(['void', 'glass', 'accent', 'accentBright', 'muted', 'warn', 'gold', 'steel', 'amber', 'bright', 'ink']);
+const SKIN_TEXTURE_KEYS = new Set(['scanlines', 'grid', 'glow', 'vignette', 'noise']);
+function paletteLabel(key) {
+  return SKIN_PALETTE_KEYS.has(key) ? t(`editor.insp.pal.${key}`) : prettyKey(key);
+}
+function textureLabel(key) {
+  return SKIN_TEXTURE_KEYS.has(key) ? t(`editor.insp.tex.${key}`) : prettyKey(key);
+}
 
 function optionFields(component, panel) {
   const o = component.options;
@@ -568,70 +588,70 @@ function optionFields(component, panel) {
 
   if (type === 'clock' || type === 'hud-clock' || type === 'ring-clock') {
     if (type === 'ring-clock') {
-      panel.append(field('Style', selectControl(o.style, [['minimal', 'Minimal (thin ring)'], ['halo', 'Halo (soft fill)']], set('style'))));
+      panel.append(field(t('editor.insp.field.style'), selectControl(o.style, [['minimal', t('editor.insp.opt.ringMinimal')], ['halo', t('editor.insp.opt.ringHalo')]], set('style'))));
     }
     panel.append(
-      field('Format', selectControl(o.format, [['24h', '24-hour'], ['12h', '12-hour']], set('format'))),
-      checkControl('Show seconds', o.seconds, set('seconds')),
-      checkControl('Show date', o.showDate, set('showDate')),
+      field(t('editor.insp.field.format'), selectControl(o.format, [['24h', t('editor.insp.opt.fmt24')], ['12h', t('editor.insp.opt.fmt12')]], set('format'))),
+      checkControl(t('editor.insp.check.showSeconds'), o.seconds, set('seconds')),
+      checkControl(t('editor.insp.check.showDate'), o.showDate, set('showDate')),
     );
   } else if (type === 'cores') {
-    panel.append(field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Core load')));
+    panel.append(field(t('editor.insp.field.label'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.coreLoad'))));
   } else if (type === 'sysinfo') {
     panel.append(
-      checkControl('Memory', o.memory !== false, set('memory')),
-      checkControl('Disk free', o.disk !== false, set('disk')),
-      checkControl('Uptime', o.uptime !== false, set('uptime')),
-      checkControl('Host name', o.host === true, set('host')),
-      checkControl('Live health alerts', o.health === true, set('health')),
-      field('Status line', textControl(o.statusText, (v) => { o.statusText = v || null; renderAll(); }, 'ALL SYSTEMS NOMINAL')),
+      checkControl(t('editor.insp.check.memory'), o.memory !== false, set('memory')),
+      checkControl(t('editor.insp.check.diskFree'), o.disk !== false, set('disk')),
+      checkControl(t('editor.insp.check.uptime'), o.uptime !== false, set('uptime')),
+      checkControl(t('editor.insp.check.hostName'), o.host === true, set('host')),
+      checkControl(t('editor.insp.check.liveHealth'), o.health === true, set('health')),
+      field(t('editor.insp.field.statusLine'), textControl(o.statusText, (v) => { o.statusText = v || null; renderAll(); }, t('editor.insp.ph.allNominal'))),
     );
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'With Live health alerts on, the status line shows your text when all is well and switches to the worst reading (e.g. “CPU 96%”) under high CPU/memory/disk or low battery — amber past 85%, red when critical.';
+    note.textContent = t('editor.insp.note.health');
     panel.appendChild(note);
   } else if (type === 'analog-clock') {
     panel.append(
-      field('Numerals', selectControl(o.numerals ?? 'quarters', [['quarters', '12 · 3 · 6 · 9'], ['all', 'All twelve'], ['none', 'None']], set('numerals'))),
-      checkControl('Minute ticks', o.minuteTicks !== false, set('minuteTicks')),
-      checkControl('Second hand', o.seconds, set('seconds')),
+      field(t('editor.insp.field.numerals'), selectControl(o.numerals ?? 'quarters', [['quarters', t('editor.insp.opt.numQuarters')], ['all', t('editor.insp.opt.numAll')], ['none', t('editor.insp.opt.none')]], set('numerals'))),
+      checkControl(t('editor.insp.check.minuteTicks'), o.minuteTicks !== false, set('minuteTicks')),
+      checkControl(t('editor.insp.check.secondHand'), o.seconds, set('seconds')),
     );
   } else if (type === 'stats') {
-    for (const [bind, label] of BIND_CHOICES) panel.append(checkControl(label, o[bind], set(bind)));
-    panel.append(checkControl('History behind bars', o.history !== false, set('history')));
+    for (const [bind, label] of bindChoices()) panel.append(checkControl(label, o[bind], set(bind)));
+    panel.append(checkControl(t('editor.insp.check.historyBars'), o.history !== false, set('history')));
   } else if (type === 'meter' || type === 'sparkline') {
-    panel.append(field('Source', selectControl(o.bind, BIND_CHOICES, set('bind'))));
+    panel.append(field(t('editor.insp.field.source'), selectControl(o.bind, bindChoices(), set('bind'))));
     if (type === 'meter') {
       panel.append(
-        field('Shape', selectControl(o.variant, [['ring', 'Ring'], ['bar', 'Bar']], set('variant'))),
-        checkControl('Big readout', o.readout !== false, set('readout')),
-        checkControl('Scale ticks', o.ticks !== false, set('ticks')),
+        field(t('editor.insp.field.shape'), selectControl(o.variant, [['ring', t('editor.insp.opt.shapeRing')], ['bar', t('editor.insp.opt.shapeBar')]], set('variant'))),
+        checkControl(t('editor.insp.check.bigReadout'), o.readout !== false, set('readout')),
+        checkControl(t('editor.insp.check.scaleTicks'), o.ticks !== false, set('ticks')),
       );
     } else {
       panel.append(
-        checkControl('Grid lines', o.grid !== false, set('grid')),
-        checkControl('Live readout', o.readout !== false, set('readout')),
+        checkControl(t('editor.insp.check.gridLines'), o.grid !== false, set('grid')),
+        checkControl(t('editor.insp.check.liveReadout'), o.readout !== false, set('readout')),
       );
     }
-    panel.append(field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'auto')));
+    panel.append(field(t('editor.insp.field.label'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.auto'))));
   } else if (type === 'text') {
     const area = document.createElement('textarea');
     area.rows = 4;
     area.maxLength = 200;
     area.value = o.text;
     area.addEventListener('change', () => { o.text = area.value; renderAll(); });
-    panel.append(field('Text', area));
+    panel.append(field(t('editor.insp.field.text'), area));
   } else if (type === 'image') {
     const choices = Object.keys(state.assets).map((rel) => [rel, rel.replace('assets/', '')]);
     if (choices.length > 0) {
       panel.append(
-        field('Image', selectControl(o.src, choices, set('src'))),
-        field('Fit', selectControl(o.fit, [['contain', 'Contain'], ['cover', 'Cover']], set('fit'))),
+        field(t('editor.insp.field.image'), selectControl(o.src, choices, set('src'))),
+        field(t('editor.insp.field.fit'), selectControl(o.fit, [['contain', t('editor.insp.opt.fitContain')], ['cover', t('editor.insp.opt.fitCover')]], set('fit'))),
       );
     }
     const importBtn = document.createElement('button');
     importBtn.className = 'btn tiny';
-    importBtn.textContent = 'Import new image…';
+    importBtn.textContent = t('editor.insp.btn.importNewImage');
     importBtn.addEventListener('click', async () => {
       const rel = await importImage();
       if (rel) { o.src = rel; renderAll(); }
@@ -645,7 +665,7 @@ function optionFields(component, panel) {
     if (o.images.length === 0) {
       const empty = document.createElement('p');
       empty.className = 'hint';
-      empty.textContent = 'No photos yet — add or import below.';
+      empty.textContent = t('editor.insp.note.galleryEmpty');
       list.appendChild(empty);
     }
     o.images.forEach((rel, i) => {
@@ -658,81 +678,81 @@ function optionFields(component, panel) {
       up.className = 'btn tiny'; up.textContent = '↑'; up.disabled = i === 0;
       up.addEventListener('click', () => { [o.images[i - 1], o.images[i]] = [o.images[i], o.images[i - 1]]; renderAll(); });
       const rm = document.createElement('button');
-      rm.className = 'btn tiny danger'; rm.textContent = 'Remove';
+      rm.className = 'btn tiny danger'; rm.textContent = t('editor.insp.btn.remove');
       rm.addEventListener('click', () => { o.images.splice(i, 1); renderAll(); });
       row.append(name, up, rm);
       list.appendChild(row);
     });
-    panel.append(field('Photos', list));
+    panel.append(field(t('editor.insp.field.photos'), list));
 
     const existing = Object.keys(state.assets).filter((r) => !o.images.includes(r));
     if (existing.length) {
-      panel.append(field('Add existing', selectControl('', [['', 'Choose an image…'], ...existing.map((r) => [r, r.replace('assets/', '')])], (v) => { if (v) { o.images.push(v); renderAll(); } })));
+      panel.append(field(t('editor.insp.field.addExisting'), selectControl('', [['', t('editor.insp.opt.chooseImage')], ...existing.map((r) => [r, r.replace('assets/', '')])], (v) => { if (v) { o.images.push(v); renderAll(); } })));
     }
     const importBtn = document.createElement('button');
     importBtn.className = 'btn tiny';
-    importBtn.textContent = 'Import photo…';
+    importBtn.textContent = t('editor.insp.btn.importPhoto');
     importBtn.addEventListener('click', async () => { const rel = await importImage(); if (rel) { o.images.push(rel); renderAll(); } });
     panel.append(importBtn);
 
     panel.append(
-      field('Seconds per photo', rangeControl(o.interval, 2, 60, 1, set('interval'))),
-      field('Fit', selectControl(o.fit, [['cover', 'Cover'], ['contain', 'Contain']], set('fit'))),
-      field('Transition', selectControl(o.transition, [['fade', 'Crossfade'], ['none', 'None']], set('transition'))),
-      checkControl('Shuffle order', o.shuffle, set('shuffle')),
+      field(t('editor.insp.field.secondsPerPhoto'), rangeControl(o.interval, 2, 60, 1, set('interval'))),
+      field(t('editor.insp.field.fit'), selectControl(o.fit, [['cover', t('editor.insp.opt.fitCover')], ['contain', t('editor.insp.opt.fitContain')]], set('fit'))),
+      field(t('editor.insp.field.transition'), selectControl(o.transition, [['fade', t('editor.insp.opt.transFade')], ['none', t('editor.insp.opt.none')]], set('transition'))),
+      checkControl(t('editor.insp.check.shuffleOrder'), o.shuffle, set('shuffle')),
     );
   } else if (type === 'divider') {
-    panel.append(field('Direction', selectControl(o.orientation, [['h', 'Horizontal'], ['v', 'Vertical']], set('orientation'))));
+    panel.append(field(t('editor.insp.field.direction'), selectControl(o.orientation, [['h', t('editor.insp.opt.orientH')], ['v', t('editor.insp.opt.orientV')]], set('orientation'))));
   } else if (type === 'calendar') {
     panel.append(
-      field('Week starts on', selectControl(o.weekStart, [['mon', 'Monday'], ['sun', 'Sunday']], set('weekStart'))),
-      checkControl('Mark days with reminders', o.showReminders, set('showReminders')),
+      field(t('editor.insp.field.weekStart'), selectControl(o.weekStart, [['mon', t('editor.insp.opt.dayMon')], ['sun', t('editor.insp.opt.daySun')]], set('weekStart'))),
+      checkControl(t('editor.insp.check.markReminders'), o.showReminders, set('showReminders')),
     );
   } else if (type === 'agenda') {
     panel.append(
-      field('Days ahead', numberControl(o.days, 1, 14, 1, set('days'))),
-      field('Max items', numberControl(o.limit, 1, 12, 1, set('limit'))),
-      field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Planner')),
+      field(t('editor.insp.field.daysAhead'), numberControl(o.days, 1, 14, 1, set('days'))),
+      field(t('editor.insp.field.maxItems'), numberControl(o.limit, 1, 12, 1, set('limit'))),
+      field(t('editor.insp.field.label'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.planner'))),
     );
   } else if (type === 'notifications') {
     panel.append(
-      field('Max items', numberControl(o.limit, 1, 12, 1, set('limit'))),
-      checkControl('Show app name', o.showApp !== false, set('showApp')),
-      field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Notifications')),
+      field(t('editor.insp.field.maxItems'), numberControl(o.limit, 1, 12, 1, set('limit'))),
+      checkControl(t('editor.insp.check.showApp'), o.showApp !== false, set('showApp')),
+      field(t('editor.insp.field.label'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.notifications'))),
     );
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Shows the user’s own live Windows notifications — never saved into the pack. Needs notification access (Windows Settings › Privacy › Notifications).';
+    note.textContent = t('editor.insp.note.notifications');
     panel.appendChild(note);
   } else if (type === 'assistant') {
     panel.append(
-      field('Prompt text', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Ask anything…')),
-      field('Button text', textControl(o.button, (v) => { o.button = v || null; renderAll(); }, 'Execute')),
+      field(t('editor.insp.field.promptText'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.askAnything'))),
+      field(t('editor.insp.field.buttonText'), textControl(o.button, (v) => { o.button = v || null; renderAll(); }, t('editor.insp.ph.execute'))),
     );
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Clicking this on the desktop opens the AI chat. It runs on a free model by default — pick a different one in the manager under Assistant.';
+    note.textContent = t('editor.insp.note.assistant');
     panel.appendChild(note);
   } else if (type === 'countdown') {
     const date = document.createElement('input');
     date.type = 'date';
     date.value = o.target ? o.target.slice(0, 10) : '';
     date.addEventListener('change', () => { o.target = date.value || null; renderAll(); });
-    panel.append(field('Target date', date), field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Countdown')));
+    panel.append(field(t('editor.insp.field.targetDate'), date), field(t('editor.insp.field.label'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.countdown'))));
   } else if (type === 'weather') {
     // Location by CITY NAME (geocoded to lat/lon) — friendlier than raw coords,
     // and it fills the display name so the widget shows the city, not "Weather".
     // Empty = follow the user's Settings weather location.
     const cityInput = document.createElement('input');
     cityInput.type = 'text';
-    cityInput.placeholder = 'e.g. Penang — empty = user’s Settings location';
+    cityInput.placeholder = t('editor.insp.ph.weatherCity');
     cityInput.value = o.place || '';
     cityInput.style.flex = '1';
     cityInput.style.minWidth = '0';
     const lookupBtn = document.createElement('button');
     lookupBtn.type = 'button';
     lookupBtn.className = 'btn tiny';
-    lookupBtn.textContent = 'Set';
+    lookupBtn.textContent = t('editor.insp.btn.set');
     const row = document.createElement('div');
     row.style.display = 'flex';
     row.style.gap = '6px';
@@ -743,8 +763,8 @@ function optionFields(component, panel) {
     const showStatus = () => {
       const hasCoords = Number.isFinite(Number(o.lat)) && Number.isFinite(Number(o.lon)) && !(Number(o.lat) === 0 && Number(o.lon) === 0);
       status.textContent = hasCoords
-        ? `Showing ${o.place || 'this location'} (${Number(o.lat).toFixed(2)}, ${Number(o.lon).toFixed(2)}).`
-        : 'No location set — follows the user’s Settings weather location.';
+        ? t('editor.insp.weather.showing', { place: o.place || t('editor.insp.weather.thisLocation'), lat: Number(o.lat).toFixed(2), lon: Number(o.lon).toFixed(2) })
+        : t('editor.insp.weather.noLocation');
     };
     showStatus();
 
@@ -752,10 +772,10 @@ function optionFields(component, panel) {
       const q = cityInput.value.trim();
       if (!q) { o.lat = 0; o.lon = 0; o.place = null; renderAll(); showStatus(); return; } // cleared → Settings location
       lookupBtn.disabled = true;
-      status.textContent = 'Looking up…';
+      status.textContent = t('editor.insp.weather.lookingUp');
       const res = await aegis.weatherGeocode(q);
       lookupBtn.disabled = false;
-      if (!res.ok) { status.textContent = res.error || 'Location not found.'; return; }
+      if (!res.ok) { status.textContent = res.error || t('editor.insp.weather.notFound'); return; }
       o.lat = res.lat; o.lon = res.lon; o.place = res.place;
       cityInput.value = res.place;
       renderAll();
@@ -765,10 +785,10 @@ function optionFields(component, panel) {
     cityInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); doLookup(); } });
 
     panel.append(
-      field('Location (city)', row),
+      field(t('editor.insp.field.locationCity'), row),
       status,
-      checkControl('Hi/lo + wind line', o.details !== false, set('details')),
-      checkControl('Compact strip (one line)', o.compact === true, set('compact')),
+      checkControl(t('editor.insp.check.hiLoWind'), o.details !== false, set('details')),
+      checkControl(t('editor.insp.check.compactStrip'), o.compact === true, set('compact')),
     );
 
     // Advanced: exact coordinates + manual display-name override, tucked away so
@@ -776,45 +796,45 @@ function optionFields(component, panel) {
     const adv = document.createElement('details');
     adv.style.marginTop = '8px';
     const sum = document.createElement('summary');
-    sum.textContent = 'Coordinates (advanced)';
+    sum.textContent = t('editor.insp.field.coordsAdvanced');
     sum.style.cursor = 'pointer';
     adv.appendChild(sum);
     adv.append(
-      field('Latitude', numberControl(o.lat, -90, 90, 0.0001, (v) => { o.lat = v; renderAll(); showStatus(); })),
-      field('Longitude', numberControl(o.lon, -180, 180, 0.0001, (v) => { o.lon = v; renderAll(); showStatus(); })),
-      field('Display name', textControl(o.place, (v) => { o.place = v || null; cityInput.value = v || ''; renderAll(); showStatus(); }, 'auto from lookup')),
+      field(t('editor.insp.field.latitude'), numberControl(o.lat, -90, 90, 0.0001, (v) => { o.lat = v; renderAll(); showStatus(); })),
+      field(t('editor.insp.field.longitude'), numberControl(o.lon, -180, 180, 0.0001, (v) => { o.lon = v; renderAll(); showStatus(); })),
+      field(t('editor.insp.field.displayName'), textControl(o.place, (v) => { o.place = v || null; cityInput.value = v || ''; renderAll(); showStatus(); }, t('editor.insp.ph.autoFromLookup'))),
     );
     panel.appendChild(adv);
   } else if (type === 'launcher') {
     panel.append(
-      checkControl('Pinned apps', o.pinned !== false, set('pinned')),
-      checkControl('Recently used', o.recent !== false, set('recent')),
-      checkControl('Open windows', o.running === true, set('running')),
-      checkControl('Show names', o.labels !== false, set('labels')),
-      field('Icon size', selectControl(o.iconSize || 'm', [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']], set('iconSize'))),
-      field('Label', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Launcher')),
+      checkControl(t('editor.insp.check.pinnedApps'), o.pinned !== false, set('pinned')),
+      checkControl(t('editor.insp.check.recentlyUsed'), o.recent !== false, set('recent')),
+      checkControl(t('editor.insp.check.openWindows'), o.running === true, set('running')),
+      checkControl(t('editor.insp.check.showNames'), o.labels !== false, set('labels')),
+      field(t('editor.insp.field.iconSize'), selectControl(o.iconSize || 'm', [['s', t('editor.insp.opt.sizeS')], ['m', t('editor.insp.opt.sizeM')], ['l', t('editor.insp.opt.sizeL')]], set('iconSize'))),
+      field(t('editor.insp.field.label'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.launcher'))),
     );
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Tiles show the user’s own pins and recents (managed in the manager) — they are never saved into the pack.';
+    note.textContent = t('editor.insp.note.launcher');
     panel.appendChild(note);
   } else if (type === 'nowplaying') {
     panel.append(
-      checkControl('Album art', o.showArt !== false, set('showArt')),
-      checkControl('Playback controls', o.showControls !== false, set('showControls')),
-      field('Label (when idle)', textControl(o.label, (v) => { o.label = v || null; renderAll(); }, 'Now Playing')),
+      checkControl(t('editor.insp.check.albumArt'), o.showArt !== false, set('showArt')),
+      checkControl(t('editor.insp.check.playbackControls'), o.showControls !== false, set('showControls')),
+      field(t('editor.insp.field.labelIdle'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.nowPlaying'))),
     );
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Shows whatever the user is playing — Spotify, a browser, any player — via the Windows media session, with play/pause/next/prev. Personal data; never saved into the pack. Live only on the desktop.';
+    note.textContent = t('editor.insp.note.nowplaying');
     panel.appendChild(note);
   } else if (type === 'visualizer') {
-    panel.append(field('Style', selectControl(o.style, [
-      ['bars', 'Bars (spectrum)'], ['waveform', 'Waveform'], ['radial', 'Radial'], ['bloom', 'Bloom (ambient glow)'],
+    panel.append(field(t('editor.insp.field.style'), selectControl(o.style, [
+      ['bars', t('editor.insp.opt.visBars')], ['waveform', t('editor.insp.opt.visWaveform')], ['radial', t('editor.insp.opt.visRadial')], ['bloom', t('editor.insp.opt.visBloom')],
     ], set('style'))));
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Reacts to the system audio on the desktop (any player — Spotify, a browser, a game) via loopback capture. Tip: place a Bloom one full-screen behind your other components for a reactive background ambience. Static preview here; live only on the desktop.';
+    note.textContent = t('editor.insp.note.visualizer');
     panel.appendChild(note);
   } else if (type === 'module') {
     const area = document.createElement('textarea');
@@ -826,13 +846,13 @@ function optionFields(component, panel) {
     area.value = o.html || '';
     area.addEventListener('change', () => { o.html = area.value; renderAll(); });
     panel.append(
-      field('Component code (HTML · CSS · JS)', area),
-      checkControl('Scroll if content overflows', o.scroll === true, set('scroll')),
-      checkControl('Feed live system stats (DE.onData)', o.telemetry !== false, set('telemetry')),
+      field(t('editor.insp.field.componentCode'), area),
+      checkControl(t('editor.insp.check.scrollOverflow'), o.scroll === true, set('scroll')),
+      checkControl(t('editor.insp.check.feedStats'), o.telemetry !== false, set('telemetry')),
     );
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Runs in a locked-down sandbox — no network, no file access, no control over the engine. It receives the pack theme (--de-* CSS variables + DE.onTheme) and, if enabled, live stats via DE.onData. Full reference in PACKS.md → Module SDK.';
+    note.textContent = t('editor.insp.note.module');
     panel.appendChild(note);
   }
 }
@@ -853,20 +873,22 @@ function styleFields(component, panel) {
     return field(label, input, clear(key));
   };
 
+  const inh = t('editor.insp.inherit');
+  const onOff = [['', inh], ['true', t('editor.insp.opt.on')], ['false', t('editor.insp.opt.off')]];
   panel.append(
-    sectionLabel('Style'),
-    colorField('Accent', 'accent'),
-    colorField('Text colour', 'textColor'),
-    field('Font', selectControl(s.font || '', [['', 'inherit'], ...FONT_CHOICES], (v) => { s.font = v || null; renderAll(); })),
-    field(`Scale (${s.fontScale ?? 'inherit'})`, rangeControl(s.fontScale ?? 1, 0.5, 3, 0.05, set('fontScale')), clear('fontScale')),
-    field('Align', selectControl(s.align || '', [['', 'inherit'], ['left', 'Left'], ['center', 'Center'], ['right', 'Right']], (v) => { s.align = v || null; renderAll(); })),
-    field('Placement', selectControl(s.place || '', [['', 'inherit'], ['top', 'Top'], ['center', 'Middle'], ['bottom', 'Bottom'], ['spread', 'Spread out']], (v) => { s.place = v || null; renderAll(); })),
-    field('Glass panel', selectControl(s.panel === null ? '' : String(s.panel), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })),
-    field('Border', selectControl(s.border === null ? '' : String(s.border), [['', 'inherit'], ['true', 'On'], ['false', 'Off']], (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })),
-    field(`Padding (${s.padding ?? 'inherit'})`, rangeControl(s.padding ?? 18, 0, 48, 1, set('padding')), clear('padding')),
-    field(`Opacity (${s.opacity ?? 'inherit'})`, rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')),
-    field(`Glow (${s.glow ?? 'inherit'})`, rangeControl(s.glow ?? 0.5, 0, 1, 0.05, set('glow')), clear('glow')),
-    field(`Rotate (${s.rotate ?? 0}°)`, rangeControl(s.rotate ?? 0, -20, 20, 0.5, set('rotate')), clear('rotate')),
+    sectionLabel(t('editor.insp.section.style')),
+    colorField(t('editor.insp.field.accent'), 'accent'),
+    colorField(t('editor.insp.field.textColour'), 'textColor'),
+    field(t('editor.insp.field.font'), selectControl(s.font || '', [['', inh], ...fontChoices()], (v) => { s.font = v || null; renderAll(); })),
+    field(t('editor.insp.dyn.scale', { value: s.fontScale ?? inh }), rangeControl(s.fontScale ?? 1, 0.5, 3, 0.05, set('fontScale')), clear('fontScale')),
+    field(t('editor.insp.field.align'), selectControl(s.align || '', [['', inh], ['left', t('editor.insp.opt.alignLeft')], ['center', t('editor.insp.opt.alignCenter')], ['right', t('editor.insp.opt.alignRight')]], (v) => { s.align = v || null; renderAll(); })),
+    field(t('editor.insp.field.placement'), selectControl(s.place || '', [['', inh], ['top', t('editor.insp.opt.placeTop')], ['center', t('editor.insp.opt.placeMiddle')], ['bottom', t('editor.insp.opt.placeBottom')], ['spread', t('editor.insp.opt.placeSpread')]], (v) => { s.place = v || null; renderAll(); })),
+    field(t('editor.insp.field.glassPanel'), selectControl(s.panel === null ? '' : String(s.panel), onOff, (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })),
+    field(t('editor.insp.field.border'), selectControl(s.border === null ? '' : String(s.border), onOff, (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })),
+    field(t('editor.insp.dyn.padding', { value: s.padding ?? inh }), rangeControl(s.padding ?? 18, 0, 48, 1, set('padding')), clear('padding')),
+    field(t('editor.insp.dyn.opacity', { value: s.opacity ?? inh }), rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')),
+    field(t('editor.insp.dyn.glow', { value: s.glow ?? inh }), rangeControl(s.glow ?? 0.5, 0, 1, 0.05, set('glow')), clear('glow')),
+    field(t('editor.insp.dyn.rotate', { value: s.rotate ?? 0 }), rangeControl(s.rotate ?? 0, -20, 20, 0.5, set('rotate')), clear('rotate')),
   );
 }
 
@@ -874,7 +896,7 @@ function renderComponentTab(panel) {
   if (state.selected === null || !state.pack.components[state.selected]) {
     const empty = document.createElement('p');
     empty.className = 'ed-empty';
-    empty.textContent = 'Nothing selected.\n\nClick a component on the canvas, drag one in from the palette, or double-click a palette entry.';
+    empty.textContent = t('editor.insp.nothingSelected');
     empty.style.whiteSpace = 'pre-wrap';
     panel.appendChild(empty);
     return;
@@ -894,9 +916,9 @@ function renderComponentTab(panel) {
     return b;
   };
   actions.append(
-    mkBtn('Bring forward', () => { component.z = Math.min(20, component.z + 1); renderAll(); }),
-    mkBtn('Send back', () => { component.z = Math.max(0, component.z - 1); renderAll(); }),
-    mkBtn('Duplicate', () => {
+    mkBtn(t('editor.insp.act.forward'), () => { component.z = Math.min(20, component.z + 1); renderAll(); }),
+    mkBtn(t('editor.insp.act.back'), () => { component.z = Math.max(0, component.z - 1); renderAll(); }),
+    mkBtn(t('editor.insp.act.duplicate'), () => {
       const copy = JSON.parse(JSON.stringify(component));
       copy.rect[0] = clamp(copy.rect[0] + 3, 0, 100 - copy.rect[2]);
       copy.rect[1] = clamp(copy.rect[1] + 3, 0, 100 - copy.rect[3]);
@@ -904,7 +926,7 @@ function renderComponentTab(panel) {
       state.selected = state.pack.components.length - 1;
       renderAll();
     }),
-    mkBtn('Delete', removeSelected, 'danger'),
+    mkBtn(t('editor.insp.act.delete'), removeSelected, 'danger'),
   );
   panel.appendChild(actions);
 
@@ -920,7 +942,7 @@ function prettyKey(key) {
 
 function renderSkinTab(panel) {
   const skin = state.pack.skin;
-  panel.appendChild(sectionLabel('Palette'));
+  panel.appendChild(sectionLabel(t('editor.insp.section.palette')));
   for (const key of Object.keys(skin.palette)) {
     const input = document.createElement('input');
     input.type = 'color';
@@ -932,35 +954,35 @@ function renderSkinTab(panel) {
     // change = on close, do a full re-sync.
     input.addEventListener('input', () => { sliderActive = true; skin.palette[key] = input.value; renderAll(); });
     input.addEventListener('change', () => { sliderActive = false; skin.palette[key] = input.value; renderAll(); });
-    panel.appendChild(field(prettyKey(key), input));
+    panel.appendChild(field(paletteLabel(key), input));
   }
 
-  panel.appendChild(sectionLabel('Texture'));
+  panel.appendChild(sectionLabel(t('editor.insp.section.texture')));
   for (const key of Object.keys(skin.texture)) {
-    panel.appendChild(field(prettyKey(key), rangeControl(skin.texture[key], 0, 1, 0.05, (v) => { skin.texture[key] = v; renderAll(); })));
+    panel.appendChild(field(textureLabel(key), rangeControl(skin.texture[key], 0, 1, 0.05, (v) => { skin.texture[key] = v; renderAll(); })));
   }
 
-  panel.appendChild(sectionLabel('Typography'));
+  panel.appendChild(sectionLabel(t('editor.insp.section.typography')));
   panel.append(
-    field('Display font', selectControl(skin.typography.display, FONT_CHOICES, (v) => { skin.typography.display = v; renderAll(); })),
-    checkControl('Uppercase display text', skin.typography.uppercase, (v) => { skin.typography.uppercase = v; renderAll(); }),
-    field('Letter spacing', rangeControl(skin.typography.letterSpacing, 0, 0.4, 0.01, (v) => { skin.typography.letterSpacing = v; renderAll(); })),
+    field(t('editor.insp.field.displayFont'), selectControl(skin.typography.display, fontChoices(), (v) => { skin.typography.display = v; renderAll(); })),
+    checkControl(t('editor.insp.check.uppercaseDisplay'), skin.typography.uppercase, (v) => { skin.typography.uppercase = v; renderAll(); }),
+    field(t('editor.insp.field.letterSpacing'), rangeControl(skin.typography.letterSpacing, 0, 0.4, 0.01, (v) => { skin.typography.letterSpacing = v; renderAll(); })),
   );
 
-  panel.appendChild(sectionLabel('Shape'));
+  panel.appendChild(sectionLabel(t('editor.insp.section.shape')));
   panel.append(
-    checkControl('Corner notches', skin.shape.cornerNotches, (v) => { skin.shape.cornerNotches = v; renderAll(); }),
-    field('Border opacity', rangeControl(skin.shape.borderOpacity, 0.05, 1, 0.01, (v) => { skin.shape.borderOpacity = v; renderAll(); })),
-    field('Panel opacity', rangeControl(skin.shape.panelOpacity, 0, 1, 0.01, (v) => { skin.shape.panelOpacity = v; renderAll(); })),
-    field('Corner radius', rangeControl(skin.shape.radius, 0, 16, 1, (v) => { skin.shape.radius = v; renderAll(); })),
-    field('Canvas padding', rangeControl(state.pack.canvas.padding, 0, 12, 0.5, (v) => { state.pack.canvas.padding = v; renderAll(); })),
+    checkControl(t('editor.insp.check.cornerNotches'), skin.shape.cornerNotches, (v) => { skin.shape.cornerNotches = v; renderAll(); }),
+    field(t('editor.insp.field.borderOpacity'), rangeControl(skin.shape.borderOpacity, 0.05, 1, 0.01, (v) => { skin.shape.borderOpacity = v; renderAll(); })),
+    field(t('editor.insp.field.panelOpacity'), rangeControl(skin.shape.panelOpacity, 0, 1, 0.01, (v) => { skin.shape.panelOpacity = v; renderAll(); })),
+    field(t('editor.insp.field.cornerRadius'), rangeControl(skin.shape.radius, 0, 16, 1, (v) => { skin.shape.radius = v; renderAll(); })),
+    field(t('editor.insp.field.canvasPadding'), rangeControl(state.pack.canvas.padding, 0, 12, 0.5, (v) => { state.pack.canvas.padding = v; renderAll(); })),
   );
 
-  panel.appendChild(sectionLabel('Ambience'));
+  panel.appendChild(sectionLabel(t('editor.insp.section.ambience')));
   if (!skin.ambience) skin.ambience = { effect: 'none', density: 0.5 };
   panel.append(
-    field('Effect', selectControl(skin.ambience.effect, [['none', 'None'], ['embers', 'Embers'], ['dust', 'Dust'], ['snow', 'Snow'], ['petals', 'Petals'], ['rain', 'Rain'], ['sparkle', 'Sparkle']], (v) => { skin.ambience.effect = v; renderAll(); })),
-    field('Density', rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
+    field(t('editor.insp.field.effect'), selectControl(skin.ambience.effect, [['none', t('editor.insp.opt.effNone')], ['embers', t('editor.insp.opt.effEmbers')], ['dust', t('editor.insp.opt.effDust')], ['snow', t('editor.insp.opt.effSnow')], ['petals', t('editor.insp.opt.effPetals')], ['rain', t('editor.insp.opt.effRain')], ['sparkle', t('editor.insp.opt.effSparkle')]], (v) => { skin.ambience.effect = v; renderAll(); })),
+    field(t('editor.insp.field.density'), rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
   );
 
   renderBackgroundSection(panel, skin);
@@ -975,16 +997,16 @@ function renderBackgroundSection(panel, skin) {
     skin.background = { layers: [], parallax: { strength: 1, axis: 'both' } };
   }
   const bg = skin.background;
-  panel.appendChild(sectionLabel('Background layers'));
+  panel.appendChild(sectionLabel(t('editor.insp.section.bgLayers')));
 
   if (bg.layers.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'ed-empty';
-    empty.textContent = 'No background yet — add an image or video layer. Add several at different depths for a parallax effect.';
+    empty.textContent = t('editor.insp.note.bgEmpty');
     panel.appendChild(empty);
   }
 
-  const FIT_CHOICES = [['cover', 'Fill (crop)'], ['contain', 'Fit whole'], ['stretch', 'Stretch']];
+  const FIT_CHOICES = [['cover', t('editor.insp.opt.bgFitCover')], ['contain', t('editor.insp.opt.bgFitContain')], ['stretch', t('editor.insp.opt.bgFitStretch')]];
   bg.layers.forEach((layer, i) => {
     const card = document.createElement('div');
     card.className = 'ed-bg-layer';
@@ -993,7 +1015,7 @@ function renderBackgroundSection(panel, skin) {
     head.className = 'ed-bg-layer-head';
     const name = document.createElement('span');
     name.className = 'ed-bg-layer-name';
-    name.textContent = `${i + 1}. ${String(layer.src).replace('assets/', '')}${isVideoRel(layer.src) ? ' (video)' : ''}`;
+    name.textContent = `${i + 1}. ${String(layer.src).replace('assets/', '')}${isVideoRel(layer.src) ? ` (${t('editor.insp.videoTag')})` : ''}`;
     head.appendChild(name);
     const tools = document.createElement('span');
     tools.className = 'ed-bg-layer-tools';
@@ -1003,9 +1025,9 @@ function renderBackgroundSection(panel, skin) {
       if (enabled) b.addEventListener('click', onClick);
       return b;
     };
-    tools.appendChild(mkTool('↑', 'Move back', i > 0, () => { [bg.layers[i - 1], bg.layers[i]] = [bg.layers[i], bg.layers[i - 1]]; renderAll(); }));
-    tools.appendChild(mkTool('↓', 'Move forward', i < bg.layers.length - 1, () => { [bg.layers[i + 1], bg.layers[i]] = [bg.layers[i], bg.layers[i + 1]]; renderAll(); }));
-    tools.appendChild(mkTool('×', 'Remove layer', true, () => { bg.layers.splice(i, 1); renderAll(); }));
+    tools.appendChild(mkTool('↑', t('editor.insp.tool.moveBack'), i > 0, () => { [bg.layers[i - 1], bg.layers[i]] = [bg.layers[i], bg.layers[i - 1]]; renderAll(); }));
+    tools.appendChild(mkTool('↓', t('editor.insp.tool.moveForward'), i < bg.layers.length - 1, () => { [bg.layers[i + 1], bg.layers[i]] = [bg.layers[i], bg.layers[i + 1]]; renderAll(); }));
+    tools.appendChild(mkTool('×', t('editor.insp.tool.removeLayer'), true, () => { bg.layers.splice(i, 1); renderAll(); }));
     head.appendChild(tools);
     card.appendChild(head);
 
@@ -1016,17 +1038,17 @@ function renderBackgroundSection(panel, skin) {
     if (typeof layer.opacity !== 'number') layer.opacity = 1;
     if (!layer.drift || typeof layer.drift !== 'object') layer.drift = { x: 0, y: 0 };
 
-    card.appendChild(field('Fit', selectControl(layer.fit, FIT_CHOICES, (v) => { layer.fit = v; renderAll(); })));
+    card.appendChild(field(t('editor.insp.field.fit'), selectControl(layer.fit, FIT_CHOICES, (v) => { layer.fit = v; renderAll(); })));
     if (layer.fit !== 'stretch') {
-      card.appendChild(field('Position X', rangeControl(layer.posX, 0, 100, 1, (v) => { layer.posX = v; renderAll(); })));
-      card.appendChild(field('Position Y', rangeControl(layer.posY, 0, 100, 1, (v) => { layer.posY = v; renderAll(); })));
+      card.appendChild(field(t('editor.insp.field.positionX'), rangeControl(layer.posX, 0, 100, 1, (v) => { layer.posX = v; renderAll(); })));
+      card.appendChild(field(t('editor.insp.field.positionY'), rangeControl(layer.posY, 0, 100, 1, (v) => { layer.posY = v; renderAll(); })));
     }
     // Depth = how much the layer moves with the cursor (0 fixed, 1 full). Opacity
     // lets a foreground layer blend over the ones behind it.
-    card.appendChild(field('Depth', rangeControl(layer.depth, 0, 1, 0.05, (v) => { layer.depth = v; renderAll(); })));
-    card.appendChild(field('Opacity', rangeControl(layer.opacity, 0.05, 1, 0.05, (v) => { layer.opacity = v; renderAll(); })));
-    card.appendChild(field('Drift X', rangeControl(layer.drift.x, -20, 20, 1, (v) => { layer.drift.x = v; renderAll(); })));
-    card.appendChild(field('Drift Y', rangeControl(layer.drift.y, -20, 20, 1, (v) => { layer.drift.y = v; renderAll(); })));
+    card.appendChild(field(t('editor.insp.field.depth'), rangeControl(layer.depth, 0, 1, 0.05, (v) => { layer.depth = v; renderAll(); })));
+    card.appendChild(field(t('editor.insp.field.opacity'), rangeControl(layer.opacity, 0.05, 1, 0.05, (v) => { layer.opacity = v; renderAll(); })));
+    card.appendChild(field(t('editor.insp.field.driftX'), rangeControl(layer.drift.x, -20, 20, 1, (v) => { layer.drift.x = v; renderAll(); })));
+    card.appendChild(field(t('editor.insp.field.driftY'), rangeControl(layer.drift.y, -20, 20, 1, (v) => { layer.drift.y = v; renderAll(); })));
     renderLayerEffects(card, layer);
     panel.appendChild(card);
   });
@@ -1039,12 +1061,12 @@ function renderBackgroundSection(panel, skin) {
   if (bg.layers.length < 6) {
     const addImg = document.createElement('button');
     addImg.className = 'btn tiny';
-    addImg.textContent = 'Add image layer…';
+    addImg.textContent = t('editor.insp.btn.addImageLayer');
     addImg.addEventListener('click', async () => addLayer(await importImage()));
     panel.appendChild(addImg);
     const addVid = document.createElement('button');
     addVid.className = 'btn tiny';
-    addVid.textContent = 'Add video layer…';
+    addVid.textContent = t('editor.insp.btn.addVideoLayer');
     addVid.addEventListener('click', async () => addLayer(await importVideo()));
     panel.appendChild(addVid);
   }
@@ -1052,16 +1074,16 @@ function renderBackgroundSection(panel, skin) {
   // Video speed is one global knob (schema); show it when any layer is a video.
   if (bg.layers.some((l) => isVideoRel(l.src))) {
     if (!skin.wallpaperVideo || typeof skin.wallpaperVideo.playbackRate !== 'number') skin.wallpaperVideo = { playbackRate: 1 };
-    panel.appendChild(field('Video speed', rangeControl(skin.wallpaperVideo.playbackRate, 0.25, 2, 0.05, (v) => { skin.wallpaperVideo.playbackRate = v; renderAll(); })));
+    panel.appendChild(field(t('editor.insp.field.videoSpeed'), rangeControl(skin.wallpaperVideo.playbackRate, 0.25, 2, 0.05, (v) => { skin.wallpaperVideo.playbackRate = v; renderAll(); })));
   }
 
   // Parallax feel — only meaningful once a layer has depth or drift.
   if (bg.layers.length > 0) {
     if (!bg.parallax || typeof bg.parallax !== 'object') bg.parallax = { strength: 1, axis: 'both' };
     if (typeof bg.parallax.strength !== 'number') bg.parallax.strength = 1;
-    panel.appendChild(sectionLabel('Parallax'));
-    panel.appendChild(field('Strength', rangeControl(bg.parallax.strength, 0, 2, 0.1, (v) => { bg.parallax.strength = v; renderAll(); })));
-    panel.appendChild(field('Axis', selectControl(bg.parallax.axis || 'both', [['both', 'Both'], ['x', 'Horizontal'], ['y', 'Vertical']], (v) => { bg.parallax.axis = v; renderAll(); })));
+    panel.appendChild(sectionLabel(t('editor.insp.section.parallax')));
+    panel.appendChild(field(t('editor.insp.field.strength'), rangeControl(bg.parallax.strength, 0, 2, 0.1, (v) => { bg.parallax.strength = v; renderAll(); })));
+    panel.appendChild(field(t('editor.insp.field.axis'), selectControl(bg.parallax.axis || 'both', [['both', t('editor.insp.opt.axisBoth')], ['x', t('editor.insp.opt.axisX')], ['y', t('editor.insp.opt.axisY')]], (v) => { bg.parallax.axis = v; renderAll(); })));
   }
 }
 
@@ -1074,8 +1096,13 @@ function defaultEffect(type) {
   return { type: 'cursor-ripple', strength: 0.5, speed: 1.4, decay: 1 };
 }
 
-const EFFECT_ADD_CHOICES = [['', 'Add effect…'], ['ripple', 'Ripple'], ['sway', 'Sway'], ['drift-warp', 'Drift warp'], ['pulse', 'Pulse'], ['cursor-ripple', 'Cursor ripple']];
-const PALETTE_TINT_CHOICES = [['', 'None'], ['accent', 'Accent'], ['accentBright', 'Bright'], ['gold', 'Gold'], ['warn', 'Warn'], ['muted', 'Muted']];
+// Effect type ids are frozen; only the display labels localize.
+function effectAddChoices() {
+  return [['', t('editor.insp.opt.fxAdd')], ['ripple', t('editor.insp.opt.fxRipple')], ['sway', t('editor.insp.opt.fxSway')], ['drift-warp', t('editor.insp.opt.fxDriftWarp')], ['pulse', t('editor.insp.opt.fxPulse')], ['cursor-ripple', t('editor.insp.opt.fxCursorRipple')]];
+}
+function paletteTintChoices() {
+  return [['', t('editor.insp.opt.none')], ['accent', t('editor.insp.opt.tintAccent')], ['accentBright', t('editor.insp.opt.tintBright')], ['gold', t('editor.insp.opt.tintGold')], ['warn', t('editor.insp.opt.tintWarn')], ['muted', t('editor.insp.opt.tintMuted')]];
+}
 
 // Per-layer WebGL effects: a small card per effect with its params + optional
 // region, an add-effect dropdown (max 3). Effects need WebGL; if this display
@@ -1084,12 +1111,12 @@ function renderLayerEffects(card, layer) {
   if (!Array.isArray(layer.effects)) layer.effects = [];
   const head = document.createElement('div');
   head.className = 'ed-bg-fx-head';
-  head.textContent = 'Effects (WebGL)';
+  head.textContent = t('editor.insp.effectsWebgl');
   card.appendChild(head);
   if (!(window.AegisGL && window.AegisGL.supported())) {
     const note = document.createElement('p');
     note.className = 'ed-empty';
-    note.textContent = 'Effects preview unavailable on this GPU — they’re still saved and run where WebGL is available.';
+    note.textContent = t('editor.insp.note.fxUnavailable');
     card.appendChild(note);
   }
 
@@ -1111,25 +1138,25 @@ function renderLayerEffects(card, layer) {
     fh.appendChild(name);
     const tools = document.createElement('span');
     tools.className = 'ed-bg-layer-tools';
-    tools.appendChild(mkTool('↑', 'Earlier', j > 0, () => { [layer.effects[j - 1], layer.effects[j]] = [layer.effects[j], layer.effects[j - 1]]; renderAll(); }));
-    tools.appendChild(mkTool('↓', 'Later', j < layer.effects.length - 1, () => { [layer.effects[j + 1], layer.effects[j]] = [layer.effects[j], layer.effects[j + 1]]; renderAll(); }));
-    tools.appendChild(mkTool('×', 'Remove', true, () => { layer.effects.splice(j, 1); renderAll(); }));
+    tools.appendChild(mkTool('↑', t('editor.insp.tool.earlier'), j > 0, () => { [layer.effects[j - 1], layer.effects[j]] = [layer.effects[j], layer.effects[j - 1]]; renderAll(); }));
+    tools.appendChild(mkTool('↓', t('editor.insp.tool.later'), j < layer.effects.length - 1, () => { [layer.effects[j + 1], layer.effects[j]] = [layer.effects[j], layer.effects[j + 1]]; renderAll(); }));
+    tools.appendChild(mkTool('×', t('editor.insp.btn.remove'), true, () => { layer.effects.splice(j, 1); renderAll(); }));
     fh.appendChild(tools);
     box.appendChild(fh);
 
     const rc = (label, key, min, max, step) => box.appendChild(field(label, rangeControl(fx[key], min, max, step, (v) => { fx[key] = v; renderAll(); })));
-    if (fx.type === 'ripple') { rc('Speed', 'speed', 0, 3, 0.1); rc('Scale', 'scale', 0.5, 8, 0.5); rc('Strength', 'strength', 0, 1, 0.05); }
-    else if (fx.type === 'sway') { rc('Speed', 'speed', 0, 3, 0.1); rc('Strength', 'strength', 0, 1, 0.05); rc('Direction', 'direction', 0, 360, 5); }
-    else if (fx.type === 'drift-warp') { rc('Speed', 'speed', 0, 3, 0.1); rc('Scale', 'scale', 0.5, 8, 0.5); }
-    else if (fx.type === 'pulse') { rc('Speed', 'speed', 0, 3, 0.1); rc('Amount', 'amount', 0, 1, 0.05); box.appendChild(field('Tint', selectControl(fx.paletteKey || '', PALETTE_TINT_CHOICES, (v) => { fx.paletteKey = v || null; renderAll(); }))); }
-    else if (fx.type === 'cursor-ripple') { rc('Strength', 'strength', 0, 1, 0.05); rc('Speed', 'speed', 0.2, 3, 0.1); rc('Decay', 'decay', 0.2, 3, 0.1); }
+    if (fx.type === 'ripple') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.scale'), 'scale', 0.5, 8, 0.5); rc(t('editor.insp.field.strength'), 'strength', 0, 1, 0.05); }
+    else if (fx.type === 'sway') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.strength'), 'strength', 0, 1, 0.05); rc(t('editor.insp.field.direction'), 'direction', 0, 360, 5); }
+    else if (fx.type === 'drift-warp') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.scale'), 'scale', 0.5, 8, 0.5); }
+    else if (fx.type === 'pulse') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.amount'), 'amount', 0, 1, 0.05); box.appendChild(field(t('editor.insp.field.tint'), selectControl(fx.paletteKey || '', paletteTintChoices(), (v) => { fx.paletteKey = v || null; renderAll(); }))); }
+    else if (fx.type === 'cursor-ripple') { rc(t('editor.insp.field.strength'), 'strength', 0, 1, 0.05); rc(t('editor.insp.field.speed'), 'speed', 0.2, 3, 0.1); rc(t('editor.insp.field.decay'), 'decay', 0.2, 3, 0.1); }
 
     renderEffectRegion(box, fx);
     card.appendChild(box);
   });
 
   if (layer.effects.length < 3) {
-    const add = selectControl('', EFFECT_ADD_CHOICES, (v) => { if (!v) return; layer.effects.push(defaultEffect(v)); renderAll(); });
+    const add = selectControl('', effectAddChoices(), (v) => { if (!v) return; layer.effects.push(defaultEffect(v)); renderAll(); });
     card.appendChild(field('', add));
   }
 }
@@ -1139,7 +1166,7 @@ function renderLayerEffects(card, layer) {
 function renderEffectRegion(box, fx) {
   const toggle = document.createElement('button');
   toggle.className = 'btn tiny';
-  toggle.textContent = fx.region ? 'Remove region' : 'Add region';
+  toggle.textContent = fx.region ? t('editor.insp.btn.removeRegion') : t('editor.insp.btn.addRegion');
   toggle.addEventListener('click', () => {
     if (fx.region) delete fx.region; else fx.region = { shape: 'rect', x: 25, y: 25, w: 50, h: 50, feather: 10 };
     renderAll();
@@ -1147,19 +1174,19 @@ function renderEffectRegion(box, fx) {
   box.appendChild(toggle);
   if (!fx.region) return;
   const r = fx.region;
-  box.appendChild(field('Shape', selectControl(r.shape, [['rect', 'Rectangle'], ['ellipse', 'Ellipse']], (v) => { r.shape = v; renderAll(); })));
+  box.appendChild(field(t('editor.insp.field.shape'), selectControl(r.shape, [['rect', t('editor.insp.opt.regRect')], ['ellipse', t('editor.insp.opt.regEllipse')]], (v) => { r.shape = v; renderAll(); })));
   const rc = (label, key, min, max) => box.appendChild(field(label, rangeControl(r[key], min, max, 1, (v) => { r[key] = v; renderAll(); })));
-  rc('Region X', 'x', 0, 100); rc('Region Y', 'y', 0, 100);
-  rc('Region W', 'w', 0, 100); rc('Region H', 'h', 0, 100);
-  rc('Feather', 'feather', 0, 50);
+  rc(t('editor.insp.field.regionX'), 'x', 0, 100); rc(t('editor.insp.field.regionY'), 'y', 0, 100);
+  rc(t('editor.insp.field.regionW'), 'w', 0, 100); rc(t('editor.insp.field.regionH'), 'h', 0, 100);
+  rc(t('editor.insp.field.feather'), 'feather', 0, 50);
 }
 
 function renderPersonaTab(panel) {
   const persona = state.pack.persona;
   panel.append(
-    sectionLabel('Persona'),
-    field('Name', textControl(persona.name, (v) => { persona.name = v.slice(0, 40) || 'Dashboard'; renderAll(); })),
-    field('Tagline', textControl(persona.tagline, (v) => { persona.tagline = v.slice(0, 80); renderAll(); })),
+    sectionLabel(t('editor.insp.section.persona')),
+    field(t('editor.insp.field.name'), textControl(persona.name, (v) => { persona.name = v.slice(0, 40) || 'Dashboard'; renderAll(); })),
+    field(t('editor.insp.field.tagline'), textControl(persona.tagline, (v) => { persona.tagline = v.slice(0, 80); renderAll(); })),
   );
   const area = document.createElement('textarea');
   area.rows = 6;
@@ -1168,7 +1195,7 @@ function renderPersonaTab(panel) {
     persona.lines = area.value.split('\n').map((l) => l.trim()).filter(Boolean).slice(0, 8);
     renderAll();
   });
-  panel.appendChild(field('Ticker lines (one per line, up to 8)', area));
+  panel.appendChild(field(t('editor.insp.field.tickerLines'), area));
 }
 
 // ── Customize knobs (pack.props) ─────────────────────────────────────────────
@@ -1203,20 +1230,27 @@ function makeProp(knob, pack) {
   return prop;
 }
 
+// A knob catalog label localized for display only — the canonical English label
+// is still what makeProp writes into the pack, so the manager's Customize panel
+// can translate it back for subscribers.
+function knobCatalogLabel(knob) {
+  return t(`editor.insp.knob.${knob.key}`);
+}
+
 function renderPropsTab(panel) {
   if (!Array.isArray(state.pack.props)) state.pack.props = [];
   const props = state.pack.props;
 
-  panel.appendChild(sectionLabel('Customize knobs'));
+  panel.appendChild(sectionLabel(t('editor.insp.section.customize')));
   const intro = document.createElement('p');
   intro.className = 'ed-empty';
-  intro.textContent = 'Expose a few controls subscribers can tweak without editing the pack. Each knob’s starting value tracks the pack’s current look.';
+  intro.textContent = t('editor.insp.note.knobsIntro');
   panel.appendChild(intro);
 
   if (props.length === 0) {
     const none = document.createElement('p');
     none.className = 'ed-empty';
-    none.textContent = 'No knobs yet — add some below.';
+    none.textContent = t('editor.insp.note.knobsEmpty');
     panel.appendChild(none);
   }
 
@@ -1234,7 +1268,7 @@ function renderPropsTab(panel) {
     type.textContent = prop.type;
     const rm = document.createElement('button');
     rm.className = 'btn tiny danger';
-    rm.textContent = 'Remove';
+    rm.textContent = t('editor.insp.btn.remove');
     rm.addEventListener('click', () => { props.splice(i, 1); renderInspector(); });
     row.append(label, type, rm);
     panel.appendChild(field(`${i + 1}.`, row));
@@ -1243,8 +1277,8 @@ function renderPropsTab(panel) {
   // Add: knobs not already exposed.
   const available = KNOB_CATALOG.filter((k) => !props.some((p) => p.key === k.key));
   if (available.length) {
-    const choices = [['', 'Add a knob…'], ...available.map((k) => [k.key, `${k.label} (${k.type})`])];
-    panel.appendChild(field('Add', selectControl('', choices, (v) => {
+    const choices = [['', t('editor.insp.knob.add')], ...available.map((k) => [k.key, `${knobCatalogLabel(k)} (${k.type})`])];
+    panel.appendChild(field(t('editor.insp.field.add'), selectControl('', choices, (v) => {
       const knob = KNOB_CATALOG.find((k) => k.key === v);
       if (knob) { props.push(makeProp(knob, state.pack)); renderInspector(); }
     })));
