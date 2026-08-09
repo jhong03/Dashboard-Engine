@@ -13,90 +13,90 @@
 
   <header class="topbar">
     <div class="brand">
-      <h1>Voice tuning</h1>
-      <p class="sub">Shape how a persona speaks — profiles store parameters, never audio.</p>
+      <h1 data-i18n="panel.title">Voice tuning</h1>
+      <p class="sub" data-i18n="panel.sub">Shape how a persona speaks — profiles store parameters, never audio.</p>
     </div>
-    <div class="chips" id="env-chips" aria-label="Engine status">
+    <div class="chips" id="env-chips" aria-label="Engine status" data-i18n-attr="aria-label:panel.engineStatus">
       <span class="chip" id="chip-piper" data-state="wait">Piper</span>
       <span class="chip" id="chip-ffmpeg" data-state="wait">FFmpeg</span>
-      <span class="chip" id="chip-bank" data-state="wait">Voices</span>
+      <span class="chip" id="chip-bank" data-state="wait" data-i18n="panel.chip.voices">Voices</span>
     </div>
   </header>
 
   <div class="layout">
 
-    <aside class="rail" aria-label="Voices and presets">
+    <aside class="rail" aria-label="Voices and presets" data-i18n-attr="aria-label:panel.railLabel">
       <section class="panel">
-        <h2>Voice bank</h2>
+        <h2 data-i18n="panel.voiceBank">Voice bank</h2>
         <ul class="list" id="voice-list"></ul>
       </section>
       <section class="panel">
-        <h2>Presets</h2>
+        <h2 data-i18n="panel.presets">Presets</h2>
         <ul class="list" id="preset-list"></ul>
       </section>
     </aside>
 
-    <main class="console" aria-label="Tuning parameters">
+    <main class="console" aria-label="Tuning parameters" data-i18n-attr="aria-label:panel.consoleLabel">
       <section class="panel group" id="group-prosody">
-        <h2>Delivery</h2>
+        <h2 data-i18n="panel.group.delivery">Delivery</h2>
       </section>
       <section class="panel group" id="group-timbre">
-        <h2>Tone</h2>
+        <h2 data-i18n="panel.group.tone">Tone</h2>
       </section>
       <section class="panel group" id="group-character">
-        <h2>Character</h2>
+        <h2 data-i18n="panel.group.character">Character</h2>
       </section>
     </main>
 
-    <aside class="rail rail-right" aria-label="Test and profile">
+    <aside class="rail rail-right" aria-label="Test and profile" data-i18n-attr="aria-label:panel.testProfileLabel">
       <section class="panel test-console">
-        <h2>Test</h2>
-        <label class="visually-hidden" for="test-text">Test text</label>
+        <h2 data-i18n="panel.test.title">Test</h2>
+        <label class="visually-hidden" for="test-text" data-i18n="panel.test.textLabel">Test text</label>
         <textarea id="test-text" rows="3" maxlength="500" spellcheck="false">Good evening. All systems are online, and every diagnostic reports nominal performance across the board.</textarea>
         <div class="btn-row">
-          <button class="btn primary" id="btn-synth">Synthesize</button>
-          <button class="btn" id="btn-play" disabled>Replay</button>
-          <button class="btn hidden" id="btn-fallback">Use system voice</button>
+          <button class="btn primary" id="btn-synth" data-i18n="panel.test.synthesize">Synthesize</button>
+          <button class="btn" id="btn-play" disabled data-i18n="panel.test.replay">Replay</button>
+          <button class="btn hidden" id="btn-fallback" data-i18n="panel.test.useSystemVoice">Use system voice</button>
         </div>
-        <p class="status-line-app" id="status" role="status" aria-live="polite">Ready.</p>
+        <p class="status-line-app" id="status" role="status" aria-live="polite" data-i18n="panel.status.ready">Ready.</p>
         <canvas id="waveform" width="560" height="96" aria-hidden="true"></canvas>
         <div class="readouts">
           <div class="tile">
-            <span class="tile-label">Measured F0</span>
+            <span class="tile-label" data-i18n="panel.readout.f0">Measured F0</span>
             <span class="tile-value" id="ro-f0">—</span>
-            <span class="tile-sub" id="ro-f0-dry">dry —</span>
+            <span class="tile-sub" id="ro-f0-dry" data-i18n="panel.readout.dryInit">dry —</span>
           </div>
           <div class="tile">
-            <span class="tile-label">Measured rate</span>
+            <span class="tile-label" data-i18n="panel.readout.rate">Measured rate</span>
             <span class="tile-value" id="ro-rate">—</span>
-            <span class="tile-sub" id="ro-rate-target">target —</span>
+            <span class="tile-sub" id="ro-rate-target" data-i18n="panel.readout.targetInit">target —</span>
           </div>
           <div class="tile">
-            <span class="tile-label">Duration</span>
+            <span class="tile-label" data-i18n="panel.readout.duration">Duration</span>
             <span class="tile-value" id="ro-duration">—</span>
-            <span class="tile-sub" id="ro-speech">speech —</span>
+            <span class="tile-sub" id="ro-speech" data-i18n="panel.readout.speechInit">speech —</span>
           </div>
           <div class="tile">
-            <span class="tile-label">Voiced</span>
+            <span class="tile-label" data-i18n="panel.readout.voiced">Voiced</span>
             <span class="tile-value" id="ro-voiced">—</span>
-            <span class="tile-sub">of frames</span>
+            <span class="tile-sub" data-i18n="panel.readout.ofFrames">of frames</span>
           </div>
         </div>
       </section>
 
       <section class="panel">
-        <h2>Profile</h2>
+        <h2 data-i18n="panel.profile.title">Profile</h2>
         <div class="field">
-          <label for="profile-name">Name</label>
+          <label for="profile-name" data-i18n="panel.profile.name">Name</label>
           <input id="profile-name" type="text" maxlength="80" spellcheck="false" value="Untitled">
         </div>
         <div class="field">
-          <label for="profile-author">Author</label>
+          <label for="profile-author" data-i18n="panel.profile.author">Author</label>
           <input id="profile-author" type="text" maxlength="80" spellcheck="false">
         </div>
         <div class="btn-row">
-          <button class="btn" id="btn-save">Save profile</button>
-          <button class="btn" id="btn-publish">Share to Workshop…</button>
+          <button class="btn" id="btn-save" data-i18n="panel.profile.save">Save profile</button>
+          <button class="btn" id="btn-publish" data-i18n="panel.profile.share">Share to Workshop…</button>
         </div>
         <p class="status-line-app" id="profile-status" role="status" aria-live="polite"></p>
         <ul class="list" id="saved-list"></ul>

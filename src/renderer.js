@@ -7,6 +7,10 @@
 
 /* global aegis */
 
+// UI localization shortcut. i18n.js (loaded first) defines window.t; this alias
+// is fail-soft so a missing runtime just yields the key's English fallback.
+const t = (key, params) => (window.t ? window.t(key, params) : key);
+
 // ── Parameter metadata (labels/format only — bounds arrive via IPC) ────────
 
 function signed(v, digits) {
@@ -98,20 +102,22 @@ function buildSliders() {
 
       const row = document.createElement('div');
       row.className = `param${meta.reserved ? ' disabled' : ''}`;
-      if (meta.tech) row.title = meta.tech; // the engineer term, on hover, for anyone who wants it
+      // The engineer term, on hover, for anyone who wants it. The English in
+      // GROUPS is the dev fallback; en.json carries the canonical strings.
+      if (meta.tech) row.title = t(`panel.param.${meta.path}.tech`);
 
       const label = document.createElement('label');
       label.className = 'param-label';
       label.htmlFor = `in-${meta.path}`;
-      label.textContent = meta.label;
+      label.textContent = t(`panel.param.${meta.path}.label`);
       if (meta.reserved) {
         const tag = document.createElement('span');
         tag.className = 'tag';
-        tag.textContent = meta.reserved;
+        tag.textContent = meta.reserved === 'Not wired' ? t('panel.reserved.notWired') : t('panel.reserved.reserved');
         label.appendChild(tag);
       }
       const hint = document.createElement('small');
-      hint.textContent = meta.hint;
+      hint.textContent = t(`panel.param.${meta.path}.hint`);
       label.appendChild(hint);
 
       const input = document.createElement('input');
@@ -179,13 +185,13 @@ function renderVoices() {
       const badge = document.createElement('span');
       badge.className = 'hd-badge';
       badge.textContent = 'HD';
-      badge.title = 'Higher-quality neural voice — larger download';
+      badge.title = t('panel.voice.hdTitle');
       name.appendChild(badge);
     }
 
     const meta = document.createElement('span');
     meta.className = `row-meta${voice.installed ? '' : ' warn'}`;
-    meta.textContent = voice.installed ? `${voice.sex} · ${voice.accent}` : 'Not installed';
+    meta.textContent = voice.installed ? `${voice.sex} · ${voice.accent}` : t('panel.voice.notInstalled');
 
     row.append(name, meta);
 
@@ -195,7 +201,7 @@ function renderVoices() {
       dl.className = 'dl';
       // HD packs are hundreds of MB — show the size so the download isn't a
       // surprise; standard Piper voices stay a plain "Get".
-      dl.textContent = voice.hd ? `Upgrade · ${formatSize(voice.sizeBytes)}` : 'Get';
+      dl.textContent = voice.hd ? t('panel.voice.upgrade', { size: formatSize(voice.sizeBytes) }) : t('panel.voice.get');
       dl.addEventListener('click', (e) => {
         e.stopPropagation();
         downloadVoice(voice, li, dl);
@@ -206,7 +212,7 @@ function renderVoices() {
     row.addEventListener('click', () => {
       state.profile.base.voice = voice.id;
       renderVoices();
-      setStatus(`Base voice: ${voice.displayName}`, 'live');
+      setStatus(t('panel.voice.baseVoice', { name: voice.displayName }), 'live');
       prewarmCurrentVoice(); // warm the newly picked voice's engine now
     });
 
@@ -229,11 +235,11 @@ async function downloadVoice(voice, li, dlButton) {
     // HD packs download the engine first, then the voice files — name the phase
     // so a long download reads as progress, not a stall.
     if (voice.hd) {
-      const what = p.phase === 'engine' ? 'HD engine' : 'HD voice';
-      setStatus(`Downloading ${what}… ${p.pct}%`, 'live');
+      const what = p.phase === 'engine' ? t('panel.voice.hdEngine') : t('panel.voice.hdVoice');
+      setStatus(t('panel.voice.downloading', { what, pct: p.pct }), 'live');
     }
   });
-  if (voice.hd) setStatus(`Downloading ${voice.displayName} — this is a large one-time HD download.`, 'live');
+  if (voice.hd) setStatus(t('panel.voice.downloadingHd', { name: voice.displayName }), 'live');
   const res = await aegis.bankDownload(voice.id);
   unsubscribe();
   if (!res.ok) {
@@ -243,7 +249,7 @@ async function downloadVoice(voice, li, dlButton) {
     return;
   }
   await refreshBank();
-  setStatus(`Installed ${voice.displayName} (checksum verified).`, 'live');
+  setStatus(t('panel.voice.installed', { name: voice.displayName }), 'live');
 }
 
 async function refreshBank() {
@@ -300,7 +306,7 @@ function renderPresets() {
 
     row.addEventListener('click', () => {
       applyProfile(preset.profile, preset.file);
-      setStatus(`Loaded preset: ${preset.profile.name}`, 'live');
+      setStatus(t('panel.loadedPreset', { name: preset.profile.name }), 'live');
     });
     li.appendChild(row);
     list.appendChild(li);
@@ -331,7 +337,7 @@ async function refreshSaved() {
         return;
       }
       applyProfile(loaded.profile, null);
-      setStatus(`Loaded profile: ${loaded.profile.name}`, 'live');
+      setStatus(t('panel.loadedProfile', { name: loaded.profile.name }), 'live');
     });
     li.appendChild(row);
     list.appendChild(li);
@@ -346,7 +352,7 @@ function syncProfileMeta() {
 async function saveProfile() {
   syncProfileMeta();
   const res = await aegis.profileSave(state.profile);
-  $('profile-status').textContent = res.ok ? `Saved to profiles/${res.file}` : res.error;
+  $('profile-status').textContent = res.ok ? t('panel.profile.savedTo', { file: res.file }) : res.error;
   // Keep the working profile's provenance in step with what was written (a fresh
   // save stamps 'scratch'), so the publish button reflects it immediately.
   if (res.ok && res.profile) { state.profile = res.profile; updatePublishButton(); await refreshSaved(); }
@@ -361,8 +367,8 @@ function updatePublishButton() {
   const imported = state.profile && state.profile.origin === 'imported';
   btn.disabled = !!imported;
   btn.title = imported
-    ? 'This voice was imported from another creator, so it can’t be republished as your own.'
-    : 'Share this voice profile on the Steam Workshop (parameters only — never audio).';
+    ? t('panel.publish.importedTitle')
+    : t('panel.publish.shareTitle');
 }
 
 // Save the current tuning, then open the Workshop publish dialog for it. Sharing
@@ -370,7 +376,7 @@ function updatePublishButton() {
 // never any audio (the project's hard legal boundary).
 async function publishVoiceFlow() {
   if (state.profile && state.profile.origin === 'imported') {
-    $('profile-status').textContent = 'This voice was imported from another creator, so it can’t be published as your own.';
+    $('profile-status').textContent = t('panel.publish.importedError');
     return;
   }
   syncProfileMeta();
@@ -381,7 +387,7 @@ async function publishVoiceFlow() {
 
   const st = await aegis.workshopStatus();
   if (!st.available) {
-    $('profile-status').textContent = st.reason || 'Steam isn’t available — start Steam and sign in, then try again.';
+    $('profile-status').textContent = st.reason || t('panel.publish.steamUnavailable');
     return;
   }
   openVoicePublishDialog(saved.file, saved.profile || state.profile);
@@ -412,28 +418,33 @@ function openVoicePublishDialog(file, profile) {
   const tryClose = () => { if (!publishing) close(); };
 
   const heading = document.createElement('h3');
-  heading.textContent = `Share “${profile.name}” to the Workshop`;
+  heading.textContent = t('panel.publish.heading', { name: profile.name });
   const sub = document.createElement('p');
   sub.className = 'tp-sub';
-  sub.textContent = `Publishes the voice PROFILE only — the base voice (${profile.base.voice}) plus your tuning. No audio is ever uploaded. People who add it and don’t have the base voice will download it on demand.`;
+  sub.textContent = t('panel.publish.sub', { voice: profile.base.voice });
   dialog.append(heading, sub);
 
   const title = document.createElement('input');
   title.type = 'text'; title.maxLength = 128; title.value = profile.name || '';
   const desc = document.createElement('textarea');
   desc.maxLength = 8000;
-  desc.value = `A custom voice for Dashboard Engine.\nBase voice: ${profile.base.voice}.`;
+  desc.value = t('panel.publish.descDefault', { voice: profile.base.voice });
   const tags = document.createElement('input');
-  tags.type = 'text'; tags.placeholder = 'tags, comma-separated (optional) — e.g. calm, deep, narrator';
+  tags.type = 'text'; tags.placeholder = t('panel.publish.tagsPlaceholder');
   const vis = document.createElement('select');
-  for (const [v, label] of [['unlisted', 'Unlisted (link only)'], ['public', 'Public'], ['friends', 'Friends only'], ['private', 'Private']]) {
+  for (const [v, label] of [
+    ['unlisted', t('panel.publish.vis.unlisted')],
+    ['public', t('panel.publish.vis.public')],
+    ['friends', t('panel.publish.vis.friends')],
+    ['private', t('panel.publish.vis.private')],
+  ]) {
     const opt = document.createElement('option'); opt.value = v; opt.textContent = label; vis.appendChild(opt);
   }
   dialog.append(
-    voiceField('Title', title),
-    voiceField('Description', desc),
-    voiceField('Tags', tags),
-    voiceField('Visibility', vis),
+    voiceField(t('panel.publish.fieldTitle'), title),
+    voiceField(t('panel.publish.fieldDescription'), desc),
+    voiceField(t('panel.publish.fieldTags'), tags),
+    voiceField(t('panel.publish.fieldVisibility'), vis),
   );
 
   const status = document.createElement('p');
@@ -442,16 +453,16 @@ function openVoicePublishDialog(file, profile) {
   const actions = document.createElement('div');
   actions.className = 'tp-actions';
   const cancel = document.createElement('button');
-  cancel.className = 'btn'; cancel.textContent = 'Cancel';
+  cancel.className = 'btn'; cancel.textContent = t('common.cancel');
   cancel.addEventListener('click', tryClose);
   const spacer = document.createElement('div'); spacer.className = 'tp-spacer';
   const submit = document.createElement('button');
-  submit.className = 'btn primary'; submit.textContent = 'Publish';
+  submit.className = 'btn primary'; submit.textContent = t('panel.publish.publish');
   submit.addEventListener('click', async () => {
     publishing = true;
     submit.disabled = true; cancel.disabled = true;
     status.style.color = '';
-    status.textContent = 'Publishing to the Workshop… this can take up to a minute — keep this window open.';
+    status.textContent = t('panel.publish.publishing');
     const out = await aegis.voicePublish({
       profileFile: file,
       title: title.value,
@@ -463,16 +474,16 @@ function openVoicePublishDialog(file, profile) {
     if (!out.ok) {
       submit.disabled = false;
       status.style.color = 'var(--warn)';
-      status.textContent = out.error || 'Publish failed.';
+      status.textContent = out.error || t('panel.publish.failed');
       return;
     }
-    const parts = [`${out.updated ? 'Updated' : 'Published'}! ${out.url}`];
-    if (out.needsToAcceptAgreement) parts.push('Accept the Workshop Legal Agreement on the item’s Steam page to make it visible.');
+    const parts = [`${out.updated ? t('panel.publish.updated') : t('panel.publish.published')} ${out.url}`];
+    if (out.needsToAcceptAgreement) parts.push(t('panel.publish.acceptAgreement'));
     if (out.note) parts.push(out.note);
     status.style.color = '';
     status.textContent = parts.join(' — ');
     submit.disabled = true;
-    cancel.textContent = 'Close';
+    cancel.textContent = t('common.close');
     $('profile-status').textContent = parts.join(' — ');
   });
   actions.append(cancel, spacer, submit);
@@ -536,11 +547,11 @@ function drawWaveform(pcm) {
 
 function updateReadouts(stats) {
   $('ro-f0').textContent = stats.medianF0Hz > 0 ? `${stats.medianF0Hz.toFixed(0)} Hz` : '—';
-  $('ro-f0-dry').textContent = `dry ${stats.dryMedianF0Hz.toFixed(0)} Hz`;
+  $('ro-f0-dry').textContent = t('panel.readout.dry', { v: `${stats.dryMedianF0Hz.toFixed(0)} Hz` });
   $('ro-rate').textContent = `${stats.wpm.toFixed(0)} wpm`;
-  $('ro-rate-target').textContent = `target ${state.profile.prosody.rate.toFixed(0)} wpm`;
+  $('ro-rate-target').textContent = t('panel.readout.target', { v: `${state.profile.prosody.rate.toFixed(0)} wpm` });
   $('ro-duration').textContent = `${stats.durationSeconds.toFixed(2)} s`;
-  $('ro-speech').textContent = `speech ${stats.speechSeconds.toFixed(2)} s`;
+  $('ro-speech').textContent = t('panel.readout.speech', { v: `${stats.speechSeconds.toFixed(2)} s` });
   $('ro-voiced').textContent = `${(stats.voicedFraction * 100).toFixed(0)} %`;
 }
 
@@ -549,7 +560,7 @@ async function synthesize({ play = true } = {}) {
   const btn = $('btn-synth');
   btn.disabled = true;
   btn.classList.add('busy');
-  setStatus('Synthesizing…', 'live');
+  setStatus(t('panel.synth.synthesizing'), 'live');
   $('btn-fallback').classList.add('hidden');
 
   const res = await aegis.synthesize(state.profile, $('test-text').value);
@@ -568,16 +579,16 @@ async function synthesize({ play = true } = {}) {
   $('btn-play').disabled = false;
   drawWaveform(res.pcm);
   updateReadouts(res.stats);
-  setStatus(res.warning || 'Done.', res.warning ? 'error' : 'live');
+  setStatus(res.warning || t('panel.synth.done'), res.warning ? 'error' : 'live');
   if (play) playPcm(res.pcm, res.sampleRate);
   return res;
 }
 
 async function speakFallback() {
-  setStatus('Speaking with the system voice…', 'live');
+  setStatus(t('panel.synth.speakingSystem'), 'live');
   const hint = state.profile.base.fallback ? state.profile.base.fallback.match : '';
   const res = await aegis.speakFallback($('test-text').value, hint);
-  setStatus(res.ok ? 'Done (system voice — untuned; install Piper for the full chain).' : res.error, res.ok ? undefined : 'error');
+  setStatus(res.ok ? t('panel.synth.doneSystem') : res.error, res.ok ? undefined : 'error');
 }
 
 // ── Environment chips ──────────────────────────────────────────────────────
@@ -586,9 +597,9 @@ function renderEnv(env) {
   $('chip-piper').dataset.state = env.piper ? 'on' : 'off';
   $('chip-ffmpeg').dataset.state = env.ffmpeg ? 'on' : 'off';
   if (!env.piper) {
-    setStatus('Piper isn’t installed — synthesis falls back to the system voice.', 'error');
+    setStatus(t('panel.env.noPiper'), 'error');
   } else if (!env.ffmpeg) {
-    setStatus('FFmpeg isn’t installed — raw voice only; timbre and character are bypassed.', 'error');
+    setStatus(t('panel.env.noFfmpeg'), 'error');
   }
 }
 
@@ -626,7 +637,7 @@ async function init() {
   const first = state.presets.find((p) => p.file === 'composed-butler.json') || state.presets[0];
   state.profile = first ? structuredClone(first.profile) : null;
   if (!state.profile) {
-    setStatus('No presets found — the presets folder is missing.', 'error');
+    setStatus(t('panel.init.noPresets'), 'error');
     return;
   }
 
@@ -660,5 +671,5 @@ async function init() {
 
 init().catch((err) => {
   // Last-resort surface — the panel should degrade before ever reaching this.
-  setStatus(`The panel failed to start: ${err.message}`, 'error');
+  setStatus(t('panel.init.startFailed', { message: err.message }), 'error');
 });
