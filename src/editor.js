@@ -9,6 +9,10 @@
 
 const $ = (id) => document.getElementById(id);
 
+// UI localization shortcut. i18n.js (loaded first) defines window.t; this alias
+// is fail-soft so a missing runtime just yields the key's English fallback.
+const t = (key, params) => (window.t ? window.t(key, params) : key);
+
 const SNAP = 0.5;       // percent grid
 const MIN_SIZE = 2;     // percent
 
@@ -142,7 +146,7 @@ function setStatus(text, warn) {
 
 function typeLabel(type) {
   const entry = PALETTE.find((p) => p.type === type);
-  return entry ? entry.label : type;
+  return entry ? t(`editor.palette.${type}.label`) : type;
 }
 
 function snap(v) {
@@ -400,12 +404,12 @@ function beginResize(event, index, dir) {
 
 function addComponent(type, atX, atY) {
   if (state.pack.components.length >= 24) {
-    setStatus('This pack already has 24 components (the cap).', true);
+    setStatus(t('editor.capReached'), true);
     return;
   }
   const options = defaultOptions(type, state.assets);
   if (type === 'image' && !options.src) {
-    setStatus('This pack has no images in assets/ — add files to the pack folder first.', true);
+    setStatus(t('editor.noImages'), true);
     return;
   }
   const rect = [...DEFAULT_RECTS[type]];
@@ -416,7 +420,7 @@ function addComponent(type, atX, atY) {
   state.pack.components.push({ type, rect, z: 2, style: { ...DEFAULT_STYLE }, options });
   state.selected = state.pack.components.length - 1;
   renderAll();
-  setStatus(`Added ${typeLabel(type).toLowerCase()}.`);
+  setStatus(t('editor.added', { name: typeLabel(type) }));
 }
 
 function removeSelected() {
@@ -435,7 +439,7 @@ async function importImage() {
     return null; // cancelled or refused
   }
   state.assets[res.rel] = res.uri;
-  setStatus(`Imported ${res.rel} — it becomes part of the pack when you save.`);
+  setStatus(t('editor.imported', { rel: res.rel }));
   return res.rel;
 }
 
@@ -448,7 +452,7 @@ async function importVideo() {
     return null; // cancelled or refused
   }
   state.assets[res.rel] = res.uri;
-  setStatus(`Imported ${res.rel} — it becomes part of the pack when you save.`);
+  setStatus(t('editor.imported', { rel: res.rel }));
   return res.rel;
 }
 
@@ -1263,11 +1267,13 @@ async function save(applyAfter) {
   const forked = res.forked;
   state.baseId = res.id;
   state.pack.id = res.id;
-  $('ed-base').textContent = `Editing ${res.id}${forked ? ' (your copy — the original is untouched)' : ''}`;
-  setStatus(forked ? `Saved as a new pack: “${res.id}”.` : 'Saved.');
+  $('ed-base').textContent = forked
+    ? t('editor.editingForked', { id: res.id })
+    : t('editor.editing', { id: res.id });
+  setStatus(forked ? t('editor.savedAsNew', { id: res.id }) : t('common.saved'));
   if (applyAfter) {
     const applied = await aegis.activeSet(res.id);
-    if (applied.ok) setStatus(`Saved — “${res.id}” is now on your desktop.`);
+    if (applied.ok) setStatus(t('editor.savedApplied', { id: res.id }));
   }
 }
 
@@ -1292,7 +1298,8 @@ async function init() {
   state.pack = loaded.pack;
   state.assets = { ...(all.ok ? all.assets : {}), ...loaded.assets };
   $('ed-name').value = state.pack.name;
-  $('ed-base').textContent = `Editing ${packId} (${loaded.origin === 'builtin' ? 'built-in — saving makes your own copy' : loaded.origin})`;
+  const originText = loaded.origin === 'builtin' ? t('editor.originBuiltin') : loaded.origin;
+  $('ed-base').textContent = t('editor.editingOrigin', { id: packId, origin: originText });
   document.title = `Editor — ${state.pack.name}`;
 
   // Palette
@@ -1301,9 +1308,11 @@ async function init() {
     const li = document.createElement('li');
     li.className = 'pal-item';
     li.draggable = true;
-    li.textContent = item.label;
+    // The English label/hint in PALETTE is the fallback; en.json carries the
+    // canonical strings so translators localize the component list.
+    li.textContent = t(`editor.palette.${item.type}.label`);
     const hint = document.createElement('small');
-    hint.textContent = item.hint;
+    hint.textContent = t(`editor.palette.${item.type}.hint`);
     li.appendChild(hint);
     li.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/aegis-type', item.type));
     li.addEventListener('dblclick', () => addComponent(item.type, 50, 50));
@@ -1345,7 +1354,7 @@ async function init() {
   $('btn-import-image').addEventListener('click', importImageAsComponent);
 
   renderAll();
-  setStatus('Drag to move · guides snap to other components’ edges & centre · hold Alt to move freely · arrow keys nudge · Delete removes.');
+  setStatus(t('editor.dragHint'));
 }
 
-init().catch((err) => setStatus(`The editor failed to start: ${err.message}`, true));
+init().catch((err) => setStatus(t('editor.startFailed', { message: err.message }), true));
