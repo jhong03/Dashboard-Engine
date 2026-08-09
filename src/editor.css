@@ -171,6 +171,18 @@ body.editor-body {
   cursor: pointer;
 }
 .field .clear:hover { color: var(--warn); }
+/* Colorway presets: a compact grid of one-click palette swatches. */
+.ed-colorways { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 4px; }
+.ed-colorway {
+  display: flex; flex-direction: column; gap: 5px; align-items: stretch;
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 6px 6px 7px; cursor: pointer; font: inherit; color: var(--text);
+}
+.ed-colorway:hover { border-color: var(--accent); }
+.ed-colorway:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ed-colorway-sw { display: flex; height: 22px; border-radius: 4px; overflow: hidden; border: 1px solid rgba(0,0,0,.35); }
+.ed-colorway-sw i { flex: 1; }
+.ed-colorway-name { font-size: 11px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Plain-language hint under a field label — says what a colour paints or how a
    slider behaves, for users who don't know the pack's internal token names. */
 .field-hint { font-size: 11px; font-weight: 400; color: var(--text-dim); opacity: 0.8; line-height: 1.45; margin: -1px 0 1px; }

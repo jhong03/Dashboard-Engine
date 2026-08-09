@@ -956,8 +956,63 @@ function prettyKey(key) {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 }
 
+// One-click palette presets — the eight seed-pack looks. Applying one writes
+// only the standard palette slots (custom pack keys are left untouched), so a
+// user gets an instant floor-clearing colourway and can then fine-tune below.
+const COLORWAY_KEYS = ['void', 'glass', 'accent', 'accentBright', 'muted', 'warn', 'gold'];
+const COLORWAYS = [
+  { id: 'cyan-hud',  void: '#050C16', glass: '#0D1E32', accent: '#4DDDFF', accentBright: '#A5F2FF', muted: '#8FB6CC', warn: '#FFB23E', gold: '#E8C56A' },
+  { id: 'ember',     void: '#1A1109', glass: '#2E1F12', accent: '#E39A54', accentBright: '#FBD9A5', muted: '#9C8168', warn: '#E0663C', gold: '#E8C56A' },
+  { id: 'slate',     void: '#0F1113', glass: '#1A1D20', accent: '#E7E9EC', accentBright: '#FFFFFF', muted: '#6B7178', warn: '#B9A06A', gold: '#B9A06A' },
+  { id: 'sakura',    void: '#E9C9D8', glass: '#FFFFFF', accent: '#E77FA8', accentBright: '#5A3A48', muted: '#9E7686', warn: '#D98A8A', gold: '#D79A6E' },
+  { id: 'pastel',    void: '#EDE4FF', glass: '#FFFFFF', accent: '#9B7EF0', accentBright: '#443F6E', muted: '#8A83B5', warn: '#F58FB0', gold: '#6FCBB0' },
+  { id: 'gothic',    void: '#070406', glass: '#170A0E', accent: '#B4102E', accentBright: '#E6D6DA', muted: '#6E4A54', warn: '#D0304A', gold: '#9A6A72' },
+  { id: 'vaporwave', void: '#1B0B3A', glass: '#1A0B2E', accent: '#FF6AD5', accentBright: '#FFFFFF', muted: '#C4A5E0', warn: '#FF71CE', gold: '#FFE45F' },
+  { id: 'neon',      void: '#05010E', glass: '#0A0618', accent: '#25E7FF', accentBright: '#EAFBFF', muted: '#6E8AA6', warn: '#FF3B6B', gold: '#FF2E97' },
+];
+
+function applyColorway(cw) {
+  const pal = state.pack.skin.palette;
+  for (const k of COLORWAY_KEYS) pal[k] = cw[k];
+  renderAll();
+  setStatus(t('editor.appliedColorway', { name: t(`editor.insp.colorway.${cw.id}`) }));
+}
+
+function renderColorways(panel) {
+  panel.appendChild(sectionLabel(t('editor.insp.section.colorways')));
+  const hint = document.createElement('p');
+  hint.className = 'ed-empty';
+  hint.textContent = t('editor.insp.note.colorways');
+  panel.appendChild(hint);
+
+  const grid = document.createElement('div');
+  grid.className = 'ed-colorways';
+  for (const cw of COLORWAYS) {
+    const name = t(`editor.insp.colorway.${cw.id}`);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ed-colorway';
+    btn.title = t('editor.insp.applyColorway', { name });
+    const sw = document.createElement('span');
+    sw.className = 'ed-colorway-sw';
+    for (const k of COLORWAY_KEYS) {
+      const seg = document.createElement('i');
+      seg.style.background = cw[k];
+      sw.appendChild(seg);
+    }
+    const label = document.createElement('span');
+    label.className = 'ed-colorway-name';
+    label.textContent = name;
+    btn.append(sw, label);
+    btn.addEventListener('click', () => applyColorway(cw));
+    grid.appendChild(btn);
+  }
+  panel.appendChild(grid);
+}
+
 function renderSkinTab(panel) {
   const skin = state.pack.skin;
+  renderColorways(panel);
   panel.appendChild(sectionLabel(t('editor.insp.section.palette')));
   for (const key of Object.keys(skin.palette)) {
     const input = document.createElement('input');
