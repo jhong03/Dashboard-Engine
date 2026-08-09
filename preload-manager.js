@@ -108,6 +108,8 @@ const bridge = {
   // Engine settings — performance (mirrors the tray) + start-with-Windows.
   performanceGet: () => ipcRenderer.invoke('aegis:settings:performance:get'),
   performanceSet: (patch) => ipcRenderer.invoke('aegis:settings:performance:set', patch),
+  detailWidthGet: () => ipcRenderer.invoke('aegis:settings:detailWidth:get'),
+  detailWidthSet: (px) => ipcRenderer.invoke('aegis:settings:detailWidth:set', px),
   backgroundMotionGet: () => ipcRenderer.invoke('aegis:settings:backgroundMotion:get'),
   backgroundMotionSet: (patch) => ipcRenderer.invoke('aegis:settings:backgroundMotion:set', patch),
   autoStartGet: () => ipcRenderer.invoke('aegis:settings:autostart:get'),

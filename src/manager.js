@@ -3512,6 +3512,49 @@ async function refreshLibrary() {
   }
 }
 
+// Make the detail sidebar resizable via its divider — capped at ~half the window
+// (and a sensible minimum). The width lives as --detail-w on the stable
+// .library-main element, so it survives the frequent gallery/detail re-renders;
+// it's persisted to settings so it also survives restarts.
+function setupDetailResizer() {
+  const main = document.querySelector('.library-main');
+  const handle = $('lib-resizer');
+  const detail = $('lib-detail');
+  if (!main || !handle || !detail) return;
+  const MIN = 240;
+  const maxW = () => Math.max(MIN, Math.round(main.clientWidth * 0.5)); // cap ~50%
+  const apply = (px) => { main.style.setProperty('--detail-w', Math.round(Math.min(maxW(), Math.max(MIN, px))) + 'px'); };
+  const persist = () => aegis.detailWidthSet(Math.round(detail.getBoundingClientRect().width)).catch(() => {});
+
+  aegis.detailWidthGet().then((r) => { if (r && r.ok && r.detailWidth) apply(r.detailWidth); }).catch(() => {});
+  // If the window shrinks, re-clamp so the sidebar never exceeds ~half of it.
+  window.addEventListener('resize', () => { apply(detail.getBoundingClientRect().width); });
+
+  handle.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    try { handle.setPointerCapture(e.pointerId); } catch (err) { /* older engines */ }
+    handle.classList.add('dragging');
+    const startX = e.clientX;
+    const startW = detail.getBoundingClientRect().width;
+    const move = (ev) => apply(startW + (startX - ev.clientX)); // drag left → wider
+    const up = () => {
+      handle.classList.remove('dragging');
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', up);
+      persist();
+    };
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', up);
+  });
+  // Keyboard resize for accessibility.
+  handle.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    apply(detail.getBoundingClientRect().width + (e.key === 'ArrowLeft' ? 24 : -24));
+    persist();
+  });
+}
+
 async function init() {
   const active = await aegis.activeGet();
   library.activeId = active.id || 'jarvis';
@@ -3565,6 +3608,8 @@ async function init() {
       await refreshLibrary();
     }
   });
+
+  setupDetailResizer();
 
   const view = new URLSearchParams(location.search).get('view');
   if (['browse', 'published', 'planner', 'launcher', 'assistant', 'create', 'settings'].includes(view)) library.tab = view;
