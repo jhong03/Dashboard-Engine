@@ -1263,15 +1263,9 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         }
       },
       // Workshop publish asks for a rendered preview image of the pack.
-      renderPreview: async (id, opts) => {
-        // Animated request: try a looping GIF first (motion shows in the Workshop
-        // grid); fall back to the static image if the GIF can't be made.
-        if (opts && opts.animated) {
-          const gif = await renderPackPreviewGif(id).catch(() => null);
-          if (gif) return gif;
-        }
-        return renderPackPreview(id);
-      },
+      // Steam gets a small STATIC preview (a big animated GIF trips Steam's upload
+      // throttle). The live moving preview is shown in-app on the Browse detail.
+      renderPreview: (id) => renderPackPreview(id),
       // Publishing a VOICE renders a small preview card (name + base voice +
       // tuning bars; no personal data).
       renderVoicePreview: (file) => renderVoicePreview(file),

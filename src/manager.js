@@ -3125,23 +3125,6 @@ function publishField(labelText, control) {
   return wrap;
 }
 
-// Does the pack's look depend on motion? Drives whether the animated (GIF)
-// preview is on by default — a still image can't sell these designs.
-function packHasMotion(pack) {
-  const skin = (pack && pack.skin) || {};
-  if (skin.ambience && skin.ambience.effect && skin.ambience.effect !== 'none') return true;
-  const bg = skin.background || {};
-  if (bg.fill && bg.fill.animate) return true;
-  const layers = Array.isArray(bg.layers) ? bg.layers : [];
-  if (layers.some((l) => l && (/\.(mp4|webm)$/i.test(String(l.src))
-    || (Array.isArray(l.effects) && l.effects.length)
-    || (l.drift && (l.drift.x || l.drift.y))
-    || (typeof l.depth === 'number' && l.depth > 0)))) return true;
-  if (typeof skin.wallpaper === 'string' && /\.(mp4|webm)$/i.test(skin.wallpaper)) return true;
-  const types = new Set(((pack && pack.components) || []).map((c) => c.type));
-  return types.has('visualizer'); // self-animating component
-}
-
 function openPublishDialog(item, opts = {}) {
   const scrim = document.createElement('div');
   scrim.className = 'modal-scrim';
@@ -3206,28 +3189,6 @@ function openPublishDialog(item, opts = {}) {
   else if (typeof opts.fetchVisibility === 'function') {
     opts.fetchVisibility().then((res) => applyVisibility(res && res.visibility)).catch(() => {});
   }
-  // Animated preview: a short looping GIF so motion-based designs (video/parallax
-  // backgrounds, ambience, animated fills, effects) show movement in the Workshop.
-  // A standalone checkbox row (NOT a publishField — its `input {width:100%}` rule
-  // would stretch the checkbox). Defaults on when the pack has motion; falls back
-  // to a static image if a GIF can't be made (e.g. ffmpeg isn't available).
-  const animatedRow = document.createElement('label');
-  animatedRow.style.display = 'flex';
-  animatedRow.style.gap = '9px';
-  animatedRow.style.alignItems = 'flex-start';
-  animatedRow.style.cursor = 'pointer';
-  animatedRow.style.fontSize = '12.5px';
-  animatedRow.style.color = 'var(--text-dim)';
-  const animatedBox = document.createElement('input');
-  animatedBox.type = 'checkbox';
-  animatedBox.checked = packHasMotion(item.pack);
-  animatedBox.style.flex = '0 0 auto';
-  animatedBox.style.width = 'auto';
-  animatedBox.style.marginTop = '2px';
-  const animatedText = document.createElement('span');
-  animatedText.innerHTML = '<b style="color:var(--text)">Animated preview</b> — capture the dashboard in motion as a short looping GIF (best for video, parallax, particle or effect packs).';
-  animatedRow.append(animatedBox, animatedText);
-
   card.append(
     publishField('Title', title),
     publishField('Description', desc),
@@ -3235,11 +3196,12 @@ function openPublishDialog(item, opts = {}) {
     publishField('More tags', tags),
     publishField('Visibility', vis),
   );
-  card.appendChild(animatedRow);
 
   const hint = document.createElement('p');
   hint.className = 'detail-line';
-  hint.textContent = 'A preview is rendered from the dashboard automatically (demo data — no personal info); tick Animated preview for a short looping GIF that shows motion. Description supports Steam formatting ([b], [h1], [i]). Only pack.json + assets are published — never your personal data.';
+  // Steam gets a small STATIC preview (a big animated GIF trips Steam's upload
+  // throttle); the live moving preview is shown in-app on the Browse detail.
+  hint.textContent = 'A preview image is rendered from the dashboard automatically (demo data — no personal info). Description supports Steam formatting ([b], [h1], [i]). Only pack.json + assets are published — never your personal data.';
   card.appendChild(hint);
 
   // Progress + result live INSIDE the dialog (right where the user is looking),
@@ -3257,7 +3219,7 @@ function openPublishDialog(item, opts = {}) {
     submit.disabled = true;
     cancel.disabled = true;
     dstatus.style.color = '';
-    dstatus.textContent = `Publishing “${title.value || item.name}” to Workshop…${animatedBox.checked ? ' rendering the animated preview, then uploading' : ''} — this can take up to a minute; keep this window open.`;
+    dstatus.textContent = `Publishing “${title.value || item.name}” to Workshop… this can take up to a minute; keep this window open.`;
     const out = await aegis.workshopPublish({
       packId: item.id,
       title: title.value,
@@ -3265,7 +3227,6 @@ function openPublishDialog(item, opts = {}) {
       // Chips + any free-text extras, deduped, Steam's 10-tag cap applied.
       tags: [...new Set([...selectedTags, ...tags.value.split(',').map((t) => t.trim()).filter(Boolean)])].slice(0, 10),
       visibility: vis.value,
-      animated: animatedBox.checked,
     });
     publishing = false;
     cancel.disabled = false;
