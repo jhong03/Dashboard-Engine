@@ -356,6 +356,9 @@ function isSelected(kind, key) {
   if (!s || s.kind !== kind) return false;
   if (kind === 'local') return s.item.id === key;
   if (kind === 'workshop') return s.item.itemId === key;
+  if (kind === 'voice-workshop') return s.item.itemId === key;
+  if (kind === 'published') return s.item.itemId === key;
+  if (kind === 'published-voice') return s.item.itemId === key;
   return `${s.url}|${s.entry.id}` === key;
 }
 
@@ -473,7 +476,11 @@ function renderGallery() {
 
 // ── Steam Workshop (consume side): browse / subscribe / import ───────────────
 
-const ws = { available: null, items: [], search: '', sort: 'trend', loaded: false, loading: false, error: null, testApp: false, filters: {} };
+// Default to NEWEST, not Trending: Steam's RankedByTrend excludes brand-new,
+// zero-engagement items, so a just-published pack would be invisible on the
+// default view (verified against live Steam). Newest surfaces fresh publishes
+// immediately; Trending/Top stay available in the dropdown.
+const ws = { available: null, items: [], search: '', sort: 'newest', loaded: false, loading: false, error: null, testApp: false, filters: {} };
 
 // ── Published: your Steam Workshop dashboards (creator management) ────────────
 // Machine-portable: Steam is the durable store, so on any computer signed into
@@ -485,7 +492,8 @@ const mine = { available: null, items: [], loaded: false, loading: false, error:
 // The Browse tab toggles between dashboards and voices; the Published tab lists
 // both. Voice profiles are ~1 KB (base-voice ref + tuning), never audio.
 let browseMode = 'dashboards';   // 'dashboards' | 'voices' — the Browse-tab toggle
-const voiceWs = { items: [], loaded: false, loading: false, error: null, available: null, testApp: false, search: '', sort: 'trend' };
+// Default to NEWEST (see the `ws` note above) — Trending hides just-published voices.
+const voiceWs = { items: [], loaded: false, loading: false, error: null, available: null, testApp: false, search: '', sort: 'newest' };
 const voiceMine = { items: [], loaded: false, loading: false, error: null, available: null, testApp: false };
 
 // Human-friendly download size for a base voice (hundreds of MB each).
@@ -543,32 +551,11 @@ function renderPublishedDashboards(gallery) {
   gallery.appendChild(grid);
 }
 
-// One published item. Actions adapt to whether an editable copy exists here:
-// a local copy → Edit / Update / View; none → Get editable copy / View.
-function publishedCard(item) {
-  const card = document.createElement('div');
-  card.className = 'ws-card';
-  const thumb = document.createElement('div');
-  thumb.className = 'ws-thumb';
-  if (item.previewUrl) {
-    aegis.workshopPreview(item.previewUrl).then((res) => {
-      if (res && res.ok && thumb.isConnected) { const img = document.createElement('img'); img.alt = ''; img.src = res.uri; thumb.appendChild(img); }
-      else thumb.classList.add('ws-noimg');
-    });
-  } else thumb.classList.add('ws-noimg');
-
-  const body = document.createElement('div');
-  body.className = 'ws-body';
-  const title = document.createElement('div');
-  title.className = 'ws-title';
-  title.textContent = item.title;
-  const meta = document.createElement('div');
-  meta.className = 'ws-meta';
-  const bits = [`▲ ${item.votesUp}`];
-  if (item.visibility && item.visibility !== 'public') bits.push(item.visibility);
-  if (item.tags.length) bits.push(item.tags.slice(0, 3).join(', '));
-  meta.textContent = bits.join(' · ');
-
+// Adaptive actions for a published DASHBOARD, shared by the card and the detail
+// sidebar (one source of truth): a local editable copy → Edit / Update / View;
+// none → Get editable copy / View. Returns a wrapper (.ws-actions + status).
+function publishedDashboardActions(item) {
+  const wrap = document.createElement('div');
   const status = document.createElement('div');
   status.className = 'ws-cardstatus';
   const actions = document.createElement('div');
@@ -603,8 +590,39 @@ function publishedCard(item) {
     }, 'tiny primary');
     actions.append(getBtn, libButton(t('manager.published.view'), () => aegis.workshopOpenItem(item.url), 'tiny'));
   }
+  wrap.append(actions, status);
+  return wrap;
+}
 
-  body.append(title, meta, actions, status);
+// One published dashboard. Selecting shows it in the detail sidebar; the same
+// adaptive actions live on the card and in the detail. A click on a button acts
+// without also selecting.
+function publishedCard(item) {
+  const card = document.createElement('div');
+  card.className = 'ws-card' + (isSelected('published', item.itemId) ? ' selected' : '');
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    library.selected = { kind: 'published', item };
+    renderGallery();
+    renderDetail();
+  });
+  const thumb = document.createElement('div');
+  thumb.className = 'ws-thumb';
+  wsThumbInto(thumb, item.previewUrl);
+
+  const body = document.createElement('div');
+  body.className = 'ws-body';
+  const title = document.createElement('div');
+  title.className = 'ws-title';
+  title.textContent = item.title;
+  const meta = document.createElement('div');
+  meta.className = 'ws-meta';
+  const bits = [`▲ ${item.votesUp}`];
+  if (item.visibility && item.visibility !== 'public') bits.push(item.visibility);
+  if (item.tags.length) bits.push(item.tags.slice(0, 3).join(', '));
+  meta.textContent = bits.join(' · ');
+
+  body.append(title, meta, publishedDashboardActions(item));
   card.append(thumb, body);
   return card;
 }
@@ -930,7 +948,15 @@ async function downloadBaseVoice(item, btn) {
 
 function voiceCard(item) {
   const card = document.createElement('div');
-  card.className = 'ws-card';
+  card.className = 'ws-card' + (isSelected('voice-workshop', item.itemId) ? ' selected' : '');
+  // Selecting shows the voice on the right (base voice, tags, description, and a
+  // sample preview). A click on any button acts without also selecting.
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    library.selected = { kind: 'voice-workshop', item };
+    renderGallery();
+    renderDetail();
+  });
   const thumb = document.createElement('div');
   thumb.className = 'ws-thumb';
   wsThumbInto(thumb, item.previewUrl);
@@ -990,6 +1016,71 @@ function voiceCard(item) {
   return card;
 }
 
+// Subscribe / Add-to-library + base-voice download for the DETAIL sidebar of a
+// selected community voice. Mirrors the card's logic but uses full-width detail
+// buttons and re-renders the detail on a state change (card + detail stay in
+// sync because they share the same mutable `item`).
+function voiceDetailActions(item) {
+  const wrap = document.createElement('div');
+  const status = document.createElement('div');
+  status.className = 'ws-cardstatus';
+
+  // Preview (before subscribing): synthesize a short sample locally from the
+  // params embedded in the listing. Needs the base voice installed; if it's
+  // missing the button is disabled and the download button below is the path.
+  // Older items (published before this feature) carry no params — no button.
+  if (item.previewParams) {
+    const previewBtn = libButton(t('manager.voices.preview'), async (e) => {
+      const btn = e.currentTarget;
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = t('manager.voices.previewing');
+      status.textContent = '';
+      const out = await aegis.voicePreviewSample(item.previewParams);
+      btn.disabled = false; btn.textContent = orig;
+      if (out && out.ok) { playTestPcm(out.pcm, out.sampleRate); }
+      else { status.textContent = (out && out.error) || t('manager.voices.previewFailed'); }
+    });
+    if (!item.baseInstalled) { previewBtn.disabled = true; previewBtn.title = t('manager.voices.previewNeedsBase'); }
+    wrap.appendChild(previewBtn);
+    // Set expectations: the first play of a language pays a one-time engine warm-up
+    // (model + BERT load), heaviest for Japanese/Korean; later plays are instant.
+    if (item.baseInstalled) { const hint = detailLine(t('manager.voices.previewWarmHint')); wrap.appendChild(hint); }
+  }
+
+  // Base voice missing → offer the download (needed to USE the voice).
+  if (item.baseVoice && !item.baseInstalled) {
+    const dl = libButton(t('manager.voices.downloadBase', { size: fmtMB(item.baseSizeBytes) || t('panel.voice.get') }), async () => {
+      const out = await downloadBaseVoice(item, dl);
+      if (out && out.ok) renderDetail();
+    });
+    wrap.appendChild(dl);
+  }
+
+  if (item.subscribed) {
+    wrap.appendChild(libButton(t('manager.voices.addVoice'), async (e) => {
+      const btn = e.currentTarget; btn.disabled = true; btn.textContent = t('manager.voices.adding');
+      const out = await aegis.voiceImport(item.itemId);
+      if (out.ok) {
+        item.baseInstalled = !!out.baseInstalled;
+        status.textContent = t('manager.voices.addedName', { name: out.name }) + (out.baseInstalled ? '' : t('manager.voices.addedNeedBase'));
+        renderGallery();
+        renderDetail();
+      } else { btn.disabled = false; btn.textContent = t('manager.voices.addVoice'); status.textContent = out.error || t('manager.workshop.notDownloaded'); }
+    }, 'primary'));
+    if (!status.textContent) status.textContent = t('manager.workshop.subscribedHint');
+  } else {
+    wrap.appendChild(libButton(t('manager.workshop.subscribe'), async (e) => {
+      const btn = e.currentTarget; btn.disabled = true; btn.textContent = t('manager.workshop.subscribing');
+      const out = await aegis.workshopSubscribe(item.itemId);
+      if (out.ok) { item.subscribed = true; renderGallery(); renderDetail(); }
+      else { btn.disabled = false; btn.textContent = t('manager.workshop.subscribe'); status.textContent = out.error || t('manager.workshop.subscribeFailed'); }
+    }, 'primary'));
+  }
+
+  wrap.appendChild(status);
+  return wrap;
+}
+
 // ── Published voices (creator management, machine-portable) ───────────────────
 
 function reloadVoiceMine() { voiceMine.loaded = false; voiceMine.loading = false; renderGallery(); }
@@ -1027,25 +1118,10 @@ function renderPublishedVoicesSection(gallery) {
   gallery.appendChild(grid);
 }
 
-function publishedVoiceCard(item) {
-  const card = document.createElement('div');
-  card.className = 'ws-card';
-  const thumb = document.createElement('div');
-  thumb.className = 'ws-thumb';
-  wsThumbInto(thumb, item.previewUrl);
-
-  const body = document.createElement('div');
-  body.className = 'ws-body';
-  const title = document.createElement('div');
-  title.className = 'ws-title';
-  title.textContent = item.title;
-  const meta = document.createElement('div');
-  meta.className = 'ws-meta';
-  const bits = [`▲ ${item.votesUp}`];
-  if (item.visibility && item.visibility !== 'public') bits.push(item.visibility);
-  if (item.baseVoice) bits.push(item.baseName || item.baseVoice);
-  meta.textContent = bits.join(' · ');
-
+// Adaptive actions for a published VOICE, shared by the card and the detail: a
+// local editable copy → Open tuning / View; none → Get editable copy / View.
+function publishedVoiceActions(item) {
+  const wrap = document.createElement('div');
   const status = document.createElement('div');
   status.className = 'ws-cardstatus';
   const actions = document.createElement('div');
@@ -1073,8 +1149,37 @@ function publishedVoiceCard(item) {
     }, 'tiny primary');
     actions.append(getBtn, libButton(t('manager.published.view'), () => aegis.workshopOpenItem(item.url), 'tiny'));
   }
+  wrap.append(actions, status);
+  return wrap;
+}
 
-  body.append(title, meta, actions, status);
+// One published voice. Selectable → detail sidebar; same actions on card + detail.
+function publishedVoiceCard(item) {
+  const card = document.createElement('div');
+  card.className = 'ws-card' + (isSelected('published-voice', item.itemId) ? ' selected' : '');
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('button')) return;
+    library.selected = { kind: 'published-voice', item };
+    renderGallery();
+    renderDetail();
+  });
+  const thumb = document.createElement('div');
+  thumb.className = 'ws-thumb';
+  wsThumbInto(thumb, item.previewUrl);
+
+  const body = document.createElement('div');
+  body.className = 'ws-body';
+  const title = document.createElement('div');
+  title.className = 'ws-title';
+  title.textContent = item.title;
+  const meta = document.createElement('div');
+  meta.className = 'ws-meta';
+  const bits = [`▲ ${item.votesUp}`];
+  if (item.visibility && item.visibility !== 'public') bits.push(item.visibility);
+  if (item.baseVoice) bits.push(item.baseName || item.baseVoice);
+  meta.textContent = bits.join(' · ');
+
+  body.append(title, meta, publishedVoiceActions(item));
   card.append(thumb, body);
   return card;
 }
@@ -3406,7 +3511,7 @@ async function renderDetail() {
         aegis.workshopPreview(item.previewUrl).then((res) => {
           if (res && res.ok && library.selected === s) {
             preview.textContent = '';
-            preview.style.background = 'none';
+            preview.style.background = ''; // fall back to the CSS matte behind the contained image
             const img = document.createElement('img');
             img.alt = '';
             img.src = res.uri;
@@ -3426,6 +3531,101 @@ async function renderDetail() {
     if (!localPack) detail.appendChild(detailLine(t('manager.workshop.livePreviewHint')));
     detail.appendChild(workshopActionRow(item, !!localPack));
     detail.appendChild(libButton(t('manager.detail.viewOnSteam'), () => aegis.workshopOpenItem(item.url), 'tiny'));
+    return;
+  }
+
+  if (s.kind === 'voice-workshop') {
+    const { item } = s;
+    // Warm the base voice's engine now (fire-and-forget) so the first Preview
+    // click doesn't pay the ~cold-start wait. No-op if the base isn't installed.
+    if (item.baseInstalled && item.baseVoice) { try { aegis.voicePrewarm(item.baseVoice); } catch (e) { /* best effort */ } }
+    // A voice has no live dashboard render — show Steam's static preview card
+    // (name + base voice + tuning bars; no audio, no personal data).
+    monogramInto(preview, item.title);
+    if (item.previewUrl) {
+      aegis.workshopPreview(item.previewUrl).then((res) => {
+        if (res && res.ok && library.selected === s) {
+          preview.textContent = '';
+          preview.style.background = ''; // fall back to the CSS matte behind the contained image
+          const img = document.createElement('img');
+          img.alt = '';
+          img.src = res.uri;
+          preview.appendChild(img);
+        }
+      });
+    }
+    name.textContent = item.title;
+    detail.append(preview, name);
+    detail.appendChild(detailLine(`▲ ${item.votesUp}${item.tags && item.tags.length ? ' · ' + item.tags.join(', ') : ''}`));
+    if (item.description) {
+      const desc = document.createElement('p');
+      desc.className = 'detail-desc';
+      desc.textContent = item.description;
+      detail.appendChild(desc);
+    }
+    detail.appendChild(voiceDepLine(item));
+    detail.appendChild(voiceDetailActions(item));
+    detail.appendChild(libButton(t('manager.detail.viewOnSteam'), () => aegis.workshopOpenItem(item.url), 'tiny'));
+    return;
+  }
+
+  if (s.kind === 'published') {
+    const { item } = s;
+    // Your own published dashboard. Live preview if an editable copy exists here,
+    // else Steam's static image.
+    const localPack = item.localPackId ? library.localPacks.find((p) => p.id === item.localPackId) : null;
+    name.textContent = item.title;
+    if (localPack) {
+      blueprintInto(preview, localPack.pack);
+      livePreviewInto(preview, localPack.id);
+      detailPreviewEl = preview;
+    } else {
+      monogramInto(preview, item.title);
+      if (item.previewUrl) {
+        aegis.workshopPreview(item.previewUrl).then((res) => {
+          if (res && res.ok && library.selected === s) {
+            preview.textContent = '';
+            preview.style.background = '';
+            const img = document.createElement('img'); img.alt = ''; img.src = res.uri; preview.appendChild(img);
+          }
+        });
+      }
+    }
+    detail.append(preview, name);
+    const bits = [`▲ ${item.votesUp}`];
+    if (item.visibility) bits.push(item.visibility);
+    if (item.tags && item.tags.length) bits.push(item.tags.join(', '));
+    detail.appendChild(detailLine(bits.join(' · ')));
+    if (item.description) {
+      const desc = document.createElement('p'); desc.className = 'detail-desc'; desc.textContent = item.description; detail.appendChild(desc);
+    }
+    detail.appendChild(publishedDashboardActions(item));
+    return;
+  }
+
+  if (s.kind === 'published-voice') {
+    const { item } = s;
+    // Your own published voice — static preview card (no live dashboard render).
+    monogramInto(preview, item.title);
+    if (item.previewUrl) {
+      aegis.workshopPreview(item.previewUrl).then((res) => {
+        if (res && res.ok && library.selected === s) {
+          preview.textContent = '';
+          preview.style.background = '';
+          const img = document.createElement('img'); img.alt = ''; img.src = res.uri; preview.appendChild(img);
+        }
+      });
+    }
+    name.textContent = item.title;
+    detail.append(preview, name);
+    const bits = [`▲ ${item.votesUp}`];
+    if (item.visibility) bits.push(item.visibility);
+    detail.appendChild(detailLine(bits.join(' · ')));
+    if (item.description) {
+      const desc = document.createElement('p'); desc.className = 'detail-desc'; desc.textContent = item.description; detail.appendChild(desc);
+    }
+    detail.appendChild(voiceDepLine(item));
+    detail.appendChild(publishedVoiceActions(item));
     return;
   }
 

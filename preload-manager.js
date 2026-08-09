@@ -71,6 +71,9 @@ const bridge = {
   // mainly in the tuning panel; the manager browses + consumes + manages them.
   voiceBrowse: (opts) => ipcRenderer.invoke('aegis:voice:browse', opts || {}),
   voiceMine: () => ipcRenderer.invoke('aegis:voice:mine'),
+  // Synthesize a short sample from a listing's embedded tuning params (no audio,
+  // never uploaded) — a preview before subscribing. Returns { ok, pcm, sampleRate }.
+  voicePreviewSample: (params) => ipcRenderer.invoke('aegis:voice:previewSample', { params }),
   voiceGetEditable: (itemId) => ipcRenderer.invoke('aegis:voice:getEditable', String(itemId)),
   voiceImport: (itemId) => ipcRenderer.invoke('aegis:voice:import', String(itemId)),
   voicePublish: (req) => ipcRenderer.invoke('aegis:voice:publish', {
