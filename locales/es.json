@@ -265,6 +265,18 @@
 
   "manager.customize.title": "Personalizar",
   "manager.customize.reset": "Restablecer valores predeterminados",
+  "manager.customize.knob.accent": "Color de acento",
+  "manager.customize.knob.highlight": "Color de resalte",
+  "manager.customize.knob.particles": "Partículas",
+  "manager.customize.knob.density": "Densidad de partículas",
+  "manager.customize.knob.notches": "Muescas de esquina",
+  "manager.customize.effect.none": "Ninguno",
+  "manager.customize.effect.embers": "Brasas",
+  "manager.customize.effect.dust": "Polvo",
+  "manager.customize.effect.snow": "Nieve",
+  "manager.customize.effect.petals": "Pétalos",
+  "manager.customize.effect.rain": "Lluvia",
+  "manager.customize.effect.sparkle": "Destellos",
 
   "manager.workshop.toggleDashboards": "Paneles",
   "manager.workshop.toggleVoices": "Voces",

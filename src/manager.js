@@ -167,12 +167,33 @@ async function refreshDetailPreview(id) {
 
 // One labelled control for a user property. Discrete controls save on change;
 // the slider updates its number live but saves on release (no IPC spam).
+// The Customize knobs are authored in each pack.json, so their labels are pack
+// CONTENT — but the built-in seed packs use a fixed, standard set, and the
+// particle options map to the engine's canonical ambience-effect VALUES. So we
+// localize KNOWN standard labels/options and leave any genuinely custom pack
+// text exactly as the author wrote it.
+const STD_KNOB_LABELS = {
+  'Accent colour': 'manager.customize.knob.accent',
+  'Highlight colour': 'manager.customize.knob.highlight',
+  'Particles': 'manager.customize.knob.particles',
+  'Particle density': 'manager.customize.knob.density',
+  'Corner notches': 'manager.customize.knob.notches',
+};
+const STD_EFFECTS = new Set(['none', 'embers', 'dust', 'snow', 'petals', 'rain', 'sparkle']);
+function knobLabelText(label) {
+  const key = STD_KNOB_LABELS[label];
+  return key ? t(key) : label; // custom labels pass through untouched
+}
+function knobOptionText(value, label) {
+  return STD_EFFECTS.has(String(value)) ? t(`manager.customize.effect.${value}`) : label;
+}
+
 function buildPropControl(prop, value, packId) {
   const row = document.createElement('label');
   row.className = 'prop-row';
   const label = document.createElement('span');
   label.className = 'prop-label';
-  label.textContent = prop.label;
+  label.textContent = knobLabelText(prop.label);
 
   const save = async (v) => {
     const out = await aegis.userPropsSet(packId, prop.key, v);
@@ -206,7 +227,7 @@ function buildPropControl(prop, value, packId) {
     for (const opt of prop.options) {
       const o = document.createElement('option');
       o.value = String(opt.value);
-      o.textContent = opt.label;
+      o.textContent = knobOptionText(opt.value, opt.label);
       select.appendChild(o);
     }
     select.value = String(value);

@@ -267,6 +267,18 @@
 
   "manager.customize.title": "Customize",
   "manager.customize.reset": "Reset to defaults",
+  "manager.customize.knob.accent": "Accent colour",
+  "manager.customize.knob.highlight": "Highlight colour",
+  "manager.customize.knob.particles": "Particles",
+  "manager.customize.knob.density": "Particle density",
+  "manager.customize.knob.notches": "Corner notches",
+  "manager.customize.effect.none": "Off",
+  "manager.customize.effect.embers": "Embers",
+  "manager.customize.effect.dust": "Dust",
+  "manager.customize.effect.snow": "Snow",
+  "manager.customize.effect.petals": "Petals",
+  "manager.customize.effect.rain": "Rain",
+  "manager.customize.effect.sparkle": "Sparkle",
 
   "manager.workshop.toggleDashboards": "Dashboards",
   "manager.workshop.toggleVoices": "Voices",
