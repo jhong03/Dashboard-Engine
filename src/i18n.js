@@ -52,10 +52,21 @@
     }
   }
 
+  // Swap the active dictionary at runtime (a live language change, no reload).
+  // Updates <html lang> and re-fills every [data-i18n] element; the caller
+  // re-renders any dynamically-built strings afterwards.
+  function setDict(newDict, lang) {
+    dict = (newDict && typeof newDict === 'object') ? newDict : dict;
+    if (lang) window.I18n.lang = lang;
+    try { document.documentElement.lang = window.I18n.lang; } catch (e) { /* no-op */ }
+    applyDom(document);
+  }
+
   window.t = t;
   window.I18n = {
     t: t,
     applyDom: applyDom,
+    setDict: setDict,
     lang: payload.lang || 'en',
     available: Array.isArray(payload.available) ? payload.available : ['en'],
   };

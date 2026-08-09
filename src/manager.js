@@ -2736,13 +2736,26 @@ function settingsSaved() {
 }
 
 function wireSettingsCfg() {
-  // Language: persist the choice, then reload so the whole window re-reads its
-  // dictionary (handed to the page at load). 'auto' clears the explicit setting.
+  // Language: persist the choice, then swap the dictionary LIVE — no page
+  // reload (reloading the manager re-inits every pack/preview and is slow).
+  // 'auto' clears the explicit setting (back to the OS locale).
   $('set-language').addEventListener('change', async (e) => {
     const val = e.target.value;
-    $('set-status').textContent = t('settings.language.applying');
-    try { await aegis.i18nSet(val === 'auto' ? null : val); } catch (err) { /* fail-soft */ }
-    location.reload();
+    const status = $('set-language-status');
+    status.textContent = t('settings.language.applying');
+    let res = null;
+    try { res = await aegis.i18nSet(val === 'auto' ? null : val); } catch (err) { /* fail-soft */ }
+    if (res && res.ok && res.dict && window.I18n && window.I18n.setDict) {
+      // Apply instantly: swap the dict + re-fill static markup, then re-render
+      // the current view so its dynamically-built strings pick up the language.
+      window.I18n.setDict(res.dict, res.lang);
+      renderGallery();
+      renderDetail();
+      status.textContent = '';
+    } else {
+      // Fallback for any environment without the live path: reload to re-read.
+      location.reload();
+    }
   });
   $('set-display').addEventListener('change', async (e) => {
     const val = e.target.value;
