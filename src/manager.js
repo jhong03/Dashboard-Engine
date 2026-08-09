@@ -1457,15 +1457,23 @@ async function renderAssistantCfg() {
   // voice isn't downloaded is shown "not available" and disabled — picking it
   // would only fall back or stay silent (see the assistant speak path).
   const [presetList, voices, bankRes] = await Promise.all([
-    aegis.voicePresetsList(), aegis.voiceProfilesList(), aegis.bankList(),
+    aegis.voicePresetsList(),
+    aegis.voiceProfilesList(),
+    // Fail-soft: if bankList is unavailable, don't gate at all (never disable
+    // everything, never abort the whole voice list).
+    Promise.resolve().then(() => (aegis.bankList ? aegis.bankList() : { ok: false })).catch(() => ({ ok: false })),
   ]);
-  const installed = new Set((bankRes && bankRes.ok ? bankRes.voices : []).filter((v) => v.installed).map((v) => v.id));
+  const haveInstallData = !!(bankRes && bankRes.ok);
+  const installed = new Set(haveInstallData ? bankRes.voices.filter((v) => v.installed).map((v) => v.id) : []);
+  // A voice is selectable if we can't tell (no install data), it's the engine
+  // default (no id), or its pack is installed.
+  const isAvail = (voiceId) => !voiceId || !haveInstallData || installed.has(voiceId);
   const notAvail = t('manager.assistant.notAvailable');
   const addOption = (group, value, voiceId, label) => {
     const opt = document.createElement('option');
     opt.value = value;
     opt.dataset.voice = voiceId; // lets us pre-warm the right HD voice on pick
-    const avail = !voiceId || installed.has(voiceId);
+    const avail = isAvail(voiceId);
     opt.textContent = avail ? label : `${label} — ${notAvail}`;
     opt.disabled = !avail;
     group.appendChild(opt);
@@ -1491,7 +1499,7 @@ async function renderAssistantCfg() {
   for (const opt of personaSel.options) {
     const want = PERSONA_VOICE[opt.value];
     if (!want) continue; // "Start from a preset…" / unknown
-    const avail = installed.has(want);
+    const avail = isAvail(want);
     opt.disabled = !avail;
     if (!avail) {
       // The non-English persona labels are static (no data-i18n), so capturing

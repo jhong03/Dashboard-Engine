@@ -207,6 +207,9 @@ const bridge = {
   assistantPresetRemove: (name) => ipcRenderer.invoke('aegis:assistant:preset:remove', String(name)),
   voiceProfilesList: () => ipcRenderer.invoke('aegis:profiles:list'),
   voicePresetsList: () => ipcRenderer.invoke('aegis:presets:list'),
+  // Which voice packs are installed — the assistant voice/persona pickers gate
+  // uninstalled languages by it.
+  bankList: () => ipcRenderer.invoke('aegis:bank:list'),
   voicePrewarm: (voiceId) => ipcRenderer.invoke('aegis:voice:prewarm', String(voiceId)),
 };
 
