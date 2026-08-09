@@ -478,7 +478,7 @@ async function importImageAsComponent() {
 
 // ── Inspector ───────────────────────────────────────────────────────────────
 
-function field(labelText, control, onClear) {
+function field(labelText, control, onClear, hint) {
   const wrap = document.createElement('div');
   wrap.className = 'field';
   const label = document.createElement('label');
@@ -493,7 +493,15 @@ function field(labelText, control, onClear) {
     clear.addEventListener('click', onClear);
     label.appendChild(clear);
   }
-  wrap.append(label, control);
+  wrap.appendChild(label);
+  // Optional plain-language explanation of what this control affects.
+  if (hint) {
+    const small = document.createElement('small');
+    small.className = 'field-hint';
+    small.textContent = hint;
+    wrap.appendChild(small);
+  }
+  wrap.appendChild(control);
   return wrap;
 }
 
@@ -579,6 +587,14 @@ function paletteLabel(key) {
 }
 function textureLabel(key) {
   return SKIN_TEXTURE_KEYS.has(key) ? t(`editor.insp.tex.${key}`) : prettyKey(key);
+}
+// Plain-language hints so a new user knows what each colour paints / how a
+// texture slider changes the look. Empty for custom (author-defined) keys.
+function paletteHint(key) {
+  return SKIN_PALETTE_KEYS.has(key) ? t(`editor.insp.palHint.${key}`) : '';
+}
+function textureHint(key) {
+  return SKIN_TEXTURE_KEYS.has(key) ? t(`editor.insp.texHint.${key}`) : '';
 }
 
 function optionFields(component, panel) {
@@ -954,12 +970,12 @@ function renderSkinTab(panel) {
     // change = on close, do a full re-sync.
     input.addEventListener('input', () => { sliderActive = true; skin.palette[key] = input.value; renderAll(); });
     input.addEventListener('change', () => { sliderActive = false; skin.palette[key] = input.value; renderAll(); });
-    panel.appendChild(field(paletteLabel(key), input));
+    panel.appendChild(field(paletteLabel(key), input, null, paletteHint(key)));
   }
 
   panel.appendChild(sectionLabel(t('editor.insp.section.texture')));
   for (const key of Object.keys(skin.texture)) {
-    panel.appendChild(field(textureLabel(key), rangeControl(skin.texture[key], 0, 1, 0.05, (v) => { skin.texture[key] = v; renderAll(); })));
+    panel.appendChild(field(textureLabel(key), rangeControl(skin.texture[key], 0, 1, 0.05, (v) => { skin.texture[key] = v; renderAll(); }), null, textureHint(key)));
   }
 
   panel.appendChild(sectionLabel(t('editor.insp.section.typography')));

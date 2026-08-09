@@ -171,6 +171,9 @@ body.editor-body {
   cursor: pointer;
 }
 .field .clear:hover { color: var(--warn); }
+/* Plain-language hint under a field label — says what a colour paints or how a
+   slider behaves, for users who don't know the pack's internal token names. */
+.field-hint { font-size: 11px; font-weight: 400; color: var(--text-dim); opacity: 0.8; line-height: 1.45; margin: -1px 0 1px; }
 .check { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
 /* Module component code editor: monospace, no line wrap, comfortably tall. */
 .ed-code {
