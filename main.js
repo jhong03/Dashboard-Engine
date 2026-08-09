@@ -680,19 +680,22 @@ function encodeGif(frameGlob, palettePath, outPath, fps, opts) {
 // deterministic capture clock as the trailer tool (?capture=1) for a smooth loop.
 // Returns a temp .gif path, or null on ANY failure (ffmpeg missing, over the
 // cap, render error) → the caller falls back to the static image. Fail-soft.
-const GIF_PREVIEW_MAX_BYTES = 1024 * 1024;
+// Generous, Wallpaper-Engine-style cap — Steam accepts multi-MB animated GIF
+// previews, so a big, full-width, longer clip is fine. Tiers below only kick in
+// for an unusually heavy pack that would exceed even this.
+const GIF_PREVIEW_MAX_BYTES = 8 * 1024 * 1024;
 function renderPackPreviewGif(packId) {
   const fs = require('fs');
   const os = require('os');
-  // Capture a touch larger than the biggest output tier so ffmpeg downscales
-  // cleanly (lanczos). Encode tiers get progressively smaller/cheaper until one
-  // fits under Steam's preview cap — busy packs still get a (slightly smaller) GIF.
-  const W = 640, H = 360, FPS = 12, SECONDS = 2.5;
+  // Capture at a large 16:9 size so the preview FILLS the Workshop frame (Steam
+  // shows a small GIF at native size on black). ~5 s loop. Encode tiers step down
+  // in size/colours only if a very busy pack would blow past the cap.
+  const W = 960, H = 540, FPS = 12, SECONDS = 5;
   const GIF_TIERS = [
-    { width: 512, colors: 192, dither: 'bayer:bayer_scale=4' },
-    { width: 448, colors: 128, dither: 'bayer:bayer_scale=5' },
-    { width: 384, colors: 96, dither: 'bayer:bayer_scale=5' },
-    { width: 320, colors: 64, dither: 'none' },
+    { width: 960, colors: 192, dither: 'bayer:bayer_scale=4' },
+    { width: 800, colors: 160, dither: 'bayer:bayer_scale=5' },
+    { width: 640, colors: 128, dither: 'bayer:bayer_scale=5' },
+    { width: 512, colors: 96, dither: 'none' },
   ];
   const total = Math.max(1, Math.round(SECONDS * FPS));
   const workDir = path.join(os.tmpdir(), `de-gif-${Date.now()}`);
@@ -717,7 +720,7 @@ function renderPackPreviewGif(packId) {
       if (!result) cleanup();
       resolve(result || null);
     };
-    const guard = setTimeout(() => finish(null), 45000); // never hang a publish
+    const guard = setTimeout(() => finish(null), 90000); // never hang a publish
     win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(null); });
     win.webContents.on('did-finish-load', async () => {
       try {

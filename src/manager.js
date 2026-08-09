@@ -3207,20 +3207,26 @@ function openPublishDialog(item, opts = {}) {
     opts.fetchVisibility().then((res) => applyVisibility(res && res.visibility)).catch(() => {});
   }
   // Animated preview: a short looping GIF so motion-based designs (video/parallax
-  // backgrounds, ambience, animated fills, effects) show movement in the Workshop
-  // grid. Defaults on when the pack has motion; falls back to a static image if a
-  // GIF can't be made (e.g. ffmpeg isn't available).
-  const animatedWrap = document.createElement('label');
-  animatedWrap.style.display = 'flex';
-  animatedWrap.style.gap = '8px';
-  animatedWrap.style.alignItems = 'center';
-  animatedWrap.style.cursor = 'pointer';
+  // backgrounds, ambience, animated fills, effects) show movement in the Workshop.
+  // A standalone checkbox row (NOT a publishField — its `input {width:100%}` rule
+  // would stretch the checkbox). Defaults on when the pack has motion; falls back
+  // to a static image if a GIF can't be made (e.g. ffmpeg isn't available).
+  const animatedRow = document.createElement('label');
+  animatedRow.style.display = 'flex';
+  animatedRow.style.gap = '9px';
+  animatedRow.style.alignItems = 'flex-start';
+  animatedRow.style.cursor = 'pointer';
+  animatedRow.style.fontSize = '12.5px';
+  animatedRow.style.color = 'var(--text-dim)';
   const animatedBox = document.createElement('input');
   animatedBox.type = 'checkbox';
   animatedBox.checked = packHasMotion(item.pack);
+  animatedBox.style.flex = '0 0 auto';
+  animatedBox.style.width = 'auto';
+  animatedBox.style.marginTop = '2px';
   const animatedText = document.createElement('span');
-  animatedText.textContent = 'Capture the dashboard in motion (a short looping GIF)';
-  animatedWrap.append(animatedBox, animatedText);
+  animatedText.innerHTML = '<b style="color:var(--text)">Animated preview</b> — capture the dashboard in motion as a short looping GIF (best for video, parallax, particle or effect packs).';
+  animatedRow.append(animatedBox, animatedText);
 
   card.append(
     publishField('Title', title),
@@ -3228,8 +3234,8 @@ function openPublishDialog(item, opts = {}) {
     publishField('Tags', tagGroups),
     publishField('More tags', tags),
     publishField('Visibility', vis),
-    publishField('Animated preview', animatedWrap),
   );
+  card.appendChild(animatedRow);
 
   const hint = document.createElement('p');
   hint.className = 'detail-line';
