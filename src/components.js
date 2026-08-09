@@ -646,7 +646,12 @@ function applyComponentStyle(el, style, pack) {
   if (style.textColor) el.style.setProperty('--accent-bright', style.textColor);
   if (style.font) el.style.setProperty('--font-display', FONT_STACKS[style.font]);
   if (style.fontScale !== null) el.style.setProperty('--font-scale', String(style.fontScale));
-  if (style.align) el.style.textAlign = style.align;
+  if (style.align) {
+    el.style.textAlign = style.align;
+    // Inner flex rows (e.g. the weather glyph + temperature) don't follow
+    // text-align — expose the choice as a justify value they can opt into.
+    el.style.setProperty('--comp-justify', { left: 'flex-start', center: 'center', right: 'flex-end' }[style.align] || 'center');
+  }
   if (style.place) {
     el.style.justifyContent = { top: 'flex-start', center: 'center', bottom: 'flex-end', spread: 'space-between' }[style.place];
   }

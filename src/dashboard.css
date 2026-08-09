@@ -925,7 +925,7 @@ body {
 .countdown-value, .weather-temp { font-size: 2.6em; }
 
 /* weather: condition glyph beside the temperature, hi/lo + wind beneath */
-.weather-main { display: flex; align-items: center; justify-content: center; gap: 0.73cqw; }
+.weather-main { display: flex; align-items: center; justify-content: var(--comp-justify, center); gap: 0.73cqw; }
 .weather-glyph { display: flex; color: var(--accent); flex-shrink: 0; }
 .weather-glyph svg { width: 3em; height: 3em; }
 .weather-meta {
