@@ -13,6 +13,8 @@
     "audition": "node scripts/audition.js",
     "selftest": "node scripts/selftest.js",
     "packs": "node scripts/packs.js",
+    "i18n:export": "node scripts/i18n-csv.js export",
+    "i18n:import": "node scripts/i18n-csv.js import",
     "panel": "electron . --panel",
     "icon": "node build/gen-icon.js",
     "pack": "electron-builder --dir",
