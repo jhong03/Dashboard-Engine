@@ -81,6 +81,7 @@ const bridge = {
   }),
   // Download a base voice a subscribed voice depends on (reuses the voice bank).
   bankDownload: (voiceId) => ipcRenderer.invoke('aegis:bank:download', String(voiceId)),
+  bankInflight: () => ipcRenderer.invoke('aegis:bank:inflight'),
   onBankProgress: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('aegis:bank:progress', handler);

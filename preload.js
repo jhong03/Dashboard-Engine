@@ -28,6 +28,9 @@ contextBridge.exposeInMainWorld('aegis', {
 
   bankList: () => ipcRenderer.invoke('aegis:bank:list'),
   bankDownload: (voiceId) => ipcRenderer.invoke('aegis:bank:download', String(voiceId)),
+  // Downloads run in main and survive this window closing; this restores the
+  // in-progress bars when the window reopens mid-download.
+  bankInflight: () => ipcRenderer.invoke('aegis:bank:inflight'),
   onBankProgress: (callback) => {
     const handler = (_event, data) => callback(data);
     ipcRenderer.on('aegis:bank:progress', handler);

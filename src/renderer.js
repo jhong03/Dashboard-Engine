@@ -69,6 +69,11 @@ const state = {
   audioSource: null,
 };
 
+// voiceId -> last-known download percent for downloads running in main. Seeded
+// from aegis.bankInflight() at startup so a window reopened mid-download shows
+// the bar, and kept current by the global onBankProgress subscription.
+const inflight = new Map();
+
 const $ = (id) => document.getElementById(id);
 
 function getByPath(obj, dotted) {
@@ -195,7 +200,10 @@ function renderVoices() {
 
     row.append(name, meta);
 
-    if (!voice.installed) {
+    // A voice that isn't installed shows a Get button — UNLESS it's downloading
+    // right now (possibly started before this window was reopened), in which case
+    // it shows a live progress bar restored from main's in-flight state.
+    if (!voice.installed && !inflight.has(voice.id)) {
       const dl = document.createElement('button');
       dl.type = 'button';
       dl.className = 'dl';
@@ -204,7 +212,7 @@ function renderVoices() {
       dl.textContent = voice.hd ? t('panel.voice.upgrade', { size: formatSize(voice.sizeBytes) }) : t('panel.voice.get');
       dl.addEventListener('click', (e) => {
         e.stopPropagation();
-        downloadVoice(voice, li, dl);
+        downloadVoice(voice);
       });
       row.appendChild(dl);
     }
@@ -212,44 +220,67 @@ function renderVoices() {
     row.addEventListener('click', () => {
       state.profile.base.voice = voice.id;
       renderVoices();
+      syncTestTextToVoice(); // switch the sample sentence to this voice's language
       setStatus(t('panel.voice.baseVoice', { name: voice.displayName }), 'live');
       prewarmCurrentVoice(); // warm the newly picked voice's engine now
     });
 
     li.appendChild(row);
+    // Restore/attach the progress bar for an in-flight download. Its width is
+    // driven by the ONE global onBankProgress subscription (see init), so it
+    // keeps updating even in a window opened after the download started.
+    if (inflight.has(voice.id)) {
+      const bar = document.createElement('div');
+      bar.className = 'progress dl-bar';
+      bar.dataset.voice = voice.id;
+      const fill = document.createElement('span');
+      fill.style.width = `${inflight.get(voice.id) || 0}%`;
+      bar.appendChild(fill);
+      li.appendChild(bar);
+    }
     list.appendChild(li);
   }
 }
 
-async function downloadVoice(voice, li, dlButton) {
-  dlButton.disabled = true;
-  const bar = document.createElement('div');
-  bar.className = 'progress';
-  const fill = document.createElement('span');
-  bar.appendChild(fill);
-  li.appendChild(bar);
+// Kick off a download. The download runs in MAIN, so it survives this window
+// closing; the global onBankProgress subscription (init) drives the bar and the
+// completion refresh, which is what makes it resilient to close/reopen.
+async function downloadVoice(voice) {
+  if (inflight.has(voice.id)) return;
+  inflight.set(voice.id, 0);
+  renderVoices();
+  if (voice.hd) setStatus(t('panel.voice.downloadingHd', { name: voice.displayName }), 'live');
+  try { await aegis.bankDownload(voice.id); } catch { /* progress subscription reports done/error */ }
+}
 
-  const unsubscribe = aegis.onBankProgress((p) => {
-    if (p.id !== voice.id) return;
-    fill.style.width = `${p.pct}%`;
-    // HD packs download the engine first, then the voice files — name the phase
-    // so a long download reads as progress, not a stall.
-    if (voice.hd) {
+// One subscription for the whole panel: updates any visible progress bar and, on
+// completion, refreshes the bank (installed) or reports the error. Because it's
+// global (not per-click), a window reopened mid-download still finishes cleanly.
+function watchBankDownloads() {
+  aegis.onBankProgress((p) => {
+    if (!p || !p.id) return;
+    if (p.done) {
+      inflight.delete(p.id);
+      if (p.ok) {
+        const v = state.voices.find((x) => x.id === p.id);
+        const name = (v && v.displayName) || p.id;
+        refreshBank();
+        setStatus(t('panel.voice.installed', { name }), 'live');
+      } else {
+        setStatus(p.error || t('panel.voice.downloadFailed'), 'error');
+        renderVoices();
+      }
+      return;
+    }
+    inflight.set(p.id, p.pct);
+    const fill = document.querySelector(`.dl-bar[data-voice="${p.id}"] > span`);
+    if (fill) fill.style.width = `${p.pct}%`;
+    const v = state.voices.find((x) => x.id === p.id);
+    if (v && v.hd) {
       const what = p.phase === 'engine' ? t('panel.voice.hdEngine') : t('panel.voice.hdVoice');
       setStatus(t('panel.voice.downloading', { what, pct: p.pct }), 'live');
     }
   });
-  if (voice.hd) setStatus(t('panel.voice.downloadingHd', { name: voice.displayName }), 'live');
-  const res = await aegis.bankDownload(voice.id);
-  unsubscribe();
-  if (!res.ok) {
-    setStatus(res.error, 'error');
-    bar.remove();
-    dlButton.disabled = false;
-    return;
-  }
-  await refreshBank();
-  setStatus(t('panel.voice.installed', { name: voice.displayName }), 'live');
 }
 
 async function refreshBank() {
@@ -274,6 +305,41 @@ function prewarmCurrentVoice() {
   } catch { /* best effort — prewarm must never block the UI */ }
 }
 
+// A sample sentence per VOICE language, so testing a Chinese voice actually
+// speaks Chinese (an English sample through a Chinese voice is a poor test). The
+// EN phrase matches the index.html default so it's recognized as "auto". These
+// are voice-language samples, NOT UI strings — they stay in their own language
+// regardless of the interface locale.
+const TEST_PHRASES = {
+  en: 'Good evening. All systems are online, and every diagnostic reports nominal performance across the board.',
+  es: 'Buenas noches. Todos los sistemas están en línea y cada diagnóstico informa de un rendimiento nominal.',
+  fr: 'Bonsoir. Tous les systèmes sont en ligne et chaque diagnostic signale des performances nominales.',
+  zh: '晚上好。所有系统均已上线，各项诊断均报告一切运行正常。',
+  ja: 'こんばんは。すべてのシステムがオンラインで、各診断は正常に動作していると報告しています。',
+  ko: '안녕하세요. 모든 시스템이 온라인 상태이며 모든 진단이 정상 작동을 보고합니다.',
+};
+const AUTO_PHRASES = new Set(Object.values(TEST_PHRASES));
+
+// A voice id's language, from its 2-letter prefix (en_hd, zh_hd, en_male, …).
+function langOfVoiceId(voiceId) {
+  const m = /^([a-z]{2})[_-]/i.exec(String(voiceId || ''));
+  if (!m) return 'en';
+  const p = m[1].toLowerCase();
+  return p === 'jp' ? 'ja' : p === 'kr' ? 'ko' : p;
+}
+
+// Swap the test text to the chosen voice's language — but ONLY when the box
+// still holds an auto phrase (or is empty). A test sentence the user typed
+// themselves is never overwritten.
+function syncTestTextToVoice() {
+  const ta = $('test-text');
+  if (!ta) return;
+  const cur = ta.value.trim();
+  if (cur !== '' && !AUTO_PHRASES.has(cur)) return;
+  const lang = langOfVoiceId(state.profile && state.profile.base && state.profile.base.voice);
+  ta.value = TEST_PHRASES[lang] || TEST_PHRASES.en;
+}
+
 function applyProfile(profile, presetFile) {
   state.profile = structuredClone(profile);
   state.activePresetFile = presetFile || null;
@@ -283,6 +349,7 @@ function applyProfile(profile, presetFile) {
   renderVoices();
   renderPresets();
   updatePublishButton(); // a loaded imported voice can't be republished
+  syncTestTextToVoice(); // match the sample sentence to this voice's language
   prewarmCurrentVoice(); // panel open + preset/profile load both flow through here
 }
 
@@ -631,6 +698,15 @@ async function init() {
   state.ranges = ranges.ranges;
   state.voices = bankRes.voices;
   state.presets = presetsRes.presets;
+
+  // Restore any download that's already running in main (it survives this window
+  // closing), then watch progress for the whole panel with ONE subscription — so
+  // reopening mid-download shows the live bar and still finishes cleanly.
+  try {
+    const inf = await aegis.bankInflight();
+    if (inf && inf.ok) for (const d of inf.downloads) inflight.set(d.id, d.pct);
+  } catch { /* fail-soft — no restored bars */ }
+  watchBankDownloads();
 
   // Start from the Butler preset (or the first available) so the panel never
   // opens on a blank profile.

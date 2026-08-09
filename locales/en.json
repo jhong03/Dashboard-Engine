@@ -584,6 +584,7 @@
   "panel.voice.downloading": "Downloading {what}… {pct}%",
   "panel.voice.downloadingHd": "Downloading {name} — this is a large one-time HD download.",
   "panel.voice.installed": "Installed {name} (checksum verified).",
+  "panel.voice.downloadFailed": "Download failed.",
 
   "panel.loadedPreset": "Loaded preset: {name}",
   "panel.loadedProfile": "Loaded profile: {name}",

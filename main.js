@@ -1138,6 +1138,16 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
       // tuning bars; no personal data).
       renderVoicePreview: (file) => renderVoicePreview(file),
       renderThumbnail: (id) => getPackThumbnail(id),
+      // Send an event to every live window — used for voice-bank download
+      // progress so a download (which runs in main) still updates a window that
+      // was closed and reopened mid-download.
+      broadcast: (channel, payload) => {
+        for (const win of BrowserWindow.getAllWindows()) {
+          if (win && !win.isDestroyed()) {
+            try { win.webContents.send(channel, payload); } catch { /* window gone */ }
+          }
+        }
+      },
       // Settings screen: performance changes must reach the live desktop, and
       // the OS login item is owned by main.
       onPerformanceChanged: () => sendDesktopPower(),

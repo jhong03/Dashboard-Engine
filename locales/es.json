@@ -582,6 +582,7 @@
   "panel.voice.downloading": "Descargando {what}… {pct} %",
   "panel.voice.downloadingHd": "Descargando {name}: es una descarga HD grande de una sola vez.",
   "panel.voice.installed": "{name} instalada (suma de comprobación verificada).",
+  "panel.voice.downloadFailed": "La descarga falló.",
 
   "panel.loadedPreset": "Ejemplo cargado: {name}",
   "panel.loadedProfile": "Perfil cargado: {name}",
