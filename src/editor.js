@@ -846,7 +846,10 @@ function styleFields(component, panel) {
     const input = document.createElement('input');
     input.type = 'color';
     input.value = s[key] || state.pack.skin.palette.accent;
-    input.addEventListener('input', () => { s[key] = input.value; renderAll(); });
+    // Same as the palette pickers: keep the inspector (and thus the open native
+    // colour picker) alive while adjusting; full re-sync on close.
+    input.addEventListener('input', () => { sliderActive = true; s[key] = input.value; renderAll(); });
+    input.addEventListener('change', () => { sliderActive = false; s[key] = input.value; renderAll(); });
     return field(label, input, clear(key));
   };
 
@@ -923,7 +926,12 @@ function renderSkinTab(panel) {
     input.type = 'color';
     // Colour inputs can't hold 8-digit hex; show the RGB part.
     input.value = skin.palette[key].slice(0, 7);
-    input.addEventListener('input', () => { skin.palette[key] = input.value; renderAll(); });
+    // input = live while the native picker is open; skip the inspector rebuild
+    // (sliderActive) so the very <input> the picker is anchored to isn't torn
+    // out from under it — otherwise the picker closes on every adjustment.
+    // change = on close, do a full re-sync.
+    input.addEventListener('input', () => { sliderActive = true; skin.palette[key] = input.value; renderAll(); });
+    input.addEventListener('change', () => { sliderActive = false; skin.palette[key] = input.value; renderAll(); });
     panel.appendChild(field(prettyKey(key), input));
   }
 
