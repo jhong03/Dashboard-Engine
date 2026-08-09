@@ -24,7 +24,7 @@ const library = {
   localPacks: [],
   registries: [],
   indexes: new Map(),   // registry url → fetched index (or {ok:false})
-  selected: null,       // { kind: 'local', item } | { kind: 'remote', url, entry, update }
+  selected: null,       // { kind: 'local', item } | { kind: 'remote', url, entry, update } | { kind: 'workshop', item, inLibrary }
 };
 
 // ── Small helpers ───────────────────────────────────────────────────────────
@@ -354,7 +354,9 @@ function matchesSearch(text) {
 function isSelected(kind, key) {
   const s = library.selected;
   if (!s || s.kind !== kind) return false;
-  return kind === 'local' ? s.item.id === key : `${s.url}|${s.entry.id}` === key;
+  if (kind === 'local') return s.item.id === key;
+  if (kind === 'workshop') return s.item.itemId === key;
+  return `${s.url}|${s.entry.id}` === key;
 }
 
 function renderGallery() {
@@ -767,9 +769,52 @@ function hintP(text) {
   return p;
 }
 
+// Subscribe / Add-to-library / In-library button + status, shared by the browse
+// card and the detail sidebar so both stay in sync. stopPropagation keeps a click
+// on the button from also (de)selecting the card.
+function workshopActionRow(item, inLibrary) {
+  const wrap = document.createElement('div');
+  const action = document.createElement('button');
+  action.className = 'btn tiny';
+  const status = document.createElement('div');
+  status.className = 'ws-cardstatus';
+  const setBtn = (label, disabled) => { action.textContent = label; action.disabled = !!disabled; };
+  if (inLibrary) {
+    setBtn(t('manager.workshop.inLibrary'), true);
+  } else if (item.subscribed) {
+    setBtn(t('manager.workshop.addToLibrary'));
+    status.textContent = t('manager.workshop.subscribedHint');
+    action.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      setBtn(t('manager.workshop.importing'), true);
+      const out = await aegis.workshopImport(item.itemId);
+      // On success refreshLibrary re-renders the detail; the item is now in the
+      // library, so it flips from the static image to the live preview.
+      if (out.ok) { status.textContent = t('manager.workshop.added'); await refreshLibrary(); }
+      else { status.textContent = out.error || t('manager.workshop.notDownloaded'); setBtn(t('manager.workshop.addToLibrary')); }
+    });
+  } else {
+    setBtn(t('manager.workshop.subscribe'));
+    action.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      setBtn(t('manager.workshop.subscribing'), true);
+      const out = await aegis.workshopSubscribe(item.itemId);
+      // Re-render from the mutated cache (no refetch) so the card + detail flip to
+      // the subscribed state with its download hint.
+      if (out.ok) { item.subscribed = true; renderGallery(); renderDetail(); }
+      else { status.textContent = out.error || t('manager.workshop.subscribeFailed'); setBtn(t('manager.workshop.subscribe')); }
+    });
+  }
+  wrap.append(action, status);
+  return wrap;
+}
+
 function workshopCard(item, inLibrary) {
   const card = document.createElement('div');
-  card.className = 'ws-card';
+  card.className = 'ws-card' + (isSelected('workshop', item.itemId) ? ' selected' : '');
+  // Selecting shows the item on the right: a live preview if it's in your library,
+  // else Steam's static image (which flips to live once you add it).
+  card.addEventListener('click', () => { library.selected = { kind: 'workshop', item, inLibrary }; renderGallery(); renderDetail(); });
   const thumb = document.createElement('div');
   thumb.className = 'ws-thumb';
   if (item.previewUrl) {
@@ -787,36 +832,8 @@ function workshopCard(item, inLibrary) {
   const meta = document.createElement('div');
   meta.className = 'ws-meta';
   meta.textContent = `▲ ${item.votesUp}${item.tags.length ? ' · ' + item.tags.slice(0, 3).join(', ') : ''}`;
-  const status = document.createElement('div');
-  status.className = 'ws-cardstatus';
 
-  const action = document.createElement('button');
-  action.className = 'btn tiny';
-  const setBtn = (label, disabled) => { action.textContent = label; action.disabled = !!disabled; };
-  if (inLibrary) {
-    setBtn(t('manager.workshop.inLibrary'), true);
-  } else if (item.subscribed) {
-    setBtn(t('manager.workshop.addToLibrary'));
-    status.textContent = t('manager.workshop.subscribedHint');
-    action.addEventListener('click', async () => {
-      setBtn(t('manager.workshop.importing'), true);
-      const out = await aegis.workshopImport(item.itemId);
-      if (out.ok) { status.textContent = t('manager.workshop.added'); await refreshLibrary(); }
-      else { status.textContent = out.error || t('manager.workshop.notDownloaded'); setBtn(t('manager.workshop.addToLibrary')); }
-    });
-  } else {
-    setBtn(t('manager.workshop.subscribe'));
-    action.addEventListener('click', async () => {
-      setBtn(t('manager.workshop.subscribing'), true);
-      const out = await aegis.workshopSubscribe(item.itemId);
-      // Re-render from the mutated cache (no refetch) so the card flips to the
-      // subscribed state with its download hint.
-      if (out.ok) { item.subscribed = true; renderGallery(); }
-      else { status.textContent = out.error || t('manager.workshop.subscribeFailed'); setBtn(t('manager.workshop.subscribe')); }
-    });
-  }
-
-  body.append(title, meta, action, status);
+  body.append(title, meta, workshopActionRow(item, inLibrary));
   card.append(thumb, body);
   return card;
 }
@@ -3369,6 +3386,46 @@ async function renderDetail() {
         await refreshLibrary();
       }, 'danger'));
     }
+    return;
+  }
+
+  if (s.kind === 'workshop') {
+    const { item } = s;
+    // If we've imported this item, we have the content → show the LIVE preview.
+    // Otherwise show Steam's static image (Steam only gives content on subscribe;
+    // adding it to the library flips this to the live render).
+    const localPack = library.localPacks.find((p) => p.meta && String(p.meta.workshopId) === String(item.itemId));
+    name.textContent = item.title;
+    if (localPack) {
+      blueprintInto(preview, localPack.pack);   // instant placeholder…
+      livePreviewInto(preview, localPack.id);    // …replaced by the live render
+      detailPreviewEl = preview;
+    } else {
+      monogramInto(preview, item.title);         // placeholder until the image loads
+      if (item.previewUrl) {
+        aegis.workshopPreview(item.previewUrl).then((res) => {
+          if (res && res.ok && library.selected === s) {
+            preview.textContent = '';
+            preview.style.background = 'none';
+            const img = document.createElement('img');
+            img.alt = '';
+            img.src = res.uri;
+            preview.appendChild(img);
+          }
+        });
+      }
+    }
+    detail.append(preview, name);
+    detail.appendChild(detailLine(`▲ ${item.votesUp}${item.tags && item.tags.length ? ' · ' + item.tags.join(', ') : ''}`));
+    if (item.description) {
+      const desc = document.createElement('p');
+      desc.className = 'detail-desc';
+      desc.textContent = item.description;
+      detail.appendChild(desc);
+    }
+    if (!localPack) detail.appendChild(detailLine(t('manager.workshop.livePreviewHint')));
+    detail.appendChild(workshopActionRow(item, !!localPack));
+    detail.appendChild(libButton(t('manager.detail.viewOnSteam'), () => aegis.workshopOpenItem(item.url), 'tiny'));
     return;
   }
 

@@ -749,7 +749,11 @@ body {
   background: var(--bg-raised);
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+  transition: border-color .12s;
 }
+.ws-card:hover { border-color: var(--border-strong); }
+.ws-card.selected { border-color: var(--accent); }
 .ws-thumb {
   aspect-ratio: 16 / 10;
   background: var(--bg-input);

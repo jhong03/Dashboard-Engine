@@ -297,6 +297,7 @@
   "manager.workshop.inLibrary": "In library",
   "manager.workshop.addToLibrary": "Add to library",
   "manager.workshop.subscribedHint": "Subscribed — click Add once Steam finishes downloading it.",
+  "manager.workshop.livePreviewHint": "Subscribe and add it to your library to see the full live preview here.",
   "manager.workshop.importing": "Importing…",
   "manager.workshop.added": "Added to your library!",
   "manager.workshop.notDownloaded": "Not downloaded yet — let Steam finish, then retry.",
