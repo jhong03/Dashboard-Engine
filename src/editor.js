@@ -1056,7 +1056,152 @@ function renderSkinTab(panel) {
     field(t('editor.insp.field.density'), rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
   );
 
+  renderFillSection(panel, skin);
   renderBackgroundSection(panel, skin);
+}
+
+// ── Base fill (skin.background.fill) ──────────────────────────────────────────
+// A gradient painted behind the wallpaper layer stack. Each named style is a
+// preset that fills in type + stops + angle/origin; stops default to palette
+// tokens so a colourway swap restyles the gradient too. The user can then edit
+// stops (colour + position), angle, origin, and toggle animate / grain.
+const FILL_PRESETS = [
+  { id: 'none',      type: 'solid',  angle: 155, posX: 50, posY: 50, stops: [] },
+  { id: 'linear',    type: 'linear', angle: 155, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'glass', at: 100 }] },
+  { id: 'multistop', type: 'linear', angle: 120, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'glass', at: 55 }, { color: 'muted', at: 100 }] },
+  { id: 'duotone',   type: 'linear', angle: 180, posX: 50, posY: 50, stops: [{ color: 'glass', at: 0 }, { color: 'void', at: 100 }] },
+  { id: 'cut',       type: 'linear', angle: 135, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'void', at: 55 }, { color: 'glass', at: 55 }, { color: 'glass', at: 100 }] },
+  { id: 'bands',     type: 'linear', angle: 180, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'void', at: 34 }, { color: 'glass', at: 34 }, { color: 'glass', at: 67 }, { color: 'muted', at: 67 }, { color: 'muted', at: 100 }] },
+  { id: 'soft',      type: 'linear', angle: 120, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'void', at: 45 }, { color: 'glass', at: 62 }, { color: 'glass', at: 100 }] },
+  { id: 'radial',    type: 'radial', angle: 155, posX: 50, posY: 35, stops: [{ color: 'glass', at: 0 }, { color: 'void', at: 70 }] },
+  { id: 'spotlight', type: 'radial', angle: 155, posX: 100, posY: 0, stops: [{ color: 'glass', at: 0 }, { color: 'void', at: 60 }] },
+  { id: 'conic',     type: 'conic',  angle: 200, posX: 50, posY: 100, stops: [{ color: 'void', at: 0 }, { color: 'glass', at: 50 }, { color: 'void', at: 100 }] },
+  { id: 'mesh',      type: 'mesh',   angle: 155, posX: 50, posY: 50, stops: [{ color: 'accent', at: 0 }, { color: 'gold', at: 50 }, { color: 'muted', at: 100 }] },
+];
+
+function ensureFill() {
+  const skin = state.pack.skin;
+  if (!skin.background || typeof skin.background !== 'object') skin.background = { layers: [], parallax: { strength: 1, axis: 'both' } };
+  if (!skin.background.fill || typeof skin.background.fill !== 'object') {
+    skin.background.fill = { type: 'solid', preset: 'none', angle: 155, posX: 50, posY: 50, stops: [], animate: false, grain: false };
+  }
+  return skin.background.fill;
+}
+
+function applyFillPreset(id) {
+  const preset = FILL_PRESETS.find((p) => p.id === id) || FILL_PRESETS[0];
+  const fill = ensureFill();
+  const keepAnimate = !!fill.animate, keepGrain = !!fill.grain; // toggles survive a style change
+  fill.type = preset.type;
+  fill.preset = id;
+  fill.angle = preset.angle;
+  fill.posX = preset.posX;
+  fill.posY = preset.posY;
+  fill.stops = preset.stops.map((s) => ({ ...s }));
+  fill.animate = keepAnimate;
+  fill.grain = keepGrain;
+  renderAll();
+}
+
+// A stop colour: a palette-token dropdown (tracks the colourway) with a "Custom…"
+// option that reveals a hex colour input.
+function fillColorControl(stop) {
+  const palette = state.pack.skin.palette;
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex';
+  wrap.style.gap = '6px';
+  wrap.style.flex = '1';
+  wrap.style.minWidth = '0';
+
+  const isToken = COLORWAY_KEYS.includes(stop.color);
+  const choices = [['custom', t('editor.insp.fill.custom')], ...COLORWAY_KEYS.map((k) => [k, paletteLabel(k)])];
+  const sel = selectControl(isToken ? stop.color : 'custom', choices, null);
+  sel.style.flex = '1';
+  sel.style.minWidth = '0';
+
+  const picker = document.createElement('input');
+  picker.type = 'color';
+  picker.value = (isToken ? (palette[stop.color] || '#000000') : (stop.color || '#000000')).slice(0, 7);
+  picker.style.display = isToken ? 'none' : '';
+  picker.style.flex = '0 0 34px';
+
+  sel.addEventListener('change', () => {
+    if (sel.value === 'custom') { stop.color = picker.value; picker.style.display = ''; }
+    else { stop.color = sel.value; picker.style.display = 'none'; }
+    renderAll();
+  });
+  // Same guard as the palette pickers: keep the open native picker alive while adjusting.
+  picker.addEventListener('input', () => { sliderActive = true; stop.color = picker.value; renderAll(); });
+  picker.addEventListener('change', () => { sliderActive = false; stop.color = picker.value; renderAll(); });
+
+  wrap.append(sel, picker);
+  return wrap;
+}
+
+function renderFillSection(panel, skin) {
+  panel.appendChild(sectionLabel(t('editor.insp.section.fill')));
+  const fill = ensureFill();
+
+  const styleChoices = FILL_PRESETS.map((p) => [p.id, t(`editor.insp.fill.style.${p.id}`)]);
+  const current = fill.preset || (fill.type === 'solid' ? 'none' : fill.type);
+  panel.appendChild(field(t('editor.insp.fill.style'), selectControl(current, styleChoices, applyFillPreset)));
+
+  if (fill.type === 'solid') {
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = t('editor.insp.fill.solidNote');
+    panel.appendChild(note);
+    return;
+  }
+
+  // Colour stops.
+  if (!Array.isArray(fill.stops)) fill.stops = [];
+  fill.stops.forEach((stop, i) => {
+    const row = document.createElement('div');
+    row.style.display = 'flex';
+    row.style.gap = '6px';
+    row.style.alignItems = 'center';
+    row.appendChild(fillColorControl(stop));
+    if (fill.type !== 'mesh') {
+      const pos = rangeControl(typeof stop.at === 'number' ? stop.at : 0, 0, 100, 1, (v) => { stop.at = v; renderAll(); });
+      pos.style.flex = '1';
+      pos.style.minWidth = '0';
+      row.appendChild(pos);
+    }
+    const rm = document.createElement('button');
+    rm.className = 'btn tiny danger';
+    rm.textContent = '×';
+    rm.title = t('editor.insp.btn.remove');
+    rm.disabled = fill.stops.length <= 2;
+    rm.addEventListener('click', () => { fill.stops.splice(i, 1); renderAll(); });
+    row.appendChild(rm);
+    panel.appendChild(field(t('editor.insp.fill.stop', { n: i + 1 }), row));
+  });
+  if (fill.stops.length < 6) {
+    const add = document.createElement('button');
+    add.className = 'btn tiny';
+    add.textContent = t('editor.insp.fill.addStop');
+    add.addEventListener('click', () => {
+      const last = fill.stops[fill.stops.length - 1];
+      fill.stops.push({ color: last ? last.color : 'accent', at: 100 });
+      renderAll();
+    });
+    panel.appendChild(add);
+  }
+
+  if (fill.type === 'linear' || fill.type === 'conic') {
+    panel.appendChild(field(t('editor.insp.fill.angle', { deg: Math.round(fill.angle) }), rangeControl(fill.angle, 0, 360, 5, (v) => { fill.angle = v; renderAll(); })));
+  }
+  if (fill.type === 'radial' || fill.type === 'conic') {
+    panel.append(
+      field(t('editor.insp.fill.originX'), rangeControl(fill.posX, 0, 100, 1, (v) => { fill.posX = v; renderAll(); })),
+      field(t('editor.insp.fill.originY'), rangeControl(fill.posY, 0, 100, 1, (v) => { fill.posY = v; renderAll(); })),
+    );
+  }
+  panel.append(
+    checkControl(t('editor.insp.fill.animate'), fill.animate, (v) => { fill.animate = v; renderAll(); }),
+    checkControl(t('editor.insp.fill.grain'), fill.grain, (v) => { fill.grain = v; renderAll(); }),
+  );
 }
 
 // Background = a stack of image/video layers (back-to-front) with parallax

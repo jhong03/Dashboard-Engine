@@ -1032,6 +1032,17 @@ body {
 }
 .bg-layer-video { background: transparent; object-fit: cover; }
 
+/* Animated base fill: a slow drift of the gradient's background-position. The
+   -grain variant pins the noise layer (position 0 0) and drifts only the
+   gradient. Paused on freeze (animation-play-state via JS); off for reduced motion. */
+@keyframes de-fill-drift { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes de-fill-drift-grain { 0% { background-position: 0 0, 0% 50%; } 50% { background-position: 0 0, 100% 50%; } 100% { background-position: 0 0, 0% 50%; } }
+.skin-root.bg-fill-animate { animation: de-fill-drift 18s ease-in-out infinite; }
+.skin-root.bg-fill-animate-grain { animation: de-fill-drift-grain 18s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .skin-root.bg-fill-animate, .skin-root.bg-fill-animate-grain { animation: none; }
+}
+
 /* WebGL effects mode: the GL canvas draws every layer; source videos stay in
    the DOM (so they keep decoding) but invisible — the canvas shows their pixels. */
 .bg-gl { position: absolute; inset: 0; width: 100%; height: 100%; }

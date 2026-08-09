@@ -95,10 +95,84 @@ function applySkin(root, pack, assets, opts) {
   root.classList.toggle('uppercase', typography.uppercase);
   root.classList.toggle('notches', shape.cornerNotches);
   s.backgroundColor = palette.void;
-  s.backgroundImage = 'none'; // the layer stack owns the wallpaper now
-  applyBackground(root, pack, assets, opts);
+  applyFill(root, pack, opts);          // gradient base fill (or plain void)
+  applyBackground(root, pack, assets, opts); // the layer stack owns the wallpaper
 
   applyAmbience(root, pack, opts);
+}
+
+// ── Base surface fill ─────────────────────────────────────────────────────────
+// A CSS gradient painted on the surface's own background, behind the wallpaper
+// layer stack (which is a child at z-index 0). A stop colour is either a palette
+// token — so it tracks the colourway — or a literal hex. 'solid' / fewer than two
+// stops falls through to the flat void colour set in applySkin.
+
+const FILL_TOKEN_KEYS = ['void', 'glass', 'accent', 'accentBright', 'muted', 'warn', 'gold'];
+// Tiling film-grain (SVG turbulence, ~5% opacity) layered over the gradient.
+const GRAIN_URI = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E\")";
+
+function resolveFillColor(c, palette) {
+  return FILL_TOKEN_KEYS.includes(c) ? (palette[c] || '#000000') : c;
+}
+
+// Build the CSS background-image for a fill, or null when it should stay solid.
+function buildFillImage(fill, palette) {
+  if (!fill || fill.type === 'solid') return null;
+  const stops = Array.isArray(fill.stops) ? fill.stops.filter((s) => s && s.color) : [];
+  const clampPct = (v) => Math.max(0, Math.min(100, Number(v) || 0));
+
+  if (fill.type === 'mesh') {
+    if (!stops.length) return null;
+    // Soft alpha blobs at spread anchor points over the void ground.
+    const spots = [[20, 25], [80, 20], [65, 85], [28, 78], [50, 48], [88, 62]];
+    const blobs = stops.map((s, i) => {
+      const [x, y] = spots[i % spots.length];
+      return `radial-gradient(46% 56% at ${x}% ${y}%, ${rgba(resolveFillColor(s.color, palette), 0.55)}, transparent 62%)`;
+    });
+    return `${blobs.join(', ')}, ${palette.void || '#05070d'}`;
+  }
+
+  if (stops.length < 2) return null;
+  const list = stops.slice().sort((a, b) => (a.at || 0) - (b.at || 0))
+    .map((s) => `${resolveFillColor(s.color, palette)} ${clampPct(s.at)}%`).join(', ');
+  const angle = Math.max(0, Math.min(360, Number(fill.angle) || 0));
+  const px = clampPct(fill.posX), py = clampPct(fill.posY);
+  if (fill.type === 'linear') return `linear-gradient(${angle}deg, ${list})`;
+  if (fill.type === 'radial') return `radial-gradient(circle at ${px}% ${py}%, ${list})`;
+  if (fill.type === 'conic') return `conic-gradient(from ${angle}deg at ${px}% ${py}%, ${list})`;
+  return null;
+}
+
+function applyFill(root, pack, opts) {
+  const s = root.style;
+  const fill = pack.skin.background && pack.skin.background.fill;
+  const image = buildFillImage(fill, pack.skin.palette);
+  root.classList.remove('bg-fill-animate', 'bg-fill-animate-grain');
+  s.animationPlayState = ''; // clear any freeze-pause from a prior render
+  if (!image) {
+    s.backgroundImage = 'none';
+    s.backgroundSize = ''; s.backgroundPosition = ''; s.backgroundRepeat = '';
+    return;
+  }
+  const still = (opts && opts.staticAmbience === true)
+    || !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  const grain = !!fill.grain;
+  const animate = !!fill.animate && !still;
+  const gradSize = animate ? '300% 300%' : (fill.type === 'mesh' ? '150% 150%' : '100% 100%');
+  if (grain) {
+    s.backgroundImage = `${GRAIN_URI}, ${image}`;
+    s.backgroundRepeat = 'repeat, no-repeat';
+    s.backgroundSize = `150px 150px, ${gradSize}`;
+    s.backgroundPosition = '0 0, center';
+  } else {
+    s.backgroundImage = image;
+    s.backgroundRepeat = 'no-repeat';
+    s.backgroundSize = gradSize;
+    s.backgroundPosition = 'center';
+  }
+  // The drift itself is a CSS keyframe (compositor-cheap); the class picks the
+  // keyframe that pins the grain layer while moving the gradient.
+  if (animate) root.classList.add(grain ? 'bg-fill-animate-grain' : 'bg-fill-animate');
 }
 
 // ── Layered parallax background ──────────────────────────────────────────────
@@ -632,6 +706,8 @@ function freezeAmbience(root) {
   if (s) { s.paused = true; cancelAnimationFrame(s.raf); }
   // Freeze the video wallpaper too, so a power-frozen desktop is truly idle.
   setWallpaperPlayback(root, false);
+  // Pause an animated base fill (harmless when nothing is animating).
+  if (root && root.style) root.style.animationPlayState = 'paused';
 }
 
 function applyComponentStyle(el, style, pack) {
