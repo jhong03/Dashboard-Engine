@@ -514,7 +514,10 @@ function selectControl(value, choices, onChange) {
     select.appendChild(option);
   }
   select.value = value;
-  select.addEventListener('change', () => onChange(select.value));
+  // A dropdown change is a discrete action, never a drag — clear sliderActive so
+  // the inspector is allowed to rebuild (a native colour picker can leave the flag
+  // stuck true because its `change` event is unreliable on Windows).
+  select.addEventListener('change', () => { sliderActive = false; if (onChange) onChange(select.value); });
   return select;
 }
 
@@ -524,7 +527,7 @@ function checkControl(labelText, value, onChange) {
   const box = document.createElement('input');
   box.type = 'checkbox';
   box.checked = Boolean(value);
-  box.addEventListener('change', () => onChange(box.checked));
+  box.addEventListener('change', () => { sliderActive = false; onChange(box.checked); });
   wrap.append(box, document.createTextNode(labelText));
   return wrap;
 }
@@ -1091,6 +1094,7 @@ function ensureFill() {
 function applyFillPreset(id) {
   const preset = FILL_PRESETS.find((p) => p.id === id) || FILL_PRESETS[0];
   const fill = ensureFill();
+  sliderActive = false; // discrete action — always let the inspector rebuild
   const keepAnimate = !!fill.animate, keepGrain = !!fill.grain; // toggles survive a style change
   fill.type = preset.type;
   fill.preset = id;
@@ -1115,21 +1119,22 @@ function fillColorControl(stop) {
 
   const isToken = COLORWAY_KEYS.includes(stop.color);
   const choices = [['custom', t('editor.insp.fill.custom')], ...COLORWAY_KEYS.map((k) => [k, paletteLabel(k)])];
-  const sel = selectControl(isToken ? stop.color : 'custom', choices, null);
-  sel.style.flex = '1';
-  sel.style.minWidth = '0';
-
   const picker = document.createElement('input');
   picker.type = 'color';
   picker.value = (isToken ? (palette[stop.color] || '#000000') : (stop.color || '#000000')).slice(0, 7);
   picker.style.display = isToken ? 'none' : '';
   picker.style.flex = '0 0 34px';
 
-  sel.addEventListener('change', () => {
-    if (sel.value === 'custom') { stop.color = picker.value; picker.style.display = ''; }
-    else { stop.color = sel.value; picker.style.display = 'none'; }
+  // 'custom' reveals the hex picker; a token tracks the colourway. selectControl
+  // clears sliderActive, so switching a stop's colour always rebuilds the list.
+  const sel = selectControl(isToken ? stop.color : 'custom', choices, (val) => {
+    if (val === 'custom') { stop.color = picker.value; picker.style.display = ''; }
+    else { stop.color = val; picker.style.display = 'none'; }
     renderAll();
   });
+  sel.style.flex = '1';
+  sel.style.minWidth = '0';
+
   // Same guard as the palette pickers: keep the open native picker alive while adjusting.
   picker.addEventListener('input', () => { sliderActive = true; stop.color = picker.value; renderAll(); });
   picker.addEventListener('change', () => { sliderActive = false; stop.color = picker.value; renderAll(); });
@@ -1173,7 +1178,7 @@ function renderFillSection(panel, skin) {
     rm.textContent = '×';
     rm.title = t('editor.insp.btn.remove');
     rm.disabled = fill.stops.length <= 2;
-    rm.addEventListener('click', () => { fill.stops.splice(i, 1); renderAll(); });
+    rm.addEventListener('click', () => { sliderActive = false; fill.stops.splice(i, 1); renderAll(); });
     row.appendChild(rm);
     panel.appendChild(field(t('editor.insp.fill.stop', { n: i + 1 }), row));
   });
@@ -1182,6 +1187,7 @@ function renderFillSection(panel, skin) {
     add.className = 'btn tiny';
     add.textContent = t('editor.insp.fill.addStop');
     add.addEventListener('click', () => {
+      sliderActive = false; // discrete action — always let the inspector rebuild
       const last = fill.stops[fill.stops.length - 1];
       fill.stops.push({ color: last ? last.color : 'accent', at: 100 });
       renderAll();
