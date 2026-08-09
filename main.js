@@ -647,6 +647,131 @@ function renderPackPreview(packId, sizeOpts) {
   });
 }
 
+// Encode a numbered PNG frame sequence → an optimized, looping animated GIF via
+// ffmpeg (two-pass palette for quality). Resolves true on success. FAIL-SOFT:
+// any error — including ffmpeg not being installed on this machine — resolves
+// false so the publish falls back to the static preview image.
+function encodeGif(frameGlob, palettePath, outPath, fps, opts) {
+  const { spawn } = require('child_process');
+  const ffmpeg = require('./lib/dsp').findFfmpeg();
+  const width = opts.width, colors = opts.colors, dither = opts.dither;
+  const run = (args) => new Promise((resolve) => {
+    let child;
+    try { child = spawn(ffmpeg, args, { windowsHide: true }); }
+    catch (e) { return resolve(false); }
+    child.on('error', () => resolve(false));           // ffmpeg missing / unspawnable
+    if (child.stderr) child.stderr.on('data', () => {}); // drain so the pipe never blocks
+    child.on('close', (code) => resolve(code === 0));
+  });
+  const scale = `scale=${width}:-1:flags=lanczos`;
+  // Pass 1: build an optimal palette from the frames (capped colours = smaller
+  // file). Pass 2: apply it with the requested dither. Two passes = far better
+  // quality-per-byte than a single-pass GIF.
+  return run(['-y', '-framerate', String(fps), '-i', frameGlob, '-vf', `${scale},palettegen=max_colors=${colors}:stats_mode=diff`, palettePath])
+    .then((ok) => ok && run(['-y', '-framerate', String(fps), '-i', frameGlob, '-i', palettePath,
+      '-lavfi', `${scale} [x]; [x][1:v] paletteuse=dither=${dither}`, '-loop', '0', outPath]));
+}
+
+// Render a short, LOOPING animated GIF preview of a pack (demo data only, no
+// personal info) for the Steam Workshop — so packs whose look depends on motion
+// (video/parallax backgrounds, ambience particles, animated fills, WebGL
+// effects) show that motion in the Workshop grid, the way Wallpaper Engine does.
+// Small + short so the GIF stays under Steam's ~1 MB preview cap. Uses the same
+// deterministic capture clock as the trailer tool (?capture=1) for a smooth loop.
+// Returns a temp .gif path, or null on ANY failure (ffmpeg missing, over the
+// cap, render error) → the caller falls back to the static image. Fail-soft.
+const GIF_PREVIEW_MAX_BYTES = 1024 * 1024;
+function renderPackPreviewGif(packId) {
+  const fs = require('fs');
+  const os = require('os');
+  // Capture a touch larger than the biggest output tier so ffmpeg downscales
+  // cleanly (lanczos). Encode tiers get progressively smaller/cheaper until one
+  // fits under Steam's preview cap — busy packs still get a (slightly smaller) GIF.
+  const W = 640, H = 360, FPS = 12, SECONDS = 2.5;
+  const GIF_TIERS = [
+    { width: 512, colors: 192, dither: 'bayer:bayer_scale=4' },
+    { width: 448, colors: 128, dither: 'bayer:bayer_scale=5' },
+    { width: 384, colors: 96, dither: 'bayer:bayer_scale=5' },
+    { width: 320, colors: 64, dither: 'none' },
+  ];
+  const total = Math.max(1, Math.round(SECONDS * FPS));
+  const workDir = path.join(os.tmpdir(), `de-gif-${Date.now()}`);
+  return new Promise((resolve) => {
+    let win = new BrowserWindow({
+      width: W, height: H, useContentSize: true, enableLargerThanScreen: true,
+      show: false, frame: false, skipTaskbar: true, backgroundColor: '#04080F',
+      webPreferences: {
+        ...COMMON_WEB_PREFERENCES,
+        preload: path.join(__dirname, 'preload-dashboard.js'),
+        offscreen: true, backgroundThrottling: false,
+      },
+    });
+    try { win.setBounds({ x: 0, y: 0, width: W, height: H }); } catch (e) { /* clamped */ }
+    let settled = false;
+    const cleanup = () => { try { fs.rmSync(workDir, { recursive: true, force: true }); } catch (e) { /* best-effort */ } };
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      if (win && !win.isDestroyed()) win.destroy();
+      win = null;
+      if (!result) cleanup();
+      resolve(result || null);
+    };
+    const guard = setTimeout(() => finish(null), 45000); // never hang a publish
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(null); });
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        fs.mkdirSync(workDir, { recursive: true });
+        const start = Date.now();
+        while (Date.now() - start < 8000) {
+          const ready = await win.webContents.executeJavaScript('window.__shotReady === true').catch(() => false);
+          if (ready) break;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+        await new Promise((r) => setTimeout(r, 300)); // one more beat so data has painted
+        // Capture in REAL time (not the deterministic capture clock, which would
+        // gate the rAF-driven data render and leave meters/clocks blank). Ambience,
+        // video, animated fills and effects all move on their own; a synthetic
+        // pointer sweep each frame drives parallax + cursor-ripple too.
+        const frameMs = Math.round(1000 / FPS);
+        for (let i = 0; i < total; i++) {
+          const tt = i / total;
+          const px = Math.round(W / 2 + W * 0.4 * Math.sin(tt * 6.283));
+          const py = Math.round(H / 2 + H * 0.3 * Math.sin(tt * 12.566 + 1));
+          await win.webContents.executeJavaScript(
+            `(function(x,y){var t=['pointermove','mousemove'];for(var i=0;i<t.length;i++){var e;try{e=new MouseEvent(t[i],{clientX:x,clientY:y,bubbles:true,view:window});}catch(_){continue;}window.dispatchEvent(e);document.dispatchEvent(e);if(document.body)document.body.dispatchEvent(e);}})(${px},${py})`
+          ).catch(() => {});
+          await new Promise((r) => setTimeout(r, frameMs)); // let it animate a frame
+          const img = await win.webContents.capturePage();
+          fs.writeFileSync(path.join(workDir, `f${String(i + 1).padStart(4, '0')}.png`), img.toPNG());
+        }
+        // Encode at successively smaller/cheaper tiers until one fits the cap.
+        const frameGlob = path.join(workDir, 'f%04d.png');
+        const palettePath = path.join(workDir, 'palette.png');
+        let gifPath = null;
+        for (const tier of GIF_TIERS) {
+          const out = path.join(os.tmpdir(), `de-preview-${Date.now()}-${tier.width}.gif`);
+          const ok = await encodeGif(frameGlob, palettePath, out, FPS, tier);
+          if (ok && fs.existsSync(out)) {
+            if (fs.statSync(out).size <= GIF_PREVIEW_MAX_BYTES) { gifPath = out; break; }
+            try { fs.rmSync(out, { force: true }); } catch (e) { /* try the next tier */ }
+          } else if (!ok) {
+            break; // ffmpeg unavailable — no tier will work; fall back to static
+          }
+        }
+        cleanup();
+        clearTimeout(guard);
+        finish(gifPath); // null → caller falls back to the static image
+      } catch (err) {
+        cleanup();
+        clearTimeout(guard);
+        finish(null);
+      }
+    });
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId) } });
+  });
+}
+
 // Render a Workshop preview CARD for a voice profile, off-screen. The card shows
 // ONLY the voice's name, its base voice (language · sex · accent), and a few
 // tuning bars — never any personal data (a voice profile has no telemetry, apps,
@@ -1133,7 +1258,15 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
         }
       },
       // Workshop publish asks for a rendered preview image of the pack.
-      renderPreview: (id) => renderPackPreview(id),
+      renderPreview: async (id, opts) => {
+        // Animated request: try a looping GIF first (motion shows in the Workshop
+        // grid); fall back to the static image if the GIF can't be made.
+        if (opts && opts.animated) {
+          const gif = await renderPackPreviewGif(id).catch(() => null);
+          if (gif) return gif;
+        }
+        return renderPackPreview(id);
+      },
       // Publishing a VOICE renders a small preview card (name + base voice +
       // tuning bars; no personal data).
       renderVoicePreview: (file) => renderVoicePreview(file),
@@ -1211,6 +1344,19 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
           if (file) fs.copyFileSync(file, path.join(envFlag('SHOTPREVIEW'), 'preview.png'));
           console.log(`[preview] ${file || 'render failed'}`);
         } catch (err) { console.warn(`[preview] ${err.message}`); }
+        app.quit();
+      });
+    }
+    // DE_GIFPREVIEW=<dir>: dev utility — render DE_PACK's ANIMATED (GIF) Workshop
+    // preview to <dir>/preview.gif and quit, to eyeball the motion + file size.
+    if (envFlag('GIFPREVIEW')) {
+      renderPackPreviewGif(envFlag('PACK') || 'jarvis').then((file) => {
+        const fs = require('fs');
+        try {
+          fs.mkdirSync(envFlag('GIFPREVIEW'), { recursive: true });
+          if (file) { fs.copyFileSync(file, path.join(envFlag('GIFPREVIEW'), 'preview.gif')); console.log(`[gifpreview] ok ${file} (${fs.statSync(file).size} bytes)`); }
+          else console.log('[gifpreview] render failed (ffmpeg missing or over size cap)');
+        } catch (err) { console.warn(`[gifpreview] ${err.message}`); }
         app.quit();
       });
     }

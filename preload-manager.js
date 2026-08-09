@@ -54,6 +54,7 @@ const bridge = {
     description: String(req.description || ''),
     tags: Array.isArray(req.tags) ? req.tags.map(String) : [],
     visibility: String(req.visibility || 'unlisted'),
+    animated: req.animated === true,
   }),
   workshopSubscribed: () => ipcRenderer.invoke('aegis:workshop:subscribed'),
   workshopImport: (itemId) => ipcRenderer.invoke('aegis:workshop:import', String(itemId)),

@@ -3125,6 +3125,23 @@ function publishField(labelText, control) {
   return wrap;
 }
 
+// Does the pack's look depend on motion? Drives whether the animated (GIF)
+// preview is on by default — a still image can't sell these designs.
+function packHasMotion(pack) {
+  const skin = (pack && pack.skin) || {};
+  if (skin.ambience && skin.ambience.effect && skin.ambience.effect !== 'none') return true;
+  const bg = skin.background || {};
+  if (bg.fill && bg.fill.animate) return true;
+  const layers = Array.isArray(bg.layers) ? bg.layers : [];
+  if (layers.some((l) => l && (/\.(mp4|webm)$/i.test(String(l.src))
+    || (Array.isArray(l.effects) && l.effects.length)
+    || (l.drift && (l.drift.x || l.drift.y))
+    || (typeof l.depth === 'number' && l.depth > 0)))) return true;
+  if (typeof skin.wallpaper === 'string' && /\.(mp4|webm)$/i.test(skin.wallpaper)) return true;
+  const types = new Set(((pack && pack.components) || []).map((c) => c.type));
+  return types.has('visualizer'); // self-animating component
+}
+
 function openPublishDialog(item, opts = {}) {
   const scrim = document.createElement('div');
   scrim.className = 'modal-scrim';
@@ -3189,17 +3206,34 @@ function openPublishDialog(item, opts = {}) {
   else if (typeof opts.fetchVisibility === 'function') {
     opts.fetchVisibility().then((res) => applyVisibility(res && res.visibility)).catch(() => {});
   }
+  // Animated preview: a short looping GIF so motion-based designs (video/parallax
+  // backgrounds, ambience, animated fills, effects) show movement in the Workshop
+  // grid. Defaults on when the pack has motion; falls back to a static image if a
+  // GIF can't be made (e.g. ffmpeg isn't available).
+  const animatedWrap = document.createElement('label');
+  animatedWrap.style.display = 'flex';
+  animatedWrap.style.gap = '8px';
+  animatedWrap.style.alignItems = 'center';
+  animatedWrap.style.cursor = 'pointer';
+  const animatedBox = document.createElement('input');
+  animatedBox.type = 'checkbox';
+  animatedBox.checked = packHasMotion(item.pack);
+  const animatedText = document.createElement('span');
+  animatedText.textContent = 'Capture the dashboard in motion (a short looping GIF)';
+  animatedWrap.append(animatedBox, animatedText);
+
   card.append(
     publishField('Title', title),
     publishField('Description', desc),
     publishField('Tags', tagGroups),
     publishField('More tags', tags),
     publishField('Visibility', vis),
+    publishField('Animated preview', animatedWrap),
   );
 
   const hint = document.createElement('p');
   hint.className = 'detail-line';
-  hint.textContent = 'A preview image is rendered from the dashboard automatically (demo data — no personal info). Description supports Steam formatting ([b], [h1], [i]). Only pack.json + assets are published — never your personal data.';
+  hint.textContent = 'A preview is rendered from the dashboard automatically (demo data — no personal info); tick Animated preview for a short looping GIF that shows motion. Description supports Steam formatting ([b], [h1], [i]). Only pack.json + assets are published — never your personal data.';
   card.appendChild(hint);
 
   // Progress + result live INSIDE the dialog (right where the user is looking),
@@ -3217,7 +3251,7 @@ function openPublishDialog(item, opts = {}) {
     submit.disabled = true;
     cancel.disabled = true;
     dstatus.style.color = '';
-    dstatus.textContent = `Publishing “${title.value || item.name}” to Workshop… this can take up to a minute — keep this window open.`;
+    dstatus.textContent = `Publishing “${title.value || item.name}” to Workshop…${animatedBox.checked ? ' rendering the animated preview, then uploading' : ''} — this can take up to a minute; keep this window open.`;
     const out = await aegis.workshopPublish({
       packId: item.id,
       title: title.value,
@@ -3225,6 +3259,7 @@ function openPublishDialog(item, opts = {}) {
       // Chips + any free-text extras, deduped, Steam's 10-tag cap applied.
       tags: [...new Set([...selectedTags, ...tags.value.split(',').map((t) => t.trim()).filter(Boolean)])].slice(0, 10),
       visibility: vis.value,
+      animated: animatedBox.checked,
     });
     publishing = false;
     cancel.disabled = false;
