@@ -26,6 +26,9 @@ const bridge = {
   version: '0.4.0',
   // withProps: the desktop shows the user's customized pack (per-pack knobs).
   packLoad: (id) => ipcRenderer.invoke('aegis:packs:load', String(id), { withProps: true }),
+  // shared: a PUBLIC preview render — the author's content is replaced with
+  // placeholders (weather location, countdown, text, labels…). Used by shot.js.
+  packLoadShared: (id) => ipcRenderer.invoke('aegis:packs:load', String(id), { shared: true }),
   onPackChanged: subscription('aegis:packs:changed'),      // hot reload (file edits + prop changes)
   activeGet: () => ipcRenderer.invoke('aegis:active:get'),
   onActiveChanged: subscription('aegis:active:changed'),   // manager picked a pack

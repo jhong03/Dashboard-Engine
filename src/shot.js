@@ -59,15 +59,12 @@ function waitForWallpaperVideo(root, timeoutMs) {
 
 async function run() {
   const id = new URLSearchParams(location.search).get('pack') || 'jarvis';
-  const res = await aegis.packLoad(id);
+  // This render becomes a PUBLIC preview image — load the SHARED (sanitized) pack
+  // so the author's own content (weather location, countdown, text, labels…) is
+  // shown as placeholders, exactly matching the published pack.json. One source of
+  // truth: packstore.sanitizeForShare (via the shared load).
+  const res = await (aegis.packLoadShared ? aegis.packLoadShared(id) : aegis.packLoad(id));
   if (!res.ok) { window.__shotReady = true; return; }
-  // This render becomes a PUBLIC preview image — never show the author's real
-  // weather location (the published pack.json already strips it; strip it here
-  // too so the widget shows a neutral label, not their city). Matches
-  // packstore.sanitizeForShare.
-  for (const c of (res.pack.components || [])) {
-    if (c && c.type === 'weather' && c.options) { c.options.lat = 0; c.options.lon = 0; c.options.place = null; }
-  }
   const renderer = AegisComponents.createRenderer(services);
   AegisComponents.applySkin(document.body, res.pack, res.assets, { maxFps: 60 });
   renderer.render(document.getElementById('canvas'), res.pack, res.assets);
