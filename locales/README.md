@@ -1,59 +1,67 @@
-# Translating Dashboard Engine
+# Translate Dashboard Engine
 
 The interface can speak any language. English ships in the app; every other
-language is a single JSON file in this folder. **Anyone can add one** — no code,
-no build step.
+language is a single JSON file. **Anyone can make one** — no account and no
+programming required.
 
-Currently bundled: **English (`en`), Spanish (`es`), French (`fr`), Chinese
-(`zh`), Japanese (`ja`), Korean (`ko`)**. `en.json` is always the source of truth
-for *which* text keys exist; any key a translation leaves out simply falls back
-to English at runtime, so a partial translation is perfectly fine.
+English (`en.json`) is always the source of truth for *which* text keys exist.
+Any key your translation leaves out just falls back to English, so a partial or
+in-progress translation works fine.
 
-## The easy way: fill a spreadsheet
+**Included today:** English, Spanish (`es`), French (`fr`), Chinese (`zh`),
+Japanese (`ja`), Korean (`ko`).
 
-1. Open **`i18n-template.csv`** (in the repo root) in Excel, Google Sheets, or
-   LibreOffice. It has three columns: `key`, `english`, `translation`.
-2. Fill in the **`translation`** column. Leave a row blank to keep the English.
-3. Turn it back into a locale file:
+---
 
-   ```
-   node scripts/i18n-csv.js import <code> your-filled-sheet.csv
-   ```
+## 1 · Make your translation
 
-   `<code>` is a 2-letter language code (e.g. `de`, `pt`, `it`). This writes
-   `locales/<code>.json`.
+Pick whichever is comfortable — both produce the same result.
 
-To start from an existing translation instead of a blank sheet (to fix or finish
-one), export it first: `node scripts/i18n-csv.js export <code>`.
+**A. In a spreadsheet (easiest).** Open **`i18n-template.csv`** in Excel, Google
+Sheets, or LibreOffice. It has three columns: `key`, `english`, `translation`.
+Fill in the **translation** column and save. Leave a row blank to keep English.
 
-## Using your translation right away
+**B. Edit the JSON directly (no tools, and you can test it immediately).** Make a
+copy of `en.json`, rename it to your 2-letter language code (e.g. `de.json`,
+`pt.json`, `it.json`), and translate the text on the right of each `":"`. Leave
+the `"key"` on the left unchanged.
 
-Drop your `<code>.json` into your **user** locales folder and restart the app —
-no rebuild needed:
+## 2 · Try it in the app right away
+
+If you made a **JSON** file (path B), drop it into your personal locales folder
+and restart Dashboard Engine — no reinstall needed:
 
 ```
 %APPDATA%\dashboard-engine\locales\<code>.json      (Windows)
 ```
 
-Then pick it in **Manager → Settings → Language** (or set the language to
-Automatic and it follows your OS locale).
+Then choose it in **Manager → Settings → Language** (or set Language to
+Automatic and it follows your system language).
 
-## Contributing it back
+*(Made a spreadsheet instead? Send it in — we convert it to JSON and it comes
+back to everyone in an app update. If you have the developer tools, you can also
+convert it yourself: `node scripts/i18n-csv.js import <code> your-sheet.csv`.)*
 
-Share your finished `locales/<code>.json` (open a pull request, or send it) and
-it can be bundled so everyone gets it. Community translations are welcome and
-refined over time.
+## 3 · Share it with everyone
 
-## Rules that keep a translation working
+Post your finished file — the `.csv` **or** the `.json` — in the **Translations**
+thread on our Steam Community Discussions (or open a pull request on the public
+translation repo). Good translations get bundled into the app so every user gets
+them, and we credit contributors. Corrections and improvements are always
+welcome.
+
+---
+
+## A few rules that keep a translation working
 
 - **Keep placeholders exactly:** `{name}`, `{count}`, `{pct}`, `{size}`, … They
-  are replaced with live values. Translate the words around them; never translate
+  get replaced with live values. Translate the words around them; never translate
   or delete the `{...}` itself. You may move it to fit your grammar.
-- **Keep the simple tags:** some strings contain `<b>`, `<strong>`, `<em>`,
-  `<i>`, `<code>`, `<kbd>`, `<small>`, `<u>`, `<br>`. Keep the tags; translate the
-  text between them. (No other HTML is allowed — it is stripped for safety.)
-- **Leave identifiers literal:** product names (Dashboard Engine, Steam,
-  Workshop, Windows, Spotify…), anything inside `<code>…</code>` (URLs, model
-  names, `/v1`, `sk-`, `DE.onData`, `--de-*`), file names like `PACKS.md`, and
-  palette keys like `void · glass · accent`.
-- Keep it short — most strings are buttons, labels, and hints in a compact UI.
+- **Keep the simple tags:** some lines contain `<b>`, `<strong>`, `<em>`, `<i>`,
+  `<code>`, `<kbd>`, `<small>`, `<u>`, `<br>`. Keep the tags; translate the text
+  between them. No other HTML is allowed (it's stripped for safety).
+- **Leave identifiers as-is:** product names (Dashboard Engine, Steam, Workshop,
+  Windows, Spotify…), anything inside `<code>…</code>` (URLs, model names, `/v1`,
+  `sk-`, `DE.onData`, `--de-*`), file names like `PACKS.md`, and palette keys like
+  `void · glass · accent`.
+- Keep it short — most lines are buttons, labels, and hints in a compact UI.
