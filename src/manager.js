@@ -579,7 +579,8 @@ function publishedCard(item) {
       libButton(t('manager.published.update'), async () => {
         const st = await aegis.workshopStatus();
         if (!st.available) return libStatus(st.reason || t('manager.detail.workshopUnavailable'), true);
-        openPublishDialog(localPack);
+        // Default the dialog to this item's current Steam visibility.
+        openPublishDialog(localPack, { visibility: item.visibility });
       }, 'tiny primary'),
       libButton(t('manager.published.view'), () => aegis.workshopOpenItem(item.url), 'tiny'),
     );
@@ -3124,7 +3125,7 @@ function publishField(labelText, control) {
   return wrap;
 }
 
-function openPublishDialog(item) {
+function openPublishDialog(item, opts = {}) {
   const scrim = document.createElement('div');
   scrim.className = 'modal-scrim';
   const card = document.createElement('div');
@@ -3178,6 +3179,15 @@ function openPublishDialog(item) {
   const vis = document.createElement('select');
   for (const [v, label] of [['unlisted', 'Unlisted (link only)'], ['public', 'Public'], ['friends', 'Friends only'], ['private', 'Private']]) {
     const opt = document.createElement('option'); opt.value = v; opt.textContent = label; vis.appendChild(opt);
+  }
+  // Default an UPDATE to the item's existing visibility so the audience is never
+  // changed by accident. A known value applies immediately; otherwise fetch it
+  // (the dialog opens right away and the dropdown corrects when Steam responds).
+  // A brand-new pack has neither → the safe 'unlisted' default (first option).
+  const applyVisibility = (v) => { if (v && [...vis.options].some((o) => o.value === v)) vis.value = v; };
+  if (opts.visibility) applyVisibility(opts.visibility);
+  else if (typeof opts.fetchVisibility === 'function') {
+    opts.fetchVisibility().then((res) => applyVisibility(res && res.visibility)).catch(() => {});
   }
   card.append(
     publishField('Title', title),
@@ -3330,7 +3340,9 @@ async function renderDetail() {
       detail.appendChild(libButton(already ? t('manager.detail.updateWorkshop') : t('manager.detail.publishWorkshop'), async () => {
         const st = await aegis.workshopStatus();
         if (!st.available) return libStatus(st.reason || t('manager.detail.workshopUnavailable'), true);
-        openPublishDialog(item);
+        // An already-published pack: default the dialog to its current Steam
+        // visibility (fetched by item id). A new pack keeps the safe default.
+        openPublishDialog(item, already ? { fetchVisibility: () => aegis.workshopVisibility(item.publishedItemId) } : {});
       }));
       if (already) {
         detail.appendChild(detailLine(t('manager.detail.publishedWorkshop')));

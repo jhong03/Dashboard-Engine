@@ -63,6 +63,7 @@ const bridge = {
   workshopOpen: () => ipcRenderer.invoke('aegis:workshop:open'),
   // Creator management: your published items, and getting an editable copy back.
   workshopMine: () => ipcRenderer.invoke('aegis:workshop:mine'),
+  workshopVisibility: (itemId) => ipcRenderer.invoke('aegis:workshop:visibility', String(itemId)),
   workshopGetEditable: (itemId) => ipcRenderer.invoke('aegis:workshop:getEditable', String(itemId)),
   workshopOpenItem: (url) => ipcRenderer.invoke('aegis:workshop:openItem', String(url)),
 
