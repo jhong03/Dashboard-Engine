@@ -3182,8 +3182,11 @@ async function renderDetail() {
     name.textContent = item.name;
     detail.append(preview, name);
     const meta = item.meta || {};
-    detail.appendChild(detailLine(`${item.id}${meta.version ? ' · v' + meta.version : ''} · ${item.origin === 'builtin' ? 'built-in reference' : meta.source === 'file' ? 'installed from file' : meta.source || 'installed'}`));
-    detail.appendChild(detailLine(`${item.pack.components.length} components · ${item.pack.persona.name}`));
+    const originDesc = item.origin === 'builtin' ? t('manager.detail.originBuiltin')
+      : meta.source === 'file' ? t('manager.detail.originFile')
+        : meta.source || t('manager.detail.originInstalled');
+    detail.appendChild(detailLine(`${item.id}${meta.version ? ' · v' + meta.version : ''} · ${originDesc}`));
+    detail.appendChild(detailLine(t('manager.detail.componentsPersona', { count: item.pack.components.length, persona: item.pack.persona.name })));
 
     const swatches = document.createElement('div');
     swatches.className = 'swatches';
@@ -3204,22 +3207,22 @@ async function renderDetail() {
     fillCustomize(customize, item.id);
 
     if (item.id === library.activeId) {
-      detail.appendChild(detailLine('Currently on your desktop'));
+      detail.appendChild(detailLine(t('manager.detail.currentlyActive')));
     } else {
-      detail.appendChild(libButton('Use on desktop', async () => {
+      detail.appendChild(libButton(t('manager.detail.useOnDesktop'), async () => {
         const out = await aegis.activeSet(item.id);
         if (!out.ok) return libStatus(out.error, true);
         library.activeId = item.id;
         setActiveIndicator();
-        libStatus(`${item.name} is now on your desktop.`);
+        libStatus(t('manager.detail.nowOnDesktop', { name: item.name }));
         renderGallery();
         renderDetail();
       }, 'primary'));
     }
-    detail.appendChild(libButton('Open in editor', () => aegis.openEditor(item.id)));
-    detail.appendChild(libButton('Export pack…', async () => {
+    detail.appendChild(libButton(t('manager.detail.openInEditor'), () => aegis.openEditor(item.id)));
+    detail.appendChild(libButton(t('manager.detail.exportPack'), async () => {
       const out = await aegis.exportPack(item.id);
-      libStatus(out.ok ? `Exported to ${out.file}` : out.error || '', !out.ok && out.error);
+      libStatus(out.ok ? t('manager.detail.exportedTo', { file: out.file }) : out.error || '', !out.ok && out.error);
     }));
     // Publish / Update — STRICT gate: only original work (from-scratch builder
     // packs, or your own re-downloaded Workshop items) may reach the Workshop.
@@ -3227,30 +3230,30 @@ async function renderDetail() {
     // explained button. The gate is also enforced in main (renderer is hostile).
     if (item.publishable) {
       const already = !!item.publishedItemId;
-      detail.appendChild(libButton(already ? 'Update on Workshop…' : 'Publish to Workshop…', async () => {
+      detail.appendChild(libButton(already ? t('manager.detail.updateWorkshop') : t('manager.detail.publishWorkshop'), async () => {
         const st = await aegis.workshopStatus();
-        if (!st.available) return libStatus(st.reason || 'Steam Workshop isn’t available.', true);
+        if (!st.available) return libStatus(st.reason || t('manager.detail.workshopUnavailable'), true);
         openPublishDialog(item);
       }));
       if (already) {
-        detail.appendChild(detailLine('Published on Workshop ✓'));
-        detail.appendChild(libButton('View on Steam', () => aegis.workshopOpenItem(`https://steamcommunity.com/sharedfiles/filedetails/?id=${item.publishedItemId}`), 'tiny'));
+        detail.appendChild(detailLine(t('manager.detail.publishedWorkshop')));
+        detail.appendChild(libButton(t('manager.detail.viewOnSteam'), () => aegis.workshopOpenItem(`https://steamcommunity.com/sharedfiles/filedetails/?id=${item.publishedItemId}`), 'tiny'));
       }
     } else {
       const why = item.origin === 'builtin'
-        ? 'built-in packs can’t be published'
+        ? t('manager.detail.whyBuiltin')
         : (item.meta && item.meta.origin === 'fork')
-          ? 'forks of other packs can’t be published'
-          : 'packs imported from other creators can’t be published';
-      const blocked = libButton('Publish to Workshop…', () => {});
+          ? t('manager.detail.whyFork')
+          : t('manager.detail.whyImported');
+      const blocked = libButton(t('manager.detail.publishWorkshop'), () => {});
       blocked.disabled = true;
-      blocked.title = `Only dashboards you built from scratch (or your own re-downloaded Workshop items) can be published — ${why}.`;
+      blocked.title = t('manager.detail.publishBlocked', { why });
       detail.appendChild(blocked);
     }
     if (item.origin === 'installed') {
-      detail.appendChild(libButton('Uninstall', async () => {
+      detail.appendChild(libButton(t('manager.detail.uninstall'), async () => {
         const out = await aegis.uninstallPack(item.id);
-        libStatus(out.ok ? `Uninstalled ${item.id}.` : out.error, !out.ok);
+        libStatus(out.ok ? t('manager.detail.uninstalled', { id: item.id }) : out.error, !out.ok);
         library.selected = null;
         await refreshLibrary();
       }, 'danger'));
@@ -3263,7 +3266,7 @@ async function renderDetail() {
   if (entry.installed) livePreviewInto(preview, entry.id);
   name.textContent = entry.name;
   detail.append(preview, name);
-  detail.appendChild(detailLine(`${entry.id} · v${entry.version} · by ${entry.author || 'unknown'}`));
+  detail.appendChild(detailLine(t('manager.browse.byAuthor', { id: entry.id, version: entry.version, author: entry.author || t('manager.browse.unknown') })));
   const sizeLabel = Number.isFinite(entry.sizeBytes) ? `${(entry.sizeBytes / 1024).toFixed(0)} KB · ` : '';
   detail.appendChild(detailLine(`${sizeLabel}${url}`));
   if (entry.description) {
@@ -3272,11 +3275,11 @@ async function renderDetail() {
     desc.textContent = entry.description;
     detail.appendChild(desc);
   }
-  const label = update ? `Update to v${update.to}` : entry.installed ? 'Reinstall' : 'Install';
+  const label = update ? t('manager.browse.updateTo', { version: update.to }) : entry.installed ? t('manager.browse.reinstall') : t('manager.browse.install');
   detail.appendChild(libButton(label, async () => {
-    libStatus(`Installing ${entry.name}…`);
+    libStatus(t('manager.browse.installing', { name: entry.name }));
     const out = await aegis.registryInstall(url, entry.id);
-    libStatus(out.ok ? `Installed ${entry.name} v${entry.version} (checksum verified).` : out.error, !out.ok);
+    libStatus(out.ok ? t('manager.browse.installed', { name: entry.name, version: entry.version }) : out.error, !out.ok);
     if (out.ok) await refreshLibrary();
   }, 'primary'));
 
@@ -3298,12 +3301,13 @@ async function renderDetail() {
 // ── Data flow ───────────────────────────────────────────────────────────────
 
 async function browseRegistry(url) {
-  libStatus('Fetching registry…');
+  libStatus(t('manager.browse.fetching'));
   const index = await aegis.registryBrowse(url);
   library.indexes.set(url, index);
   if (index.ok) {
-    const updates = index.updates.length ? `, ${index.updates.length} update${index.updates.length > 1 ? 's' : ''} available` : '';
-    libStatus(`${index.name}: ${index.packs.length} pack${index.packs.length === 1 ? '' : 's'}${updates}.`);
+    let msg = t('manager.browse.registrySummary', { name: index.name, count: index.packs.length });
+    if (index.updates.length) msg += ' ' + t('manager.browse.updatesAvailable', { n: index.updates.length });
+    libStatus(msg);
   } else {
     libStatus(index.error, true);
   }
