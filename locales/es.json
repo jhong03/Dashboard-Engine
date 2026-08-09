@@ -48,6 +48,9 @@
   "manager.launcher.pinApp": "Anclar aplicación",
   "manager.launcher.pinFile": "Anclar un archivo…",
   "manager.launcher.pinFolder": "Anclar una carpeta…",
+  "manager.launcher.empty": "Aún no hay nada anclado. Elige una aplicación arriba, o ancla un archivo o una carpeta.",
+  "manager.launcher.unpin": "Desanclar",
+  "manager.launcher.pinned": "Anclado.",
 
   "manager.assistant.baseUrl": "URL base",
   "manager.assistant.apiKey": "Clave de API",
@@ -167,6 +170,10 @@
   "manager.welcome.lead": "Tu escritorio ahora es un panel en vivo: se dibuja directamente sobre el fondo, detrás de tus iconos. Esto es lo que puedes hacer desde aquí.",
   "manager.welcome.setupAssistant": "Configurar el asistente",
   "manager.welcome.getStarted": "Empezar",
+  "manager.welcome.point1": "<b>Explora y cambia de paquetes.</b> Vienen instalados ocho diseños integrados. Elige uno en <em>Instalados</em> y pulsa «Usar en el escritorio». Encuentra más en <em>Explorar</em>.",
+  "manager.welcome.point2": "<b>Hazlo tuyo.</b> Selecciona un paquete y usa <em>Personalizar</em> para recolorearlo, cambiar las partículas y más, o ábrelo en el editor para rehacer el diseño.",
+  "manager.welcome.point3": "<b>Conéctalo a tu vida.</b> La <em>Agenda</em> pone eventos en el fondo, el <em>Lanzador</em> ancla tus aplicaciones y el <em>Asistente</em> conecta una IA local o en la nube con la que puedes hablar.",
+  "manager.welcome.point4": "<b>No molesta.</b> El motor vive en la bandeja y pausa la animación cuando una app está a pantalla completa. Cierra esta ventana cuando quieras: el fondo sigue funcionando.",
 
   "manager.event.new": "Nuevo evento",
   "manager.event.edit": "Editar evento",

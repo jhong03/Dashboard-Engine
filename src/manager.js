@@ -1258,7 +1258,7 @@ async function renderLauncherCfg() {
   if (state.pins.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'hint';
-    empty.textContent = 'Nothing pinned yet. Pick an app above, or pin a file or folder.';
+    empty.textContent = t('manager.launcher.empty');
     list.appendChild(empty);
   }
   state.pins.forEach((pin, index) => {
@@ -1286,7 +1286,7 @@ async function renderLauncherCfg() {
     up.disabled = index === 0;
     const down = libButton('↓', async () => { await aegis.launcherPinMove(pin.id, 1); renderLauncherCfg(); }, 'tiny');
     down.disabled = index === state.pins.length - 1;
-    const del = libButton('Unpin', async () => { await aegis.launcherUnpin(pin.id); renderLauncherCfg(); }, 'tiny danger');
+    const del = libButton(t('manager.launcher.unpin'), async () => { await aegis.launcherUnpin(pin.id); renderLauncherCfg(); }, 'tiny danger');
 
     row.append(name, up, down, del);
     list.appendChild(row);
@@ -1307,13 +1307,13 @@ async function wireLauncherCfg() {
   $('btn-pin-app').addEventListener('click', async () => {
     if (!select.value) return;
     const out = await aegis.launcherPinApp(select.value);
-    libStatus(out.ok ? 'Pinned.' : out.error, !out.ok);
+    libStatus(out.ok ? t('manager.launcher.pinned') : out.error, !out.ok);
     renderLauncherCfg();
   });
   const pinPath = (kind) => async () => {
     const out = await aegis.launcherPinPath(kind);
     if (out.cancelled) return;
-    libStatus(out.ok ? 'Pinned.' : out.error, !out.ok);
+    libStatus(out.ok ? t('manager.launcher.pinned') : out.error, !out.ok);
     renderLauncherCfg();
   };
   $('btn-pin-file').addEventListener('click', pinPath('file'));
