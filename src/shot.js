@@ -61,6 +61,13 @@ async function run() {
   const id = new URLSearchParams(location.search).get('pack') || 'jarvis';
   const res = await aegis.packLoad(id);
   if (!res.ok) { window.__shotReady = true; return; }
+  // This render becomes a PUBLIC preview image — never show the author's real
+  // weather location (the published pack.json already strips it; strip it here
+  // too so the widget shows a neutral label, not their city). Matches
+  // packstore.sanitizeForShare.
+  for (const c of (res.pack.components || [])) {
+    if (c && c.type === 'weather' && c.options) { c.options.lat = 0; c.options.lon = 0; c.options.place = null; }
+  }
   const renderer = AegisComponents.createRenderer(services);
   AegisComponents.applySkin(document.body, res.pack, res.assets, { maxFps: 60 });
   renderer.render(document.getElementById('canvas'), res.pack, res.assets);

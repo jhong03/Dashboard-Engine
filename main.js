@@ -680,21 +680,23 @@ function encodeGif(frameGlob, palettePath, outPath, fps, opts) {
 // deterministic capture clock as the trailer tool (?capture=1) for a smooth loop.
 // Returns a temp .gif path, or null on ANY failure (ffmpeg missing, over the
 // cap, render error) → the caller falls back to the static image. Fail-soft.
-// Generous, Wallpaper-Engine-style cap — Steam accepts multi-MB animated GIF
-// previews, so a big, full-width, longer clip is fine. Tiers below only kick in
-// for an unusually heavy pack that would exceed even this.
-const GIF_PREVIEW_MAX_BYTES = 8 * 1024 * 1024;
+// Keep the animated preview SMALL. Steam throttles Workshop uploads by size, not
+// just frequency (confirmed: an ~8 MB GIF hit "limit exceeded" while a ~270 KB
+// static went through at the same moment) — a heavy preview is exactly what makes
+// publishing fail. So the GIF is capped low; a calm pack still renders full-width
+// at 960, and a busy one steps down through the tiers until it fits.
+const GIF_PREVIEW_MAX_BYTES = 2 * 1024 * 1024;
 function renderPackPreviewGif(packId) {
   const fs = require('fs');
   const os = require('os');
-  // Capture at a large 16:9 size so the preview FILLS the Workshop frame (Steam
-  // shows a small GIF at native size on black). ~5 s loop. Encode tiers step down
-  // in size/colours only if a very busy pack would blow past the cap.
-  const W = 960, H = 540, FPS = 12, SECONDS = 5;
+  // Capture at 16:9; a short loop keeps the file small. Encode tiers step down in
+  // size/colours until the GIF fits GIF_PREVIEW_MAX_BYTES (so busy packs stay
+  // light enough to upload rather than tripping Steam's throttle).
+  const W = 960, H = 540, FPS = 10, SECONDS = 4;
   const GIF_TIERS = [
-    { width: 960, colors: 192, dither: 'bayer:bayer_scale=4' },
-    { width: 800, colors: 160, dither: 'bayer:bayer_scale=5' },
-    { width: 640, colors: 128, dither: 'bayer:bayer_scale=5' },
+    { width: 960, colors: 160, dither: 'bayer:bayer_scale=5' },
+    { width: 768, colors: 128, dither: 'bayer:bayer_scale=5' },
+    { width: 640, colors: 112, dither: 'none' },
     { width: 512, colors: 96, dither: 'none' },
   ];
   const total = Math.max(1, Math.round(SECONDS * FPS));
