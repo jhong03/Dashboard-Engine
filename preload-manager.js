@@ -6,6 +6,14 @@
 
 const { contextBridge, ipcRenderer } = require('electron');
 
+// UI language dictionary, fetched SYNCHRONOUSLY so the page has it before it
+// renders (no flash of untranslated text). Exposed read-only to the page world;
+// src/i18n.js reads window.__i18n. Fail-soft: if unavailable, pages fall back to
+// English keys.
+try {
+  contextBridge.exposeInMainWorld('__i18n', ipcRenderer.sendSync('aegis:i18n:get'));
+} catch (e) { /* i18n unavailable — English fallback */ }
+
 // SECURITY: preloads run in every frame, including the sandboxed <iframe> a
 // module component renders inside the manager's live pack preview. This bridge
 // is the most powerful in the app (installs, registries, reminder CRUD,
@@ -13,6 +21,11 @@ const { contextBridge, ipcRenderer } = require('electron');
 // untrusted module code. See preload-dashboard.js for the full rationale.
 const bridge = {
   version: '0.4.0',
+
+  // UI language (i18n): list available locales, and set the active one (the
+  // renderer reloads to apply the new dictionary).
+  i18nList: () => ipcRenderer.invoke('aegis:i18n:list'),
+  i18nSet: (code) => ipcRenderer.invoke('aegis:i18n:set', code),
 
   libraryState: () => ipcRenderer.invoke('aegis:library:state'),
   packThumbnail: (id) => ipcRenderer.invoke('aegis:pack:thumbnail', String(id)),

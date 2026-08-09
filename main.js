@@ -21,6 +21,7 @@ const music = require('./lib/music');
 const videostore = require('./lib/videostore');
 const settings = require('./lib/settings');
 const achievements = require('./lib/achievements');
+const i18n = require('./lib/i18n');
 const logger = require('./lib/logger');
 const { registerIpcHandlers } = require('./lib/ipc');
 const { createAlertScheduler } = require('./lib/alerts');
@@ -449,12 +450,15 @@ function startPresenceMonitoring() {
 function buildTrayMenu() {
   const listed = packs.listPacks(__dirname, USER_DIR);
   const active = settings.getActivePack(USER_DIR) || 'jarvis';
+  // Localized tray labels, fail-soft: a missing key falls back to the English literal.
+  const dict = i18n.getActive(USER_DIR, settings.getLocale(USER_DIR), app.getLocale()).dict;
+  const tr = (key, english) => { const s = i18n.translate(dict, key); return s === key ? english : s; };
   return Menu.buildFromTemplate([
-    { label: 'Open Manager', click: createManagerWindow },
-    { label: 'Voice Tuning', click: createPanelWindow },
+    { label: tr('tray.openManager', 'Open Manager'), click: createManagerWindow },
+    { label: tr('tray.voiceTuning', 'Voice Tuning'), click: createPanelWindow },
     { type: 'separator' },
     {
-      label: 'Switch Pack',
+      label: tr('tray.switchPack', 'Switch Pack'),
       submenu: listed.packs.map((p) => ({
         label: p.name,
         type: 'radio',
@@ -462,10 +466,10 @@ function buildTrayMenu() {
         click: () => setActivePackFromTray(p.id),
       })),
     },
-    { label: desktopPaused ? 'Resume Desktop' : 'Pause Desktop', click: toggleDesktop },
-    { label: 'Performance', submenu: buildPerformanceMenu() },
+    { label: desktopPaused ? tr('tray.resumeDesktop', 'Resume Desktop') : tr('tray.pauseDesktop', 'Pause Desktop'), click: toggleDesktop },
+    { label: tr('tray.performance', 'Performance'), submenu: buildPerformanceMenu() },
     { type: 'separator' },
-    { label: 'Quit Dashboard Engine', click: () => app.quit() },
+    { label: tr('tray.quit', 'Quit Dashboard Engine'), click: () => app.quit() },
   ]);
 }
 

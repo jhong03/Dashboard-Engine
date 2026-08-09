@@ -1,0 +1,18 @@
+{
+  "app.name": "Dashboard Engine",
+
+  "tray.openManager": "Open Manager",
+  "tray.voiceTuning": "Voice Tuning",
+  "tray.switchPack": "Switch Pack",
+  "tray.pauseDesktop": "Pause Desktop",
+  "tray.resumeDesktop": "Resume Desktop",
+  "tray.performance": "Performance",
+  "tray.quit": "Quit Dashboard Engine",
+
+  "manager.topbar.onDesktop": "On your desktop:",
+  "manager.topbar.voiceTuning": "Voice tuning",
+
+  "settings.language.label": "Language",
+  "settings.language.auto": "Automatic (system)",
+  "settings.language.help": "Choose the interface language. Community translations added to the locales folder appear here automatically. Untranslated text falls back to English."
+}
