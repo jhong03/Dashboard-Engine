@@ -3759,6 +3759,16 @@ async function init() {
   const active = await aegis.activeGet();
   library.activeId = active.id || 'jarvis';
 
+  // Warm the common English voice engines in the background the moment the Manager
+  // opens — well before the user reaches Browse → Voices → Preview, the tuning
+  // panel, or the assistant Test — so the first synth isn't a cold-start wait. The
+  // first synth on a fresh install pays a big one-time engine load + OS/Defender
+  // first-access scan (see lib/ipc prewarmVoice); doing it now hides that cost.
+  // Fire-and-forget; main-side guards a not-installed voice as a no-op.
+  setTimeout(() => {
+    try { aegis.voicePrewarm('en_us_hd'); aegis.voicePrewarm('en_male'); } catch (e) { /* best effort */ }
+  }, 1200);
+
   // The tray can switch packs too — keep the indicator and badges honest.
   aegis.onActiveChanged((data) => {
     library.activeId = data.id;

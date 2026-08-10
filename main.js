@@ -23,7 +23,7 @@ const settings = require('./lib/settings');
 const achievements = require('./lib/achievements');
 const i18n = require('./lib/i18n');
 const logger = require('./lib/logger');
-const { registerIpcHandlers } = require('./lib/ipc');
+const { registerIpcHandlers, prewarmAssistantVoice } = require('./lib/ipc');
 const { createAlertScheduler } = require('./lib/alerts');
 const { userDataDir } = require('./lib/paths');
 
@@ -257,6 +257,10 @@ function attachToDesktop(win, monitorIndex = -1) {
   });
 }
 
+// Warm the assistant voice engine at most once per app session (the desktop can
+// reload / re-attach, and we don't want the warm-up to stack).
+let warmedVoiceOnce = false;
+
 async function createDashboardWindow() {
   if (dashboardWindow) return;
   const { display } = chosenDisplay();
@@ -300,6 +304,16 @@ async function createDashboardWindow() {
   // Push the current power state on first load and every reload/hot-reload, so
   // the renderer starts at the right fps / frozen if a game is already up.
   dashboardWindow.webContents.on('did-finish-load', () => { sendDesktopPower(); sendBackgroundMotion(); });
+
+  // Warm the assistant's voice engine in the background a few seconds after the
+  // desktop is up (idle time), so the FIRST spoken reply / health alert isn't a
+  // cold-start wait — the expensive one-time engine load + OS first-access scan
+  // happens invisibly here instead of on the user. Fail-soft + gated (only if a
+  // voice is configured) inside the helper. Guarded so retries don't stack warms.
+  if (!warmedVoiceOnce) {
+    warmedVoiceOnce = true;
+    setTimeout(() => { try { prewarmAssistantVoice(__dirname, USER_DIR); } catch (e) { /* best effort */ } }, 6000);
+  }
 
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
   dashboardWindow.showInactive(); // visible, but don't grab focus on launch
