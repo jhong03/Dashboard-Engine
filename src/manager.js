@@ -2143,13 +2143,49 @@ function starterPack() {
   };
 }
 
-const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set(), depthLayers: [], parallaxStrength: 1 };
+const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set(), depthLayers: [], parallaxStrength: 1, fill: null };
+
+// Base-fill presets (a gradient wash painted behind the wallpaper stack). Mirrors
+// the editor's Skin-tab presets; stop colours are palette TOKENS so they track the
+// Colours step. `none` = flat/solid (no overlay). Full stop-editing stays in the
+// editor, which opens after Create.
+const BUILDER_FILL_PRESETS = [
+  { id: 'none', type: 'solid', angle: 155, posX: 50, posY: 50, stops: [] },
+  { id: 'linear', type: 'linear', angle: 155, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'glass', at: 100 }] },
+  { id: 'multistop', type: 'linear', angle: 120, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'glass', at: 55 }, { color: 'muted', at: 100 }] },
+  { id: 'duotone', type: 'linear', angle: 180, posX: 50, posY: 50, stops: [{ color: 'glass', at: 0 }, { color: 'void', at: 100 }] },
+  { id: 'cut', type: 'linear', angle: 135, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'void', at: 55 }, { color: 'glass', at: 55 }, { color: 'glass', at: 100 }] },
+  { id: 'bands', type: 'linear', angle: 180, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'void', at: 34 }, { color: 'glass', at: 34 }, { color: 'glass', at: 67 }, { color: 'muted', at: 67 }, { color: 'muted', at: 100 }] },
+  { id: 'soft', type: 'linear', angle: 120, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'void', at: 45 }, { color: 'glass', at: 62 }, { color: 'glass', at: 100 }] },
+  { id: 'radial', type: 'radial', angle: 155, posX: 50, posY: 35, stops: [{ color: 'glass', at: 0 }, { color: 'void', at: 70 }] },
+  { id: 'spotlight', type: 'radial', angle: 155, posX: 100, posY: 0, stops: [{ color: 'glass', at: 0 }, { color: 'void', at: 60 }] },
+  { id: 'conic', type: 'conic', angle: 200, posX: 50, posY: 100, stops: [{ color: 'void', at: 0 }, { color: 'glass', at: 50 }, { color: 'void', at: 100 }] },
+  { id: 'mesh', type: 'mesh', angle: 155, posX: 50, posY: 50, stops: [{ color: 'accent', at: 0 }, { color: 'gold', at: 50 }, { color: 'muted', at: 100 }] },
+];
+const BUILDER_TEXTURE_KEYS = ['scanlines', 'grid', 'glow', 'vignette', 'noise'];
+// Plain-language names (the builder steps are English-only; keep it consistent).
+const BUILDER_FILL_NAMES = { none: 'None (solid)', linear: 'Linear', multistop: 'Multi-stop', duotone: 'Vertical fade', cut: 'Diagonal cut', bands: 'Stepped bands', soft: 'Soft split', radial: 'Radial glow', spotlight: 'Corner spotlight', conic: 'Conic sweep', mesh: 'Mesh / aurora' };
+const BUILDER_TEXTURE_NAMES = { scanlines: 'Scanlines', grid: 'Grid', glow: 'Glow', vignette: 'Vignette', noise: 'Noise' };
+
+// Set builder.fill from a preset id (keeps the animate/grain toggles across a
+// style change; `none` clears the overlay back to a flat base colour).
+function applyBuilderFill(id) {
+  const preset = BUILDER_FILL_PRESETS.find((p) => p.id === id) || BUILDER_FILL_PRESETS[0];
+  if (preset.id === 'none') { builder.fill = null; return; }
+  const keepAnimate = builder.fill ? !!builder.fill.animate : false;
+  const keepGrain = builder.fill ? !!builder.fill.grain : false;
+  builder.fill = {
+    type: preset.type, preset: id, angle: preset.angle, posX: preset.posX, posY: preset.posY,
+    stops: preset.stops.map((s) => ({ ...s })), animate: keepAnimate, grain: keepGrain,
+  };
+}
 
 // Optional parallax: when the user adds depth layers, compose skin.background as
 // [base wallpaper, ...extra layers]; otherwise leave it off so a plain wallpaper
 // renders via the renderer's wallpaper fallback.
 function syncBuilderBackground() {
   const skin = builder.pack.skin;
+  const fill = builder.fill;
   if (builder.depthLayers.length && skin.wallpaper) {
     skin.background = {
       layers: [
@@ -2158,6 +2194,12 @@ function syncBuilderBackground() {
       ],
       parallax: { strength: builder.parallaxStrength, axis: 'both' },
     };
+    if (fill) skin.background.fill = fill;
+  } else if (fill) {
+    // A base fill with no depth layers: keep ONLY the fill on background. With no
+    // layers array, the renderer's fallback (components.js) still synthesizes the
+    // wallpaper from skin.wallpaper, and applyFill paints the fill behind it.
+    skin.background = { fill };
   } else {
     delete skin.background;
   }
@@ -2279,6 +2321,7 @@ async function openBuilder() {
   builder.wallpaperUri = null;
   builder.depthLayers = [];
   builder.parallaxStrength = 1;
+  builder.fill = null;
   builder.selected = [...DEFAULT_SELECTED];
   builder.layout = 'command';
   builder.compOpts = {};
@@ -2354,6 +2397,58 @@ function renderBgStep(el) {
     }));
   }
   el.appendChild(feel);
+
+  // Texture — fine-tune the surface (the "Surface feel" presets set these at once).
+  const texHead = document.createElement('span');
+  texHead.className = 'b-sublabel';
+  texHead.textContent = 'Texture';
+  el.appendChild(texHead);
+  for (const key of BUILDER_TEXTURE_KEYS) {
+    if (typeof builder.pack.skin.texture[key] !== 'number') builder.pack.skin.texture[key] = 0;
+    const f = bField(BUILDER_TEXTURE_NAMES[key]);
+    const r = document.createElement('input');
+    r.type = 'range'; r.min = '0'; r.max = '1'; r.step = '0.05';
+    r.value = String(builder.pack.skin.texture[key]);
+    r.addEventListener('input', () => { builder.pack.skin.texture[key] = Number(r.value); schedulePreview(); });
+    f.appendChild(r);
+    el.appendChild(f);
+  }
+
+  // Base fill — a gradient (or flat) wash painted behind the wallpaper stack. Its
+  // colours are palette tokens, so they follow the Colours step. Fine stop-editing
+  // stays in the editor, which opens after Create.
+  const fillHead = document.createElement('span');
+  fillHead.className = 'b-sublabel';
+  fillHead.textContent = 'Base fill';
+  el.appendChild(fillHead);
+  const fillRow = bPresetRow();
+  const activeFillId = builder.fill ? (builder.fill.preset || builder.fill.type) : 'none';
+  for (const preset of BUILDER_FILL_PRESETS) {
+    fillRow.appendChild(bPreset(BUILDER_FILL_NAMES[preset.id] || preset.id, activeFillId === preset.id, () => {
+      applyBuilderFill(preset.id);
+      renderBgStep(el); schedulePreview();
+    }));
+  }
+  el.appendChild(fillRow);
+  if (builder.fill && builder.fill.type !== 'solid') {
+    const toggles = bField('Movement & grain');
+    const mkChk = (label, get, set) => {
+      const lab = document.createElement('label');
+      lab.style.display = 'inline-flex'; lab.style.alignItems = 'center'; lab.style.gap = '5px'; lab.style.marginRight = '14px';
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = get();
+      cb.addEventListener('change', () => { set(cb.checked); schedulePreview(); });
+      lab.append(cb, document.createTextNode(label));
+      return lab;
+    };
+    const wrap = document.createElement('div');
+    wrap.append(
+      mkChk('Slow drift', () => !!builder.fill.animate, (v) => { builder.fill.animate = v; }),
+      mkChk('Film grain', () => !!builder.fill.grain, (v) => { builder.fill.grain = v; }),
+    );
+    toggles.appendChild(wrap);
+    el.appendChild(toggles);
+  }
 
   const imgLabel = document.createElement('span');
   imgLabel.className = 'b-sublabel';
