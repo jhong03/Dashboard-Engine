@@ -2147,8 +2147,8 @@ const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selec
 
 // Base-fill presets (a gradient wash painted behind the wallpaper stack). Mirrors
 // the editor's Skin-tab presets; stop colours are palette TOKENS so they track the
-// Colours step. `none` = flat/solid (no overlay). Full stop-editing stays in the
-// editor, which opens after Create.
+// Colours step. `none` = flat/solid (no overlay). A chosen preset can then be
+// tuned per-stop (colour + position), plus angle and origin (see renderBgStep).
 const BUILDER_FILL_PRESETS = [
   { id: 'none', type: 'solid', angle: 155, posX: 50, posY: 50, stops: [] },
   { id: 'linear', type: 'linear', angle: 155, posX: 50, posY: 50, stops: [{ color: 'void', at: 0 }, { color: 'glass', at: 100 }] },
@@ -2166,6 +2166,10 @@ const BUILDER_TEXTURE_KEYS = ['scanlines', 'grid', 'glow', 'vignette', 'noise'];
 // Plain-language names (the builder steps are English-only; keep it consistent).
 const BUILDER_FILL_NAMES = { none: 'None (solid)', linear: 'Linear', multistop: 'Multi-stop', duotone: 'Vertical fade', cut: 'Diagonal cut', bands: 'Stepped bands', soft: 'Soft split', radial: 'Radial glow', spotlight: 'Corner spotlight', conic: 'Conic sweep', mesh: 'Mesh / aurora' };
 const BUILDER_TEXTURE_NAMES = { scanlines: 'Scanlines', grid: 'Grid', glow: 'Glow', vignette: 'Vignette', noise: 'Noise' };
+// The palette tokens a fill stop can bind to (matches the Colours step so a
+// colourway swap restyles the gradient); plain-language names, English-only.
+const BUILDER_FILL_TOKENS = ['void', 'glass', 'accent', 'accentBright', 'muted', 'warn', 'gold'];
+const BUILDER_PALETTE_NAMES = { void: 'Background', glass: 'Panels', accent: 'Accent', accentBright: 'Bright accent', muted: 'Muted', warn: 'Warning', gold: 'Gold' };
 
 // Set builder.fill from a preset id (keeps the animate/grain toggles across a
 // style change; `none` clears the overlay back to a flat base colour).
@@ -2178,6 +2182,63 @@ function applyBuilderFill(id) {
     type: preset.type, preset: id, angle: preset.angle, posX: preset.posX, posY: preset.posY,
     stops: preset.stops.map((s) => ({ ...s })), animate: keepAnimate, grain: keepGrain,
   };
+}
+
+// A fill stop's colour: a palette-token dropdown (tracks the Colours step) with a
+// "Custom…" option that reveals a hex picker. Mirrors the editor's fillColorControl
+// but uses the builder's live-preview refresh (no full inspector rebuild needed —
+// the picker is shown/hidden inline). onChange is called after any colour change.
+function builderFillColorControl(stop, onChange) {
+  const palette = builder.pack.skin.palette;
+  const wrap = document.createElement('div');
+  wrap.style.display = 'flex';
+  wrap.style.gap = '6px';
+  wrap.style.flex = '1';
+  wrap.style.minWidth = '0';
+
+  const isToken = BUILDER_FILL_TOKENS.includes(stop.color);
+  const sel = document.createElement('select');
+  sel.add(new Option('Custom…', 'custom', !isToken, !isToken));
+  for (const k of BUILDER_FILL_TOKENS) sel.add(new Option(BUILDER_PALETTE_NAMES[k], k, false, isToken && stop.color === k));
+  sel.style.flex = '1';
+  sel.style.minWidth = '0';
+
+  const picker = document.createElement('input');
+  picker.type = 'color';
+  picker.className = 'b-color';
+  picker.value = (isToken ? (palette[stop.color] || '#000000') : (stop.color || '#000000')).slice(0, 7);
+  picker.style.display = isToken ? 'none' : '';
+  picker.style.flex = '0 0 34px';
+
+  sel.addEventListener('change', () => {
+    if (sel.value === 'custom') { stop.color = picker.value; picker.style.display = ''; }
+    else { stop.color = sel.value; picker.style.display = 'none'; }
+    onChange();
+  });
+  picker.addEventListener('input', () => { stop.color = picker.value; onChange(); });
+
+  wrap.append(sel, picker);
+  return wrap;
+}
+
+// A labelled range slider with a live numeric readout (angle / origin). fmt turns
+// the raw value into the shown text; onInput fires on every drag.
+function bRangeField(label, value, min, max, step, fmt, onInput) {
+  const f = bField(label);
+  const row = document.createElement('div');
+  row.style.display = 'flex';
+  row.style.alignItems = 'center';
+  row.style.gap = '10px';
+  const r = document.createElement('input');
+  r.type = 'range'; r.min = String(min); r.max = String(max); r.step = String(step);
+  r.value = String(value); r.style.flex = '1'; r.style.minWidth = '0';
+  const out = document.createElement('span');
+  out.className = 'set-range-val';
+  out.textContent = fmt(value);
+  r.addEventListener('input', () => { const v = Number(r.value); out.textContent = fmt(v); onInput(v); });
+  row.append(r, out);
+  f.appendChild(row);
+  return f;
 }
 
 // Optional parallax: when the user adds depth layers, compose skin.background as
@@ -2414,9 +2475,10 @@ function renderBgStep(el) {
     el.appendChild(f);
   }
 
-  // Base fill — a gradient (or flat) wash painted behind the wallpaper stack. Its
-  // colours are palette tokens, so they follow the Colours step. Fine stop-editing
-  // stays in the editor, which opens after Create.
+  // Base fill — a gradient (or flat) wash painted behind the wallpaper stack. Pick a
+  // preset, then tune it: colour stops (palette token or custom hex + position), the
+  // gradient angle, and the radial/conic origin. Stop colours default to palette
+  // tokens so they follow the Colours step.
   const fillHead = document.createElement('span');
   fillHead.className = 'b-sublabel';
   fillHead.textContent = 'Base fill';
@@ -2431,6 +2493,57 @@ function renderBgStep(el) {
   }
   el.appendChild(fillRow);
   if (builder.fill && builder.fill.type !== 'solid') {
+    const fill = builder.fill;
+    if (!Array.isArray(fill.stops)) fill.stops = [];
+
+    // Colour stops — each is a palette-token (or custom hex) colour plus a position
+    // along the gradient (0–100). Mesh fills blend without positions, so no slider.
+    const stopsHead = document.createElement('span');
+    stopsHead.className = 'b-sublabel';
+    stopsHead.textContent = 'Colour stops';
+    el.appendChild(stopsHead);
+
+    fill.stops.forEach((stop, i) => {
+      const f = bField(`Stop ${i + 1}`);
+      const row = document.createElement('div');
+      row.style.display = 'flex';
+      row.style.gap = '6px';
+      row.style.alignItems = 'center';
+      row.appendChild(builderFillColorControl(stop, schedulePreview));
+      if (fill.type !== 'mesh') {
+        const pos = document.createElement('input');
+        pos.type = 'range'; pos.min = '0'; pos.max = '100'; pos.step = '1';
+        pos.value = String(typeof stop.at === 'number' ? stop.at : 0);
+        pos.style.flex = '1'; pos.style.minWidth = '0';
+        pos.title = 'Position';
+        pos.addEventListener('input', () => { stop.at = Number(pos.value); schedulePreview(); });
+        row.appendChild(pos);
+      }
+      const rm = libButton('×', () => { fill.stops.splice(i, 1); renderBgStep(el); schedulePreview(); }, 'tiny danger');
+      rm.disabled = fill.stops.length <= 2; // a gradient needs at least two stops
+      rm.title = 'Remove this stop';
+      row.appendChild(rm);
+      f.appendChild(row);
+      el.appendChild(f);
+    });
+    if (fill.stops.length < 6) {
+      const add = libButton('+ Add colour stop', () => {
+        const last = fill.stops[fill.stops.length - 1];
+        fill.stops.push({ color: last ? last.color : 'accent', at: 100 });
+        renderBgStep(el); schedulePreview();
+      }, 'tiny');
+      el.appendChild(add);
+    }
+
+    // Angle (linear/conic) and origin (radial/conic) — same geometry the editor exposes.
+    if (fill.type === 'linear' || fill.type === 'conic') {
+      el.appendChild(bRangeField('Angle', Math.round(fill.angle), 0, 360, 5, (v) => `${v}°`, (v) => { fill.angle = v; schedulePreview(); }));
+    }
+    if (fill.type === 'radial' || fill.type === 'conic') {
+      el.appendChild(bRangeField('Origin X', fill.posX, 0, 100, 1, (v) => `${v}%`, (v) => { fill.posX = v; schedulePreview(); }));
+      el.appendChild(bRangeField('Origin Y', fill.posY, 0, 100, 1, (v) => `${v}%`, (v) => { fill.posY = v; schedulePreview(); }));
+    }
+
     const toggles = bField('Movement & grain');
     const mkChk = (label, get, set) => {
       const lab = document.createElement('label');
