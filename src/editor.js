@@ -1107,39 +1107,38 @@ function applyFillPreset(id) {
   renderAll();
 }
 
-// A stop colour: a palette-token dropdown (tracks the colourway) with a "Custom…"
-// option that reveals a hex colour input.
+// A stop's colour, shown as SWATCHES of the actual palette colours — a token name
+// like "Panels" doesn't tell you what colour you'll get. Clicking a palette swatch
+// binds the stop to that token (so it tracks the colourway on a Colours change);
+// the dashed swatch is a native colour input for a Custom hex. Hover a swatch for
+// its token name.
 function fillColorControl(stop) {
   const palette = state.pack.skin.palette;
   const wrap = document.createElement('div');
-  wrap.style.display = 'flex';
-  wrap.style.gap = '6px';
-  wrap.style.flex = '1';
-  wrap.style.minWidth = '0';
+  wrap.className = 'fill-swatches';
 
   const isToken = COLORWAY_KEYS.includes(stop.color);
-  const choices = [['custom', t('editor.insp.fill.custom')], ...COLORWAY_KEYS.map((k) => [k, paletteLabel(k)])];
-  const picker = document.createElement('input');
-  picker.type = 'color';
-  picker.value = (isToken ? (palette[stop.color] || '#000000') : (stop.color || '#000000')).slice(0, 7);
-  picker.style.display = isToken ? 'none' : '';
-  picker.style.flex = '0 0 34px';
+  for (const key of COLORWAY_KEYS) {
+    const sw = document.createElement('button');
+    sw.type = 'button';
+    sw.className = 'fill-swatch' + (isToken && stop.color === key ? ' selected' : '');
+    sw.style.setProperty('--sw', palette[key] || '#000000');
+    sw.title = paletteLabel(key);
+    // A discrete pick — clear sliderActive so the inspector rebuilds and the ring moves.
+    sw.addEventListener('click', () => { sliderActive = false; stop.color = key; renderAll(); });
+    wrap.appendChild(sw);
+  }
 
-  // 'custom' reveals the hex picker; a token tracks the colourway. selectControl
-  // clears sliderActive, so switching a stop's colour always rebuilds the list.
-  const sel = selectControl(isToken ? stop.color : 'custom', choices, (val) => {
-    if (val === 'custom') { stop.color = picker.value; picker.style.display = ''; }
-    else { stop.color = val; picker.style.display = 'none'; }
-    renderAll();
-  });
-  sel.style.flex = '1';
-  sel.style.minWidth = '0';
-
+  const custom = document.createElement('input');
+  custom.type = 'color';
+  custom.className = 'fill-swatch fill-swatch-custom' + (isToken ? '' : ' selected');
+  custom.value = (isToken ? (palette[stop.color] || '#000000') : (stop.color || '#000000')).slice(0, 7);
+  custom.title = t('editor.insp.fill.custom');
   // Same guard as the palette pickers: keep the open native picker alive while adjusting.
-  picker.addEventListener('input', () => { sliderActive = true; stop.color = picker.value; renderAll(); });
-  picker.addEventListener('change', () => { sliderActive = false; stop.color = picker.value; renderAll(); });
+  custom.addEventListener('input', () => { sliderActive = true; stop.color = custom.value; renderAll(); });
+  custom.addEventListener('change', () => { sliderActive = false; stop.color = custom.value; renderAll(); });
+  wrap.appendChild(custom);
 
-  wrap.append(sel, picker);
   return wrap;
 }
 
@@ -1159,28 +1158,28 @@ function renderFillSection(panel, skin) {
     return;
   }
 
-  // Colour stops.
+  // Colour stops: swatches on top, then the position slider + remove on one row.
   if (!Array.isArray(fill.stops)) fill.stops = [];
   fill.stops.forEach((stop, i) => {
-    const row = document.createElement('div');
-    row.style.display = 'flex';
-    row.style.gap = '6px';
-    row.style.alignItems = 'center';
-    row.appendChild(fillColorControl(stop));
+    const stack = document.createElement('div');
+    stack.className = 'fill-stop';
+    stack.appendChild(fillColorControl(stop));
+
+    const bottom = document.createElement('div');
+    bottom.className = 'fill-stop-row';
     if (fill.type !== 'mesh') {
-      const pos = rangeControl(typeof stop.at === 'number' ? stop.at : 0, 0, 100, 1, (v) => { stop.at = v; renderAll(); });
-      pos.style.flex = '1';
-      pos.style.minWidth = '0';
-      row.appendChild(pos);
+      bottom.appendChild(rangeControl(typeof stop.at === 'number' ? stop.at : 0, 0, 100, 1, (v) => { stop.at = v; renderAll(); }));
     }
     const rm = document.createElement('button');
     rm.className = 'btn tiny danger';
     rm.textContent = '×';
     rm.title = t('editor.insp.btn.remove');
     rm.disabled = fill.stops.length <= 2;
+    rm.style.marginLeft = 'auto'; // keep it right-aligned even for mesh (no slider)
     rm.addEventListener('click', () => { sliderActive = false; fill.stops.splice(i, 1); renderAll(); });
-    row.appendChild(rm);
-    panel.appendChild(field(t('editor.insp.fill.stop', { n: i + 1 }), row));
+    bottom.appendChild(rm);
+    stack.appendChild(bottom);
+    panel.appendChild(field(t('editor.insp.fill.stop', { n: i + 1 }), stack));
   });
   if (fill.stops.length < 6) {
     const add = document.createElement('button');

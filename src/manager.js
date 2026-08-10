@@ -2184,40 +2184,38 @@ function applyBuilderFill(id) {
   };
 }
 
-// A fill stop's colour: a palette-token dropdown (tracks the Colours step) with a
-// "Custom…" option that reveals a hex picker. Mirrors the editor's fillColorControl
-// but uses the builder's live-preview refresh (no full inspector rebuild needed —
-// the picker is shown/hidden inline). onChange is called after any colour change.
-function builderFillColorControl(stop, onChange) {
+// A fill stop's colour, shown as SWATCHES of the actual palette colours — a token
+// name doesn't tell you what colour you'll get. Clicking a palette swatch binds the
+// stop to that token (so it tracks the Colours step); the dashed swatch is a native
+// colour input for a Custom hex. Hover a swatch for its name. `el` is the step
+// container, re-rendered on a discrete pick so the selected ring moves.
+function builderFillColorControl(stop, el) {
   const palette = builder.pack.skin.palette;
   const wrap = document.createElement('div');
-  wrap.style.display = 'flex';
-  wrap.style.gap = '6px';
-  wrap.style.flex = '1';
-  wrap.style.minWidth = '0';
+  wrap.className = 'fill-swatches';
+  const rerender = () => { renderBgStep(el); schedulePreview(); };
 
   const isToken = BUILDER_FILL_TOKENS.includes(stop.color);
-  const sel = document.createElement('select');
-  sel.add(new Option('Custom…', 'custom', !isToken, !isToken));
-  for (const k of BUILDER_FILL_TOKENS) sel.add(new Option(BUILDER_PALETTE_NAMES[k], k, false, isToken && stop.color === k));
-  sel.style.flex = '1';
-  sel.style.minWidth = '0';
+  for (const key of BUILDER_FILL_TOKENS) {
+    const sw = document.createElement('button');
+    sw.type = 'button';
+    sw.className = 'fill-swatch' + (isToken && stop.color === key ? ' selected' : '');
+    sw.style.setProperty('--sw', palette[key] || '#000000');
+    sw.title = BUILDER_PALETTE_NAMES[key];
+    sw.addEventListener('click', () => { stop.color = key; rerender(); });
+    wrap.appendChild(sw);
+  }
 
-  const picker = document.createElement('input');
-  picker.type = 'color';
-  picker.className = 'b-color';
-  picker.value = (isToken ? (palette[stop.color] || '#000000') : (stop.color || '#000000')).slice(0, 7);
-  picker.style.display = isToken ? 'none' : '';
-  picker.style.flex = '0 0 34px';
+  const custom = document.createElement('input');
+  custom.type = 'color';
+  custom.className = 'fill-swatch fill-swatch-custom' + (isToken ? '' : ' selected');
+  custom.value = (isToken ? (palette[stop.color] || '#000000') : (stop.color || '#000000')).slice(0, 7);
+  custom.title = 'Custom colour';
+  // Live drag updates the preview only; re-render on close (change) so the ring settles.
+  custom.addEventListener('input', () => { stop.color = custom.value; schedulePreview(); });
+  custom.addEventListener('change', () => { stop.color = custom.value; rerender(); });
+  wrap.appendChild(custom);
 
-  sel.addEventListener('change', () => {
-    if (sel.value === 'custom') { stop.color = picker.value; picker.style.display = ''; }
-    else { stop.color = sel.value; picker.style.display = 'none'; }
-    onChange();
-  });
-  picker.addEventListener('input', () => { stop.color = picker.value; onChange(); });
-
-  wrap.append(sel, picker);
   return wrap;
 }
 
@@ -2505,25 +2503,27 @@ function renderBgStep(el) {
 
     fill.stops.forEach((stop, i) => {
       const f = bField(`Stop ${i + 1}`);
-      const row = document.createElement('div');
-      row.style.display = 'flex';
-      row.style.gap = '6px';
-      row.style.alignItems = 'center';
-      row.appendChild(builderFillColorControl(stop, schedulePreview));
+      const stack = document.createElement('div');
+      stack.className = 'fill-stop';
+      stack.appendChild(builderFillColorControl(stop, el));
+
+      const bottom = document.createElement('div');
+      bottom.className = 'fill-stop-row';
       if (fill.type !== 'mesh') {
         const pos = document.createElement('input');
         pos.type = 'range'; pos.min = '0'; pos.max = '100'; pos.step = '1';
         pos.value = String(typeof stop.at === 'number' ? stop.at : 0);
-        pos.style.flex = '1'; pos.style.minWidth = '0';
         pos.title = 'Position';
         pos.addEventListener('input', () => { stop.at = Number(pos.value); schedulePreview(); });
-        row.appendChild(pos);
+        bottom.appendChild(pos);
       }
       const rm = libButton('×', () => { fill.stops.splice(i, 1); renderBgStep(el); schedulePreview(); }, 'tiny danger');
       rm.disabled = fill.stops.length <= 2; // a gradient needs at least two stops
       rm.title = 'Remove this stop';
-      row.appendChild(rm);
-      f.appendChild(row);
+      rm.style.marginLeft = 'auto'; // keep it right-aligned even for mesh (no slider)
+      bottom.appendChild(rm);
+      stack.appendChild(bottom);
+      f.appendChild(stack);
       el.appendChild(f);
     });
     if (fill.stops.length < 6) {

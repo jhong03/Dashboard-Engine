@@ -130,3 +130,31 @@ input[type="checkbox"] { accent-color: var(--accent); }
   min-height: 1.6em;
 }
 .status-line-app.warn { color: var(--warn); }
+
+/* ── Gradient fill: colour-stop swatches ────────────────────────────────────
+   Used by the editor Skin tab and the from-scratch builder. Each stop shows the
+   ACTUAL palette colours as swatches (a token name like "Panels" doesn't tell you
+   the colour); the dashed swatch is a custom-hex colour input. */
+.fill-stop { display: flex; flex-direction: column; gap: 7px; }
+.fill-stop-row { display: flex; align-items: center; gap: 8px; }
+.fill-stop-row input[type="range"] { flex: 1; min-width: 0; }
+.fill-swatches { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; }
+.fill-swatch {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  cursor: pointer;
+  /* A checkerboard behind the (possibly translucent) swatch colour so alpha reads. */
+  background:
+    linear-gradient(var(--sw, #000), var(--sw, #000)),
+    conic-gradient(#8a8a8a 25%, #cfcfcf 0 50%, #8a8a8a 0 75%, #cfcfcf 0) 0 0 / 10px 10px;
+  background-clip: padding-box;
+}
+.fill-swatch:hover { border-color: var(--text-dim); }
+.fill-swatch.selected { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+/* The custom-colour swatch IS a native colour input; a dashed border sets it apart. */
+input.fill-swatch-custom { border-style: dashed; -webkit-appearance: none; appearance: none; }
+input.fill-swatch-custom::-webkit-color-swatch-wrapper { padding: 0; }
+input.fill-swatch-custom::-webkit-color-swatch { border: none; border-radius: 4px; }
