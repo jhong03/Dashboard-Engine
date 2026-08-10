@@ -184,6 +184,17 @@ function createManagerWindow() {
   managerWindow.loadFile(path.join(__dirname, 'src', 'manager.html'), {
     query: { view: envFlag('VIEW') || '' },
   });
+  // Let the window settle after opening before the thumbnail render swarm starts,
+  // and pause it whenever the window is being moved or resized — so offscreen GPU
+  // renders never fight the OS window-drag modal loop (which can hang/crash the app
+  // with no catchable error). Every move/resize event just pushes the idle moment
+  // forward; the queue resumes shortly after the drag stops.
+  markManagerBusy(700);
+  const bumpBusy = () => markManagerBusy(500);
+  managerWindow.on('will-move', bumpBusy);
+  managerWindow.on('will-resize', bumpBusy);
+  managerWindow.on('move', bumpBusy);
+  managerWindow.on('resize', bumpBusy);
   managerWindow.on('closed', () => { managerWindow = null; });
 }
 
@@ -996,6 +1007,27 @@ const THUMB_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,47}$/;
 const thumbInFlight = new Map();
 let thumbQueue = Promise.resolve();
 
+// Card thumbnails are rendered in OFFSCREEN BrowserWindows (GPU-backed). Creating/
+// destroying those while the OS is in a window MOVE/RESIZE modal loop — the user
+// grabbed the manager's title bar — contends with the GPU/compositor and can hang
+// or hard-crash the app with NO catchable JS error (nothing reaches the crash
+// log). So the thumbnail queue waits until the manager window is idle: not
+// just-opened (still settling), and not being dragged or resized. `markManagerBusy`
+// pushes the idle moment forward; a fresh build makes every thumbnail stale, so the
+// first open is exactly when the render swarm would collide with an eager drag.
+let managerBusyUntil = 0;
+function markManagerBusy(ms) { managerBusyUntil = Math.max(managerBusyUntil, Date.now() + ms); }
+function whenManagerIdle() {
+  return new Promise((resolve) => {
+    const tick = () => {
+      const wait = managerBusyUntil - Date.now();
+      if (wait <= 0) resolve();
+      else setTimeout(tick, Math.min(wait, 150));
+    };
+    tick();
+  });
+}
+
 function thumbDir() { return path.join(USER_DIR, 'thumbnails'); }
 
 function packManifestMtime(id) {
@@ -1022,7 +1054,12 @@ function cachedThumbUri(id) {
 }
 
 function queuedThumbRender(id) {
-  const next = thumbQueue.then(() => renderPackPreview(id, { width: 854, height: 480 }).catch(() => null));
+  const next = thumbQueue.then(async () => {
+    // Hold off while the manager window is settling after open or being dragged/
+    // resized, so offscreen GPU renders never churn during an OS modal move loop.
+    await whenManagerIdle();
+    return renderPackPreview(id, { width: 854, height: 480 }).catch(() => null);
+  });
   thumbQueue = next.catch(() => {});
   return next;
 }
