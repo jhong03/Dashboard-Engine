@@ -22,3 +22,5 @@ out/
 *.tmp
 __pycache__/
 store-assets/
+# SteamPipe build scripts — hold the machine's absolute contentroot path + build logs
+steampipe/
