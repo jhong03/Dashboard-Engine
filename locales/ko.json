@@ -778,6 +778,7 @@
   "editor.insp.note.bgEmpty": "아직 배경이 없습니다 — 이미지 또는 동영상 레이어를 추가하세요. 서로 다른 깊이로 여러 개 추가하면 시차 효과가 납니다.",
   "editor.insp.note.fxUnavailable": "이 GPU에서는 효과 미리보기를 사용할 수 없습니다 — 저장은 되며 WebGL을 사용할 수 있는 곳에서 실행됩니다.",
   "editor.insp.note.knobsIntro": "구독자가 팩을 편집하지 않고 조정할 수 있는 컨트롤을 몇 가지 노출합니다. 각 노브의 시작 값은 팩의 현재 룩을 따릅니다.",
+  "editor.insp.note.knobsLocked": "이 노브는 팩 작성자가 설정합니다. 자신의 사용자 지정 노브를 노출하려면 팩을 처음부터 만들거나 직접 게시한 팩을 편집하세요. (노출된 노브의 값은 누구나 라이브러리의 사용자 지정 패널에서 조정할 수 있습니다.)",
   "editor.insp.note.knobsEmpty": "아직 노브가 없습니다 — 아래에서 추가하세요.",
   "editor.insp.weather.showing": "{place}({lat}, {lon}) 표시 중.",
   "editor.insp.weather.thisLocation": "이 위치",

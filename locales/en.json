@@ -778,6 +778,7 @@
   "editor.insp.note.bgEmpty": "No background yet — add an image or video layer. Add several at different depths for a parallax effect.",
   "editor.insp.note.fxUnavailable": "Effects preview unavailable on this GPU — they’re still saved and run where WebGL is available.",
   "editor.insp.note.knobsIntro": "Expose a few controls subscribers can tweak without editing the pack. Each knob’s starting value tracks the pack’s current look.",
+  "editor.insp.note.knobsLocked": "These knobs are set by the pack’s author. Build a pack from scratch, or edit one of your own published packs, to expose your own Customize knobs. (Anyone can still adjust an exposed knob’s value from the library’s Customize panel.)",
   "editor.insp.note.knobsEmpty": "No knobs yet — add some below.",
   "editor.insp.weather.showing": "Showing {place} ({lat}, {lon}).",
   "editor.insp.weather.thisLocation": "this location",

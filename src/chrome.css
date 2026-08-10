@@ -120,6 +120,8 @@ input[type="checkbox"] { accent-color: var(--accent); }
 }
 .tab:hover { color: var(--text); }
 .tab[aria-selected="true"] { color: var(--text); background: var(--bg-raised); }
+/* A tab whose content is read-only for this pack (e.g. Customize on a preset). */
+.tab.tab-locked::after { content: " 🔒"; font-size: 0.82em; opacity: 0.6; }
 
 /* ── Small text helpers ─────────────────────────────────────────────────── */
 

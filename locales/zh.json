@@ -778,6 +778,7 @@
   "editor.insp.note.bgEmpty": "还没有背景——添加一个图片或视频图层。在不同深度添加多个可产生视差效果。",
   "editor.insp.note.fxUnavailable": "此 GPU 上无法预览特效——它们仍会被保存，并在支持 WebGL 的设备上运行。",
   "editor.insp.note.knobsIntro": "公开几个订阅者无需编辑包即可微调的控制项。每个旋钮的初始值跟随包当前的外观。",
+  "editor.insp.note.knobsLocked": "这些旋钮由该包的作者设定。从零开始新建一个包，或编辑你自己已发布的包，才能公开你自己的自定义旋钮。（任何人仍可在库的“自定义”面板中调整已公开旋钮的数值。）",
   "editor.insp.note.knobsEmpty": "还没有旋钮——在下方添加一些。",
   "editor.insp.weather.showing": "正在显示 {place}（{lat}, {lon}）。",
   "editor.insp.weather.thisLocation": "此位置",

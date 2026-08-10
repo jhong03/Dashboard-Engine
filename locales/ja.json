@@ -778,6 +778,7 @@
   "editor.insp.note.bgEmpty": "まだ背景がありません——画像または動画レイヤーを追加してください。異なる深度で複数追加するとパララックス効果になります。",
   "editor.insp.note.fxUnavailable": "この GPU ではエフェクトをプレビューできません——保存はされ、WebGL が利用できる環境で動作します。",
   "editor.insp.note.knobsIntro": "購読者がパックを編集せずに微調整できるコントロールをいくつか公開します。各つまみの初期値はパックの現在の見た目に追従します。",
+  "editor.insp.note.knobsLocked": "これらのつまみはパックの作者が設定します。自分のつまみを公開するには、パックを一から作成するか、自分で公開したパックを編集してください。（公開されたつまみの値は、ライブラリの「カスタマイズ」パネルから誰でも調整できます。）",
   "editor.insp.note.knobsEmpty": "まだつまみがありません——下で追加してください。",
   "editor.insp.weather.showing": "{place}（{lat}, {lon}）を表示中。",
   "editor.insp.weather.thisLocation": "この場所",

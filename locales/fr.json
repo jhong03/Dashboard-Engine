@@ -778,6 +778,7 @@
   "editor.insp.note.bgEmpty": "Aucun arrière-plan pour l’instant — ajoutez une couche image ou vidéo. Ajoutez-en plusieurs à différentes profondeurs pour un effet de parallaxe.",
   "editor.insp.note.fxUnavailable": "Aperçu des effets indisponible sur ce GPU — ils sont tout de même enregistrés et fonctionnent là où WebGL est disponible.",
   "editor.insp.note.knobsIntro": "Exposez quelques réglages que les abonnés peuvent ajuster sans modifier le pack. La valeur de départ de chaque réglage suit le rendu actuel du pack.",
+  "editor.insp.note.knobsLocked": "Ces réglages sont définis par l’auteur du pack. Créez un pack de zéro, ou modifiez l’un de vos propres packs publiés, pour exposer vos propres réglages de personnalisation. (Chacun peut toujours ajuster la valeur d’un réglage exposé depuis le panneau Personnaliser de la bibliothèque.)",
   "editor.insp.note.knobsEmpty": "Aucun réglage pour l’instant — ajoutez-en ci-dessous.",
   "editor.insp.weather.showing": "Affichage de {place} ({lat}, {lon}).",
   "editor.insp.weather.thisLocation": "cet emplacement",

@@ -778,6 +778,7 @@
   "editor.insp.note.bgEmpty": "Aún no hay fondo — añade una capa de imagen o vídeo. Añade varias a distintas profundidades para un efecto de paralaje.",
   "editor.insp.note.fxUnavailable": "Vista previa de efectos no disponible en esta GPU — se guardan igualmente y se ejecutan donde WebGL esté disponible.",
   "editor.insp.note.knobsIntro": "Expón unos pocos controles que los suscriptores puedan ajustar sin editar el paquete. El valor inicial de cada control sigue el aspecto actual del paquete.",
+  "editor.insp.note.knobsLocked": "Estos controles los define el autor del paquete. Crea un paquete desde cero, o edita uno de tus propios paquetes publicados, para exponer tus propios controles de personalización. (Cualquiera puede ajustar el valor de un control expuesto desde el panel Personalizar de la biblioteca.)",
   "editor.insp.note.knobsEmpty": "Aún no hay controles — añade algunos abajo.",
   "editor.insp.weather.showing": "Mostrando {place} ({lat}, {lon}).",
   "editor.insp.weather.thisLocation": "esta ubicación",

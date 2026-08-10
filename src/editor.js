@@ -1512,6 +1512,18 @@ function renderPropsTab(panel) {
   const props = state.pack.props;
 
   panel.appendChild(sectionLabel(t('editor.insp.section.customize')));
+
+  // Preset / imported / forked pack: the knobs belong to the original author.
+  // Show a read-only explanation instead of the authoring controls. (Subscribers
+  // still tweak any exposed knob's VALUE from the library's Customize panel.)
+  if (!state.publishable) {
+    const locked = document.createElement('p');
+    locked.className = 'ed-empty';
+    locked.textContent = t('editor.insp.note.knobsLocked');
+    panel.appendChild(locked);
+    return;
+  }
+
   const intro = document.createElement('p');
   intro.className = 'ed-empty';
   intro.textContent = t('editor.insp.note.knobsIntro');
@@ -1608,6 +1620,11 @@ async function init() {
 
   state.baseId = packId;
   state.pack = loaded.pack;
+  // Only the user's OWN packs (from-scratch / their re-downloaded Workshop pack)
+  // may author Customize knobs. Presets, imports, and forks are someone else's
+  // design — the knobs are the author's to define, not the editor's to change.
+  // Fail-open (editable) only if main didn't report the flag.
+  state.publishable = loaded.publishable !== false;
   state.assets = { ...(all.ok ? all.assets : {}), ...loaded.assets };
   $('ed-name').value = state.pack.name;
   const originText = loaded.origin === 'builtin' ? t('editor.originBuiltin') : loaded.origin;
@@ -1661,6 +1678,13 @@ async function init() {
   $('itab-skin').addEventListener('click', () => { state.tab = 'skin'; syncTabs(); renderInspector(); });
   $('itab-persona').addEventListener('click', () => { state.tab = 'persona'; syncTabs(); renderInspector(); });
   $('itab-props').addEventListener('click', () => { state.tab = 'props'; syncTabs(); renderInspector(); });
+  // Mark the Customize tab locked (still clickable — it shows why) on packs that
+  // aren't the user's own to author.
+  if (!state.publishable) {
+    const propsTab = $('itab-props');
+    propsTab.classList.add('tab-locked');
+    propsTab.title = t('editor.insp.note.knobsLocked');
+  }
   $('btn-save').addEventListener('click', () => save(false));
   $('btn-save-apply').addEventListener('click', () => save(true));
   $('btn-import-image').addEventListener('click', importImageAsComponent);
