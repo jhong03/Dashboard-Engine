@@ -1991,6 +1991,13 @@ const BUILDER_TEXTURES = [
   { name: 'Deep glow', t: { scanlines: 0, grid: 0.05, glow: 0.7, vignette: 0.5 } },
 ];
 const BUILDER_EFFECTS = ['none', 'embers', 'dust', 'snow', 'petals', 'rain', 'sparkle'];
+// Chip glyph + friendly name per effect (the picker reads as a lively row, not a
+// plain dropdown). Emoji are standard Segoe symbols so they render on Windows.
+const BUILDER_EFFECT_GLYPHS = { none: '⊘', embers: '🔥', dust: '🌫️', snow: '❄️', petals: '🌸', rain: '🌧️', sparkle: '✨' };
+const BUILDER_EFFECT_NAMES = { none: 'None', embers: 'Embers', dust: 'Dust', snow: 'Snow', petals: 'Petals', rain: 'Rain', sparkle: 'Sparkle' };
+// Each effect's DEFAULT particle-colour token (mirrors the engine's AMBIENCE_COLOR_KEY),
+// so the colour picker highlights the right swatch before any override is set.
+const AMBIENCE_DEFAULT_KEY = { embers: 'gold', dust: 'muted', snow: 'accentBright', petals: 'accent', rain: 'accent', sparkle: 'accent' };
 const BUILDER_FONTS = [['rajdhani', 'Rajdhani (HUD)'], ['system-sans', 'System sans'], ['system-serif', 'Serif'], ['mono', 'Monospace']];
 
 // The component menu (a curated subset of the 20 types), with defaults ticked.
@@ -2214,6 +2221,42 @@ function builderFillColorControl(stop, el) {
   // Live drag updates the preview only; re-render on close (change) so the ring settles.
   custom.addEventListener('input', () => { stop.color = custom.value; schedulePreview(); });
   custom.addEventListener('change', () => { stop.color = custom.value; rerender(); });
+  wrap.appendChild(custom);
+
+  return wrap;
+}
+
+// The particle colour as SWATCHES (same idea as the fill stops, single value). A
+// palette token tracks the Colours step; the dashed swatch is a custom hex. Unset
+// → the effect's built-in default token shows selected. `el` re-renders on a pick.
+function builderAmbienceColorControl(ambience, el) {
+  const palette = builder.pack.skin.palette;
+  const wrap = document.createElement('div');
+  wrap.className = 'fill-swatches';
+  const rerender = () => { renderParticlesStep(el); schedulePreview(); };
+
+  const hasCustom = typeof ambience.color === 'string' && /^#/.test(ambience.color);
+  const activeKey = hasCustom ? null
+    : (ambience.colorKey && palette[ambience.colorKey]) ? ambience.colorKey
+    : (AMBIENCE_DEFAULT_KEY[ambience.effect] || 'accent');
+
+  for (const key of BUILDER_FILL_TOKENS) {
+    const sw = document.createElement('button');
+    sw.type = 'button';
+    sw.className = 'fill-swatch' + (activeKey === key ? ' selected' : '');
+    sw.style.setProperty('--sw', palette[key] || '#000000');
+    sw.title = BUILDER_PALETTE_NAMES[key];
+    sw.addEventListener('click', () => { ambience.colorKey = key; delete ambience.color; rerender(); });
+    wrap.appendChild(sw);
+  }
+
+  const custom = document.createElement('input');
+  custom.type = 'color';
+  custom.className = 'fill-swatch fill-swatch-custom' + (hasCustom ? ' selected' : '');
+  custom.value = (hasCustom ? ambience.color : (palette[activeKey] || '#000000')).slice(0, 7);
+  custom.title = 'Custom colour';
+  custom.addEventListener('input', () => { ambience.color = custom.value; schedulePreview(); });
+  custom.addEventListener('change', () => { ambience.color = custom.value; rerender(); });
   wrap.appendChild(custom);
 
   return wrap;
@@ -2730,26 +2773,47 @@ function renderColoursStep(el) {
 
 function renderParticlesStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Particles', 'An optional drifting-particle layer over the background. Reduced-motion safe.'));
+  el.appendChild(stepHead('Particles', 'An optional drifting-particle layer over the background. Recolour it, set the speed, and add a glow. Reduced-motion safe.'));
+  const amb = builder.pack.skin.ambience;
 
-  const fx = bField('Effect');
-  const sel = document.createElement('select');
+  // Effect — glyph chips (matches the Surface-feel / Base-fill picker style).
+  const fxLabel = document.createElement('span');
+  fxLabel.className = 'b-sublabel';
+  fxLabel.textContent = 'Effect';
+  el.appendChild(fxLabel);
+  const fxRow = bPresetRow();
   for (const e of BUILDER_EFFECTS) {
-    const o = document.createElement('option'); o.value = e; o.textContent = e === 'none' ? 'None' : e[0].toUpperCase() + e.slice(1);
-    sel.appendChild(o);
+    fxRow.appendChild(bPreset(`${BUILDER_EFFECT_GLYPHS[e] || ''}  ${BUILDER_EFFECT_NAMES[e]}`, amb.effect === e, () => {
+      amb.effect = e;
+      renderParticlesStep(el); schedulePreview();
+    }));
   }
-  sel.value = builder.pack.skin.ambience.effect;
-  sel.addEventListener('change', () => { builder.pack.skin.ambience.effect = sel.value; schedulePreview(); });
-  fx.appendChild(sel);
-  el.appendChild(fx);
+  el.appendChild(fxRow);
 
-  const dens = bField('Density');
-  const range = document.createElement('input');
-  range.type = 'range'; range.min = '0.05'; range.max = '1'; range.step = '0.05';
-  range.value = String(builder.pack.skin.ambience.density);
-  range.addEventListener('input', () => { builder.pack.skin.ambience.density = Number(range.value); schedulePreview(); });
-  dens.appendChild(range);
-  el.appendChild(dens);
+  if (amb.effect === 'none') return; // nothing more to tune without particles
+
+  // Colour swatches.
+  const colLabel = document.createElement('span');
+  colLabel.className = 'b-sublabel';
+  colLabel.textContent = 'Colour';
+  el.appendChild(colLabel);
+  el.appendChild(builderAmbienceColorControl(amb, el));
+
+  // Density + speed (labelled ranges with a live readout).
+  if (typeof amb.speed !== 'number') amb.speed = 1;
+  el.appendChild(bRangeField('Density', amb.density, 0.05, 1, 0.05, (v) => v.toFixed(2), (v) => { amb.density = v; schedulePreview(); }));
+  el.appendChild(bRangeField('Speed', amb.speed, 0.2, 3, 0.1, (v) => `${v.toFixed(1)}x`, (v) => { amb.speed = v; schedulePreview(); }));
+
+  // Glow toggle.
+  const glow = bField('Glow');
+  const lab = document.createElement('label');
+  lab.style.display = 'inline-flex'; lab.style.alignItems = 'center'; lab.style.gap = '6px';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox'; cb.checked = !!amb.glow;
+  cb.addEventListener('change', () => { amb.glow = cb.checked; schedulePreview(); });
+  lab.append(cb, document.createTextNode('Luminous blend (particles brighten where they overlap)'));
+  glow.appendChild(lab);
+  el.appendChild(glow);
 }
 
 function renderTypeStep(el) {

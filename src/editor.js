@@ -1058,6 +1058,14 @@ function renderSkinTab(panel) {
     field(t('editor.insp.field.effect'), selectControl(skin.ambience.effect, [['none', t('editor.insp.opt.effNone')], ['embers', t('editor.insp.opt.effEmbers')], ['dust', t('editor.insp.opt.effDust')], ['snow', t('editor.insp.opt.effSnow')], ['petals', t('editor.insp.opt.effPetals')], ['rain', t('editor.insp.opt.effRain')], ['sparkle', t('editor.insp.opt.effSparkle')]], (v) => { skin.ambience.effect = v; renderAll(); })),
     field(t('editor.insp.field.density'), rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
   );
+  // Recolour / speed / glow apply only to a real particle effect (not "none").
+  if (skin.ambience.effect !== 'none') {
+    panel.append(
+      field(t('editor.insp.field.particleColor'), ambienceColorControl(skin.ambience)),
+      field(t('editor.insp.field.particleSpeed'), rangeControl(typeof skin.ambience.speed === 'number' ? skin.ambience.speed : 1, 0.2, 3, 0.1, (v) => { skin.ambience.speed = v; renderAll(); })),
+      checkControl(t('editor.insp.field.particleGlow'), !!skin.ambience.glow, (v) => { skin.ambience.glow = v; renderAll(); }),
+    );
+  }
 
   renderFillSection(panel, skin);
   renderBackgroundSection(panel, skin);
@@ -1137,6 +1145,47 @@ function fillColorControl(stop) {
   // Same guard as the palette pickers: keep the open native picker alive while adjusting.
   custom.addEventListener('input', () => { sliderActive = true; stop.color = custom.value; renderAll(); });
   custom.addEventListener('change', () => { sliderActive = false; stop.color = custom.value; renderAll(); });
+  wrap.appendChild(custom);
+
+  return wrap;
+}
+
+// Each ambience effect's DEFAULT particle-colour token (mirrors the engine's
+// AMBIENCE_COLOR_KEY). Used to highlight the right swatch when a pack hasn't set
+// an explicit colour override.
+const AMBIENCE_DEFAULT_KEY = { embers: 'gold', dust: 'muted', snow: 'accentBright', petals: 'accent', rain: 'accent', sparkle: 'accent' };
+
+// The particle colour as SWATCHES (same idea as the fill stops). A palette token
+// tracks the colourway; the dashed swatch is a custom hex. Unset → the effect's
+// built-in default token is shown selected.
+function ambienceColorControl(ambience) {
+  const palette = state.pack.skin.palette;
+  const wrap = document.createElement('div');
+  wrap.className = 'fill-swatches';
+
+  const hasCustom = typeof ambience.color === 'string' && /^#/.test(ambience.color);
+  const activeKey = hasCustom ? null
+    : (ambience.colorKey && palette[ambience.colorKey]) ? ambience.colorKey
+    : (AMBIENCE_DEFAULT_KEY[ambience.effect] || 'accent');
+
+  for (const key of COLORWAY_KEYS) {
+    const sw = document.createElement('button');
+    sw.type = 'button';
+    sw.className = 'fill-swatch' + (activeKey === key ? ' selected' : '');
+    sw.style.setProperty('--sw', palette[key] || '#000000');
+    sw.title = paletteLabel(key);
+    // A token pick clears any custom hex so the token (and colourway) wins.
+    sw.addEventListener('click', () => { sliderActive = false; ambience.colorKey = key; delete ambience.color; renderAll(); });
+    wrap.appendChild(sw);
+  }
+
+  const custom = document.createElement('input');
+  custom.type = 'color';
+  custom.className = 'fill-swatch fill-swatch-custom' + (hasCustom ? ' selected' : '');
+  custom.value = (hasCustom ? ambience.color : (palette[activeKey] || '#000000')).slice(0, 7);
+  custom.title = t('editor.insp.fill.custom');
+  custom.addEventListener('input', () => { sliderActive = true; ambience.color = custom.value; renderAll(); });
+  custom.addEventListener('change', () => { sliderActive = false; ambience.color = custom.value; renderAll(); });
   wrap.appendChild(custom);
 
   return wrap;

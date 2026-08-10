@@ -485,12 +485,23 @@ const AMBIENCE_COLOR_KEY = {
 function setupAmbienceParticles(root, pack, opts, reduced) {
   const ambience = pack.skin.ambience || { effect: 'none', density: 0.5 };
   const effect = ambience.effect;
-  if (!AMBIENCE_COLOR_KEY[effect]) return null;
+  const defKey = AMBIENCE_COLOR_KEY[effect];
+  if (!defKey) return null;
 
   const canvas = document.createElement('canvas');
   canvas.className = 'ambience-layer';
   root.appendChild(canvas);
-  const [r, g, b] = hexToRgbParts(pack.skin.palette[AMBIENCE_COLOR_KEY[effect]]);
+  // Particle colour: a custom hex wins; else a palette TOKEN override (colorKey)
+  // that names a real palette entry; else the effect's default token. So a pack
+  // can recolour any effect and still track the colourway when it uses a token.
+  const palette = pack.skin.palette;
+  let hex;
+  if (typeof ambience.color === 'string' && /^#[0-9a-fA-F]{3,8}$/.test(ambience.color)) hex = ambience.color;
+  else hex = palette[(ambience.colorKey && palette[ambience.colorKey]) ? ambience.colorKey : defKey];
+  const [r, g, b] = hexToRgbParts(hex);
+  // speed scales all motion; glow composites additively (overlaps brighten).
+  const speed = Math.min(3, Math.max(0.2, (typeof ambience.speed === 'number' && isFinite(ambience.speed)) ? ambience.speed : 1));
+  const glow = ambience.glow === true;
   const count = Math.round(14 + ambience.density * 66);
   const rand = (lo, hi) => lo + Math.random() * (hi - lo);
   let particles = [];
@@ -552,6 +563,7 @@ function setupAmbienceParticles(root, pack, opts, reduced) {
 
   const stepParticles = (dt, t) => {
     const w = cssW, h = cssH;
+    dt *= speed; // a global motion multiplier scales fall/drift/rotation/rain uniformly
     for (let i = 0; i < particles.length; i++) {
       const p = particles[i];
       if (effect === 'sparkle') continue; // fixed points; only the twinkle animates
@@ -579,13 +591,15 @@ function setupAmbienceParticles(root, pack, opts, reduced) {
     // Draw in CSS pixels; the dpr transform maps them onto the backing store.
     ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx2.clearRect(0, 0, cssW, cssH);
+    // Additive blend makes overlapping particles glow; source-over is the flat look.
+    ctx2.globalCompositeOperation = glow ? 'lighter' : 'source-over';
     for (const p of particles) {
       let a = p.alpha;
       if (effect === 'embers') {
-        a *= 0.65 + 0.35 * Math.sin(t * 0.004 + p.phase);      // flicker
+        a *= 0.65 + 0.35 * Math.sin(t * 0.004 * speed + p.phase); // flicker (speed-scaled)
         a *= Math.min(1, Math.max(0, p.y / (cssH * 0.35)));    // die out near the top
       } else if (effect === 'sparkle') {
-        a *= 0.3 + 0.7 * Math.abs(Math.sin(t * p.twSpeed + p.phase)); // twinkle
+        a *= 0.3 + 0.7 * Math.abs(Math.sin(t * p.twSpeed * speed + p.phase)); // twinkle (speed-scaled)
       }
       const colour = `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, a)).toFixed(3)})`;
       if (effect === 'rain') {
