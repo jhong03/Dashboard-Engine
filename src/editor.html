@@ -59,11 +59,16 @@
     </aside>
   </div>
 
+  <!-- capture-clock.js FIRST (no-op unless ?capture=1): routes every rAF/clock
+       read through the trailer recorder's virtual clock. -->
+  <script src="capture-clock.js"></script>
   <!-- i18n.js FIRST: it defines window.t / I18n.applyDom and translates the
        static [data-i18n] markup before the app scripts run. -->
   <script src="i18n.js"></script>
   <script src="gl-background.js"></script>
   <script src="components.js"></script>
   <script src="editor.js"></script>
+  <!-- Editor-trailer choreography (no-op unless ?demo=1). -->
+  <script src="editor-demo.js"></script>
 </body>
 </html>

@@ -944,6 +944,73 @@ function buildVoiceCardHtml(profile, voice) {
 // sequence for a store trailer — offscreen, no personal data. Drives a synthetic
 // cursor so parallax + cursor-ripple react, and bakes an on-brand caption. The
 // frames are encoded to MP4 externally with ffmpeg. Dev/marketing utility.
+// The "editor in action" trailer choreography (injected into the offscreen editor
+// under ?demo=1). Phase 1 proof: add a component and drag it until the REAL smart-
+// alignment guides catch, then add another and resize it. The `to` callbacks read
+// live positions from the demo API so targets track the actual layout.
+const EDITOR_DEMO_TIMELINE = `
+window.__demo.setTimeline([
+  { at: 400,  type: 'add',    comp: 'weather', x: 27, y: 24 },
+  { at: 1100, type: 'drag',   index: 'last', dur: 2000,
+    to: function (b, api) { var r = api.rectPx(0); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; } },
+  { at: 3500, type: 'add',    comp: 'ring-clock', x: 72, y: 70 },
+  { at: 4200, type: 'resize', index: 'last', dir: 'se', dur: 1500,
+    to: function (b) { return { x: b.left + b.width * 0.9, y: b.top + b.height * 0.92 }; } }
+]);
+`;
+
+// Capture the editor-choreography as a PNG frame sequence (fNNNN.png) for the
+// editor trailer segment. Offscreen + deterministic (?capture=1&demo=1), so it's a
+// perfect 30fps of the REAL editor UI (palette + stage + inspector) being driven.
+function captureEditorTrailer(outDir, opts) {
+  const fs = require('fs');
+  const fps = (opts && opts.fps) || 30;
+  const W = (opts && opts.width) || 1600;
+  const H = (opts && opts.height) || 900;
+  const pack = (opts && opts.pack) || 'neon-cyberpunk';
+  return new Promise((resolve) => {
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e) { /* exists */ }
+    let win = new BrowserWindow({
+      width: W, height: H, useContentSize: true, enableLargerThanScreen: true,
+      show: false, frame: false, skipTaskbar: true, backgroundColor: '#1b1d21',
+      webPreferences: {
+        ...COMMON_WEB_PREFERENCES,
+        preload: path.join(__dirname, 'preload-editor.js'),
+        offscreen: true, backgroundThrottling: false,
+      },
+    });
+    try { win.setBounds({ x: 0, y: 0, width: W, height: H }); } catch (e) { /* clamp */ }
+    let settled = false, frame = 0;
+    const finish = (n) => { if (settled) return; settled = true; if (win && !win.isDestroyed()) win.destroy(); win = null; resolve(n); };
+    const guard = setTimeout(() => finish(frame), 180000);
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(frame); });
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        const start = Date.now();
+        while (Date.now() - start < 25000) {
+          const ready = await win.webContents.executeJavaScript('window.__demoReady === true && !!window.__editorDemoApi').catch(() => false);
+          if (ready) break;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+        await win.webContents.executeJavaScript(EDITOR_DEMO_TIMELINE).catch(() => {});
+        const durMs = await win.webContents.executeJavaScript('window.__demo.duration()').catch(() => 5000);
+        const total = Math.max(1, Math.round(((durMs + 700) / 1000) * fps)); // +0.7s tail so the last action settles
+        for (let i = 0; i < total; i++) {
+          const vt = (i * 1000) / fps;
+          await win.webContents.executeJavaScript(`window.__demo.step(${vt}); window.__cap && window.__cap.step(${vt});`).catch(() => {});
+          await new Promise((r) => setTimeout(r, 16)); // let the compositor paint the stepped frame
+          const img = await win.webContents.capturePage();
+          fs.writeFileSync(path.join(outDir, `f${String(i).padStart(4, '0')}.png`), img.toPNG());
+          frame = i + 1;
+        }
+        clearTimeout(guard);
+        finish(frame);
+      } catch (err) { clearTimeout(guard); finish(frame); }
+    });
+    win.loadFile(path.join(__dirname, 'src', 'editor.html'), { query: { capture: '1', demo: '1', pack } });
+  });
+}
+
 function captureTrailerClip(packId, outDir, opts) {
   const fs = require('fs');
   const seconds = (opts && opts.seconds) || 6;
@@ -1416,6 +1483,15 @@ if (IS_SESSION) {
         ? mediaMonitor.control(action)
         : Promise.resolve({ ok: false, error: 'Media control is unavailable.' })),
     });
+    // DE_EDITOR_TRAILER=<dir>: capture the deterministic "editor in action" clip and
+    // quit. Capture-only — IPC + protocols are up (the editor page needs them), but
+    // we skip the tray/desktop so it never touches the live wallpaper.
+    if (envFlag('EDITOR_TRAILER')) {
+      captureEditorTrailer(envFlag('EDITOR_TRAILER'), { pack: envFlag('EDITOR_TRAILER_PACK') || 'neon-cyberpunk' })
+        .then((n) => { console.log(`[editor-trailer] ${n} frames -> ${envFlag('EDITOR_TRAILER')}`); app.quit(); })
+        .catch((e) => { console.log(`[editor-trailer] failed: ${e && e.message}`); app.quit(); });
+      return;
+    }
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();
     // Accept commands from Steam-launched SESSION processes (open the Manager; and

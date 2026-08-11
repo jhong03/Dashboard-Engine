@@ -75,34 +75,37 @@
   // runtime state (started/ended, cached elements) so step() is idempotent.
   let timeline = [];
   let api = null;
+  let lastAdded = -1; // resolves an action's index:'last' to the most-recent add
 
   // Drag a component from wherever it is toward a target CLIENT point over dur ms,
   // firing pointerdown → moves → pointerup on its real hitbox so the alignment
   // guides light up. `to` is a function(bounds) → {x,y} client coords (so targets
   // can be expressed relative to the stage).
+  function idxOf(a) { return a.index === 'last' ? lastAdded : a.index; }
+
   function runDrag(a, localT) {
-    const hit = api.hitEl(a.index);
+    const idx = idxOf(a);
     const b = api.stageBounds();
-    const start = a._start || (a._start = centerOf(api.rectPx(a.index)));
-    const target = a._target || (a._target = a.to(b));
-    if (!a._down) { a._down = true; api.select(a.index); firePointer(hit, 'pointerdown', start.x, start.y); }
+    const start = a._start || (a._start = centerOf(api.rectPx(idx)));
+    const target = a._target || (a._target = a.to(b, api));
+    if (!a._down) { a._down = true; api.select(idx); firePointer(api.hitEl(idx), 'pointerdown', start.x, start.y); }
     const p = easeInOut(Math.min(1, localT / a.dur));
     const x = lerp(start.x, target.x, p), y = lerp(start.y, target.y, p);
     moveCursor(x, y);
-    firePointer(api.hitEl(a.index), 'pointermove', x, y);
-    if (localT >= a.dur && !a._up) { a._up = true; firePointer(api.hitEl(a.index), 'pointerup', x, y); }
+    firePointer(api.hitEl(idx), 'pointermove', x, y);
+    if (localT >= a.dur && !a._up) { a._up = true; firePointer(api.hitEl(idx), 'pointerup', x, y); }
   }
 
   function runResize(a, localT) {
-    const handle = api.handleEl(a.index, a.dir);
-    const start = a._start || (a._start = handleCenter(api.rectPx(a.index), a.dir));
-    const target = a._target || (a._target = a.to(api.stageBounds()));
-    if (!a._down) { a._down = true; api.select(a.index); firePointer(handle, 'pointerdown', start.x, start.y); }
+    const idx = idxOf(a);
+    const start = a._start || (a._start = handleCenter(api.rectPx(idx), a.dir));
+    const target = a._target || (a._target = a.to(api.stageBounds(), api));
+    if (!a._down) { a._down = true; api.select(idx); firePointer(api.handleEl(idx, a.dir), 'pointerdown', start.x, start.y); }
     const p = easeInOut(Math.min(1, localT / a.dur));
     const x = lerp(start.x, target.x, p), y = lerp(start.y, target.y, p);
     moveCursor(x, y);
-    firePointer(api.handleEl(a.index, a.dir), 'pointermove', x, y);
-    if (localT >= a.dur && !a._up) { a._up = true; firePointer(api.handleEl(a.index, a.dir), 'pointerup', x, y); }
+    firePointer(api.handleEl(idx, a.dir), 'pointermove', x, y);
+    if (localT >= a.dur && !a._up) { a._up = true; firePointer(api.handleEl(idx, a.dir), 'pointerup', x, y); }
   }
 
   function centerOf(r) { return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }
@@ -123,7 +126,7 @@
       if (a.done) continue;
       try {
         if (a.type === 'cursor') { const p = a.to(api.stageBounds()); moveCursor(p.x, p.y); a.done = true; }
-        else if (a.type === 'add') { a.index = api.addComponent(a.comp, a.x, a.y); a.done = true; }
+        else if (a.type === 'add') { a.index = api.addComponent(a.comp, a.x, a.y); lastAdded = a.index; a.done = true; }
         else if (a.type === 'select') { api.select(a.index); a.done = true; }
         else if (a.type === 'background') { api.setBackground(a.bg); a.done = true; }
         else if (a.type === 'gallery') { api.setGallery(a.images); a.done = true; }

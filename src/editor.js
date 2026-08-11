@@ -1691,6 +1691,48 @@ async function init() {
 
   renderAll();
   setStatus(t('editor.dragHint'));
+  exposeEditorDemoApi();
+}
+
+// Editor-trailer capture (?demo=1): expose the hooks src/editor-demo.js drives, and
+// flag readiness so the recorder (main.js DE_EDITOR_TRAILER) can start stepping.
+// No-op in normal use — this is offscreen marketing tooling, never a live editor.
+function exposeEditorDemoApi() {
+  if (new URLSearchParams(location.search).get('demo') !== '1') return;
+  window.__editorDemoApi = {
+    addComponent(type, x, y) { addComponent(type, x, y); return state.selected; },
+    select(index) { select(index); },
+    hitEl(index) { return overlayEl().querySelectorAll('.hitbox')[index] || null; },
+    handleEl(index, dir) {
+      if (state.selected !== index) select(index);
+      return overlayEl().querySelector(`.sel-box .handle.${dir}`) || null;
+    },
+    rectPx(index) {
+      const el = state.renderedEls && state.renderedEls[index];
+      if (el && el.getBoundingClientRect) return el.getBoundingClientRect();
+      const b = overlayEl().getBoundingClientRect();
+      const r = state.pack.components[index].rect;
+      return { left: b.left + (r[0] / 100) * b.width, top: b.top + (r[1] / 100) * b.height, width: (r[2] / 100) * b.width, height: (r[3] / 100) * b.height };
+    },
+    stageBounds() { return overlayEl().getBoundingClientRect(); },
+    // bg = { rel, uri }: an image (data: URI) or a video (depack:// URI from main).
+    setBackground(bg) {
+      if (!bg || !bg.rel) return;
+      state.pack.skin.wallpaper = bg.rel;
+      if (bg.uri) state.assets[bg.rel] = bg.uri;
+      renderAll();
+    },
+    // images = [{ rel, uri }]: point the first gallery component at them.
+    setGallery(images) {
+      const gi = state.pack.components.findIndex((c) => c.type === 'gallery');
+      if (gi < 0 || !Array.isArray(images)) return;
+      for (const im of images) if (im && im.rel && im.uri) state.assets[im.rel] = im.uri;
+      state.pack.components[gi].options = { ...(state.pack.components[gi].options || {}), images: images.map((im) => im.rel) };
+      renderAll();
+    },
+    renderAll() { renderAll(); },
+  };
+  window.__demoReady = true;
 }
 
 init().catch((err) => setStatus(t('editor.startFailed', { message: err.message }), true));
