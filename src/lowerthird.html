@@ -1,0 +1,53 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Trailer lower-third generator — renders one caption banner (1920x240,
+     transparent) matching the store trailer's style: a skewed dark-glass panel
+     with a cyan glow border, a cyan slash, and a bold Rajdhani caption. Captured
+     off-screen to a transparent PNG by main.js (DE_LOWERTHIRDS). ?text= is the
+     caption. Marketing tooling only. */
+  @font-face { font-family: 'Rajdhani'; font-weight: 700; src: url('fonts/Rajdhani-700.woff2') format('woff2'); }
+  html, body { margin: 0; width: 1920px; height: 240px; background: transparent; overflow: hidden; }
+  .lt { position: absolute; inset: 0; }
+  .lt-back, .lt-panel { position: absolute; transform: skewX(-11deg); border-radius: 4px; }
+  /* The cyan layer peeks out as the glowing border (brightest top-left). */
+  .lt-back {
+    left: 74px; right: 52px; top: 36px; height: 160px;
+    background: linear-gradient(135deg, #74ecff 0%, #33c6f2 42%, #0e5a78 100%);
+    box-shadow: 0 8px 34px rgba(77, 227, 255, 0.45);
+  }
+  /* The dark glass panel sits on top, inset so the cyan border shows. */
+  .lt-panel {
+    left: 82px; right: 60px; top: 46px; height: 150px;
+    background: linear-gradient(180deg, #0d1c2b 0%, #0a1420 100%);
+    box-shadow: inset 0 0 60px rgba(0, 0, 0, 0.45);
+    display: flex; align-items: center; padding-left: 58px;
+  }
+  .lt-slash {
+    width: 11px; height: 72px; background: #58e4ff; margin-right: 34px;
+    box-shadow: 0 0 14px rgba(88, 228, 255, 0.9);
+    flex: 0 0 auto;
+  }
+  .lt-text {
+    font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 76px;
+    color: #eaf9ff; letter-spacing: 2px; white-space: nowrap;
+    transform: skewX(11deg); /* un-skew the text so only the panel leans */
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.55);
+  }
+</style>
+</head>
+<body>
+  <div class="lt">
+    <div class="lt-back"></div>
+    <div class="lt-panel"><span class="lt-slash"></span><span class="lt-text" id="cap"></span></div>
+  </div>
+  <script>
+    document.getElementById('cap').textContent = new URLSearchParams(location.search).get('text') || '';
+    // Signal readiness once the font is applied so the capture isn't a fallback face.
+    (document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve())
+      .then(function () { requestAnimationFrame(function () { window.__ltReady = true; }); });
+  </script>
+</body>
+</html>

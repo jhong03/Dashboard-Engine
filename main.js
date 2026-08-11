@@ -944,6 +944,49 @@ function buildVoiceCardHtml(profile, voice) {
 // sequence for a store trailer — offscreen, no personal data. Drives a synthetic
 // cursor so parallax + cursor-ripple react, and bakes an on-brand caption. The
 // frames are encoded to MP4 externally with ffmpeg. Dev/marketing utility.
+// Render trailer lower-third caption banners (src/lowerthird.html) to transparent
+// 1920x240 PNGs — one per caption — matching the store trailer's style, so the
+// editor segment carries the same banners. Offscreen + transparent; captured PNGs
+// keep their alpha for compositing in ffmpeg. Marketing tooling (DE_LOWERTHIRDS).
+function captureLowerThirds(outDir, captions) {
+  const fs = require('fs');
+  return new Promise(async (resolve) => {
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e) { /* exists */ }
+    const files = [];
+    for (let i = 0; i < captions.length; i++) {
+      const file = path.join(outDir, `lt-${String(i).padStart(2, '0')}.png`);
+      await new Promise((res) => {
+        let win = new BrowserWindow({
+          width: 1920, height: 240, useContentSize: true, enableLargerThanScreen: true,
+          show: false, frame: false, skipTaskbar: true, transparent: true, backgroundColor: '#00000000',
+          webPreferences: { offscreen: true, backgroundThrottling: false, contextIsolation: true, nodeIntegration: false, sandbox: true },
+        });
+        try { win.setBounds({ x: 0, y: 0, width: 1920, height: 240 }); } catch (e) { /* clamp */ }
+        let settled = false;
+        const done = () => { if (settled) return; settled = true; if (win && !win.isDestroyed()) win.destroy(); win = null; res(); };
+        const guard = setTimeout(done, 15000);
+        win.webContents.on('did-finish-load', async () => {
+          try {
+            const start = Date.now();
+            while (Date.now() - start < 8000) {
+              const r = await win.webContents.executeJavaScript('window.__ltReady === true').catch(() => false);
+              if (r) break;
+              await new Promise((r) => setTimeout(r, 100));
+            }
+            await new Promise((r) => setTimeout(r, 150));
+            const img = await win.webContents.capturePage();
+            fs.writeFileSync(file, img.toPNG());
+            files.push(file);
+            clearTimeout(guard); done();
+          } catch (e) { clearTimeout(guard); done(); }
+        });
+        win.loadFile(path.join(__dirname, 'src', 'lowerthird.html'), { query: { text: captions[i] } });
+      });
+    }
+    resolve(files);
+  });
+}
+
 // The "editor in action" trailer choreography (injected into the offscreen editor
 // under ?demo=1). Phase 1 proof: add a component and drag it until the REAL smart-
 // alignment guides catch, then add another and resize it. The `to` callbacks read
@@ -1499,6 +1542,14 @@ if (IS_SESSION) {
       captureEditorTrailer(envFlag('EDITOR_TRAILER'), { pack: envFlag('EDITOR_TRAILER_PACK') || 'neon-cyberpunk' })
         .then((n) => { console.log(`[editor-trailer] ${n} frames -> ${envFlag('EDITOR_TRAILER')}`); app.quit(); })
         .catch((e) => { console.log(`[editor-trailer] failed: ${e && e.message}`); app.quit(); });
+      return;
+    }
+    // DE_LOWERTHIRDS=<dir> + DE_LT_CAPTIONS="a|b|c": render the caption banners.
+    if (envFlag('LOWERTHIRDS')) {
+      const caps = (envFlag('LT_CAPTIONS') || '').split('|').map((s) => s.trim()).filter(Boolean);
+      captureLowerThirds(envFlag('LOWERTHIRDS'), caps)
+        .then((f) => { console.log(`[lowerthirds] ${f.length} banners -> ${envFlag('LOWERTHIRDS')}`); app.quit(); })
+        .catch((e) => { console.log(`[lowerthirds] failed: ${e && e.message}`); app.quit(); });
       return;
     }
     if (!WANT_PANEL) createTray();
