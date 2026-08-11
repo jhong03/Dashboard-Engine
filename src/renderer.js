@@ -654,7 +654,13 @@ function drawWaveform(pcm) {
 }
 
 function updateReadouts(stats) {
-  $('ro-f0').textContent = stats.medianF0Hz > 0 ? `${stats.medianF0Hz.toFixed(0)} Hz` : '—';
+  // F0 is absolute Hz, but the Pitch slider is a RELATIVE shift — show the measured
+  // shift in semitones too so it reads against the slider (e.g. 205 Hz = +0.5 st
+  // above the dry 200 Hz), not as an unrelated number.
+  const shiftSt = (stats.medianF0Hz > 0 && stats.dryMedianF0Hz > 0) ? 12 * Math.log2(stats.medianF0Hz / stats.dryMedianF0Hz) : 0;
+  $('ro-f0').textContent = stats.medianF0Hz > 0
+    ? `${stats.medianF0Hz.toFixed(0)} Hz${Math.abs(shiftSt) >= 0.05 ? ` (${signed(shiftSt, 1)} st)` : ''}`
+    : '—';
   $('ro-f0-dry').textContent = t('panel.readout.dry', { v: `${stats.dryMedianF0Hz.toFixed(0)} Hz` });
   $('ro-rate').textContent = `${stats.wpm.toFixed(0)} wpm`;
   $('ro-rate-target').textContent = t('panel.readout.target', { v: `${state.profile.prosody.rate.toFixed(0)} wpm` });
