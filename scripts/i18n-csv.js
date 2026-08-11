@@ -27,7 +27,8 @@ const path = require('path');
 
 const LOCALES_DIR = path.join(__dirname, '..', 'locales');
 const EN_FILE = path.join(LOCALES_DIR, 'en.json');
-const CODE_PATTERN = /^[a-z]{2,3}$/;
+// A 2–3 letter base code, optionally with a script/region subtag (e.g. zh-hant).
+const CODE_PATTERN = /^[a-z]{2,3}(-[a-z]{2,4})?$/;
 
 // ── CSV primitives (RFC 4180) ────────────────────────────────────────────────
 
@@ -115,7 +116,7 @@ function doExport(code, outfile) {
 
 function doImport(code, infile) {
   if (!code || !CODE_PATTERN.test(code)) {
-    fail(`Bad locale code "${code}". Use a 2–3 letter code like es, fr, zh.`);
+    fail(`Bad locale code "${code}". Use a code like es, fr, zh, or zh-hant.`);
   }
   if (!infile || !fs.existsSync(infile)) fail(`CSV not found: ${infile}`);
 
@@ -167,7 +168,7 @@ function main() {
   const cmd = args[0];
   if (cmd === 'export') {
     const code = args[1] || null;
-    if (code && !CODE_PATTERN.test(code)) fail(`Bad locale code "${code}". Use a 2–3 letter code like es, fr, zh.`);
+    if (code && !CODE_PATTERN.test(code)) fail(`Bad locale code "${code}". Use a code like es, fr, zh, or zh-hant.`);
     return doExport(code, args[2] || null);
   }
   if (cmd === 'import') return doImport(args[1], args[2]);
