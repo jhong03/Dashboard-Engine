@@ -1010,7 +1010,9 @@ function buildEditorTimeline(a) {
   { at: 6500,  type: 'resize', index: 0, dir: 'se', dur: 950, to: function (b) { return { x: b.left + b.width * 0.4, y: b.top + b.height * 0.5 }; } },
   { at: 7900,  type: 'background', bg: { rel: 'assets/demo-photo.jpg', uri: ${JSON.stringify(a.photo)} } },
   { at: 10000, type: 'add', comp: 'gallery', x: 50, y: 50 },
-  { at: 10300, type: 'gallery', images: ${JSON.stringify(a.gallery)} }
+  { at: 10300, type: 'gallery', images: ${JSON.stringify(a.gallery)} },
+  { at: 11000, type: 'select', index: -1 },
+  { at: 14500, type: 'cursor', to: function (b) { return { x: b.left + b.width * 0.5, y: b.top + b.height * 0.92 }; } }
 ]);`;
 }
 
