@@ -1,0 +1,144 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  /* Trailer looping-video generator (marketing tooling, throwaway). Renders a
+     lush, seamless aurora loop on a canvas — original art, no external assets.
+     main.js (DE_LOOPFRAMES) steps window.__drawFrame(t) over one PERIOD and
+     captures each frame; the frames encode to editor-assets/loop.mp4, the
+     "any looping video" a user might set as their wallpaper. Every motion term
+     is periodic in t (period = PERIOD) so the exported clip loops perfectly. */
+  html, body { margin: 0; background: #01020a; overflow: hidden; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(function () {
+  var PERIOD = 6;            // seconds — the seamless loop length
+  var W = window.innerWidth, H = window.innerHeight;
+  var cv = document.getElementById('c');
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+  var TAU = Math.PI * 2;
+
+  // Soft aurora "clouds": big radial blobs drifting on Lissajous paths, added
+  // together (lighter) over near-black. Colours stay in a cool teal→cyan→violet
+  // band so overlaid UI reads clearly. k* are INTEGER harmonics of the loop
+  // frequency, so every position/alpha returns to its start at t = PERIOD.
+  var COLS = [
+    [38, 220, 210],   // teal
+    [60, 200, 255],   // cyan
+    [120, 150, 255],  // periwinkle
+    [150, 105, 255],  // violet
+    [40, 130, 240]    // deep blue
+  ];
+  var clouds = [];
+  for (var i = 0; i < 9; i++) {
+    var c = COLS[i % COLS.length];
+    clouds.push({
+      col: c,
+      bx: (0.12 + 0.76 * ((i * 0.618) % 1)),      // base position (fraction of W/H)
+      by: (0.18 + 0.64 * ((i * 0.371 + 0.2) % 1)),
+      ax: 0.06 + 0.05 * ((i * 7) % 3) / 2,        // drift amplitude
+      ay: 0.05 + 0.05 * ((i * 5) % 3) / 2,
+      kx: 1 + (i % 2),                            // integer harmonic → seamless
+      ky: 1 + ((i + 1) % 2),
+      phx: (i * 1.7) % TAU,
+      phy: (i * 2.3) % TAU,
+      r: 0.30 + 0.16 * ((i * 3) % 4) / 3,         // radius (fraction of min(W,H))
+      a0: 0.10 + 0.05 * ((i * 2) % 3) / 2,        // base alpha
+      ka: 1 + (i % 2),
+      pha: (i * 0.9) % TAU
+    });
+  }
+
+  // A drift of fine particles for depth. Positions are periodic (sin of the loop
+  // frequency), so they breathe rather than wrap.
+  var parts = [];
+  for (var j = 0; j < 70; j++) {
+    parts.push({
+      bx: (j * 0.137) % 1,
+      by: (j * 0.529 + 0.11) % 1,
+      ax: 0.01 + 0.02 * ((j * 3) % 4) / 3,
+      ay: 0.015 + 0.02 * ((j * 2) % 3) / 2,
+      kx: 1 + (j % 3),
+      ky: 1 + ((j + 1) % 3),
+      ph: (j * 1.3) % TAU,
+      sz: 0.6 + (j % 3) * 0.7,
+      tw: 1 + (j % 2)                             // twinkle harmonic
+    });
+  }
+
+  function draw(t) {
+    var u = (t % PERIOD) / PERIOD;                // 0..1 loop phase
+    var ang = u * TAU;
+    var minWH = Math.min(W, H);
+
+    // Deep base: a soft radial that itself drifts a touch, over black.
+    var bx = W * (0.5 + 0.05 * Math.sin(ang));
+    var by = H * (0.42 + 0.05 * Math.cos(ang));
+    var base = ctx.createRadialGradient(bx, by, 0, bx, by, Math.max(W, H) * 0.75);
+    base.addColorStop(0, '#0a1226');
+    base.addColorStop(0.55, '#050a18');
+    base.addColorStop(1, '#01020a');
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = base;
+    ctx.fillRect(0, 0, W, H);
+
+    // Aurora clouds, additive.
+    ctx.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < clouds.length; i++) {
+      var cl = clouds[i];
+      var cx = W * (cl.bx + cl.ax * Math.sin(cl.kx * ang + cl.phx));
+      var cy = H * (cl.by + cl.ay * Math.sin(cl.ky * ang + cl.phy));
+      var rr = minWH * cl.r * (0.92 + 0.12 * Math.sin(ang + cl.pha));
+      var a = cl.a0 * (0.7 + 0.5 * (0.5 + 0.5 * Math.sin(cl.ka * ang + cl.pha)));
+      var g = ctx.createRadialGradient(cx, cy, 0, cx, cy, rr);
+      var col = cl.col;
+      g.addColorStop(0, 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + a.toFixed(3) + ')');
+      g.addColorStop(0.5, 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',' + (a * 0.4).toFixed(3) + ')');
+      g.addColorStop(1, 'rgba(' + col[0] + ',' + col[1] + ',' + col[2] + ',0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, W, H);
+    }
+
+    // A faint bright sweep near the top for a "light source" feel.
+    var sweepX = W * (0.5 + 0.28 * Math.sin(ang));
+    var sw = ctx.createRadialGradient(sweepX, H * 0.08, 0, sweepX, H * 0.08, minWH * 0.7);
+    sw.addColorStop(0, 'rgba(150,225,255,0.10)');
+    sw.addColorStop(1, 'rgba(150,225,255,0)');
+    ctx.fillStyle = sw;
+    ctx.fillRect(0, 0, W, H);
+
+    // Particles.
+    for (var j = 0; j < parts.length; j++) {
+      var p = parts[j];
+      var px = W * (p.bx + p.ax * Math.sin(p.kx * ang + p.ph));
+      var py = H * (p.by + p.ay * Math.cos(p.ky * ang + p.ph));
+      var tw = 0.25 + 0.55 * (0.5 + 0.5 * Math.sin(p.tw * ang + p.ph));
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(190,235,255,' + tw.toFixed(3) + ')';
+      ctx.arc(px, py, p.sz, 0, TAU);
+      ctx.fill();
+    }
+
+    // Vignette so the frame edges settle (helps overlaid UI read).
+    ctx.globalCompositeOperation = 'source-over';
+    var vg = ctx.createRadialGradient(W / 2, H / 2, minWH * 0.35, W / 2, H / 2, Math.max(W, H) * 0.72);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+  }
+
+  window.__loopPeriod = PERIOD;
+  window.__drawFrame = function (t) { draw(t); };
+  draw(0);
+  window.__loopReady = true;
+})();
+</script>
+</body>
+</html>

@@ -988,15 +988,12 @@ function captureLowerThirds(outDir, captions) {
 }
 
 // The "editor in action" trailer choreography (injected into the offscreen editor
-// under ?demo=1). Phase 1 proof: add a component and drag it until the REAL smart-
-// alignment guides catch, then add another and resize it. The `to` callbacks read
-// live positions from the demo API so targets track the actual layout.
-// Build the editor-choreography timeline (injected under ?demo=1). Beats: clear ->
-// build a tidy 2x2 dashboard (each drag targets a logical grid slot so the real
-// smart-guides snap) -> size the hero clock up -> swap the background to the user's
-// PHOTO, then a LOOPING VIDEO -> add a PHOTO GALLERY that cycles their shots. The
-// bg/gallery asset URIs are staged by captureEditorTrailer.
-function buildEditorTimeline(a) {
+// under ?demo=1). It shows the DESIGN PROCESS: from a clean stage, add four
+// components and drag each into a logical grid slot so the REAL smart-alignment
+// guides catch, then size the hero clock up. The finished dashboard — over a
+// looping video, and as a photo gallery — is shown full-frame in the two PAYOFF
+// beats (captureTrailerDash), not here, so this stays a tight editing showcase.
+function buildEditorTimeline() {
   return `window.__demo.setTimeline([
   { at: 200,   type: 'clear' },
   { at: 600,   type: 'add',  comp: 'ring-clock', x: 42, y: 42 },
@@ -1008,11 +1005,8 @@ function buildEditorTimeline(a) {
   { at: 5050,  type: 'add',  comp: 'sparkline', x: 60, y: 58 },
   { at: 5350,  type: 'drag', index: 'last', dur: 950,  to: function (b) { return { x: b.left + b.width * 0.78, y: b.top + b.height * 0.64 }; } },
   { at: 6500,  type: 'resize', index: 0, dir: 'se', dur: 950, to: function (b) { return { x: b.left + b.width * 0.4, y: b.top + b.height * 0.5 }; } },
-  { at: 7900,  type: 'background', bg: { rel: 'assets/demo-photo.jpg', uri: ${JSON.stringify(a.photo)} } },
-  { at: 10000, type: 'add', comp: 'gallery', x: 50, y: 50 },
-  { at: 10300, type: 'gallery', images: ${JSON.stringify(a.gallery)} },
-  { at: 11000, type: 'select', index: -1 },
-  { at: 14500, type: 'cursor', to: function (b) { return { x: b.left + b.width * 0.5, y: b.top + b.height * 0.92 }; } }
+  { at: 7700,  type: 'select', index: -1 },
+  { at: 8000,  type: 'cursor', to: function (b) { return { x: b.left + b.width * 0.5, y: b.top + b.height * 0.85 }; } }
 ]);`;
 }
 
@@ -1050,21 +1044,7 @@ function captureEditorTrailer(outDir, opts) {
           if (ready) break;
           await new Promise((r) => setTimeout(r, 150));
         }
-        // Stage the background photo/video + gallery images (from store-assets), then
-        // inject the full timeline. Images ride as data: URIs; the video registers
-        // with videostore and rides as a depack:// URL the editor stage can play.
-        const aDir = path.join(__dirname, 'store-assets', 'trailer', 'editor-assets');
-        const b64 = (f) => `data:image/jpeg;base64,${fs.readFileSync(path.join(aDir, f)).toString('base64')}`;
-        let assets = { photo: '', video: '', gallery: [] };
-        try {
-          const vidId = videostore.registerStagedVideo(path.join(aDir, 'loop.mp4'));
-          assets = {
-            photo: b64('photo.jpg'),
-            video: `${VIDEO_SCHEME}://${vidId}`,
-            gallery: [1, 2, 3, 4].map((i) => ({ rel: `assets/g${i}.jpg`, uri: b64(`gallery/g${i}.jpg`) })),
-          };
-        } catch (e) { console.log(`[editor-trailer] asset staging failed: ${e && e.message}`); }
-        await win.webContents.executeJavaScript(buildEditorTimeline(assets)).catch(() => {});
+        await win.webContents.executeJavaScript(buildEditorTimeline()).catch(() => {});
         const durMs = await win.webContents.executeJavaScript('window.__demo.duration()').catch(() => 5000);
         const total = Math.max(1, Math.round(((durMs + 900) / 1000) * fps)); // +0.9s tail so the last action settles
         for (let i = 0; i < total; i++) {
@@ -1083,6 +1063,158 @@ function captureEditorTrailer(outDir, opts) {
       } catch (err) { clearTimeout(guard); finish(frame); }
     });
     win.loadFile(path.join(__dirname, 'src', 'editor.html'), { query: { capture: '1', demo: '1', pack } });
+  });
+}
+
+// ── Editor-trailer PAYOFF beats (marketing tooling) ──────────────────────────
+// A full style block matching a sanitized pack's shape, so the ad-hoc trailer
+// packs below render exactly like a real one (component builders read every key).
+function trailerStyle(over) {
+  return Object.assign({
+    accent: null, textColor: null, font: null, fontScale: null, align: null,
+    place: null, panel: null, border: null, notches: null, opacity: null,
+    glow: null, padding: 0, rotate: null,
+  }, over || {});
+}
+
+// The finished "sci-fi HUD" dashboard shown OVER the looping video (rendered on
+// transparency; ffmpeg lays the video behind it). Scanlines/grid off so the video
+// reads clean; glass panels + a hero ring-clock sit on top.
+function trailerHudPack() {
+  return {
+    schema: 2, id: '_trailer-hud', name: 'Dashboard Engine',
+    persona: { name: 'Dashboard', tagline: 'LIVE HUD', lines: ['All systems online.'] },
+    skin: {
+      palette: { void: '#050C16', glass: '#0D1E32', accent: '#4DDDFF', accentBright: '#A5F2FF', muted: '#8FB6CC', warn: '#FFB23E', gold: '#E8C56A' },
+      typography: { display: 'rajdhani', uppercase: true, letterSpacing: 0.22 },
+      texture: { scanlines: 0, grid: 0, glow: 0.6, vignette: 0.4 },
+      shape: { cornerNotches: true, borderOpacity: 0.3, panelOpacity: 0.62, radius: 8 },
+      ambience: { effect: 'none', density: 0.5 }, wallpaper: null,
+    },
+    canvas: { padding: 0 }, props: [],
+    components: [
+      { type: 'sysinfo', rect: [4, 10, 26, 20], z: 2, style: trailerStyle({ panel: true, padding: 10, fontScale: 0.95 }), options: { memory: true, disk: true, uptime: true, host: false, statusText: 'ALL SYSTEMS NOMINAL' } },
+      { type: 'weather', rect: [70, 10, 26, 9], z: 2, style: trailerStyle({ panel: true, padding: 16 }), options: { lat: 0, lon: 0, place: null, details: true, compact: true } },
+      { type: 'ring-clock', rect: [37, 22, 26, 45], z: 2, style: trailerStyle({}), options: { style: 'halo', showDate: true } },
+      { type: 'cores', rect: [31, 80, 38, 13], z: 2, style: trailerStyle({ panel: true, padding: 10 }), options: { label: 'CORE LOAD' } },
+    ],
+  };
+}
+
+// The finished "personal gallery" dashboard — a photo gallery hero cycling the
+// user's shots, with a clock, weather and system readouts. Rendered opaque over a
+// warm gradient base fill.
+function trailerGalleryPack(imageRels) {
+  return {
+    schema: 2, id: '_trailer-gallery', name: 'My Gallery',
+    persona: { name: 'Gallery', tagline: 'PERSONAL', lines: ['Welcome home.'] },
+    skin: {
+      palette: { void: '#0B0D12', glass: '#171B24', accent: '#E6B980', accentBright: '#F6ECD8', muted: '#9AA1AA', warn: '#E0A446', gold: '#E8C56A' },
+      typography: { display: 'rajdhani', uppercase: true, letterSpacing: 0.16 },
+      texture: { scanlines: 0, grid: 0.06, glow: 0.3, vignette: 0.5 },
+      shape: { cornerNotches: false, borderOpacity: 0.22, panelOpacity: 0.85, radius: 14 },
+      ambience: { effect: 'none', density: 0.4 }, wallpaper: null,
+      background: { fill: { type: 'radial', posX: 50, posY: 30, angle: 0, stops: [{ color: '#1B2130', at: 0 }, { color: '#0B0D12', at: 100 }], animate: false, grain: false } },
+    },
+    canvas: { padding: 0 }, props: [],
+    components: [
+      { type: 'text', rect: [31, 1.6, 64, 4.5], z: 3, style: trailerStyle({ align: 'left', fontScale: 1.0, textColor: '#F6ECD8', glow: 0.4 }), options: { text: 'MY GALLERY' } },
+      { type: 'gallery', rect: [31, 7, 65, 74], z: 2, style: trailerStyle({ panel: true, notches: false, padding: 8, glow: 0.3 }), options: { images: imageRels, interval: 2, transition: 'fade', fit: 'cover' } },
+      { type: 'ring-clock', rect: [4, 9, 23, 26], z: 2, style: trailerStyle({}), options: { style: 'halo', showDate: true } },
+      { type: 'weather', rect: [4, 38, 23, 9], z: 2, style: trailerStyle({ panel: true, padding: 16 }), options: { lat: 0, lon: 0, place: null, details: true, compact: true } },
+      { type: 'sysinfo', rect: [4, 49, 23, 22], z: 2, style: trailerStyle({ panel: true, padding: 10 }), options: { memory: true, disk: true, uptime: true, host: false, statusText: null } },
+    ],
+  };
+}
+
+// Render a rich, seamless looping video (scratch/loopgen.html) to a PNG frame
+// sequence — the "any looping video" a user might set as their wallpaper. Every
+// motion term is periodic, so capturing exactly one PERIOD loops perfectly.
+function captureLoopFrames(outDir, opts) {
+  const fs = require('fs');
+  const fps = (opts && opts.fps) || 30;
+  const W = 1920, H = 1080;
+  return new Promise((resolve) => {
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e) { /* exists */ }
+    let win = new BrowserWindow({
+      width: W, height: H, useContentSize: true, enableLargerThanScreen: true,
+      show: false, frame: false, skipTaskbar: true, backgroundColor: '#01020a',
+      webPreferences: { offscreen: true, backgroundThrottling: false, contextIsolation: true, nodeIntegration: false, sandbox: true },
+    });
+    try { win.setBounds({ x: 0, y: 0, width: W, height: H }); } catch (e) { /* clamp */ }
+    let settled = false, frame = 0;
+    const finish = (n) => { if (settled) return; settled = true; if (win && !win.isDestroyed()) win.destroy(); win = null; resolve(n); };
+    const guard = setTimeout(() => finish(frame), 180000);
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(frame); });
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        const start = Date.now();
+        while (Date.now() - start < 12000) {
+          if (await win.webContents.executeJavaScript('window.__loopReady === true').catch(() => false)) break;
+          await new Promise((r) => setTimeout(r, 100));
+        }
+        const period = await win.webContents.executeJavaScript('window.__loopPeriod || 6').catch(() => 6);
+        const total = Math.max(1, Math.round(period * fps));
+        for (let i = 0; i < total; i++) {
+          await win.webContents.executeJavaScript(`window.__drawFrame(${(i / fps).toFixed(4)})`).catch(() => {});
+          await new Promise((r) => setTimeout(r, 24)); // let the compositor paint
+          const img = await win.webContents.capturePage();
+          fs.writeFileSync(path.join(outDir, `f${String(i).padStart(4, '0')}.png`), img.toPNG());
+          frame = i + 1;
+        }
+        clearTimeout(guard); finish(frame);
+      } catch (e) { clearTimeout(guard); finish(frame); }
+    });
+    win.loadFile(path.join(__dirname, 'src', 'loopgen.html'));
+  });
+}
+
+// Render an ad-hoc trailer pack full-frame to a PNG sequence. REAL-TIME capture
+// (no virtual clock) so the gallery's setInterval cycling and the clock animate
+// naturally. opts.transparent → a transparent window whose PNGs keep alpha, for
+// compositing a looping video behind the dashboard.
+function captureTrailerDash(spec, outDir, opts) {
+  const fs = require('fs');
+  const fps = (opts && opts.fps) || 30;
+  const seconds = (opts && opts.seconds) || 4;
+  const transparent = !!(opts && opts.transparent);
+  const W = 1920, H = 1080;
+  return new Promise((resolve) => {
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e) { /* exists */ }
+    let win = new BrowserWindow({
+      width: W, height: H, useContentSize: true, enableLargerThanScreen: true,
+      show: false, frame: false, skipTaskbar: true,
+      transparent, backgroundColor: transparent ? '#00000000' : '#04080F',
+      webPreferences: {
+        ...COMMON_WEB_PREFERENCES,
+        preload: path.join(__dirname, 'preload-dashboard.js'),
+        offscreen: true, backgroundThrottling: false,
+      },
+    });
+    try { win.setBounds({ x: 0, y: 0, width: W, height: H }); } catch (e) { /* clamp */ }
+    let settled = false, frame = 0;
+    const finish = (n) => { if (settled) return; settled = true; if (win && !win.isDestroyed()) win.destroy(); win = null; resolve(n); };
+    const guard = setTimeout(() => finish(frame), 120000);
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(frame); });
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        await win.webContents.executeJavaScript(`window.__trailerSpec = ${JSON.stringify(spec)}; true;`).catch(() => {});
+        const start = Date.now();
+        while (Date.now() - start < 15000) {
+          if (await win.webContents.executeJavaScript('window.__shotReady === true').catch(() => false)) break;
+          await new Promise((r) => setTimeout(r, 120));
+        }
+        const total = Math.max(1, Math.round(seconds * fps));
+        for (let i = 0; i < total; i++) {
+          await new Promise((r) => setTimeout(r, Math.round(1000 / fps))); // real-time cadence
+          const img = await win.webContents.capturePage();
+          fs.writeFileSync(path.join(outDir, `f${String(i).padStart(4, '0')}.png`), img.toPNG());
+          frame = i + 1;
+        }
+        clearTimeout(guard); finish(frame);
+      } catch (e) { clearTimeout(guard); finish(frame); }
+    });
+    win.loadFile(path.join(__dirname, 'src', 'trailer-dash.html'));
   });
 }
 
@@ -1573,6 +1705,48 @@ if (IS_SESSION) {
       captureLowerThirds(envFlag('LOWERTHIRDS'), caps)
         .then((f) => { console.log(`[lowerthirds] ${f.length} banners -> ${envFlag('LOWERTHIRDS')}`); app.quit(); })
         .catch((e) => { console.log(`[lowerthirds] failed: ${e && e.message}`); app.quit(); });
+      return;
+    }
+    // DE_LOOPFRAMES=<dir>: render the seamless aurora loop to a PNG frame sequence.
+    if (envFlag('LOOPFRAMES')) {
+      captureLoopFrames(envFlag('LOOPFRAMES'), {})
+        .then((n) => { console.log(`[loopframes] ${n} frames -> ${envFlag('LOOPFRAMES')}`); app.quit(); })
+        .catch((e) => { console.log(`[loopframes] failed: ${e && e.message}`); app.quit(); });
+      return;
+    }
+    // DE_TRAILER_DASH=<dir> + DE_TDASH_KIND=video|gallery: render a full-frame
+    // finished dashboard for a payoff beat (transparent HUD for the video beat,
+    // opaque photo-gallery dashboard for the gallery beat).
+    if (envFlag('TRAILER_DASH')) {
+      const outDir = envFlag('TRAILER_DASH');
+      const kind = envFlag('TDASH_KIND') || 'video';
+      let spec, opts;
+      if (kind === 'gallery') {
+        const fs = require('fs');
+        const gdir = path.join(__dirname, 'store-assets', 'trailer', 'editor-assets', 'gallery');
+        // Four varied, scene-like "photos": the two seed wallpapers that read as
+        // real scenes (a sunset, a city skyline) plus two rich stills from the
+        // aurora loop — so the gallery sells "your photos" instead of flat gradients.
+        const photoSrcs = [
+          { p: path.join(__dirname, 'packs', 'vaporwave', 'assets', 'bg.png'), m: 'image/png' },
+          { p: path.join(__dirname, 'packs', 'neon-cyberpunk', 'assets', 'bg.png'), m: 'image/png' },
+          { p: path.join(gdir, 'space1.jpg'), m: 'image/jpeg' },
+          { p: path.join(gdir, 'space2.jpg'), m: 'image/jpeg' },
+        ];
+        const assets = {}; const imgs = [];
+        photoSrcs.forEach((s, i) => {
+          const rel = `assets/photo${i + 1}.jpg`;
+          try { assets[rel] = `data:${s.m};base64,${fs.readFileSync(s.p).toString('base64')}`; imgs.push(rel); } catch (e) { /* skip */ }
+        });
+        spec = { pack: trailerGalleryPack(imgs), assets, transparent: false };
+        opts = { transparent: false, seconds: 6, fps: 30 };
+      } else {
+        spec = { pack: trailerHudPack(), assets: {}, transparent: true };
+        opts = { transparent: true, seconds: 4, fps: 30 };
+      }
+      captureTrailerDash(spec, outDir, opts)
+        .then((n) => { console.log(`[trailer-dash:${kind}] ${n} frames -> ${outDir}`); app.quit(); })
+        .catch((e) => { console.log(`[trailer-dash:${kind}] failed: ${e && e.message}`); app.quit(); });
       return;
     }
     if (!WANT_PANEL) createTray();

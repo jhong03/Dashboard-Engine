@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <!-- Same strict CSP as the desktop/shot surface. img-src data: carries the
+       injected gallery photos; no network. -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'none'; style-src 'self'; script-src 'self'; font-src 'self'; img-src 'self' data:; media-src depack:; frame-src demodule:">
+  <title>Dashboard Engine — trailer render</title>
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <!-- Off-screen full-frame pack render for the editor-trailer PAYOFF beats: a
+       finished dashboard over a still (gallery beat) or on TRANSPARENCY so ffmpeg
+       can lay a looping video behind it (video beat). Demo data only — never the
+       user's real stats/apps/notifications. Marketing tooling; no-op with no spec. -->
+  <main class="canvas-outer" aria-label="Trailer render">
+    <div class="canvas" id="canvas"></div>
+  </main>
+  <script src="capture-clock.js"></script>
+  <script src="gl-background.js"></script>
+  <script src="components.js"></script>
+  <script src="trailer-dash.js"></script>
+</body>
+</html>
