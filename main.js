@@ -113,10 +113,21 @@ const NO_DESKTOP = process.argv.includes('--no-desktop');
 const AUTOSTART_FLAG = '--autostart';
 const LAUNCHED_AT_LOGIN = process.argv.includes(AUTOSTART_FLAG);
 
+// Wallpaper-Engine-style Steam integration (see lib/session-link.js). The packaged
+// Steam launch runs as a thin SESSION whose lifetime = the Manager being open, so
+// Steam shows "playing" only while the Manager is up; the persistent ENGINE (tray +
+// wallpaper) runs detached and keeps going when the session ends. Everything else —
+// `npm start` (unpackaged dev), the login autostart, `--panel`, and the engine
+// spawn itself (`--engine`) — takes the ENGINE path unchanged, so the split's blast
+// radius is only the Steam launch.
+const ENGINE_FLAG = '--engine';
+const IS_SESSION = app.isPackaged && !WANT_PANEL && !LAUNCHED_AT_LOGIN && !process.argv.includes(ENGINE_FLAG);
+
 let panelWindow = null;
 let managerWindow = null;
 let dashboardWindow = null;
 let editorWindow = null;
+let sessionLink = null; // the engine's session-link server (accepts Steam-session commands)
 let tray = null;
 let desktopPaused = false;
 let alertScheduler = null;
@@ -195,7 +206,13 @@ function createManagerWindow() {
   managerWindow.on('will-resize', bumpBusy);
   managerWindow.on('move', bumpBusy);
   managerWindow.on('resize', bumpBusy);
-  managerWindow.on('closed', () => { managerWindow = null; });
+  managerWindow.on('closed', () => {
+    managerWindow = null;
+    // The Manager is the Steam "session": closing it ends the session so Steam stops
+    // showing "playing" — the wallpaper (this engine) keeps running. No-op when the
+    // Manager was opened outside a session (tray / first run) → no socket to signal.
+    if (sessionLink) sessionLink.endSession();
+  });
 }
 
 function createEditorWindow(packId) {
@@ -1090,6 +1107,29 @@ async function getPackThumbnail(id) {
   return job;
 }
 
+// SESSION role (the packaged Steam launch): do NOT run the engine here. Ask the
+// running engine — starting one detached if none is up — to open the Manager, then
+// stay alive only until it closes, so Steam's "playing" indicator tracks the Manager
+// rather than the always-on wallpaper. A session owns no windows; the pipe socket
+// keeps the process alive. FAIL-SOFT: if no engine can be reached or started, spawn
+// one detached so the wallpaper still appears, then exit.
+function runSession() {
+  const link = require('./lib/session-link');
+  const editAt = process.argv.indexOf('--edit');
+  const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'jarvis' } : { cmd: 'open-manager' };
+  app.on('window-all-closed', () => { /* a session has no windows — stay alive on the socket */ });
+  app.whenReady().then(() => {
+    link.connect(process.execPath, intent, {
+      onEnd: () => app.quit(), // Manager closed (or engine gone) → session ends → Steam not playing
+      onFail: () => {
+        try { require('child_process').spawn(process.execPath, [ENGINE_FLAG], { detached: true, stdio: 'ignore', windowsHide: true }).unref(); }
+        catch { /* nothing more we can do */ }
+        app.quit();
+      },
+    });
+  });
+}
+
 function openFirstWindows() {
   if (WANT_PANEL) {
     createPanelWindow();
@@ -1136,7 +1176,10 @@ app.on('child-process-gone', (_event, details) => {
 // manager (so closing the manager doesn't strand the desktop persona).
 // Panel/selftest launches are tools, not the engine — they skip the lock so
 // they can run alongside a live desktop.
-if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
+if (IS_SESSION) {
+  // The Steam-launched session: talk to the engine, don't become it.
+  runSession();
+} else if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
   app.on('second-instance', (event, argv) => {
@@ -1375,6 +1418,20 @@ if (!WANT_PANEL && !app.requestSingleInstanceLock()) {
     });
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();
+    // Accept commands from Steam-launched SESSION processes (open the Manager; and
+    // when a session ends — Manager closed or Steam "Stop" — close the Manager but
+    // keep the wallpaper). Fail-soft: if the pipe can't bind, the engine still runs
+    // exactly as before, just without the "playing tracks the Manager" behaviour.
+    if (!WANT_PANEL) {
+      try {
+        sessionLink = require('./lib/session-link').serve({
+          onOpen: () => createManagerWindow(),
+          onEdit: (id) => createEditorWindow(id),
+          onSessionGone: () => { if (managerWindow && !managerWindow.isDestroyed()) managerWindow.close(); },
+          onError: (err) => logEngine('WARN', `session-link server: ${err && err.message}`),
+        });
+      } catch (err) { logEngine('WARN', `session-link unavailable: ${err && err.message}`); }
+    }
     // Monitor hotplug / rearrange: re-place the wallpaper (and drop a pin whose
     // display vanished). Only meaningful with a live desktop window.
     if (!WANT_PANEL) {
