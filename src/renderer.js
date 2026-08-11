@@ -171,6 +171,38 @@ function formatSize(bytes) {
   return `${Math.round(bytes / (1024 * 1024))} MB`;
 }
 
+// Live download rate — keeps a decimal in the MB range and drops to KB/s on a slow
+// link so the number still visibly moves (formatSize rounds MB, too coarse here).
+function formatRate(bytesPerSec) {
+  if (!bytesPerSec || bytesPerSec <= 0) return '';
+  const mb = bytesPerSec / (1024 * 1024);
+  if (mb >= 1) return `${mb.toFixed(1)} MB/s`;
+  return `${Math.max(1, Math.round(bytesPerSec / 1024))} KB/s`;
+}
+
+// Remaining time as ~m:ss (an HD pack never realistically exceeds an hour). '' when
+// there's no speed sample yet.
+function formatEta(sec) {
+  if (sec == null || !isFinite(sec) || sec <= 0) return '';
+  if (sec >= 3600) { const h = Math.floor(sec / 3600), m = Math.round((sec % 3600) / 60); return `~${h}h${m}m`; }
+  let m = Math.floor(sec / 60), s = Math.round(sec % 60);
+  if (s === 60) { m += 1; s = 0; }
+  return `~${m}:${String(s).padStart(2, '0')}`;
+}
+
+// The compact "1.2 / 3.4 GB · 5.6 MB/s · ~2:15" line under a download bar. Kept
+// numeric/symbolic on purpose so it reads the same in every locale.
+function formatDlInfo(p) {
+  if (!p || typeof p !== 'object') return '';
+  const parts = [];
+  if (p.total) parts.push(`${formatSize(p.received || 0) || '0 MB'} / ${formatSize(p.total)}`);
+  const rate = formatRate(p.bytesPerSec);
+  if (rate) parts.push(rate);
+  const eta = formatEta(p.etaSec);
+  if (eta) parts.push(eta);
+  return parts.join(' · ');
+}
+
 function renderVoices() {
   const list = $('voice-list');
   list.textContent = '';
@@ -230,13 +262,20 @@ function renderVoices() {
     // driven by the ONE global onBankProgress subscription (see init), so it
     // keeps updating even in a window opened after the download started.
     if (inflight.has(voice.id)) {
+      const p = inflight.get(voice.id) || {};
       const bar = document.createElement('div');
       bar.className = 'progress dl-bar';
       bar.dataset.voice = voice.id;
       const fill = document.createElement('span');
-      fill.style.width = `${inflight.get(voice.id) || 0}%`;
+      fill.style.width = `${p.pct || 0}%`;
       bar.appendChild(fill);
       li.appendChild(bar);
+      // Live readout: downloaded / total · speed · time left.
+      const info = document.createElement('div');
+      info.className = 'dl-info';
+      info.dataset.voice = voice.id;
+      info.textContent = formatDlInfo(p);
+      li.appendChild(info);
     }
     list.appendChild(li);
   }
@@ -247,7 +286,7 @@ function renderVoices() {
 // completion refresh, which is what makes it resilient to close/reopen.
 async function downloadVoice(voice) {
   if (inflight.has(voice.id)) return;
-  inflight.set(voice.id, 0);
+  inflight.set(voice.id, { pct: 0 });
   renderVoices();
   if (voice.hd) setStatus(t('panel.voice.downloadingHd', { name: voice.displayName }), 'live');
   try { await aegis.bankDownload(voice.id); } catch { /* progress subscription reports done/error */ }
@@ -272,9 +311,11 @@ function watchBankDownloads() {
       }
       return;
     }
-    inflight.set(p.id, p.pct);
+    inflight.set(p.id, p);
     const fill = document.querySelector(`.dl-bar[data-voice="${p.id}"] > span`);
     if (fill) fill.style.width = `${p.pct}%`;
+    const info = document.querySelector(`.dl-info[data-voice="${p.id}"]`);
+    if (info) info.textContent = formatDlInfo(p);
     const v = state.voices.find((x) => x.id === p.id);
     if (v && v.hd) {
       const what = p.phase === 'engine' ? t('panel.voice.hdEngine') : t('panel.voice.hdVoice');
@@ -704,7 +745,7 @@ async function init() {
   // reopening mid-download shows the live bar and still finishes cleanly.
   try {
     const inf = await aegis.bankInflight();
-    if (inf && inf.ok) for (const d of inf.downloads) inflight.set(d.id, d.pct);
+    if (inf && inf.ok) for (const d of inf.downloads) inflight.set(d.id, d);
   } catch { /* fail-soft — no restored bars */ }
   watchBankDownloads();
 

@@ -937,7 +937,10 @@ async function downloadBaseVoice(item, btn) {
   const original = btn.textContent;
   btn.disabled = true;
   const unsub = aegis.onBankProgress((p) => {
-    if (p && p.id === item.baseVoice && typeof p.pct === 'number') btn.textContent = t('manager.voices.downloadingBase', { pct: p.pct });
+    if (p && p.id === item.baseVoice && typeof p.pct === 'number') {
+      const rate = (p.bytesPerSec > 0) ? ` · ${(p.bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s` : '';
+      btn.textContent = t('manager.voices.downloadingBase', { pct: p.pct }) + rate;
+    }
   });
   let out;
   try { out = await aegis.bankDownload(item.baseVoice); } finally { unsub(); }

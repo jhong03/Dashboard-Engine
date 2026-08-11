@@ -137,6 +137,14 @@ body {
   background: var(--accent);
   transition: width 0.25s linear;
 }
+/* Live download readout under the bar: downloaded / total · speed · time left. */
+.dl-info {
+  margin: -1px 8px 6px;
+  font-size: 10.5px;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
 
 /* ── Parameter sliders ──────────────────────────────────────────────────── */
 
