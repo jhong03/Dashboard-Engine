@@ -2,6 +2,17 @@
 # as JSON for the launcher component's "running" section. Read-only. Invoked
 # by main with a fixed argv (CLAUDE.md shell rule) — no arguments accepted.
 
+# Write a JSON string as PURE ASCII (non-ASCII → \uXXXX) so CJK window/app names
+# survive any stdout codepage instead of becoming "?". See media-nowplaying.ps1.
+function EmitAscii($s) {
+  $sb = [System.Text.StringBuilder]::new([int]$s.Length)
+  foreach ($ch in $s.ToCharArray()) {
+    $code = [int][char]$ch
+    if ($code -gt 127) { [void]$sb.AppendFormat('\u{0:x4}', $code) } else { [void]$sb.Append($ch) }
+  }
+  [Console]::Out.WriteLine($sb.ToString())
+}
+
 $src = @"
 using System;
 using System.Collections.Generic;
@@ -60,4 +71,4 @@ foreach ($w in [WindowList]::Snapshot()) {
 }
 # -InputObject (not pipeline) so PS 5.1 serializes the ARRAY itself — piping
 # unrolls it and re-wraps as {value, Count}. Empty must still be valid JSON.
-if ($out.Count -eq 0) { '[]' } else { ConvertTo-Json -InputObject $out -Compress }
+EmitAscii $(if ($out.Count -eq 0) { '[]' } else { ConvertTo-Json -InputObject $out -Compress })

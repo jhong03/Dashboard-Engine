@@ -10,7 +10,18 @@
 $ErrorActionPreference = 'Stop'
 $MAX = 40
 
-function Emit($obj) { $obj | ConvertTo-Json -Compress -Depth 4 }
+# Emit as PURE ASCII (non-ASCII → \uXXXX) so CJK/emoji notification text survives
+# any stdout codepage; the console default otherwise mangles it to "?" before Node
+# reads it. JSON.parse decodes the escapes back. See media-nowplaying.ps1.
+function Emit($obj) {
+  $json = $obj | ConvertTo-Json -Compress -Depth 4
+  $sb = [System.Text.StringBuilder]::new($json.Length)
+  foreach ($ch in $json.ToCharArray()) {
+    $code = [int][char]$ch
+    if ($code -gt 127) { [void]$sb.AppendFormat('\u{0:x4}', $code) } else { [void]$sb.Append($ch) }
+  }
+  [Console]::Out.WriteLine($sb.ToString())
+}
 
 try {
   Add-Type -AssemblyName System.Runtime.WindowsRuntime

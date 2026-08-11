@@ -24,7 +24,21 @@ param([string]$Exclude = '')
 
 $ErrorActionPreference = 'Stop'
 
-function Emit($obj) { $obj | ConvertTo-Json -Compress -Depth 3; [Console]::Out.Flush() }
+# Emit one JSON line as PURE ASCII — every non-ASCII char escaped to \uXXXX — so
+# CJK / accented / emoji titles survive ANY stdout codepage. Otherwise PowerShell
+# renders the line under the console's default (often non-UTF-8) codepage and turns
+# Japanese/Chinese titles into literal "?" before Node ever reads them. Node's
+# JSON.parse decodes the \uXXXX escapes straight back to the real characters.
+function Emit($obj) {
+  $json = $obj | ConvertTo-Json -Compress -Depth 3
+  $sb = [System.Text.StringBuilder]::new($json.Length)
+  foreach ($ch in $json.ToCharArray()) {
+    $code = [int][char]$ch
+    if ($code -gt 127) { [void]$sb.AppendFormat('\u{0:x4}', $code) } else { [void]$sb.Append($ch) }
+  }
+  [Console]::Out.WriteLine($sb.ToString())
+  [Console]::Out.Flush()
+}
 
 try {
   Add-Type -AssemblyName System.Runtime.WindowsRuntime
