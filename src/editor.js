@@ -1701,6 +1701,9 @@ function exposeEditorDemoApi() {
   if (new URLSearchParams(location.search).get('demo') !== '1') return;
   window.__editorDemoApi = {
     addComponent(type, x, y) { addComponent(type, x, y); return state.selected; },
+    // Start from a clean stage (wallpaper only) so the demo builds a deliberate
+    // layout instead of rearranging a busy one.
+    clearComponents() { state.pack.components = []; state.selected = null; renderAll(); },
     select(index) { select(index); },
     hitEl(index) { return overlayEl().querySelectorAll('.hitbox')[index] || null; },
     handleEl(index, dir) {

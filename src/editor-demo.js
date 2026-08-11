@@ -25,7 +25,7 @@
     Element.prototype.releasePointerCapture = function () {};
   } catch (e) { /* best effort */ }
 
-  const CURSOR_SIZE = 22;
+  const CURSOR_SIZE = 30;
   let cursor = null;
   function ensureCursor() {
     if (cursor) return cursor;
@@ -89,7 +89,9 @@
     const start = a._start || (a._start = centerOf(api.rectPx(idx)));
     const target = a._target || (a._target = a.to(b, api));
     if (!a._down) { a._down = true; api.select(idx); firePointer(api.hitEl(idx), 'pointerdown', start.x, start.y); }
-    const p = easeInOut(Math.min(1, localT / a.dur));
+    // Reach the aligned target at ~70% of dur, then HOLD there — so the smart-guide
+    // snap is visible for a beat before the drop, instead of a one-frame flash.
+    const p = easeInOut(Math.min(1, localT / (a.dur * 0.7)));
     const x = lerp(start.x, target.x, p), y = lerp(start.y, target.y, p);
     moveCursor(x, y);
     firePointer(api.hitEl(idx), 'pointermove', x, y);
@@ -125,7 +127,8 @@
       const localT = vt - a.at;
       if (a.done) continue;
       try {
-        if (a.type === 'cursor') { const p = a.to(api.stageBounds()); moveCursor(p.x, p.y); a.done = true; }
+        if (a.type === 'cursor') { const p = a.to(api.stageBounds(), api); moveCursor(p.x, p.y); a.done = true; }
+        else if (a.type === 'clear') { api.clearComponents(); a.done = true; }
         else if (a.type === 'add') { a.index = api.addComponent(a.comp, a.x, a.y); lastAdded = a.index; a.done = true; }
         else if (a.type === 'select') { api.select(a.index); a.done = true; }
         else if (a.type === 'background') { api.setBackground(a.bg); a.done = true; }

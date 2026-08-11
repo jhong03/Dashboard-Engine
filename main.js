@@ -950,12 +950,21 @@ function buildVoiceCardHtml(profile, voice) {
 // live positions from the demo API so targets track the actual layout.
 const EDITOR_DEMO_TIMELINE = `
 window.__demo.setTimeline([
-  { at: 400,  type: 'add',    comp: 'weather', x: 27, y: 24 },
-  { at: 1100, type: 'drag',   index: 'last', dur: 2000,
-    to: function (b, api) { var r = api.rectPx(0); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; } },
-  { at: 3500, type: 'add',    comp: 'ring-clock', x: 72, y: 70 },
-  { at: 4200, type: 'resize', index: 'last', dir: 'se', dur: 1500,
-    to: function (b) { return { x: b.left + b.width * 0.9, y: b.top + b.height * 0.92 }; } }
+  { at: 200,  type: 'clear' },
+  // Hero ring-clock -> top-left (snaps to the top & left margins).
+  { at: 700,  type: 'add',  comp: 'ring-clock', x: 42, y: 42 },
+  { at: 1200, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.22, y: b.top + b.height * 0.27 }; } },
+  // Weather -> top-right, on the SAME centre-line as the clock (horizontal guide).
+  { at: 3000, type: 'add',  comp: 'weather', x: 56, y: 56 },
+  { at: 3500, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.78, y: b.top + b.height * 0.27 }; } },
+  // Stats -> bottom-left, in the SAME column as the clock (vertical guide).
+  { at: 5300, type: 'add',  comp: 'stats', x: 44, y: 46 },
+  { at: 5800, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.22, y: b.top + b.height * 0.64 }; } },
+  // Sparkline -> bottom-right, aligning to weather (column) AND stats (row).
+  { at: 7600, type: 'add',  comp: 'sparkline', x: 60, y: 58 },
+  { at: 8100, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.78, y: b.top + b.height * 0.64 }; } },
+  // Size the hero clock up to a clean centre-aligned block (right edge to mid-stage).
+  { at: 9900, type: 'resize', index: 0, dir: 'se', dur: 1400, to: function (b) { return { x: b.left + b.width * 0.4, y: b.top + b.height * 0.5 }; } }
 ]);
 `;
 
