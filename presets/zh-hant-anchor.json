@@ -1,9 +1,9 @@
 {
   "schema": 1,
-  "id": "preset-zh-anchor",
-  "name": "Chinese (Simplified) · Anchor",
+  "id": "preset-zh-hant-anchor",
+  "name": "Chinese (Traditional) · Anchor",
   "author": "Dashboard Engine",
-  "created": "2026-08-03T00:00:00.000Z",
+  "created": "2026-08-11T00:00:00.000Z",
   "base": {
     "engine": "melotts",
     "voice": "zh_hd",
