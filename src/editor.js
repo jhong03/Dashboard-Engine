@@ -1719,18 +1719,34 @@ function exposeEditorDemoApi() {
     },
     stageBounds() { return overlayEl().getBoundingClientRect(); },
     // bg = { rel, uri }: an image (data: URI) or a video (depack:// URI from main).
+    // Replace the whole background with ONE clean layer of the new asset so it
+    // works over a pack whose base renders via background.layers (e.g. neon's WebGL).
     setBackground(bg) {
       if (!bg || !bg.rel) return;
       state.pack.skin.wallpaper = bg.rel;
       if (bg.uri) state.assets[bg.rel] = bg.uri;
+      state.pack.skin.background = {
+        layers: [{ src: bg.rel, depth: 0, fit: 'cover', posX: 50, posY: 50, opacity: 1, drift: { x: 0, y: 0 }, effects: [] }],
+        parallax: { strength: 1, axis: 'both' },
+      };
       renderAll();
+      // A video wallpaper won't advance on the capture's virtual clock — force it to
+      // play (muted+loop) so the beat shows real motion, not a frozen first frame.
+      if (/\.(mp4|webm)$/i.test(bg.rel)) {
+        requestAnimationFrame(() => {
+          document.querySelectorAll('video').forEach((v) => { try { v.muted = true; v.loop = true; const p = v.play(); if (p && p.catch) p.catch(() => {}); } catch (e) { /* ignore */ } });
+        });
+      }
     },
-    // images = [{ rel, uri }]: point the first gallery component at them.
+    // images = [{ rel, uri }]: point the first gallery component at them (fast cycle).
     setGallery(images) {
       const gi = state.pack.components.findIndex((c) => c.type === 'gallery');
       if (gi < 0 || !Array.isArray(images)) return;
       for (const im of images) if (im && im.rel && im.uri) state.assets[im.rel] = im.uri;
-      state.pack.components[gi].options = { ...(state.pack.components[gi].options || {}), images: images.map((im) => im.rel) };
+      state.pack.components[gi].options = {
+        ...(state.pack.components[gi].options || {}),
+        images: images.map((im) => im.rel), interval: 1.4, transition: 'fade', fit: 'cover',
+      };
       renderAll();
     },
     renderAll() { renderAll(); },

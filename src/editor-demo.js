@@ -131,7 +131,7 @@
         else if (a.type === 'clear') { api.clearComponents(); a.done = true; }
         else if (a.type === 'add') { a.index = api.addComponent(a.comp, a.x, a.y); lastAdded = a.index; a.done = true; }
         else if (a.type === 'select') { api.select(a.index); a.done = true; }
-        else if (a.type === 'background') { api.setBackground(a.bg); a.done = true; }
+        else if (a.type === 'background') { api.setBackground(a.bg); if (a.bg && a.bg.video) window.__demoVideoWait = true; a.done = true; }
         else if (a.type === 'gallery') { api.setGallery(a.images); a.done = true; }
         else if (a.type === 'call') { a.fn(api); a.done = true; }
         else if (a.type === 'drag') { runDrag(a, localT); if (localT >= a.dur) a.done = true; }

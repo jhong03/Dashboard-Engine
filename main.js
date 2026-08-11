@@ -991,25 +991,28 @@ function captureLowerThirds(outDir, captions) {
 // under ?demo=1). Phase 1 proof: add a component and drag it until the REAL smart-
 // alignment guides catch, then add another and resize it. The `to` callbacks read
 // live positions from the demo API so targets track the actual layout.
-const EDITOR_DEMO_TIMELINE = `
-window.__demo.setTimeline([
-  { at: 200,  type: 'clear' },
-  // Hero ring-clock -> top-left (snaps to the top & left margins).
-  { at: 700,  type: 'add',  comp: 'ring-clock', x: 42, y: 42 },
-  { at: 1200, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.22, y: b.top + b.height * 0.27 }; } },
-  // Weather -> top-right, on the SAME centre-line as the clock (horizontal guide).
-  { at: 3000, type: 'add',  comp: 'weather', x: 56, y: 56 },
-  { at: 3500, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.78, y: b.top + b.height * 0.27 }; } },
-  // Stats -> bottom-left, in the SAME column as the clock (vertical guide).
-  { at: 5300, type: 'add',  comp: 'stats', x: 44, y: 46 },
-  { at: 5800, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.22, y: b.top + b.height * 0.64 }; } },
-  // Sparkline -> bottom-right, aligning to weather (column) AND stats (row).
-  { at: 7600, type: 'add',  comp: 'sparkline', x: 60, y: 58 },
-  { at: 8100, type: 'drag', index: 'last', dur: 1500, to: function (b) { return { x: b.left + b.width * 0.78, y: b.top + b.height * 0.64 }; } },
-  // Size the hero clock up to a clean centre-aligned block (right edge to mid-stage).
-  { at: 9900, type: 'resize', index: 0, dir: 'se', dur: 1400, to: function (b) { return { x: b.left + b.width * 0.4, y: b.top + b.height * 0.5 }; } }
-]);
-`;
+// Build the editor-choreography timeline (injected under ?demo=1). Beats: clear ->
+// build a tidy 2x2 dashboard (each drag targets a logical grid slot so the real
+// smart-guides snap) -> size the hero clock up -> swap the background to the user's
+// PHOTO, then a LOOPING VIDEO -> add a PHOTO GALLERY that cycles their shots. The
+// bg/gallery asset URIs are staged by captureEditorTrailer.
+function buildEditorTimeline(a) {
+  return `window.__demo.setTimeline([
+  { at: 200,   type: 'clear' },
+  { at: 600,   type: 'add',  comp: 'ring-clock', x: 42, y: 42 },
+  { at: 900,   type: 'drag', index: 'last', dur: 1000, to: function (b) { return { x: b.left + b.width * 0.22, y: b.top + b.height * 0.27 }; } },
+  { at: 2100,  type: 'add',  comp: 'weather', x: 56, y: 56 },
+  { at: 2400,  type: 'drag', index: 'last', dur: 1000, to: function (b) { return { x: b.left + b.width * 0.78, y: b.top + b.height * 0.27 }; } },
+  { at: 3600,  type: 'add',  comp: 'stats', x: 44, y: 46 },
+  { at: 3900,  type: 'drag', index: 'last', dur: 950,  to: function (b) { return { x: b.left + b.width * 0.22, y: b.top + b.height * 0.64 }; } },
+  { at: 5050,  type: 'add',  comp: 'sparkline', x: 60, y: 58 },
+  { at: 5350,  type: 'drag', index: 'last', dur: 950,  to: function (b) { return { x: b.left + b.width * 0.78, y: b.top + b.height * 0.64 }; } },
+  { at: 6500,  type: 'resize', index: 0, dir: 'se', dur: 950, to: function (b) { return { x: b.left + b.width * 0.4, y: b.top + b.height * 0.5 }; } },
+  { at: 7900,  type: 'background', bg: { rel: 'assets/demo-photo.jpg', uri: ${JSON.stringify(a.photo)} } },
+  { at: 10000, type: 'add', comp: 'gallery', x: 50, y: 50 },
+  { at: 10300, type: 'gallery', images: ${JSON.stringify(a.gallery)} }
+]);`;
+}
 
 // Capture the editor-choreography as a PNG frame sequence (fNNNN.png) for the
 // editor trailer segment. Offscreen + deterministic (?capture=1&demo=1), so it's a
@@ -1029,6 +1032,7 @@ function captureEditorTrailer(outDir, opts) {
         ...COMMON_WEB_PREFERENCES,
         preload: path.join(__dirname, 'preload-editor.js'),
         offscreen: true, backgroundThrottling: false,
+        autoplayPolicy: 'no-user-gesture-required', // so a video-wallpaper beat actually plays
       },
     });
     try { win.setBounds({ x: 0, y: 0, width: W, height: H }); } catch (e) { /* clamp */ }
@@ -1044,12 +1048,29 @@ function captureEditorTrailer(outDir, opts) {
           if (ready) break;
           await new Promise((r) => setTimeout(r, 150));
         }
-        await win.webContents.executeJavaScript(EDITOR_DEMO_TIMELINE).catch(() => {});
+        // Stage the background photo/video + gallery images (from store-assets), then
+        // inject the full timeline. Images ride as data: URIs; the video registers
+        // with videostore and rides as a depack:// URL the editor stage can play.
+        const aDir = path.join(__dirname, 'store-assets', 'trailer', 'editor-assets');
+        const b64 = (f) => `data:image/jpeg;base64,${fs.readFileSync(path.join(aDir, f)).toString('base64')}`;
+        let assets = { photo: '', video: '', gallery: [] };
+        try {
+          const vidId = videostore.registerStagedVideo(path.join(aDir, 'loop.mp4'));
+          assets = {
+            photo: b64('photo.jpg'),
+            video: `${VIDEO_SCHEME}://${vidId}`,
+            gallery: [1, 2, 3, 4].map((i) => ({ rel: `assets/g${i}.jpg`, uri: b64(`gallery/g${i}.jpg`) })),
+          };
+        } catch (e) { console.log(`[editor-trailer] asset staging failed: ${e && e.message}`); }
+        await win.webContents.executeJavaScript(buildEditorTimeline(assets)).catch(() => {});
         const durMs = await win.webContents.executeJavaScript('window.__demo.duration()').catch(() => 5000);
-        const total = Math.max(1, Math.round(((durMs + 700) / 1000) * fps)); // +0.7s tail so the last action settles
+        const total = Math.max(1, Math.round(((durMs + 900) / 1000) * fps)); // +0.9s tail so the last action settles
         for (let i = 0; i < total; i++) {
           const vt = (i * 1000) / fps;
           await win.webContents.executeJavaScript(`window.__demo.step(${vt}); window.__cap && window.__cap.step(${vt});`).catch(() => {});
+          // A background VIDEO was just mounted — give it a real-time beat to load + play.
+          const vw = await win.webContents.executeJavaScript('var w=window.__demoVideoWait; window.__demoVideoWait=false; !!w').catch(() => false);
+          if (vw) await new Promise((r) => setTimeout(r, 1600));
           await new Promise((r) => setTimeout(r, 16)); // let the compositor paint the stepped frame
           const img = await win.webContents.capturePage();
           fs.writeFileSync(path.join(outDir, `f${String(i).padStart(4, '0')}.png`), img.toPNG());
