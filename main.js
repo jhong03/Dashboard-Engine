@@ -8,7 +8,7 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net, desktopCapturer } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net, desktopCapturer, shell } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
@@ -174,6 +174,20 @@ function createPanelWindow() {
     query: { selftest: envFlag('SELFTEST') === '1' ? '1' : '0' },
   });
   panelWindow.on('closed', () => { panelWindow = null; });
+}
+
+// Tray / icon "Open Manager": when packaged, relaunch through Steam so a fresh
+// SESSION process opens the Manager and Steam tracks "playing" (opening the window
+// directly, in the engine, bypasses Steam entirely — the reason a re-open didn't
+// show "playing"). Already open → just focus it. Dev / no Steam → open directly.
+function openManagerFromTray() {
+  if (managerWindow && !managerWindow.isDestroyed()) { bringToFront(managerWindow); return; }
+  if (app.isPackaged) {
+    const appId = require('./lib/workshop').STEAM_APP_ID;
+    shell.openExternal(`steam://rungameid/${appId}`).catch(() => createManagerWindow());
+  } else {
+    createManagerWindow();
+  }
 }
 
 function createManagerWindow() {
@@ -602,7 +616,7 @@ function buildTrayMenu() {
   const dict = i18n.getActive(USER_DIR, settings.getLocale(USER_DIR), app.getLocale()).dict;
   const tr = (key, english) => { const s = i18n.translate(dict, key); return s === key ? english : s; };
   return Menu.buildFromTemplate([
-    { label: tr('tray.openManager', 'Open Manager'), click: createManagerWindow },
+    { label: tr('tray.openManager', 'Open Manager'), click: openManagerFromTray },
     { label: tr('tray.voiceTuning', 'Voice Tuning'), click: createPanelWindow },
     { type: 'separator' },
     {
@@ -674,8 +688,8 @@ function setAutoStart(enabled) {
 function createTray() {
   tray = new Tray(nativeImage.createFromPath(path.join(__dirname, 'resources', 'tray-icon.png')));
   tray.setToolTip('Dashboard Engine');
-  tray.on('click', () => createManagerWindow());
-  tray.on('double-click', () => createManagerWindow());
+  tray.on('click', openManagerFromTray);
+  tray.on('double-click', openManagerFromTray);
   tray.on('right-click', () => tray.popUpContextMenu(buildTrayMenu()));
 }
 
@@ -1493,8 +1507,18 @@ async function getPackThumbnail(id) {
 // rather than the always-on wallpaper. A session owns no windows; the pipe socket
 // keeps the process alive. FAIL-SOFT: if no engine can be reached or started, spawn
 // one detached so the wallpaper still appears, then exit.
+// The Steam operations the engine may forward to the session. Whitelisted so a
+// forwarded call can only reach a known Workshop op, never e.g. setForwarder.
+const SESSION_STEAM_OPS = new Set([
+  'status', 'publish', 'browse', 'listSubscribed', 'importSubscribed', 'subscribe',
+  'listMine', 'getEditableCopy', 'getItemVisibility',
+  'publishVoice', 'browseVoices', 'listMineVoices', 'getEditableVoice', 'importVoice',
+]);
+
 function runSession() {
   const link = require('./lib/session-link');
+  const workshop = require('./lib/workshop');
+  const achievements = require('./lib/achievements');
   const editAt = process.argv.indexOf('--edit');
   const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'jarvis' } : { cmd: 'open-manager' };
   app.on('window-all-closed', () => { /* a session has no windows — stay alive on the socket */ });
@@ -1505,6 +1529,13 @@ function runSession() {
         try { require('child_process').spawn(process.execPath, [ENGINE_FLAG], { detached: true, stdio: 'ignore', windowsHide: true }).unref(); }
         catch { /* nothing more we can do */ }
         app.quit();
+      },
+      // The SESSION owns the Steam client — run the Workshop / achievement ops the
+      // engine forwards. (No forwarder is set in this process, so these run locally.)
+      onRpc: (method, args) => {
+        if (method === 'unlock') return Promise.resolve(achievements.unlock(String((args && args[0]) || '')));
+        if (SESSION_STEAM_OPS.has(method) && typeof workshop[method] === 'function') return Promise.resolve(workshop[method](...(args || [])));
+        return Promise.reject(new Error(`Unsupported Steam op: ${method}`));
       },
     });
   });
@@ -1863,12 +1894,38 @@ if (IS_SESSION) {
     // exactly as before, just without the "playing tracks the Manager" behaviour.
     if (!WANT_PANEL) {
       try {
+        const workshop = require('./lib/workshop');
+        // Achievements fired while no session is connected wait here, then flush to
+        // the session on the next connect (Steam's activate is idempotent).
+        const pendingAchievements = new Set();
         sessionLink = require('./lib/session-link').serve({
-          onOpen: () => createManagerWindow(),
+          onOpen: () => {
+            createManagerWindow();
+            if (pendingAchievements.size && sessionLink && sessionLink.hasSession()) {
+              for (const name of Array.from(pendingAchievements)) sessionLink.call('unlock', [name]).catch(() => {});
+              pendingAchievements.clear();
+            }
+          },
           onEdit: (id) => createEditorWindow(id),
           onSessionGone: () => { if (managerWindow && !managerWindow.isDestroyed()) managerWindow.close(); },
           onError: (err) => logEngine('WARN', `session-link server: ${err && err.message}`),
         });
+        // The persistent engine must NEVER open its own Steam connection (Steam would
+        // then track IT as "playing"). Forward every Steam op to the session, which
+        // Steam launched and tracks. Packaged only — unpackaged dev has no session and
+        // keeps using its own client, so Workshop still works while developing.
+        if (app.isPackaged) {
+          workshop.setForwarder((method, args) =>
+            (sessionLink && sessionLink.hasSession())
+              ? sessionLink.call(method, args)
+              : Promise.resolve({ ok: false, error: 'Open the Manager from Steam to use the Workshop.' }));
+          achievements.setForwarder((method, args) => {
+            const name = String((args && args[0]) || '');
+            if (sessionLink && sessionLink.hasSession()) return sessionLink.call(method, args).catch(() => {});
+            if (name) pendingAchievements.add(name); // flush on next session connect
+            return Promise.resolve();
+          });
+        }
       } catch (err) { logEngine('WARN', `session-link unavailable: ${err && err.message}`); }
     }
     // Monitor hotplug / rearrange: re-place the wallpaper (and drop a pin whose
