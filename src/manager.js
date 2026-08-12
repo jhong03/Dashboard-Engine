@@ -2179,7 +2179,7 @@ const BUILDER_TEXTURE_NAMES = { scanlines: 'Scanlines', grid: 'Grid', glow: 'Glo
 // The palette tokens a fill stop can bind to (matches the Colours step so a
 // colourway swap restyles the gradient); plain-language names, English-only.
 const BUILDER_FILL_TOKENS = ['void', 'glass', 'accent', 'accentBright', 'muted', 'warn', 'gold'];
-const BUILDER_PALETTE_NAMES = { void: 'Background', glass: 'Panels', accent: 'Accent', accentBright: 'Bright accent', muted: 'Muted', warn: 'Warning', gold: 'Gold' };
+const BUILDER_PALETTE_NAMES = { void: 'Background', glass: 'Panels', accent: 'Accent', accentBright: 'Bright accent', muted: 'Secondary text', warn: 'Warning', gold: 'Extra accent' };
 
 // Set builder.fill from a preset id (keeps the animate/grain toggles across a
 // style change; `none` clears the overlay back to a flat base colour).
@@ -2343,12 +2343,19 @@ const BUILDER_STEPS = [
 ];
 
 // Small control helpers (keep step renderers readable).
-function bField(label) {
+function bField(label, hint) {
   const w = document.createElement('label');
   w.className = 'b-field';
   const s = document.createElement('span');
   s.textContent = label;
   w.appendChild(s);
+  // Optional plain-language line under the label (says what a colour paints, etc.).
+  if (hint) {
+    const h = document.createElement('span');
+    h.className = 'b-hint';
+    h.textContent = hint;
+    w.appendChild(h);
+  }
   return w;
 }
 function bColorInput(value, onChange) {
@@ -2767,8 +2774,17 @@ function renderColoursStep(el) {
   }
   el.appendChild(presets);
 
-  for (const [key, label] of [['accent', 'Accent'], ['accentBright', 'Highlight'], ['muted', 'Muted'], ['warn', 'Warning'], ['gold', 'Gold']]) {
-    const f = bField(label);
+  // Plain-language names + a line saying what each colour actually paints — the raw
+  // token names (muted/gold) told you nothing about what you'd get.
+  const COLOUR_FIELDS = [
+    ['accent', 'Accent', 'Main colour — clock rings, gauges, bars, borders and glow.'],
+    ['accentBright', 'Bright accent', 'Brighter tone — headings, the time and key numbers.'],
+    ['muted', 'Secondary text', 'Dim tone for labels, units and less-important text.'],
+    ['warn', 'Warning', 'Alerts and critical readings — high CPU, low battery.'],
+    ['gold', 'Extra accent', 'A second accent for small details, like timestamps and badges.'],
+  ];
+  for (const [key, label, hint] of COLOUR_FIELDS) {
+    const f = bField(label, hint);
     f.appendChild(bColorInput(builder.pack.skin.palette[key], (v) => { builder.pack.skin.palette[key] = v; schedulePreview(); }));
     el.appendChild(f);
   }
