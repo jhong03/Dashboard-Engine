@@ -178,15 +178,24 @@ function createPanelWindow() {
 
 function createManagerWindow() {
   if (managerWindow) {
-    bringToFront(managerWindow);
+    // Already up → bring it forward. Still initializing behind the splash (hidden)
+    // → leave it; the pending reveal will show it once it's loaded + warmed, so a
+    // second open can't yank a half-warmed window into view.
+    if (managerWindow.isVisible()) bringToFront(managerWindow);
     return;
   }
+  const splash = createSplashWindow(); // branded loading dialog, shown immediately
   managerWindow = new BrowserWindow({
     width: 1180,
     height: 760,
     minWidth: 940,
     minHeight: 600,
     backgroundColor: '#04080F',
+    // Stay hidden until the page has rendered AND the thumbnail cache is warm, so a
+    // first eager drag can never land during the offscreen GPU render swarm (which
+    // could hang/crash the app). The splash covers the wait; revealManagerWhenReady
+    // shows this window once it's ready.
+    show: false,
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
       preload: path.join(__dirname, 'preload-manager.js'),
@@ -195,11 +204,10 @@ function createManagerWindow() {
   managerWindow.loadFile(path.join(__dirname, 'src', 'manager.html'), {
     query: { view: envFlag('VIEW') || '' },
   });
-  // Let the window settle after opening before the thumbnail render swarm starts,
-  // and pause it whenever the window is being moved or resized — so offscreen GPU
-  // renders never fight the OS window-drag modal loop (which can hang/crash the app
-  // with no catchable error). Every move/resize event just pushes the idle moment
-  // forward; the queue resumes shortly after the drag stops.
+  // Keep the thumbnail queue paused while the window is settling or being moved/
+  // resized, so offscreen GPU renders never fight the OS window-drag modal loop.
+  // Every move/resize event pushes the idle moment forward; the queue resumes
+  // shortly after the drag stops.
   markManagerBusy(700);
   const bumpBusy = () => markManagerBusy(500);
   managerWindow.on('will-move', bumpBusy);
@@ -213,6 +221,104 @@ function createManagerWindow() {
     // Manager was opened outside a session (tray / first run) → no socket to signal.
     if (sessionLink) sessionLink.endSession();
   });
+  revealManagerWhenReady(managerWindow, splash);
+}
+
+// A small branded loading dialog shown while the Manager loads and warms its
+// thumbnail cache off-screen. Frameless, centred, always-on-top; the logo is
+// injected as a data: URI (no file-path/CSP surprises) and the window is shown
+// only once the logo is in place, so it never flashes a bare frame. Fail-soft:
+// if it can't be created the Manager still opens (just without the splash).
+function createSplashWindow() {
+  let splash;
+  try {
+    splash = new BrowserWindow({
+      width: 470, height: 290, resizable: false, movable: false,
+      minimizable: false, maximizable: false, fullscreenable: false,
+      frame: false, transparent: true, backgroundColor: '#00000000', hasShadow: false,
+      skipTaskbar: true, alwaysOnTop: true, center: true, show: false, focusable: false,
+      webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    });
+  } catch (e) { return null; }
+  splash.loadFile(path.join(__dirname, 'src', 'splash.html'));
+  splash.webContents.once('did-finish-load', () => {
+    if (!splash || splash.isDestroyed()) return;
+    try {
+      const b64 = require('fs').readFileSync(path.join(__dirname, 'brand', 'DEHori1.png')).toString('base64');
+      splash.webContents.executeJavaScript(`window.__splashLogo && window.__splashLogo('data:image/png;base64,${b64}')`).catch(() => {});
+    } catch (e) { /* no logo — status + bar still identify the app */ }
+    if (!splash.isDestroyed()) splash.show();
+  });
+  return splash;
+}
+
+// Push a status line to the splash (no-op once it's gone).
+function splashStatus(splash, text) {
+  if (!splash || splash.isDestroyed()) return;
+  splash.webContents.executeJavaScript(`window.__splashStatus && window.__splashStatus(${JSON.stringify(text)})`).catch(() => {});
+}
+
+// Pre-generate the (GPU-heavy) library thumbnails while the Manager is still
+// hidden, so the offscreen render swarm can never collide with an eager first
+// drag. A fast no-op when the cache is already warm; bounded so a slow render
+// never holds the window back too long (any leftovers render lazily after reveal,
+// idle-gated as before).
+async function warmManagerThumbnails(maxMs, onProgress) {
+  let ids = [];
+  try { ids = (packs.listPacks(__dirname, USER_DIR).packs || []).map((p) => p.id).filter(Boolean); }
+  catch (e) { return; }
+  if (!ids.length) return;
+  const deadline = Date.now() + maxMs;
+  for (let i = 0; i < ids.length; i++) {
+    if (Date.now() > deadline) break;
+    if (onProgress) onProgress(i + 1, ids.length);
+    try { await getPackThumbnail(ids[i]); } catch (e) { /* skip a bad pack */ }
+  }
+}
+
+// Poll the Manager renderer's readiness flag (set after its first library render).
+async function waitForManagerReady(win, maxMs) {
+  const start = Date.now();
+  while (Date.now() - start < maxMs) {
+    if (!win || win.isDestroyed()) return;
+    const ready = await win.webContents.executeJavaScript('window.__managerReady === true').catch(() => false);
+    if (ready) return;
+    await new Promise((r) => setTimeout(r, 100));
+  }
+}
+
+// Reveal the Manager only once it has finished its first render AND its thumbnail
+// cache is warm — walking the splash through the stages, then swapping the splash
+// out for the real window. A failsafe guarantees the window always appears even if
+// a step stalls; a minimum splash time keeps it from flashing on a warm reopen.
+const SPLASH_MIN_MS = 750;
+function revealManagerWhenReady(win, splash) {
+  const shownAt = Date.now();
+  let shown = false, scheduled = false;
+  const failsafe = setTimeout(() => revealNow(), 9000);
+  function revealNow() {
+    if (shown) return;
+    shown = true;
+    clearTimeout(failsafe);
+    if (win && !win.isDestroyed()) { markManagerBusy(500); win.show(); win.focus(); }
+    // Let the Manager paint a frame before dropping the splash (no desktop flash).
+    setTimeout(() => { if (splash && !splash.isDestroyed()) { try { splash.close(); } catch (e) { /* gone */ } } }, 90);
+  }
+  function reveal() {
+    if (shown || scheduled) return;
+    scheduled = true;
+    setTimeout(revealNow, Math.max(0, SPLASH_MIN_MS - (Date.now() - shownAt)));
+  }
+  (async () => {
+    try {
+      splashStatus(splash, 'Initializing…');
+      await waitForManagerReady(win, 6000);
+      splashStatus(splash, 'Warming up…');
+      await warmManagerThumbnails(4000, (n, total) => splashStatus(splash, `Warming up… ${n}/${total}`));
+      splashStatus(splash, 'Almost ready…');
+    } catch (e) { /* reveal regardless */ }
+    reveal();
+  })();
 }
 
 function createEditorWindow(packId) {

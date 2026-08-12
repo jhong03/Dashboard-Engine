@@ -4106,6 +4106,11 @@ async function init() {
     const ob = await aegis.onboardedGet();
     if (ob.ok && !ob.onboarded) showWelcome();
   }
+
+  // The library has rendered and onboarding (if any) is up — tell main the window
+  // is ready to be revealed. Main warms the thumbnail cache off-screen, then swaps
+  // the loading splash for this window. (Read via executeJavaScript, not IPC.)
+  window.__managerReady = true;
 }
 
 init().catch((err) => libStatus(`The manager failed to start: ${err.message}`, true));
