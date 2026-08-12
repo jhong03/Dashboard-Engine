@@ -46,6 +46,16 @@ const bridge = {
     ipcRenderer.on('aegis:launcher:changed', handler);
     return () => ipcRenderer.removeListener('aegis:launcher:changed', handler);
   },
+  // Open a module component's code in VS Code and sync saves back. The CODE goes
+  // into a temp FILE (never onto a command line); main watches it and pushes
+  // changes over onModuleExternalChange.
+  moduleEditExternal: (html) => ipcRenderer.invoke('aegis:module:editExternal', String(html)),
+  moduleEditStop: (token) => ipcRenderer.invoke('aegis:module:editStop', String(token)),
+  onModuleExternalChange: (callback) => {
+    const handler = (_e, msg) => callback(msg);
+    ipcRenderer.on('aegis:module:external:changed', handler);
+    return () => ipcRenderer.removeListener('aegis:module:external:changed', handler);
+  },
 };
 
 if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

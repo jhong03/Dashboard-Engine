@@ -939,5 +939,9 @@
 
   "panel.init.noPresets": "Aucun préréglage trouvé — le dossier des préréglages est manquant.",
   "panel.init.startFailed": "Le panneau n’a pas pu démarrer : {message}",
-  "editor.insp.gallery.privacyWarn": "Les photos que vous ajoutez sont enregistrées dans le pack. Si vous le publiez ou le partagez, elles deviennent publiques — n’incluez rien de privé."
+  "editor.insp.gallery.privacyWarn": "Les photos que vous ajoutez sont enregistrées dans le pack. Si vous le publiez ou le partagez, elles deviennent publiques — n’incluez rien de privé.",
+  "editor.insp.btn.editVscode": "Modifier dans VS Code",
+  "editor.insp.btn.stopVscode": "Arrêter la synchronisation",
+  "editor.insp.note.editingVscode": "Édition dans Visual Studio Code — les modifications enregistrées se synchronisent ici.",
+  "editor.insp.note.vscodeMissing": "Visual Studio Code est introuvable. Installez-le (ou ajoutez ‘code’ à votre PATH), puis réessayez."
 }

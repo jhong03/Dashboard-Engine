@@ -125,6 +125,7 @@ const state = {
   selected: null,   // component index
   tab: 'component',
   renderedEls: [],
+  extEdit: null,    // { token, component } while a module is being edited in VS Code
 };
 
 const renderer = AegisComponents.createRenderer({
@@ -864,6 +865,7 @@ function optionFields(component, panel) {
     note.textContent = t('editor.insp.note.visualizer');
     panel.appendChild(note);
   } else if (type === 'module') {
+    const editingExt = !!(state.extEdit && state.extEdit.component === component);
     const area = document.createElement('textarea');
     area.className = 'ed-code';
     area.rows = 16;
@@ -871,17 +873,54 @@ function optionFields(component, panel) {
     area.maxLength = 24 * 1024;
     area.placeholder = '<div>…</div>\n<style>…</style>\n<script>DE.onData(d => …)<\/script>';
     area.value = o.html || '';
-    area.addEventListener('change', () => { o.html = area.value; renderAll(); });
+    area.disabled = editingExt; // while VS Code owns it, the file is the source of truth
+    area.addEventListener('change', () => { if (!area.disabled) { o.html = area.value; renderAll(); } });
+
+    // "Edit in VS Code" — pop the code into a real editor; saved changes sync back.
+    const vsRow = document.createElement('div');
+    vsRow.className = 'row-actions';
+    const vsBtn = document.createElement('button');
+    vsBtn.className = 'btn tiny';
+    vsBtn.textContent = editingExt ? t('editor.insp.btn.stopVscode') : t('editor.insp.btn.editVscode');
+    vsBtn.addEventListener('click', () => { if (editingExt) { stopExternalEdit(); renderAll(); } else { startExternalEdit(component); } });
+    vsRow.appendChild(vsBtn);
+
     panel.append(
       field(t('editor.insp.field.componentCode'), area),
+      vsRow,
       checkControl(t('editor.insp.check.scrollOverflow'), o.scroll === true, set('scroll')),
       checkControl(t('editor.insp.check.feedStats'), o.telemetry !== false, set('telemetry')),
     );
+    if (editingExt) {
+      const ext = document.createElement('p');
+      ext.className = 'field-hint warn';
+      ext.textContent = t('editor.insp.note.editingVscode');
+      panel.appendChild(ext);
+    }
     const note = document.createElement('p');
     note.className = 'ed-empty';
     note.textContent = t('editor.insp.note.module');
     panel.appendChild(note);
   }
+}
+
+// "Edit in VS Code" for a module component: hand its code to main (temp file +
+// VS Code launch + file watch), then live-apply every saved change back onto the
+// component. One session at a time; starting a new one stops the old.
+async function startExternalEdit(component) {
+  const html = (component.options && component.options.html) || '';
+  const res = await aegis.moduleEditExternal(html);
+  if (res && res.ok) {
+    if (state.extEdit && state.extEdit.token !== res.token) { try { aegis.moduleEditStop(state.extEdit.token); } catch (e) { /* ignore */ } }
+    state.extEdit = { token: res.token, component };
+    renderAll();
+  } else {
+    const missing = res && res.reason === 'vscode-missing';
+    setStatus(missing ? t('editor.insp.note.vscodeMissing') : ((res && res.error) || t('editor.insp.note.vscodeMissing')), true);
+  }
+}
+function stopExternalEdit() {
+  if (state.extEdit) { try { aegis.moduleEditStop(state.extEdit.token); } catch (e) { /* ignore */ } state.extEdit = null; }
 }
 
 // Not every style control affects every component. Text/layout/glow controls are
@@ -1653,6 +1692,17 @@ async function init() {
   const originText = loaded.origin === 'builtin' ? t('editor.originBuiltin') : loaded.origin;
   $('ed-base').textContent = t('editor.editingOrigin', { id: packId, origin: originText });
   document.title = `Editor — ${state.pack.name}`;
+
+  // Module "Edit in VS Code": apply each externally-saved change back onto the
+  // component (even if it isn't the currently-selected one), then re-render.
+  if (aegis.onModuleExternalChange) {
+    aegis.onModuleExternalChange((msg) => {
+      if (!state.extEdit || !msg || msg.token !== state.extEdit.token) return;
+      if (!state.pack.components.includes(state.extEdit.component)) { state.extEdit = null; return; }
+      state.extEdit.component.options.html = msg.html;
+      renderAll();
+    });
+  }
 
   // Palette
   const palette = $('palette');

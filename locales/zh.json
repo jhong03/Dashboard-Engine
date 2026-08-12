@@ -939,5 +939,9 @@
 
   "panel.init.noPresets": "未找到预设——预设文件夹缺失。",
   "panel.init.startFailed": "面板启动失败：{message}",
-  "editor.insp.gallery.privacyWarn": "你添加的照片会保存在包中。如果你发布或分享它，这些照片将会公开——请勿添加任何私密内容。"
+  "editor.insp.gallery.privacyWarn": "你添加的照片会保存在包中。如果你发布或分享它，这些照片将会公开——请勿添加任何私密内容。",
+  "editor.insp.btn.editVscode": "在 VS Code 中编辑",
+  "editor.insp.btn.stopVscode": "停止同步",
+  "editor.insp.note.editingVscode": "正在 Visual Studio Code 中编辑——保存后会自动同步到这里。",
+  "editor.insp.note.vscodeMissing": "未找到 Visual Studio Code。请安装它（或将 ‘code’ 添加到 PATH），然后重试。"
 }

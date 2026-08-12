@@ -201,6 +201,8 @@ body.editor-body {
   resize: vertical;
   min-height: 240px;
 }
+/* While the code is being edited in VS Code, the file is the source of truth. */
+.ed-code:disabled { opacity: 0.5; cursor: not-allowed; }
 .ed-panel .section {
   font-size: 11.5px;
   font-weight: 600;
