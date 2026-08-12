@@ -884,10 +884,26 @@ function optionFields(component, panel) {
   }
 }
 
+// Not every style control affects every component. Text/layout/glow controls are
+// no-ops on graphical components (image, gallery, module, visualizer — no text,
+// and --glow drives only text/clock-canvas glow), and a divider is force-
+// chromeless (its CSS kills panel/border/padding/box-shadow with !important; only
+// the accent line colour, opacity and rotation do anything). Hide the dead
+// controls so each component shows only what it actually responds to.
+const STYLE_HIDDEN_BY_TYPE = {
+  image: ['textColor', 'font', 'fontScale', 'align', 'place', 'glow'],
+  gallery: ['textColor', 'font', 'fontScale', 'align', 'place', 'glow'],
+  module: ['textColor', 'font', 'fontScale', 'align', 'place', 'glow'],
+  visualizer: ['textColor', 'font', 'fontScale', 'align', 'place', 'glow'],
+  divider: ['textColor', 'font', 'fontScale', 'align', 'place', 'glow', 'panel', 'border', 'padding'],
+};
+function styleShows(type, key) { return !(STYLE_HIDDEN_BY_TYPE[type] || []).includes(key); }
+
 function styleFields(component, panel) {
   const s = component.style;
   const set = (key) => (v) => { s[key] = v; renderAll(); };
   const clear = (key) => () => { s[key] = null; renderAll(); };
+  const show = (key) => styleShows(component.type, key);
 
   const colorField = (label, key) => {
     const input = document.createElement('input');
@@ -902,21 +918,20 @@ function styleFields(component, panel) {
 
   const inh = t('editor.insp.inherit');
   const onOff = [['', inh], ['true', t('editor.insp.opt.on')], ['false', t('editor.insp.opt.off')]];
-  panel.append(
-    sectionLabel(t('editor.insp.section.style')),
-    colorField(t('editor.insp.field.accent'), 'accent'),
-    colorField(t('editor.insp.field.textColour'), 'textColor'),
-    field(t('editor.insp.field.font'), selectControl(s.font || '', [['', inh], ...fontChoices()], (v) => { s.font = v || null; renderAll(); })),
-    field(t('editor.insp.dyn.scale', { value: s.fontScale ?? inh }), rangeControl(s.fontScale ?? 1, 0.5, 3, 0.05, set('fontScale')), clear('fontScale')),
-    field(t('editor.insp.field.align'), selectControl(s.align || '', [['', inh], ['left', t('editor.insp.opt.alignLeft')], ['center', t('editor.insp.opt.alignCenter')], ['right', t('editor.insp.opt.alignRight')]], (v) => { s.align = v || null; renderAll(); })),
-    field(t('editor.insp.field.placement'), selectControl(s.place || '', [['', inh], ['top', t('editor.insp.opt.placeTop')], ['center', t('editor.insp.opt.placeMiddle')], ['bottom', t('editor.insp.opt.placeBottom')], ['spread', t('editor.insp.opt.placeSpread')]], (v) => { s.place = v || null; renderAll(); })),
-    field(t('editor.insp.field.glassPanel'), selectControl(s.panel === null ? '' : String(s.panel), onOff, (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })),
-    field(t('editor.insp.field.border'), selectControl(s.border === null ? '' : String(s.border), onOff, (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })),
-    field(t('editor.insp.dyn.padding', { value: s.padding ?? inh }), rangeControl(s.padding ?? 18, 0, 48, 1, set('padding')), clear('padding')),
-    field(t('editor.insp.dyn.opacity', { value: s.opacity ?? inh }), rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')),
-    field(t('editor.insp.dyn.glow', { value: s.glow ?? inh }), rangeControl(s.glow ?? 0.5, 0, 1, 0.05, set('glow')), clear('glow')),
-    field(t('editor.insp.dyn.rotate', { value: s.rotate ?? 0 }), rangeControl(s.rotate ?? 0, -20, 20, 0.5, set('rotate')), clear('rotate')),
-  );
+  const rows = [sectionLabel(t('editor.insp.section.style'))];
+  if (show('accent')) rows.push(colorField(t('editor.insp.field.accent'), 'accent'));
+  if (show('textColor')) rows.push(colorField(t('editor.insp.field.textColour'), 'textColor'));
+  if (show('font')) rows.push(field(t('editor.insp.field.font'), selectControl(s.font || '', [['', inh], ...fontChoices()], (v) => { s.font = v || null; renderAll(); })));
+  if (show('fontScale')) rows.push(field(t('editor.insp.dyn.scale', { value: s.fontScale ?? inh }), rangeControl(s.fontScale ?? 1, 0.5, 3, 0.05, set('fontScale')), clear('fontScale')));
+  if (show('align')) rows.push(field(t('editor.insp.field.align'), selectControl(s.align || '', [['', inh], ['left', t('editor.insp.opt.alignLeft')], ['center', t('editor.insp.opt.alignCenter')], ['right', t('editor.insp.opt.alignRight')]], (v) => { s.align = v || null; renderAll(); })));
+  if (show('place')) rows.push(field(t('editor.insp.field.placement'), selectControl(s.place || '', [['', inh], ['top', t('editor.insp.opt.placeTop')], ['center', t('editor.insp.opt.placeMiddle')], ['bottom', t('editor.insp.opt.placeBottom')], ['spread', t('editor.insp.opt.placeSpread')]], (v) => { s.place = v || null; renderAll(); })));
+  if (show('panel')) rows.push(field(t('editor.insp.field.glassPanel'), selectControl(s.panel === null ? '' : String(s.panel), onOff, (v) => { s.panel = v === '' ? null : v === 'true'; renderAll(); })));
+  if (show('border')) rows.push(field(t('editor.insp.field.border'), selectControl(s.border === null ? '' : String(s.border), onOff, (v) => { s.border = v === '' ? null : v === 'true'; renderAll(); })));
+  if (show('padding')) rows.push(field(t('editor.insp.dyn.padding', { value: s.padding ?? inh }), rangeControl(s.padding ?? 18, 0, 48, 1, set('padding')), clear('padding')));
+  if (show('opacity')) rows.push(field(t('editor.insp.dyn.opacity', { value: s.opacity ?? inh }), rangeControl(s.opacity ?? 1, 0.05, 1, 0.05, set('opacity')), clear('opacity')));
+  if (show('glow')) rows.push(field(t('editor.insp.dyn.glow', { value: s.glow ?? inh }), rangeControl(s.glow ?? 0.5, 0, 1, 0.05, set('glow')), clear('glow')));
+  if (show('rotate')) rows.push(field(t('editor.insp.dyn.rotate', { value: s.rotate ?? 0 }), rangeControl(s.rotate ?? 0, -20, 20, 0.5, set('rotate')), clear('rotate')));
+  panel.append(...rows);
 }
 
 function renderComponentTab(panel) {
