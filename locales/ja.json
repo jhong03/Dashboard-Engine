@@ -938,5 +938,6 @@
   "panel.env.noFfmpeg": "FFmpeg がインストールされていません——生の音声のみ。音色とキャラクターはバイパスされます。",
 
   "panel.init.noPresets": "プリセットが見つかりません——プリセットフォルダーがありません。",
-  "panel.init.startFailed": "パネルの起動に失敗しました：{message}"
+  "panel.init.startFailed": "パネルの起動に失敗しました：{message}",
+  "editor.insp.gallery.privacyWarn": "追加した写真はパックに保存されます。公開または共有すると写真も公開されるため、プライベートなものは追加しないでください。"
 }

@@ -938,5 +938,6 @@
   "panel.env.noFfmpeg": "FFmpeg no está instalado: solo voz en bruto; el tono y el carácter se omiten.",
 
   "panel.init.noPresets": "No se encontraron ejemplos: falta la carpeta de ejemplos.",
-  "panel.init.startFailed": "El panel no pudo iniciarse: {message}"
+  "panel.init.startFailed": "El panel no pudo iniciarse: {message}",
+  "editor.insp.gallery.privacyWarn": "Las fotos que añadas se guardan dentro del paquete. Si lo publicas o lo compartes, se vuelven públicas: no incluyas nada privado."
 }

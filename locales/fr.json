@@ -938,5 +938,6 @@
   "panel.env.noFfmpeg": "FFmpeg n’est pas installé — voix brute uniquement ; le timbre et le caractère sont contournés.",
 
   "panel.init.noPresets": "Aucun préréglage trouvé — le dossier des préréglages est manquant.",
-  "panel.init.startFailed": "Le panneau n’a pas pu démarrer : {message}"
+  "panel.init.startFailed": "Le panneau n’a pas pu démarrer : {message}",
+  "editor.insp.gallery.privacyWarn": "Les photos que vous ajoutez sont enregistrées dans le pack. Si vous le publiez ou le partagez, elles deviennent publiques — n’incluez rien de privé."
 }

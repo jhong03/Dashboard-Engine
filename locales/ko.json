@@ -938,5 +938,6 @@
   "panel.env.noFfmpeg": "FFmpeg가 설치되지 않았습니다 — 원시 목소리만 사용되며 음색과 캐릭터는 건너뜁니다.",
 
   "panel.init.noPresets": "프리셋을 찾을 수 없습니다 — 프리셋 폴더가 없습니다.",
-  "panel.init.startFailed": "패널을 시작하지 못했습니다: {message}"
+  "panel.init.startFailed": "패널을 시작하지 못했습니다: {message}",
+  "editor.insp.gallery.privacyWarn": "추가한 사진은 팩에 저장됩니다. 게시하거나 공유하면 사진도 공개되므로 비공개 항목은 추가하지 마세요."
 }

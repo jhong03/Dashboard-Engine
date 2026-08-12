@@ -704,6 +704,14 @@ function optionFields(component, panel) {
     });
     panel.append(field(t('editor.insp.field.photos'), list));
 
+    // Gallery photos are bundled INTO the pack and are NOT stripped by the publish
+    // sanitizer (unlike text/labels/location) — so anything added here goes public
+    // if the pack is published or shared. Warn before the user adds personal shots.
+    const gwarn = document.createElement('p');
+    gwarn.className = 'field-hint warn';
+    gwarn.textContent = t('editor.insp.gallery.privacyWarn');
+    panel.append(gwarn);
+
     const existing = Object.keys(state.assets).filter((r) => !o.images.includes(r));
     if (existing.length) {
       panel.append(field(t('editor.insp.field.addExisting'), selectControl('', [['', t('editor.insp.opt.chooseImage')], ...existing.map((r) => [r, r.replace('assets/', '')])], (v) => { if (v) { o.images.push(v); renderAll(); } })));

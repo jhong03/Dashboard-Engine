@@ -938,5 +938,6 @@
   "panel.env.noFfmpeg": "未安装 FFmpeg——仅原始语音；音色和特性被跳过。",
 
   "panel.init.noPresets": "未找到预设——预设文件夹缺失。",
-  "panel.init.startFailed": "面板启动失败：{message}"
+  "panel.init.startFailed": "面板启动失败：{message}",
+  "editor.insp.gallery.privacyWarn": "你添加的照片会保存在包中。如果你发布或分享它，这些照片将会公开——请勿添加任何私密内容。"
 }

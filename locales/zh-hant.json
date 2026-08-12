@@ -892,5 +892,6 @@
   "panel.env.noPiper": "未安裝 Piper——合成回退到系統語音。",
   "panel.env.noFfmpeg": "未安裝 FFmpeg——僅原始語音；音色和特性被跳過。",
   "panel.init.noPresets": "未找到預設——預設資料夾缺失。",
-  "panel.init.startFailed": "面板啟動失敗：{message}"
+  "panel.init.startFailed": "面板啟動失敗：{message}",
+  "editor.insp.gallery.privacyWarn": "你新增的相片會儲存在包中。如果你發布或分享它，這些相片將會公開——請勿加入任何私密內容。"
 }

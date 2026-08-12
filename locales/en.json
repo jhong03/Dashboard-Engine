@@ -938,5 +938,6 @@
   "panel.env.noFfmpeg": "FFmpeg isn’t installed — raw voice only; timbre and character are bypassed.",
 
   "panel.init.noPresets": "No presets found — the presets folder is missing.",
-  "panel.init.startFailed": "The panel failed to start: {message}"
+  "panel.init.startFailed": "The panel failed to start: {message}",
+  "editor.insp.gallery.privacyWarn": "Photos you add are saved inside the pack. If you publish or share it, they become public — don’t include anything private."
 }
