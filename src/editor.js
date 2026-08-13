@@ -1739,11 +1739,16 @@ async function init() {
     const li = document.createElement('li');
     li.className = 'pal-item';
     li.draggable = true;
-    // The English label/hint in PALETTE is the fallback; en.json carries the
-    // canonical strings so translators localize the component list.
-    li.textContent = t(`editor.palette.${item.type}.label`);
+    // en.json carries the canonical strings so translators localize the palette;
+    // if a key is ever missing, fall back to the English label/hint in PALETTE
+    // (t() returns the key itself when unknown) rather than showing a raw key.
+    const labelKey = `editor.palette.${item.type}.label`;
+    const hintKey = `editor.palette.${item.type}.hint`;
+    const labelStr = t(labelKey);
+    li.textContent = labelStr === labelKey ? item.label : labelStr;
     const hint = document.createElement('small');
-    hint.textContent = t(`editor.palette.${item.type}.hint`);
+    const hintStr = t(hintKey);
+    hint.textContent = hintStr === hintKey ? item.hint : hintStr;
     li.appendChild(hint);
     li.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/aegis-type', item.type));
     li.addEventListener('dblclick', () => addComponent(item.type, 50, 50));
