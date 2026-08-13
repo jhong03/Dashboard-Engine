@@ -396,6 +396,19 @@ function chosenDisplay() {
   return { display: pinned || screen.getPrimaryDisplay(), explicit: Boolean(pinned) };
 }
 
+// The wallpaper's monitor as a (Left,Top) rank — the SAME index desktop-attach.ps1
+// and the full-screen watcher use, so all three agree on which screen it's on.
+// The full-screen pause keys off THIS monitor (not the primary), so a full-screen
+// app on another screen doesn't freeze the wallpaper.
+function dashboardMonitorIndex() {
+  try {
+    const id = chosenDisplay().display.id;
+    return rankedDisplays().findIndex((d) => d.id === id);
+  } catch (err) {
+    return -1; // fail-soft → the watcher falls back to the primary monitor
+  }
+}
+
 // Reparent the dashboard under the shell's wallpaper layer, optionally moving it
 // onto a specific monitor (rank in rankedDisplays; -1 = leave bounds as set).
 // The hwnd is program-generated; the PowerShell argv is fixed (CLAUDE.md rule).
@@ -435,6 +448,10 @@ async function createDashboardWindow() {
   // (We deliberately do NOT persist a pin here — a null displayId is the valid
   // "Auto / follow primary" choice, and pinning would fight it.)
   const monitorIndex = rankedDisplays().findIndex((d) => d.id === display.id);
+  // Point the full-screen watcher at THIS monitor so it pauses the wallpaper only
+  // when something covers the screen the wallpaper is actually on. Covers first
+  // launch, a display re-pick, and a monitor plug/unplug (all route through here).
+  if (presenceMonitor) presenceMonitor.setMonitor(monitorIndex);
 
   dashboardWindow = new BrowserWindow({
     x: display.bounds.x,
@@ -609,7 +626,7 @@ function startPresenceMonitoring() {
   presenceMonitor = createPresenceMonitor(__dirname, (fullscreen) => {
     isFullscreen = fullscreen;
     sendDesktopPower();
-  });
+  }, dashboardMonitorIndex());
   // "Now playing" from the Windows media session — pushed to the desktop for the
   // `nowplaying` component (personal data; never enters a pack).
   // Exclude our OWN media session (the background-music <audio> registers with
