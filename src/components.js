@@ -2755,6 +2755,13 @@ function createRenderer(services) {
     const rows = new Map();   // id -> { root, iconWrap, name, slider, mute, dragging }
     let draggingId = null;    // don't rebuild the row a user is actively dragging
     let pending = null;       // a snapshot that arrived mid-drag, applied on release
+    // A row stays "sticky" to the user's own value for a moment after they touch
+    // it, so the ~1.2 s enumeration poll (which may still report the pre-change
+    // value, in flight when the SET landed) can't rubberband the slider back.
+    const recentSet = new Map(); // id -> last user-interaction timestamp
+    const GRACE_MS = 1600;       // longer than the poll interval + SET-apply latency
+    const touch = (id) => recentSet.set(id, Date.now());
+    const locked = (h, id) => h.dragging || (Date.now() - (recentSet.get(id) || 0) < GRACE_MS);
 
     // Throttle the live SET during a drag (drag fires ~60/s; the daemon SET is a
     // COM call). The exact final value is always sent again on release.
@@ -2787,15 +2794,17 @@ function createRenderer(services) {
         const endDrag = () => {
           if (!h.dragging) return;
           h.dragging = false; draggingId = null;
+          touch(item.id);
           svc.set(item.id, { volume: Number(slider.value) });
-          if (pending) { const p = pending; pending = null; paint(p); }
+          if (pending) { const p = pending; pending = null; paint(p); } // updateRow keeps this row sticky
         };
-        slider.addEventListener('pointerdown', () => { h.dragging = true; draggingId = item.id; });
+        slider.addEventListener('pointerdown', () => { h.dragging = true; draggingId = item.id; touch(item.id); });
         slider.addEventListener('pointerup', endDrag);
         slider.addEventListener('pointercancel', endDrag);
-        slider.addEventListener('input', () => { slider.style.setProperty('--fill', `${slider.value}%`); sendVol(item.id, Number(slider.value)); });
+        slider.addEventListener('input', () => { touch(item.id); slider.style.setProperty('--fill', `${slider.value}%`); sendVol(item.id, Number(slider.value)); });
         mute.addEventListener('click', () => {
           const next = !root.classList.contains('muted');
+          touch(item.id);
           root.classList.toggle('muted', next);           // optimistic; next poll confirms
           mute.textContent = next ? '🔇' : '🔊';
           svc.set(item.id, { muted: next });
@@ -2818,10 +2827,15 @@ function createRenderer(services) {
         h.iconWrap.style.backgroundImage = '';
         h.iconWrap.textContent = item.system ? '🔔' : '🔊';
       }
-      if (!h.dragging) h.slider.value = String(item.volume);
+      // While the user is dragging (or just did), keep THEIR value/mute — only an
+      // untouched row follows the incoming snapshot. The --fill always tracks
+      // whatever value is actually shown.
+      if (!locked(h, item.id)) {
+        h.slider.value = String(item.volume);
+        h.root.classList.toggle('muted', !!item.muted);
+        h.mute.textContent = item.muted ? '🔇' : '🔊';
+      }
       h.slider.style.setProperty('--fill', `${h.slider.value}%`);
-      h.root.classList.toggle('muted', !!item.muted);
-      h.mute.textContent = item.muted ? '🔇' : '🔊';
     };
 
     const itemsFrom = (state) => {
