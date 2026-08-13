@@ -695,6 +695,9 @@ body {
 /* Steam Workshop browse section in the Browse tab. It lives inside .gallery
    (a grid), so it must span every column for its own inner grid to spread. */
 .workshop-section { grid-column: 1 / -1; margin-bottom: 14px; }
+/* "Open Workshop in Steam" prompt shown when the Manager has no Steam session. */
+.ws-gate { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 44px 24px; text-align: center; }
+.ws-gate .hint { max-width: 440px; margin: 0; }
 .ws-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ws-controls .lib-search { width: 180px; }
 

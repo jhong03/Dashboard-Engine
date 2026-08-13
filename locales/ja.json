@@ -943,5 +943,8 @@
   "editor.insp.btn.editVscode": "VS Code で編集",
   "editor.insp.btn.stopVscode": "同期を停止",
   "editor.insp.note.editingVscode": "Visual Studio Code で編集中——保存した変更はここに同期されます。",
-  "editor.insp.note.vscodeMissing": "Visual Studio Code が見つかりません。インストールして（または ‘code’ を PATH に追加して）から、もう一度お試しください。"
+  "editor.insp.note.vscodeMissing": "Visual Studio Code が見つかりません。インストールして（または ‘code’ を PATH に追加して）から、もう一度お試しください。",
+  "manager.workshop.needsSteam": "閲覧・購読・公開するには、Steam からワークショップを開きます。Steam に短い起動ダイアログが表示されますが、正常です。",
+  "manager.workshop.openInSteam": "Steam でワークショップを開く",
+  "manager.workshop.openingSteam": "Steam を開いています…"
 }

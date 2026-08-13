@@ -25,6 +25,7 @@ const library = {
   registries: [],
   indexes: new Map(),   // registry url → fetched index (or {ok:false})
   selected: null,       // { kind: 'local', item } | { kind: 'remote', url, entry, update } | { kind: 'workshop', item, inLibrary }
+  wsAccess: null,       // Workshop usable now? null=unknown, true (dev/session), false (needs Steam session)
 };
 
 // ── Small helpers ───────────────────────────────────────────────────────────
@@ -421,17 +422,24 @@ function renderGallery() {
     return;
   }
 
+  // Both Workshop tabs need a Steam session; check once when entering them.
+  if ((library.tab === 'published' || library.tab === 'browse') && library.wsAccess === null) refreshWorkshopAccess();
+
   if (library.tab === 'published') {
+    // Published is entirely Steam — gate the whole tab behind "Open in Steam".
+    if (library.wsAccess === false) { gallery.appendChild(workshopGate()); return; }
     renderPublishedSection(gallery);
     return;
   }
 
   // Steam Workshop — browse / subscribe / install inside the app (fail-soft;
-  // filled async so the registry feeds below aren't blocked on Steam).
+  // filled async so the registry feeds below aren't blocked on Steam). Only the
+  // Workshop section is gated; the registry feeds below don't need Steam.
   const wsBox = document.createElement('div');
   wsBox.className = 'workshop-section';
   gallery.appendChild(wsBox);
-  renderWorkshopSection(wsBox);
+  if (library.wsAccess === false) wsBox.appendChild(workshopGate());
+  else renderWorkshopSection(wsBox);
 
   if (library.registries.length === 0) {
     const empty = document.createElement('p');
@@ -785,6 +793,39 @@ function hintP(text) {
   p.className = 'hint';
   p.textContent = text;
   return p;
+}
+
+// The Workshop needs a Steam-tracked session (which owns the Steam client). When the
+// Manager was opened directly — e.g. from the tray — there's none, so the Workshop
+// tabs show this "Open in Steam" prompt that spawns a session on demand. That's the
+// ONLY time Steam's launch dialog appears; a plain tray open never triggers it.
+// dev / a live session → no gate. The session-connected event reloads the view.
+function workshopGate() {
+  const wrap = document.createElement('div');
+  wrap.className = 'ws-gate';
+  wrap.appendChild(hintP(t('manager.workshop.needsSteam')));
+  const btn = document.createElement('button');
+  btn.className = 'btn';
+  btn.textContent = t('manager.workshop.openInSteam');
+  btn.addEventListener('click', async () => {
+    btn.disabled = true;
+    btn.textContent = t('manager.workshop.openingSteam');
+    try { await aegis.workshopLaunchSession(); } catch (e) { /* fail-soft */ }
+  });
+  wrap.appendChild(btn);
+  return wrap;
+}
+
+// Fast local check (main reports whether a Steam session is connected). Re-renders
+// the Workshop tabs when the answer changes.
+function refreshWorkshopAccess() {
+  aegis.workshopAvailable().then((a) => {
+    const ok = !!(a && a.available);
+    if (library.wsAccess !== ok) {
+      library.wsAccess = ok;
+      if (library.tab === 'browse' || library.tab === 'published') renderGallery();
+    }
+  }).catch(() => {});
 }
 
 // Subscribe / Add-to-library / In-library button + status, shared by the browse
@@ -4067,6 +4108,16 @@ async function init() {
     renderGallery();
     renderDetail();
   });
+
+  // A Steam session connected (the user opened the Workshop, which bounced through
+  // Steam) — grant Workshop access and reload the Workshop views.
+  if (aegis.onWorkshopSession) {
+    aegis.onWorkshopSession((msg) => {
+      library.wsAccess = !!(msg && msg.connected);
+      if (library.wsAccess) { ws.loaded = false; mine.loaded = false; voiceWs.loaded = false; voiceMine.loaded = false; }
+      if (library.tab === 'browse' || library.tab === 'published') renderGallery();
+    });
+  }
 
   // A pack was saved in the editor (or hot-reloaded on disk) — refresh so the
   // gallery thumbnail, detail preview, and pack list reflect it immediately,

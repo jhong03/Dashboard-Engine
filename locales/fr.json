@@ -943,5 +943,8 @@
   "editor.insp.btn.editVscode": "Modifier dans VS Code",
   "editor.insp.btn.stopVscode": "Arrêter la synchronisation",
   "editor.insp.note.editingVscode": "Édition dans Visual Studio Code — les modifications enregistrées se synchronisent ici.",
-  "editor.insp.note.vscodeMissing": "Visual Studio Code est introuvable. Installez-le (ou ajoutez ‘code’ à votre PATH), puis réessayez."
+  "editor.insp.note.vscodeMissing": "Visual Studio Code est introuvable. Installez-le (ou ajoutez ‘code’ à votre PATH), puis réessayez.",
+  "manager.workshop.needsSteam": "Pour parcourir, vous abonner et publier, ouvrez le Workshop via Steam. Steam affichera une brève fenêtre de lancement, c’est normal.",
+  "manager.workshop.openInSteam": "Ouvrir le Workshop dans Steam",
+  "manager.workshop.openingSteam": "Ouverture de Steam…"
 }

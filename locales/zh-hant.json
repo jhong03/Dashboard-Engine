@@ -897,5 +897,8 @@
   "editor.insp.btn.editVscode": "在 VS Code 中編輯",
   "editor.insp.btn.stopVscode": "停止同步",
   "editor.insp.note.editingVscode": "正在 Visual Studio Code 中編輯——儲存後會自動同步到這裡。",
-  "editor.insp.note.vscodeMissing": "找不到 Visual Studio Code。請安裝它（或將 ‘code’ 加入 PATH），然後重試。"
+  "editor.insp.note.vscodeMissing": "找不到 Visual Studio Code。請安裝它（或將 ‘code’ 加入 PATH），然後重試。",
+  "manager.workshop.needsSteam": "瀏覽、訂閱和發布需要透過 Steam 開啟創意工坊。Steam 會顯示一個短暫的啟動提示——這是正常的。",
+  "manager.workshop.openInSteam": "在 Steam 中開啟創意工坊",
+  "manager.workshop.openingSteam": "正在開啟 Steam……"
 }

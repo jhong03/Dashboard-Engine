@@ -48,6 +48,15 @@ const bridge = {
 
   // Steam Workshop (prototype). All fail-soft when Steam isn't available.
   workshopStatus: () => ipcRenderer.invoke('aegis:workshop:status'),
+  // Is the Workshop usable now (dev-local, or a live Steam session)? And a way to
+  // spawn a session on demand (relaunch through Steam) when it isn't.
+  workshopAvailable: () => ipcRenderer.invoke('aegis:workshop:available'),
+  workshopLaunchSession: () => ipcRenderer.invoke('aegis:workshop:launchSession'),
+  onWorkshopSession: (callback) => {
+    const handler = (_e, msg) => callback(msg);
+    ipcRenderer.on('aegis:workshop:session', handler);
+    return () => ipcRenderer.removeListener('aegis:workshop:session', handler);
+  },
   workshopPublish: (req) => ipcRenderer.invoke('aegis:workshop:publish', {
     packId: String(req.packId),
     title: String(req.title || ''),

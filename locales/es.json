@@ -943,5 +943,8 @@
   "editor.insp.btn.editVscode": "Editar en VS Code",
   "editor.insp.btn.stopVscode": "Dejar de sincronizar",
   "editor.insp.note.editingVscode": "Editando en Visual Studio Code: los cambios guardados se sincronizan aquí.",
-  "editor.insp.note.vscodeMissing": "No se encontró Visual Studio Code. Instálalo (o añade ‘code’ a tu PATH) e inténtalo de nuevo."
+  "editor.insp.note.vscodeMissing": "No se encontró Visual Studio Code. Instálalo (o añade ‘code’ a tu PATH) e inténtalo de nuevo.",
+  "manager.workshop.needsSteam": "Para explorar, suscribirte y publicar, abre el Workshop a través de Steam. Steam mostrará un breve aviso de inicio; es normal.",
+  "manager.workshop.openInSteam": "Abrir el Workshop en Steam",
+  "manager.workshop.openingSteam": "Abriendo Steam…"
 }

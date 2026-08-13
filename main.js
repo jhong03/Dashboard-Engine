@@ -176,18 +176,31 @@ function createPanelWindow() {
   panelWindow.on('closed', () => { panelWindow = null; });
 }
 
-// Tray / icon "Open Manager": when packaged, relaunch through Steam so a fresh
-// SESSION process opens the Manager and Steam tracks "playing" (opening the window
-// directly, in the engine, bypasses Steam entirely — the reason a re-open didn't
-// show "playing"). Already open → just focus it. Dev / no Steam → open directly.
+// Open the Manager directly, no Steam relaunch — so opening it from the tray for
+// everyday use (switch packs, edit, voice, settings) never triggers Steam's
+// "launching a game" dialog. Steam only needs to be involved when the user actually
+// opens the WORKSHOP, which is bounced on demand (launchWorkshopSession → the Browse/
+// Published tabs). Already open → just focus it.
 function openManagerFromTray() {
   if (managerWindow && !managerWindow.isDestroyed()) { bringToFront(managerWindow); return; }
-  if (app.isPackaged) {
-    const appId = require('./lib/workshop').STEAM_APP_ID;
-    shell.openExternal(`steam://rungameid/${appId}`).catch(() => createManagerWindow());
-  } else {
-    createManagerWindow();
-  }
+  createManagerWindow();
+}
+
+// The Workshop needs a Steam-tracked session (which owns the Steam client). Relaunch
+// through Steam so one spawns; the session connects to this engine and the Manager
+// picks up Workshop access. Packaged only — unpackaged dev uses its own client.
+function launchWorkshopSession() {
+  if (!app.isPackaged) return false; // dev: Workshop runs locally, no session needed
+  if (sessionLink && sessionLink.hasSession()) return true; // already have one
+  try { shell.openExternal(`steam://rungameid/${require('./lib/workshop').STEAM_APP_ID}`); return true; }
+  catch (e) { return false; }
+}
+
+// Whether the Workshop can run right now: unpackaged dev (own client) or a live
+// Steam session. The Manager uses this to gate the Workshop tabs behind an
+// "Open in Steam" prompt instead of a bare error.
+function workshopAvailable() {
+  return !app.isPackaged || !!(sessionLink && sessionLink.hasSession());
 }
 
 function createManagerWindow() {
@@ -1785,6 +1798,10 @@ if (IS_SESSION) {
           }
         }
       },
+      // Workshop needs a Steam-tracked session; the Manager gates the Workshop tabs
+      // on this and bounces through Steam only when the user opens one.
+      workshopAvailable: () => workshopAvailable(),
+      launchWorkshopSession: () => launchWorkshopSession(),
       // Settings screen: performance changes must reach the live desktop, and
       // the OS login item is owned by main.
       onPerformanceChanged: () => sendDesktopPower(),
@@ -1901,6 +1918,11 @@ if (IS_SESSION) {
         sessionLink = require('./lib/session-link').serve({
           onOpen: () => {
             createManagerWindow();
+            // A session just connected — a Manager already open on a Workshop tab
+            // can now load it (it bounced through Steam to get here).
+            if (managerWindow && !managerWindow.isDestroyed()) {
+              try { managerWindow.webContents.send('aegis:workshop:session', { connected: true }); } catch (e) { /* window gone */ }
+            }
             if (pendingAchievements.size && sessionLink && sessionLink.hasSession()) {
               for (const name of Array.from(pendingAchievements)) sessionLink.call('unlock', [name]).catch(() => {});
               pendingAchievements.clear();
