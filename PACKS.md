@@ -197,14 +197,18 @@ art behind widgets.
 | `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
 | `notifications` | `limit` (1–12), `label`, `showApp` | the user's live Windows notifications (needs notification access) |
 | `launcher` | `pinned`, `recent`, `running`, `labels`, `iconSize` (`s`/`m`/`l`), `label` | the user's pinned/recent/open apps as clickable tiles |
+| `mixer` | `showMaster`, `label` | per-app volume mixer (Windows): a master slider + a live volume slider + mute for every app currently using audio |
 | `assistant` | `label`, `button` | a console line that opens the AI chat when clicked on the desktop (connects to the user's own OpenAI-compatible endpoint — a local model, a free-tier key, or their own key; configured in the manager) |
 | `module` | `html`, `scroll`, `telemetry` | **your own component** — sandboxed HTML/CSS/JS you write. See [Module SDK](#module-sdk) below |
 
-`calendar`, `agenda`, `notifications`, and `launcher` display the **user's own
-data** (planner events managed in the engine's Planner tab; app pins in its
-Launcher tab; live Windows notifications from the system). A pack only places
-and styles these components — this data is personal and is never part of a
-pack, an export, or a registry download. The `notifications` component reads
+`calendar`, `agenda`, `notifications`, `launcher`, and `mixer` display the
+**user's own data** (planner events managed in the engine's Planner tab; app
+pins in its Launcher tab; live Windows notifications from the system; the running
+apps' audio sessions for the mixer). A pack only places and styles these
+components — this data is personal and is never part of a pack, an export, or a
+registry download. The `mixer` shows only apps **currently using audio** (the
+Windows Volume Mixer model) and is Windows-only + interactive on the desktop
+(a static sample in previews); its sliders drive the Windows Core Audio API. The `notifications` component reads
 the system's notifications and needs access granted under Windows Settings ›
 Privacy › Notifications; without it, the component shows how to enable it.
 

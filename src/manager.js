@@ -1870,6 +1870,7 @@ const CREATE_COMPONENTS = [
   ['agenda', 'Your upcoming reminders', 'days, limit, label'],
   ['notifications', 'Your live Windows notifications', 'limit, label, showApp'],
   ['launcher', 'Your pinned / recent / open apps', 'pinned, recent, running, labels, iconSize, label'],
+  ['mixer', 'Per-app volume for your audio apps (Windows)', 'showMaster, label'],
   ['assistant', 'The AI console on the wallpaper', 'label, button'],
   ['module', 'Your own sandboxed HTML/CSS/JS', 'html, scroll, telemetry'],
 ];
@@ -2062,6 +2063,7 @@ const BUILDER_COMPONENTS = [
   ['agenda', 'Agenda', false],
   ['notifications', 'Notifications', false],
   ['launcher', 'App launcher', false],
+  ['mixer', 'Volume mixer', false],
   ['nowplaying', 'Now playing', false],
   ['visualizer', 'Audio visualizer', false],
   ['gallery', 'Photo gallery', false],
@@ -2084,6 +2086,7 @@ const STARTER_OPTS = {
   calendar: {}, agenda: { days: 7, limit: 6 }, notifications: { limit: 5 },
   pomodoro: { focusMin: 25, shortBreakMin: 5, longBreakMin: 15, cyclesBeforeLong: 4 },
   launcher: { pinned: true, recent: true }, status: {}, assistant: {},
+  mixer: { showMaster: true },
   nowplaying: { showArt: true, showControls: true },
   visualizer: { style: 'bars' },
   text: { text: 'HELLO' }, gallery: { images: [], interval: 6, fit: 'cover' },
@@ -3522,6 +3525,7 @@ const COMPONENT_LABELS = {
   countdown: 'countdown',
   weather: 'weather', agenda: 'agenda', notifications: 'notifications',
   launcher: 'app launcher', assistant: 'AI assistant', module: 'custom module',
+  mixer: 'volume mixer',
 };
 
 // A ready-to-post Workshop description (Steam BBCode) built from the pack —

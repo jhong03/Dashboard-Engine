@@ -76,6 +76,13 @@ const renderer = AegisComponents.createRenderer({
     control: (action) => aegis.mediaControl(action),
     onChange: (cb) => aegis.onMediaChanged(cb),
   },
+  // Per-app volume mixer — present ONLY on the desktop, so the mixer component is
+  // interactive here and a static sample in editor/manager previews.
+  audio: {
+    state: () => aegis.audioState(),
+    set: (id, patch) => aegis.audioSet(id, patch),
+    onChange: (cb) => aegis.onAudioChanged(cb),
+  },
   // Spoken health alerts. Present ONLY on the desktop, so editor /
   // manager previews never speak. Main gates on the opt-in setting + rate-limits;
   // here we just play the returned PCM (with a light local throttle so a burst of

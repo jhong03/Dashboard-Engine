@@ -38,6 +38,7 @@ const PALETTE = [
   { type: 'agenda', label: 'Agenda', hint: 'your upcoming reminders' },
   { type: 'notifications', label: 'Notifications', hint: 'live Windows notifications' },
   { type: 'launcher', label: 'Launcher', hint: 'your pinned & recent apps' },
+  { type: 'mixer', label: 'Volume mixer', hint: 'per-app volume (Windows)' },
   { type: 'nowplaying', label: 'Now playing', hint: 'Spotify / any media, with controls' },
   { type: 'visualizer', label: 'Audio visualizer', hint: 'reacts to any system audio' },
   { type: 'assistant', label: 'Assistant console', hint: 'opens the AI chat' },
@@ -83,6 +84,7 @@ const DEFAULT_RECTS = {
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
   'hud-clock': [10, 10, 24, 42], 'ring-clock': [10, 10, 22, 38], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
   'assistant': [10, 10, 60, 6], 'nowplaying': [10, 10, 30, 12], 'visualizer': [10, 10, 30, 16], 'module': [10, 10, 26, 26],
+  'mixer': [10, 10, 26, 30],
 };
 
 function defaultOptions(type, assets) {
@@ -105,6 +107,7 @@ function defaultOptions(type, assets) {
     'agenda': { days: 7, limit: 6, label: null },
     'notifications': { limit: 6, label: null, showApp: true },
     'launcher': { pinned: true, recent: true, running: false, labels: true, iconSize: 'm', label: null },
+    'mixer': { showMaster: true, label: null },
     'hud-clock': { format: '24h', seconds: true, showDate: true },
     'ring-clock': { style: 'minimal', format: '24h', seconds: true, showDate: true },
     'cores': { label: null },
@@ -862,6 +865,15 @@ function optionFields(component, panel) {
     const note = document.createElement('p');
     note.className = 'ed-empty';
     note.textContent = t('editor.insp.note.launcher');
+    panel.appendChild(note);
+  } else if (type === 'mixer') {
+    panel.append(
+      checkControl(t('editor.insp.check.showMaster'), o.showMaster !== false, set('showMaster')),
+      field(t('editor.insp.field.label'), textControl(o.label, (v) => { o.label = v || null; renderAll(); }, t('editor.insp.ph.volume'))),
+    );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = t('editor.insp.note.mixer');
     panel.appendChild(note);
   } else if (type === 'nowplaying') {
     panel.append(

@@ -96,6 +96,15 @@ const bridge = {
   mediaState: () => ipcRenderer.invoke('aegis:media:state'),
   mediaControl: (action) => ipcRenderer.invoke('aegis:media:control', String(action)),
   onMediaChanged: subscription('aegis:media:changed'),
+  // Per-app volume mixer (Windows Core Audio). Read the sessions, set a per-app
+  // (or master) volume/mute. Personal data (running apps), never in a pack.
+  audioState: () => ipcRenderer.invoke('aegis:audio:state'),
+  audioSet: (id, patch) => ipcRenderer.invoke('aegis:audio:set', {
+    id: String(id),
+    volume: (patch && patch.volume !== undefined) ? Number(patch.volume) : undefined,
+    muted: (patch && patch.muted !== undefined) ? Boolean(patch.muted) : undefined,
+  }),
+  onAudioChanged: subscription('aegis:audio:changed'),
 };
 
 if (window.top === window) contextBridge.exposeInMainWorld('aegis', bridge);

@@ -14,6 +14,7 @@ const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
 const { createPresenceMonitor } = require('./lib/presence');
 const { createMediaMonitor } = require('./lib/media');
+const { createAudioMixer } = require('./lib/audiomixer');
 const voicebank = require('./lib/voicebank');
 const profiles = require('./lib/profiles');
 const packs = require('./lib/packs');
@@ -140,6 +141,12 @@ let presenceMonitor = null;
 let mediaMonitor = null;
 let isFullscreen = false;
 let onBattery = false;
+// Per-app volume mixer (Windows Core Audio). Created lazily the first time a pack
+// with a `mixer` component is active; polls only while that component is visible.
+let audioMixer = null;
+let lastAudioState = { ok: false, master: null, sessions: [] };
+let activePackMixer = false;        // does the ACTIVE pack contain a mixer component?
+const audioIconCache = new Map();   // exe path → icon data URI | null
 
 const COMMON_WEB_PREFERENCES = {
   // Non-negotiable (CLAUDE.md): the renderer never touches Node.
@@ -527,6 +534,7 @@ function notifyActivePack(id) {
   for (const win of [dashboardWindow, managerWindow]) {
     if (win && !win.isDestroyed()) win.webContents.send('aegis:active:changed', { id });
   }
+  recomputeActivePackMixer(); // the new pack may add/drop the mixer component
 }
 
 function setActivePackFromTray(id) {
@@ -609,6 +617,79 @@ function sendDesktopPower() {
   // background music and stops the render loop (a hidden window keeps running).
   const shouldPause = desktopPaused || (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery);
   dashboardWindow.webContents.send('aegis:desktop:power', { active: !shouldPause, maxFps: perf.maxFps });
+  refreshAudioMixer(); // pause/resume the volume-mixer poll with the wallpaper
+}
+
+// ── Per-app volume mixer (Windows Core Audio) ────────────────────────────────
+// The wallpaper's `mixer` component adjusts each app's volume live. The heavy
+// COM enumeration runs in a background daemon (lib/audiomixer.js) that only polls
+// while a mixer component is actually visible (an active-pack mixer + the desktop
+// not frozen), so it costs nothing on packs that don't use it or during a game.
+
+// Is the wallpaper currently rendering (not frozen / hidden)? Same rule as
+// sendDesktopPower — kept module-level so the mixer lifecycle can share it.
+function desktopActive() {
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) return false;
+  const perf = settings.getPerformance(USER_DIR);
+  return !(desktopPaused || (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery));
+}
+
+// A process's icon as a data URI, cached by exe path (same source as launcher
+// tiles). Master + system-sounds rows have no path and fall back to a glyph.
+async function audioIcon(exePath) {
+  if (!exePath) return null;
+  if (audioIconCache.has(exePath)) return audioIconCache.get(exePath);
+  let uri = null;
+  try {
+    const icon = await app.getFileIcon(exePath, { size: 'normal' });
+    if (icon && !icon.isEmpty()) uri = icon.toDataURL();
+  } catch (err) { /* protected process / gone — no icon */ }
+  audioIconCache.set(exePath, uri);
+  return uri;
+}
+
+async function attachAudioIcons(raw) {
+  if (!raw || raw.ok !== true) return raw;
+  const sessions = [];
+  for (const s of raw.sessions) sessions.push({ ...s, icon: await audioIcon(s.path) });
+  return { ...raw, sessions };
+}
+
+// A fresh snapshot from the daemon: attach icons, cache it, and push to the
+// desktop so the mixer repaints (apps come/go, external volume changes).
+function onAudioState(raw) {
+  attachAudioIcons(raw).then((state) => {
+    lastAudioState = state;
+    if (dashboardWindow && !dashboardWindow.isDestroyed()) {
+      dashboardWindow.webContents.send('aegis:audio:changed', state);
+    }
+  });
+}
+
+function ensureAudioMixer() {
+  if (!audioMixer) audioMixer = createAudioMixer(__dirname, onAudioState);
+  return audioMixer;
+}
+
+// Recompute whether the active pack has a mixer component (cheap — only on a
+// pack change), then reconcile the daemon's polling.
+function recomputeActivePackMixer() {
+  try {
+    const id = settings.getActivePack(USER_DIR) || 'jarvis';
+    const loaded = packs.loadPack(__dirname, USER_DIR, id);
+    const comps = (loaded && loaded.pack && loaded.pack.components) || [];
+    activePackMixer = comps.some((c) => c && c.type === 'mixer');
+  } catch (err) {
+    activePackMixer = false;
+  }
+  refreshAudioMixer();
+}
+
+// Poll only when a mixer component is on the active pack AND the wallpaper is
+// visible; otherwise pause the daemon (near-zero cost). Started lazily.
+function refreshAudioMixer() {
+  if (activePackMixer) ensureAudioMixer();
+  if (audioMixer) audioMixer.setActive(activePackMixer && desktopActive());
 }
 
 // Push the global background-motion multiplier to the desktop (on load + change),
@@ -1878,6 +1959,7 @@ if (IS_SESSION) {
         for (const win of [dashboardWindow, managerWindow]) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:packs:changed', { id });
         }
+        recomputeActivePackMixer(); // an edit may have added/removed the mixer
       },
       // Workshop publish asks for a rendered preview image of the pack.
       // Steam gets a small STATIC preview (a big animated GIF trips Steam's upload
@@ -1942,6 +2024,14 @@ if (IS_SESSION) {
       mediaControl: (action) => (mediaMonitor
         ? mediaMonitor.control(action)
         : Promise.resolve({ ok: false, error: 'Media control is unavailable.' })),
+      // Per-app volume mixer: the `mixer` component reads current sessions on
+      // mount (which starts/activates the daemon) and sets per-app volume/mute.
+      getAudioState: () => { ensureAudioMixer(); refreshAudioMixer(); return lastAudioState; },
+      audioSet: (id, patch) => {
+        if (!audioMixer) return;
+        if (patch && patch.volume !== undefined) audioMixer.setVolume(id, patch.volume);
+        if (patch && patch.muted !== undefined) audioMixer.setMute(id, patch.muted);
+      },
     });
     // DE_EDITOR_TRAILER=<dir>: capture the deterministic "editor in action" clip and
     // quit. Capture-only — IPC + protocols are up (the editor page needs them), but
@@ -2004,6 +2094,9 @@ if (IS_SESSION) {
     }
     if (!WANT_PANEL) createTray();
     if (!WANT_PANEL) startPresenceMonitoring();
+    // Start the volume-mixer daemon now only if the active pack already uses it
+    // (else it stays dormant until a mixer pack is loaded).
+    if (!WANT_PANEL) recomputeActivePackMixer();
     // Accept commands from Steam-launched SESSION processes (open the Manager; and
     // when a session ends — Manager closed or Steam "Stop" — close the Manager but
     // keep the wallpaper). Fail-soft: if the pipe can't bind, the engine still runs
@@ -2138,5 +2231,6 @@ if (IS_SESSION) {
   app.on('before-quit', () => {
     if (presenceMonitor) presenceMonitor.stop();
     if (mediaMonitor) mediaMonitor.stop();
+    if (audioMixer) audioMixer.stop();
   });
 }

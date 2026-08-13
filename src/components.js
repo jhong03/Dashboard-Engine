@@ -2735,6 +2735,152 @@ function createRenderer(services) {
     row.addEventListener('click', () => openChatPanel(component, row));
   }
 
+  // Per-app volume mixer (Windows Core Audio). A master slider + one row per app
+  // currently using audio — icon, name, volume slider, mute — adjustable live,
+  // the same control the Windows Volume Mixer / Win+G buries. Interactive only on
+  // the desktop (services.audio); editor/manager previews show a static sample.
+  function buildMixer(component, el) {
+    const o = component.options;
+    const svc = services.audio;
+    const interactive = !!(svc && typeof svc.set === 'function');
+    const showMaster = o.showMaster !== false;
+
+    const label = document.createElement('span');
+    label.className = 'comp-label';
+    label.textContent = o.label || 'Volume';
+    const list = document.createElement('div');
+    list.className = 'mixer-list';
+    el.append(label, list);
+
+    const rows = new Map();   // id -> { root, iconWrap, name, slider, mute, dragging }
+    let draggingId = null;    // don't rebuild the row a user is actively dragging
+    let pending = null;       // a snapshot that arrived mid-drag, applied on release
+
+    // Throttle the live SET during a drag (drag fires ~60/s; the daemon SET is a
+    // COM call). The exact final value is always sent again on release.
+    const throttle = (fn, ms) => {
+      let t = 0, timer = null, lastArgs = null;
+      return (...args) => {
+        lastArgs = args;
+        const now = Date.now();
+        if (now - t >= ms) { t = now; fn(...args); }
+        else if (!timer) { timer = setTimeout(() => { timer = null; t = Date.now(); fn(...lastArgs); }, ms - (now - t)); }
+      };
+    };
+    const sendVol = interactive ? throttle((id, v) => svc.set(id, { volume: v }), 60) : () => {};
+
+    const makeRow = (item) => {
+      const root = document.createElement('div');
+      root.className = 'mixer-row';
+      const iconWrap = document.createElement('span');
+      iconWrap.className = 'mixer-icon';
+      const name = document.createElement('span');
+      name.className = 'mixer-name';
+      const slider = document.createElement('input');
+      slider.type = 'range'; slider.min = '0'; slider.max = '100'; slider.className = 'mixer-slider';
+      const mute = document.createElement('button');
+      mute.type = 'button'; mute.className = 'mixer-mute';
+      root.append(iconWrap, name, slider, mute);
+      const h = { root, iconWrap, name, slider, mute, dragging: false };
+
+      if (interactive) {
+        const endDrag = () => {
+          if (!h.dragging) return;
+          h.dragging = false; draggingId = null;
+          svc.set(item.id, { volume: Number(slider.value) });
+          if (pending) { const p = pending; pending = null; paint(p); }
+        };
+        slider.addEventListener('pointerdown', () => { h.dragging = true; draggingId = item.id; });
+        slider.addEventListener('pointerup', endDrag);
+        slider.addEventListener('pointercancel', endDrag);
+        slider.addEventListener('input', () => { slider.style.setProperty('--fill', `${slider.value}%`); sendVol(item.id, Number(slider.value)); });
+        mute.addEventListener('click', () => {
+          const next = !root.classList.contains('muted');
+          root.classList.toggle('muted', next);           // optimistic; next poll confirms
+          mute.textContent = next ? '🔇' : '🔊';
+          svc.set(item.id, { muted: next });
+        });
+      } else {
+        slider.disabled = true; mute.disabled = true;
+      }
+      return h;
+    };
+
+    const updateRow = (h, item) => {
+      h.name.textContent = item.name;
+      h.name.title = item.name;
+      if (item.icon) {
+        h.iconWrap.style.backgroundImage = `url("${item.icon}")`;
+        h.iconWrap.classList.add('has-img');
+        h.iconWrap.textContent = '';
+      } else {
+        h.iconWrap.classList.remove('has-img');
+        h.iconWrap.style.backgroundImage = '';
+        h.iconWrap.textContent = item.system ? '🔔' : '🔊';
+      }
+      if (!h.dragging) h.slider.value = String(item.volume);
+      h.slider.style.setProperty('--fill', `${h.slider.value}%`);
+      h.root.classList.toggle('muted', !!item.muted);
+      h.mute.textContent = item.muted ? '🔇' : '🔊';
+    };
+
+    const itemsFrom = (state) => {
+      const items = [];
+      if (showMaster && state.master) {
+        items.push({ id: 'master', name: 'System volume', icon: null, master: true, volume: state.master.volume, muted: state.master.muted });
+      }
+      for (const s of state.sessions || []) {
+        items.push({ id: s.id, name: s.name || 'App', icon: s.icon || null, system: s.system, volume: s.volume, muted: s.muted });
+      }
+      return items;
+    };
+
+    const note = document.createElement('p');
+    note.className = 'mixer-empty';
+
+    function paint(state) {
+      if (!state || state.ok !== true) {
+        for (const [, h] of rows) h.root.remove();
+        rows.clear();
+        note.textContent = interactive ? 'Connecting to audio…' : 'Per-app volume (Windows).';
+        list.appendChild(note);
+        return;
+      }
+      const items = itemsFrom(state);
+      const wantIds = new Set(items.map((i) => i.id));
+      for (const [id, h] of rows) {
+        if (!wantIds.has(id) && id !== draggingId) { h.root.remove(); rows.delete(id); }
+      }
+      let anyApp = false;
+      for (const item of items) {
+        if (!item.master) anyApp = true;
+        let h = rows.get(item.id);
+        if (!h) { h = makeRow(item); rows.set(item.id, h); }
+        updateRow(h, item);
+        list.appendChild(h.root); // re-append keeps declared order
+      }
+      if (!anyApp) { note.textContent = 'No apps are playing audio.'; list.appendChild(note); }
+      else if (note.parentNode) note.remove();
+    }
+
+    const onState = (state) => {
+      if (draggingId) { pending = state; return; } // never rebuild mid-drag
+      paint(state);
+    };
+
+    if (interactive) {
+      svc.state().then((s) => onState(s));
+      live.disposers.push(svc.onChange((s) => onState(s)));
+    } else {
+      // Static preview (no service): a master + a couple of apps.
+      paint({ ok: true, master: { volume: 80, muted: false }, sessions: [
+        { id: '1', name: 'Spotify', icon: null, system: false, volume: 65, muted: false },
+        { id: '2', name: 'Chrome', icon: null, system: false, volume: 45, muted: false },
+        { id: 'system', name: 'System sounds', icon: null, system: true, volume: 100, muted: true },
+      ] });
+    }
+  }
+
   // Now playing (Windows media session — Spotify, a browser, any player). Album
   // art + title/artist + a progress bar + transport controls. Live only on the
   // desktop (services.media); editor/manager previews show a static placeholder.
@@ -3306,6 +3452,7 @@ function createRenderer(services) {
     notifications: buildNotifications,
     launcher: buildLauncher,
     assistant: buildAssistant,
+    mixer: buildMixer,
     nowplaying: buildNowPlaying,
     visualizer: buildVisualizer,
     module: buildModule,
