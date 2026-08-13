@@ -2105,6 +2105,195 @@ function createRenderer(services) {
     live.timers.push(setInterval(render, 60 * 1000));
   }
 
+  // Focus / Pomodoro timer. The COUNTDOWN itself lives in main (lib/pomodoro.js)
+  // so it keeps running — and dings — even while the desktop is frozen for a
+  // full-screen app; this component only DISPLAYS the state and drives it.
+  // Interactive on the desktop (services.pomodoro is present); the editor/manager
+  // previews omit that service, so it renders a static sample like the calendar.
+  const POMO_PHASE_LABEL = { focus: 'Focus', shortBreak: 'Short break', longBreak: 'Long break' };
+
+  function buildPomodoro(component, el) {
+    const o = component.options;
+    const svc = services.pomodoro;
+    const interactive = !!(svc && typeof svc.control === 'function');
+    const dpr = window.devicePixelRatio || 1;
+
+    // The editor options main needs to run the timer, sent with every control
+    // call so the running timer tracks whatever this pack configures.
+    const cfg = {
+      focusMin: o.focusMin, shortBreakMin: o.shortBreakMin, longBreakMin: o.longBreakMin,
+      cyclesBeforeLong: o.cyclesBeforeLong, autoStart: o.autoStart, notify: o.notify, sound: o.sound,
+    };
+    const durationMs = (phase) => 60000 * (phase === 'shortBreak' ? o.shortBreakMin
+      : phase === 'longBreak' ? o.longBreakMin : o.focusMin);
+
+    el.classList.add('pomodoro');
+    const wrap = document.createElement('div');
+    wrap.className = 'pomo-wrap';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'pomo-ring fill-canvas';
+    const face = document.createElement('div');
+    face.className = 'pomo-face';
+    const phaseEl = document.createElement('div');
+    phaseEl.className = 'pomo-phase display-case';
+    const timeEl = document.createElement('div');
+    timeEl.className = 'pomo-time';
+    const pipsEl = document.createElement('div');
+    pipsEl.className = 'pomo-pips';
+    face.append(phaseEl, timeEl);
+    if (o.showPips !== false) face.append(pipsEl);
+    wrap.append(canvas, face);
+    el.appendChild(wrap);
+
+    const controls = document.createElement('div');
+    controls.className = 'pomo-controls';
+    const mkBtn = (cls, label, action) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `pomo-btn${cls ? ' ' + cls : ''}`;
+      b.textContent = label;
+      if (interactive) b.addEventListener('click', () => act(action));
+      else b.disabled = true; // static preview: controls are inert
+      return b;
+    };
+    const primaryBtn = mkBtn('pomo-primary', 'Start', 'toggle');
+    const resetBtn = mkBtn('', 'Reset', 'reset');
+    const skipBtn = mkBtn('', 'Skip', 'skip');
+    controls.append(primaryBtn, resetBtn, skipBtn);
+    el.appendChild(controls);
+
+    // Optimistic starting state so the box is never blank; the real state
+    // arrives right after (sync) on the desktop.
+    let st = { phase: 'focus', running: false, endsAt: null, remainingMs: durationMs('focus'), completedFocus: 0 };
+
+    const remainingMs = () => {
+      if (!st) return 0;
+      if (st.running && st.endsAt) return Math.max(0, st.endsAt - Date.now());
+      return Math.max(0, Number(st.remainingMs) || 0);
+    };
+    const fmt = (ms) => {
+      const total = Math.ceil(ms / 1000);
+      return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    };
+
+    const draw = () => {
+      const ctx2 = canvas.getContext('2d');
+      const w = canvas.width, h = canvas.height;
+      ctx2.clearRect(0, 0, w, h);
+      const cx = w / 2, cy = h / 2;
+      const R = Math.min(w, h) / 2 - 3 * dpr;
+      if (R <= 0) return;
+      const isBreak = st.phase !== 'focus';
+      const arc = cssVar(el, isBreak ? '--gold' : '--accent-bright');
+      const track = cssVar(el, '--accent');
+      const glow = cssVar(el, '--glow');
+      const full = durationMs(st.phase);
+      const progress = full > 0 ? Math.min(1, Math.max(0, 1 - remainingMs() / full)) : 0;
+      const lw = Math.max(2 * dpr, R * 0.1);
+      const top = -Math.PI / 2; // 12 o'clock
+      ctx2.lineCap = 'round';
+      ctx2.beginPath();
+      ctx2.globalAlpha = 0.16;
+      ctx2.lineWidth = lw;
+      ctx2.strokeStyle = track;
+      ctx2.arc(cx, cy, R * 0.82, 0, Math.PI * 2);
+      ctx2.stroke();
+      if (progress > 0) {
+        ctx2.beginPath();
+        ctx2.globalAlpha = 1;
+        ctx2.lineWidth = lw;
+        ctx2.strokeStyle = arc;
+        ctx2.shadowColor = glow;
+        ctx2.shadowBlur = 8 * dpr;
+        ctx2.arc(cx, cy, R * 0.82, top, top + progress * Math.PI * 2);
+        ctx2.stroke();
+        ctx2.shadowBlur = 0;
+      }
+      ctx2.globalAlpha = 1;
+      ctx2.lineCap = 'butt';
+    };
+
+    const renderPips = () => {
+      if (o.showPips === false) return;
+      const n = Math.max(1, Math.min(12, o.cyclesBeforeLong || 4));
+      const done = Math.max(0, Math.min(n, st.completedFocus || 0));
+      pipsEl.textContent = '';
+      for (let i = 0; i < n; i++) {
+        const dot = document.createElement('i');
+        dot.className = `pomo-pip${i < done ? ' on' : ''}`;
+        pipsEl.appendChild(dot);
+      }
+    };
+
+    const applyState = () => {
+      phaseEl.textContent = POMO_PHASE_LABEL[st.phase] || 'Focus';
+      el.classList.toggle('pomo-break', st.phase !== 'focus');
+      timeEl.textContent = fmt(remainingMs());
+      primaryBtn.textContent = st.running ? 'Pause' : 'Start';
+      renderPips();
+      draw();
+    };
+
+    async function act(action) {
+      const res = await svc.control(action, cfg);
+      if (res && res.ok && res.state) { st = res.state; applyState(); }
+    }
+
+    // A short, pleasant two-note chime (no bundled audio). Descending when a
+    // break begins ("rest"), rising when focus resumes ("go"). Plays only on a
+    // real phase-end while the desktop is active — the main-fired notification
+    // covers the frozen case.
+    let audioCtx = null;
+    const playChime = (newPhase) => {
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const now = audioCtx.currentTime;
+        const notes = newPhase !== 'focus' ? [660, 495] : [495, 660];
+        notes.forEach((f, i) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = f;
+          const t0 = now + i * 0.16;
+          gain.gain.setValueAtTime(0, t0);
+          gain.gain.linearRampToValueAtTime(0.18, t0 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0008, t0 + 0.35);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start(t0);
+          osc.stop(t0 + 0.42);
+        });
+      } catch { /* audio unavailable — the notification still alerts */ }
+    };
+
+    applyState();
+    observeCanvas(canvas, draw);
+
+    if (interactive) {
+      // Adopt this pack's cfg (durations) and read the live state in one call;
+      // a running timer is left running, an idle one snaps to this focus length.
+      svc.control('sync', cfg).then((res) => { if (res && res.ok && res.state) { st = res.state; applyState(); } });
+      if (typeof svc.onChanged === 'function') {
+        const off = svc.onChanged((msg) => {
+          if (!msg || !msg.state) return;
+          st = msg.state;
+          applyState();
+          if (msg.event === 'phase-end' && o.sound !== false) playChime(st.phase);
+        });
+        live.disposers.push(off);
+      }
+      // Tick the shown time down each second (the ring + MM:SS); the real end
+      // moment is main's — we just render toward it and clamp at 00:00.
+      live.timers.push(setInterval(() => { timeEl.textContent = fmt(remainingMs()); draw(); }, 1000));
+      live.disposers.push(() => { if (audioCtx) { try { audioCtx.close(); } catch (e) { /* ignore */ } audioCtx = null; } });
+    } else {
+      // Static preview: a representative mid-focus frame so the box reads well on
+      // the editor stage / library card without any live service.
+      st = { phase: 'focus', running: false, endsAt: null, remainingMs: Math.round(durationMs('focus') * 0.62), completedFocus: 1 };
+      applyState();
+    }
+  }
+
   function buildAgenda(component, el) {
     const label = document.createElement('span');
     label.className = 'comp-label';
@@ -3078,6 +3267,7 @@ function createRenderer(services) {
     gallery: buildGallery,
     divider: buildDivider,
     calendar: buildCalendar,
+    pomodoro: buildPomodoro,
     countdown: buildCountdown,
     weather: buildWeather,
     agenda: buildAgenda,

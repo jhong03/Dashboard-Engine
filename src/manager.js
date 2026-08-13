@@ -1864,6 +1864,7 @@ const CREATE_COMPONENTS = [
   ['gallery', 'A looping photo slideshow', 'images (assets/…), interval, fit, transition, shuffle'],
   ['divider', 'A hairline rule', 'orientation (h/v)'],
   ['calendar', 'Month calendar with your reminders', 'weekStart (sun/mon), showReminders'],
+  ['pomodoro', 'A Pomodoro focus / break timer', 'focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, autoStart, sound, notify, showPips'],
   ['countdown', 'Counts down to a date', 'target (ISO date), label'],
   ['weather', 'Live weather (Open-Meteo, keyless)', 'lat, lon, place, details, compact'],
   ['agenda', 'Your upcoming reminders', 'days, limit, label'],
@@ -2057,6 +2058,7 @@ const BUILDER_COMPONENTS = [
   ['sparkline', 'History graph', false],
   ['weather', 'Weather', true],
   ['calendar', 'Calendar', false],
+  ['pomodoro', 'Focus timer', false],
   ['agenda', 'Agenda', false],
   ['notifications', 'Notifications', false],
   ['launcher', 'App launcher', false],
@@ -2080,6 +2082,7 @@ const STARTER_OPTS = {
   meter: { bind: 'cpu', variant: 'ring' }, sparkline: { bind: 'cpu' },
   weather: { compact: true },
   calendar: {}, agenda: { days: 7, limit: 6 }, notifications: { limit: 5 },
+  pomodoro: { focusMin: 25, shortBreakMin: 5, longBreakMin: 15, cyclesBeforeLong: 4 },
   launcher: { pinned: true, recent: true }, status: {}, assistant: {},
   nowplaying: { showArt: true, showControls: true },
   visualizer: { style: 'bars' },
@@ -2090,7 +2093,7 @@ const STARTER_OPTS = {
 // heroes are the centrepiece, rails stack in the side columns.
 function componentCategory(type) {
   if (['status', 'assistant', 'text', 'divider'].includes(type)) return 'bar';
-  if (['hud-clock', 'ring-clock', 'analog-clock', 'clock', 'calendar', 'module', 'image', 'gallery'].includes(type)) return 'hero';
+  if (['hud-clock', 'ring-clock', 'analog-clock', 'clock', 'calendar', 'pomodoro', 'module', 'image', 'gallery'].includes(type)) return 'hero';
   return 'rail';
 }
 
@@ -2128,6 +2131,7 @@ const BUILDER_QUICK_OPTS = {
   'hud-clock': [{ key: 'format', label: 'Clock', kind: 'select', options: [['24h', '24-hour'], ['12h', '12-hour']] }],
   clock: [{ key: 'format', label: 'Clock', kind: 'select', options: [['24h', '24-hour'], ['12h', '12-hour']] }],
   agenda: [{ key: 'days', label: 'Days ahead', kind: 'number', min: 1, max: 14 }],
+  pomodoro: [{ key: 'focusMin', label: 'Focus minutes', kind: 'number', min: 1, max: 180 }],
 };
 
 // User-adjustable "Customize knobs" the creator can expose (→ pack.props). The
@@ -3514,7 +3518,8 @@ const COMPONENT_LABELS = {
   status: 'persona status', clock: 'clock', 'analog-clock': 'analog clock',
   'hud-clock': 'HUD clock', stats: 'system stats', cores: 'core load',
   sysinfo: 'system info', meter: 'meter', sparkline: 'sparkline', text: 'text',
-  image: 'image', divider: 'divider', calendar: 'calendar', countdown: 'countdown',
+  image: 'image', divider: 'divider', calendar: 'calendar', pomodoro: 'focus timer',
+  countdown: 'countdown',
   weather: 'weather', agenda: 'agenda', notifications: 'notifications',
   launcher: 'app launcher', assistant: 'AI assistant', module: 'custom module',
 };

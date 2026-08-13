@@ -47,6 +47,14 @@ const renderer = AegisComponents.createRenderer({
   remindersAdd: (r) => { markLocalReminderEdit(); return aegis.remindersAdd(r); },
   remindersRemove: (id) => { markLocalReminderEdit(); return aegis.remindersRemove(id); },
   remindersToggle: (id) => { markLocalReminderEdit(); return aegis.remindersToggle(id); },
+  // Focus timer — present ONLY on the desktop, so the pomodoro component is
+  // interactive here and a static sample in editor/manager previews. The timer
+  // itself lives in main; these just read it, drive it, and follow its changes.
+  pomodoro: {
+    get: () => aegis.pomodoroGet(),
+    control: (action, cfg) => aegis.pomodoroControl(action, cfg),
+    onChanged: (cb) => aegis.onPomodoroChanged(cb),
+  },
   launcher: {
     state: (opts) => aegis.launcherState(opts),
     launch: (id) => aegis.launcherLaunch(id),

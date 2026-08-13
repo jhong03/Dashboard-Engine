@@ -17,6 +17,7 @@ const { createMediaMonitor } = require('./lib/media');
 const voicebank = require('./lib/voicebank');
 const profiles = require('./lib/profiles');
 const packs = require('./lib/packs');
+const pomodoro = require('./lib/pomodoro');
 const music = require('./lib/music');
 const videostore = require('./lib/videostore');
 const settings = require('./lib/settings');
@@ -131,6 +132,7 @@ let sessionLink = null; // the engine's session-link server (accepts Steam-sessi
 let tray = null;
 let desktopPaused = false;
 let alertScheduler = null;
+let pomodoroTimer = null;
 
 // Performance citizenship: pause/throttle the animated wallpaper when a
 // full-screen app is up or the machine is on battery (both user-configurable).
@@ -1652,6 +1654,77 @@ if (IS_SESSION) {
     notification.show();
   }
 
+  // ── Pomodoro / focus timer (main-backed, wall-clock) ───────────────────────
+  // The timer's source of truth is lib/pomodoro.js (persisted). We keep ONE
+  // timer armed against the running phase's end moment; when it fires — or the
+  // app reopens across an end — we advance the phase, fire the notification, and
+  // tell every window so the wallpaper repaints. Running the countdown HERE, not
+  // in the renderer, is what lets the phase-end ding survive the desktop freeze
+  // (the renderer is destroyed while a full-screen app owns the screen).
+  const POMODORO_CATCHUP_MS = 90 * 1000;              // ding for an end missed this recently; older → silent transition
+  const POMODORO_MAX_SLEEP_MS = 24 * 60 * 60 * 1000;  // re-arm at least daily (a paused timer parks until a control action)
+
+  // The desktop is "active" (rendering, so a chime will play) when a desktop
+  // window exists and nothing is pausing it — same rule as sendDesktopPower().
+  function desktopIsActive() {
+    if (!dashboardWindow || dashboardWindow.isDestroyed()) return false;
+    const perf = settings.getPerformance(USER_DIR);
+    return !(desktopPaused || (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery));
+  }
+
+  function broadcastPomodoro(event) {
+    const payload = { event: event || 'control', state: pomodoro.get(USER_DIR) };
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (win && !win.isDestroyed()) {
+        try { win.webContents.send('aegis:pomodoro:changed', payload); } catch { /* window gone */ }
+      }
+    }
+  }
+
+  function firePomodoroEnd(result) {
+    const cfg = result.state.cfg || {};
+    // Broadcast first: an active desktop repaints to the new phase and (if the
+    // chime is on) plays its sound in the component.
+    broadcastPomodoro('phase-end');
+    if (!cfg.notify || !Notification.isSupported()) return;
+    // When the desktop is active AND the chime is on, the chime is the sound, so
+    // fire the toast SILENT to avoid a double-ding. When frozen/closed (you're
+    // heads-down in a full-screen app) there's no chime — the OS sound is the alert.
+    const chimeCovers = cfg.sound && desktopIsActive();
+    const dict = i18n.getActive(USER_DIR, settings.getLocale(USER_DIR), app.getLocale()).dict;
+    const tr = (key, english) => { const s = i18n.translate(dict, key); return s === key ? english : s; };
+    const endedFocus = result.endedPhase === 'focus';
+    const title = endedFocus ? tr('pomodoro.notify.focusDone.title', 'Focus complete') : tr('pomodoro.notify.breakDone.title', 'Break over');
+    const body = endedFocus ? tr('pomodoro.notify.focusDone.body', 'Time for a break.') : tr('pomodoro.notify.breakDone.body', 'Back to focus.');
+    const n = new Notification({ title, body, silent: chimeCovers });
+    n.on('click', () => { if (dashboardWindow && !dashboardWindow.isDestroyed()) dashboardWindow.focus(); });
+    n.show();
+  }
+
+  function armNextPomodoro(state) {
+    if (!state.running || !state.endsAt) return; // paused/idle — a control action re-arms
+    const sleep = Math.min(Math.max(state.endsAt - Date.now(), 250), POMODORO_MAX_SLEEP_MS);
+    pomodoroTimer = setTimeout(rearmPomodoro, sleep);
+    if (typeof pomodoroTimer.unref === 'function') pomodoroTimer.unref(); // never hold the process open
+  }
+
+  // Fire any phase(s) that ended while we weren't watching, then arm the next
+  // timer. Bounded loop so auto-start across a long absence can't spin forever.
+  function rearmPomodoro() {
+    if (pomodoroTimer) { clearTimeout(pomodoroTimer); pomodoroTimer = null; }
+    for (let i = 0; i < 500; i++) {
+      const result = pomodoro.tick(USER_DIR);
+      if (!result.ended) { armNextPomodoro(result.state); return; }
+      // Only ding for a genuinely recent end — a live timer firing, or the app
+      // reopening moments after. Older ends (the app was closed a while) advance
+      // silently so you don't get a stale ding for a break long gone.
+      if (Date.now() - (result.endedAt || 0) <= POMODORO_CATCHUP_MS) firePomodoroEnd(result);
+      if (!result.autoStarted) { armNextPomodoro(result.state); return; }
+      // autoStarted → the next phase is already running; loop in case it, too, is overdue.
+    }
+    armNextPomodoro(pomodoro.get(USER_DIR));
+  }
+
   app.whenReady().then(() => {
     logEngine('INFO', `engine start — v${app.getVersion()} · electron ${process.versions.electron} · ${process.platform} · ${LAUNCHED_AT_LOGIN ? 'login' : 'manual'}`);
     // Voice models now live in user data (survive updates); bring any the owner
@@ -1751,6 +1824,9 @@ if (IS_SESSION) {
     if (!WANT_PANEL) {
       alertScheduler = createAlertScheduler({ userDir: USER_DIR, notify: notifyReminder });
       alertScheduler.rearm();
+      // Focus timer: reconcile any phase that ended while the app was closed and
+      // arm the next one (a paused/idle timer just parks until a control action).
+      rearmPomodoro();
     }
     registerIpcHandlers(__dirname, USER_DIR, {
       openPanel: createPanelWindow,
@@ -1769,6 +1845,12 @@ if (IS_SESSION) {
         for (const win of [dashboardWindow, editorWindow, managerWindow]) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:launcher:changed');
         }
+      },
+      onPomodoroChanged: (info) => {
+        // A control action changed the focus timer: sync every window at once so
+        // all pomodoro components agree, then re-arm main's phase-end timer.
+        broadcastPomodoro((info && info.event) || 'control');
+        rearmPomodoro();
       },
       openManager: (view) => openManagerView(view || 'installed'),
       onPackSaved: (id) => {

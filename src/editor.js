@@ -32,6 +32,7 @@ const PALETTE = [
   { type: 'gallery', label: 'Photo gallery', hint: 'looping photo slideshow' },
   { type: 'divider', label: 'Divider', hint: 'hairline rule' },
   { type: 'calendar', label: 'Calendar', hint: 'month grid, today marked' },
+  { type: 'pomodoro', label: 'Focus timer', hint: 'Pomodoro focus / break cycles' },
   { type: 'countdown', label: 'Countdown', hint: 'days/hours to a date' },
   { type: 'weather', label: 'Weather', hint: 'Open-Meteo, needs lat/lon' },
   { type: 'agenda', label: 'Agenda', hint: 'your upcoming reminders' },
@@ -78,6 +79,7 @@ const DEFAULT_RECTS = {
   'stats': [10, 10, 34, 22], 'meter': [10, 10, 14, 22], 'sparkline': [10, 10, 26, 16],
   'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'gallery': [10, 10, 28, 34], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
+  'pomodoro': [10, 10, 20, 34],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
   'hud-clock': [10, 10, 24, 42], 'ring-clock': [10, 10, 22, 38], 'cores': [10, 10, 16, 10], 'sysinfo': [10, 10, 16, 14],
   'assistant': [10, 10, 60, 6], 'nowplaying': [10, 10, 30, 12], 'visualizer': [10, 10, 30, 16], 'module': [10, 10, 26, 26],
@@ -97,6 +99,7 @@ function defaultOptions(type, assets) {
     'gallery': { images: [], interval: 6, fit: 'cover', transition: 'fade', shuffle: false },
     'divider': { orientation: 'h' },
     'calendar': { weekStart: 'mon', showReminders: true },
+    'pomodoro': { focusMin: 25, shortBreakMin: 5, longBreakMin: 15, cyclesBeforeLong: 4, autoStart: false, sound: true, notify: true, showPips: true },
     'countdown': { target: in30days, label: 'Countdown' },
     'weather': { lat: 0, lon: 0, place: null, details: true, compact: false },
     'agenda': { days: 7, limit: 6, label: null },
@@ -736,6 +739,21 @@ function optionFields(component, panel) {
       field(t('editor.insp.field.weekStart'), selectControl(o.weekStart, [['mon', t('editor.insp.opt.dayMon')], ['sun', t('editor.insp.opt.daySun')]], set('weekStart'))),
       checkControl(t('editor.insp.check.markReminders'), o.showReminders, set('showReminders')),
     );
+  } else if (type === 'pomodoro') {
+    panel.append(
+      field(t('editor.insp.field.focusMin'), numberControl(o.focusMin, 1, 180, 1, set('focusMin'))),
+      field(t('editor.insp.field.shortBreakMin'), numberControl(o.shortBreakMin, 1, 180, 1, set('shortBreakMin'))),
+      field(t('editor.insp.field.longBreakMin'), numberControl(o.longBreakMin, 1, 180, 1, set('longBreakMin'))),
+      field(t('editor.insp.field.cyclesBeforeLong'), numberControl(o.cyclesBeforeLong, 1, 12, 1, set('cyclesBeforeLong'))),
+      checkControl(t('editor.insp.check.autoStart'), o.autoStart === true, set('autoStart')),
+      checkControl(t('editor.insp.check.pomoSound'), o.sound !== false, set('sound')),
+      checkControl(t('editor.insp.check.pomoNotify'), o.notify !== false, set('notify')),
+      checkControl(t('editor.insp.check.showPips'), o.showPips !== false, set('showPips')),
+    );
+    const note = document.createElement('p');
+    note.className = 'ed-empty';
+    note.textContent = t('editor.insp.note.pomodoro');
+    panel.appendChild(note);
   } else if (type === 'agenda') {
     panel.append(
       field(t('editor.insp.field.daysAhead'), numberControl(o.days, 1, 14, 1, set('days'))),

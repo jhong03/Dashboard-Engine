@@ -53,6 +53,16 @@ const bridge = {
   remindersRemove: (id) => ipcRenderer.invoke('aegis:reminders:remove', String(id)),
   remindersToggle: (id) => ipcRenderer.invoke('aegis:reminders:toggle', String(id)),
   onRemindersChanged: subscription('aegis:reminders:changed'),
+  // Pomodoro / focus timer. The timer runs in MAIN (survives the perf freeze);
+  // the desktop only reads it, sends control actions, and hears phase changes.
+  // The component's editor options ride along as `cfg` so durations follow the
+  // pack. Top-frame only — a module iframe never sees this bridge.
+  pomodoroGet: () => ipcRenderer.invoke('aegis:pomodoro:get'),
+  pomodoroControl: (action, cfg) => ipcRenderer.invoke('aegis:pomodoro:control', {
+    action: String(action),
+    cfg: (cfg && typeof cfg === 'object') ? cfg : undefined,
+  }),
+  onPomodoroChanged: subscription('aegis:pomodoro:changed'),
   // Launcher: tiles resolve to opaque ids; main holds the real paths.
   launcherState: (opts) => ipcRenderer.invoke('aegis:launcher:state', { running: Boolean(opts && opts.running) }),
   launcherLaunch: (id) => ipcRenderer.invoke('aegis:launcher:launch', String(id)),
