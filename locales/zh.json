@@ -675,7 +675,6 @@
   "editor.insp.check.liveReadout": "实时读数",
   "editor.insp.check.shuffleOrder": "随机顺序",
   "editor.insp.check.markReminders": "标记有提醒的日子",
-  "editor.insp.check.autoStart": "自动开始下一阶段",
   "editor.insp.check.pomoSound": "阶段结束时提示音",
   "editor.insp.check.pomoNotify": "阶段结束时桌面通知",
   "editor.insp.check.showPips": "显示循环圆点",

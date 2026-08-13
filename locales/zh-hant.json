@@ -640,7 +640,6 @@
   "editor.insp.check.liveReadout": "即時讀數",
   "editor.insp.check.shuffleOrder": "隨機順序",
   "editor.insp.check.markReminders": "標記有提醒的日子",
-  "editor.insp.check.autoStart": "自動開始下一階段",
   "editor.insp.check.pomoSound": "階段結束時提示音",
   "editor.insp.check.pomoNotify": "階段結束時桌面通知",
   "editor.insp.check.showPips": "顯示循環圓點",

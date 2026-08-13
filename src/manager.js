@@ -1864,7 +1864,7 @@ const CREATE_COMPONENTS = [
   ['gallery', 'A looping photo slideshow', 'images (assets/…), interval, fit, transition, shuffle'],
   ['divider', 'A hairline rule', 'orientation (h/v)'],
   ['calendar', 'Month calendar with your reminders', 'weekStart (sun/mon), showReminders'],
-  ['pomodoro', 'A Pomodoro focus / break timer', 'focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, autoStart, sound, notify, showPips'],
+  ['pomodoro', 'A Pomodoro focus / break timer', 'focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, sound, notify, showPips'],
   ['countdown', 'Counts down to a date', 'target (ISO date), label'],
   ['weather', 'Live weather (Open-Meteo, keyless)', 'lat, lon, place, details, compact'],
   ['agenda', 'Your upcoming reminders', 'days, limit, label'],

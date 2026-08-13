@@ -675,7 +675,6 @@
   "editor.insp.check.liveReadout": "ライブ表示",
   "editor.insp.check.shuffleOrder": "順序をシャッフル",
   "editor.insp.check.markReminders": "リマインダーのある日をマーク",
-  "editor.insp.check.autoStart": "次のフェーズを自動的に開始",
   "editor.insp.check.pomoSound": "フェーズ終了時にチャイム",
   "editor.insp.check.pomoNotify": "フェーズ終了時にデスクトップ通知",
   "editor.insp.check.showPips": "サイクルのドットを表示",

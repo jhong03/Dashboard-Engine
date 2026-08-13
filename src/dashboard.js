@@ -52,7 +52,7 @@ const renderer = AegisComponents.createRenderer({
   // itself lives in main; these just read it, drive it, and follow its changes.
   pomodoro: {
     get: () => aegis.pomodoroGet(),
-    control: (action, cfg) => aegis.pomodoroControl(action, cfg),
+    control: (action, cfg, breakMin) => aegis.pomodoroControl(action, cfg, breakMin),
     onChanged: (cb) => aegis.onPomodoroChanged(cb),
   },
   launcher: {

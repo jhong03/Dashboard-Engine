@@ -58,9 +58,10 @@ const bridge = {
   // The component's editor options ride along as `cfg` so durations follow the
   // pack. Top-frame only — a module iframe never sees this bridge.
   pomodoroGet: () => ipcRenderer.invoke('aegis:pomodoro:get'),
-  pomodoroControl: (action, cfg) => ipcRenderer.invoke('aegis:pomodoro:control', {
+  pomodoroControl: (action, cfg, breakMin) => ipcRenderer.invoke('aegis:pomodoro:control', {
     action: String(action),
     cfg: (cfg && typeof cfg === 'object') ? cfg : undefined,
+    breakMin: breakMin === undefined ? undefined : Number(breakMin),
   }),
   onPomodoroChanged: subscription('aegis:pomodoro:changed'),
   // Launcher: tiles resolve to opaque ids; main holds the real paths.

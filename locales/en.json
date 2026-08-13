@@ -675,7 +675,6 @@
   "editor.insp.check.liveReadout": "Live readout",
   "editor.insp.check.shuffleOrder": "Shuffle order",
   "editor.insp.check.markReminders": "Mark days with reminders",
-  "editor.insp.check.autoStart": "Auto-start the next phase",
   "editor.insp.check.pomoSound": "Chime at phase end",
   "editor.insp.check.pomoNotify": "Desktop notification at phase end",
   "editor.insp.check.showPips": "Show cycle dots",

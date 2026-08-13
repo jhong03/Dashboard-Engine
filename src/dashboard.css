@@ -628,6 +628,12 @@ body {
   color: var(--accent-bright);
 }
 .comp-pomodoro.pomo-break .pomo-time { color: var(--gold); }
+.pomo-hint {
+  font-size: 0.6em;
+  letter-spacing: 0.16em;
+  color: var(--gold);
+  min-height: 0.9em; /* reserve the line so the layout doesn't jump when it clears */
+}
 .pomo-pips { display: flex; gap: 0.4em; margin-top: 0.2em; }
 .pomo-pip {
   width: 0.5em;
@@ -664,6 +670,8 @@ body {
 .pomo-btn:hover:not(:disabled) { border-color: var(--accent); }
 .pomo-btn:focus-visible { outline: 2px solid var(--accent-bright); outline-offset: 2px; }
 .pomo-btn:disabled { opacity: 0.5; cursor: default; }
+/* Break with a break already queued (auto-starts when focus ends). */
+.pomo-btn.queued { color: var(--gold); border-color: var(--gold); }
 .pomo-btn.pomo-primary {
   color: var(--void);
   background: var(--accent);

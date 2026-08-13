@@ -675,7 +675,6 @@
   "editor.insp.check.liveReadout": "실시간 판독값",
   "editor.insp.check.shuffleOrder": "순서 섞기",
   "editor.insp.check.markReminders": "리마인더가 있는 날 표시",
-  "editor.insp.check.autoStart": "다음 단계 자동 시작",
   "editor.insp.check.pomoSound": "단계 종료 시 알림음",
   "editor.insp.check.pomoNotify": "단계 종료 시 데스크톱 알림",
   "editor.insp.check.showPips": "사이클 점 표시",

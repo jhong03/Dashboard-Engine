@@ -675,7 +675,6 @@
   "editor.insp.check.liveReadout": "Lectura en vivo",
   "editor.insp.check.shuffleOrder": "Orden aleatorio",
   "editor.insp.check.markReminders": "Marcar días con recordatorios",
-  "editor.insp.check.autoStart": "Iniciar la siguiente fase automáticamente",
   "editor.insp.check.pomoSound": "Sonido al terminar la fase",
   "editor.insp.check.pomoNotify": "Notificación de escritorio al terminar la fase",
   "editor.insp.check.showPips": "Mostrar los puntos de ciclo",

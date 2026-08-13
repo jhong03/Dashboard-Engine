@@ -191,7 +191,7 @@ art behind widgets.
 | `gallery` | `images` (list of `assets/…`, ≤30), `interval` (2–120 s), `fit`, `transition` (`fade`/`none`), `shuffle` | looping photo slideshow inside the box |
 | `divider` | `orientation` (`h`/`v`) | hairline rule |
 | `calendar` | `weekStart` (`mon`/`sun`), `showReminders` | month grid, today marked, reminder days dotted |
-| `pomodoro` | `focusMin` (1–180), `shortBreakMin`, `longBreakMin`, `cyclesBeforeLong` (1–12), `autoStart`, `sound`, `notify`, `showPips` | Pomodoro focus/break timer: countdown ring + phase + cycle dots, with Start·Pause / Reset / Skip on the desktop |
+| `pomodoro` | `focusMin` (1–180), `shortBreakMin`, `longBreakMin`, `cyclesBeforeLong` (1–12), `sound`, `notify`, `showPips` | focus/break timer: countdown ring + cycle dots, with **Start · Stop · Break · Reset** on the desktop. Break offers the short/long lengths and auto-starts when focus ends |
 | `countdown` | `target` (ISO date), `label` | days/hours to a date |
 | `weather` | `lat`, `lon`, `place`, `details`, `compact` | conditions with glyph, hi/lo + wind, or a one-line strip (Open-Meteo, no key — the one component that goes online) |
 | `agenda` | `days` (1–14), `limit` (1–12), `label` | the user's upcoming reminders |
@@ -208,13 +208,16 @@ pack, an export, or a registry download. The `notifications` component reads
 the system's notifications and needs access granted under Windows Settings ›
 Privacy › Notifications; without it, the component shows how to enable it.
 
-The `pomodoro` timer is **interactive on the desktop** (Start·Pause / Reset /
-Skip) and runs in the **background process**, not the wallpaper — so it keeps
-counting and rings its phase-end notification even while a full-screen app hides
-the wallpaper (the wallpaper freezes for performance, but the timer doesn't). A
-pack carries only the display and the default durations/behaviour; the running
-timer state is personal and never part of a pack. In the editor and library
-previews the component shows a static sample.
+The `pomodoro` timer is **interactive on the desktop** — **Start** (begin/resume),
+**Stop** (pause, keeping the remaining time), **Break** (pick the short or long
+length; while a focus session is running it's queued and auto-starts the moment
+focus ends, otherwise it starts now), and **Reset** (start over). It runs in the
+**background process**, not the wallpaper — so it keeps counting and rings its
+phase-end notification even while a full-screen app hides the wallpaper (the
+wallpaper freezes for performance, but the timer doesn't). A pack carries only
+the display and the default durations; the running timer state is personal and
+never part of a pack. In the editor and library previews the component shows a
+static sample.
 
 Rather not hand-write JSON? Open any pack in the **editor** (manager → pack
 → OPEN IN EDITOR, or `--edit <id>`): drag components from the palette, move/

@@ -2108,24 +2108,26 @@ function createRenderer(services) {
   // Focus / Pomodoro timer. The COUNTDOWN itself lives in main (lib/pomodoro.js)
   // so it keeps running — and dings — even while the desktop is frozen for a
   // full-screen app; this component only DISPLAYS the state and drives it.
+  // Controls (owner's design): Start · Stop(=pause) · Break · Reset, where Break
+  // opens an inline choice of a short/long break that auto-starts when focus ends.
   // Interactive on the desktop (services.pomodoro is present); the editor/manager
   // previews omit that service, so it renders a static sample like the calendar.
-  const POMO_PHASE_LABEL = { focus: 'Focus', shortBreak: 'Short break', longBreak: 'Long break' };
+  const POMO_PHASE_LABEL = { focus: 'Focus', break: 'Break' };
 
   function buildPomodoro(component, el) {
     const o = component.options;
     const svc = services.pomodoro;
     const interactive = !!(svc && typeof svc.control === 'function');
     const dpr = window.devicePixelRatio || 1;
+    const shortMin = Math.max(1, Math.min(180, o.shortBreakMin || 5));
+    const longMin = Math.max(1, Math.min(180, o.longBreakMin || 15));
 
     // The editor options main needs to run the timer, sent with every control
     // call so the running timer tracks whatever this pack configures.
     const cfg = {
       focusMin: o.focusMin, shortBreakMin: o.shortBreakMin, longBreakMin: o.longBreakMin,
-      cyclesBeforeLong: o.cyclesBeforeLong, autoStart: o.autoStart, notify: o.notify, sound: o.sound,
+      cyclesBeforeLong: o.cyclesBeforeLong, notify: o.notify, sound: o.sound,
     };
-    const durationMs = (phase) => 60000 * (phase === 'shortBreak' ? o.shortBreakMin
-      : phase === 'longBreak' ? o.longBreakMin : o.focusMin);
 
     el.classList.add('pomodoro');
     const wrap = document.createElement('div');
@@ -2138,33 +2140,27 @@ function createRenderer(services) {
     phaseEl.className = 'pomo-phase display-case';
     const timeEl = document.createElement('div');
     timeEl.className = 'pomo-time';
+    const hintEl = document.createElement('div');
+    hintEl.className = 'pomo-hint';
     const pipsEl = document.createElement('div');
     pipsEl.className = 'pomo-pips';
-    face.append(phaseEl, timeEl);
+    face.append(phaseEl, timeEl, hintEl);
     if (o.showPips !== false) face.append(pipsEl);
     wrap.append(canvas, face);
     el.appendChild(wrap);
 
     const controls = document.createElement('div');
     controls.className = 'pomo-controls';
-    const mkBtn = (cls, label, action) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = `pomo-btn${cls ? ' ' + cls : ''}`;
-      b.textContent = label;
-      if (interactive) b.addEventListener('click', () => act(action));
-      else b.disabled = true; // static preview: controls are inert
-      return b;
-    };
-    const primaryBtn = mkBtn('pomo-primary', 'Start', 'toggle');
-    const resetBtn = mkBtn('', 'Reset', 'reset');
-    const skipBtn = mkBtn('', 'Skip', 'skip');
-    controls.append(primaryBtn, resetBtn, skipBtn);
     el.appendChild(controls);
 
     // Optimistic starting state so the box is never blank; the real state
     // arrives right after (sync) on the desktop.
-    let st = { phase: 'focus', running: false, endsAt: null, remainingMs: durationMs('focus'), completedFocus: 0 };
+    let st = { phase: 'focus', running: false, endsAt: null, remainingMs: o.focusMin * 60000, breakMin: null, queuedBreakMin: null, completedFocus: 0 };
+    let breakMenu = false; // the Break button swaps the row into a short/long choice
+
+    // Full length of the phase currently shown — a break uses the length chosen
+    // for it (or the queued one on the preview), focus uses this pack's focusMin.
+    const phaseFullMs = () => (st.phase === 'break' ? (st.breakMin || shortMin) : o.focusMin) * 60000;
 
     const remainingMs = () => {
       if (!st) return 0;
@@ -2183,11 +2179,11 @@ function createRenderer(services) {
       const cx = w / 2, cy = h / 2;
       const R = Math.min(w, h) / 2 - 3 * dpr;
       if (R <= 0) return;
-      const isBreak = st.phase !== 'focus';
+      const isBreak = st.phase === 'break';
       const arc = cssVar(el, isBreak ? '--gold' : '--accent-bright');
       const track = cssVar(el, '--accent');
       const glow = cssVar(el, '--glow');
-      const full = durationMs(st.phase);
+      const full = phaseFullMs();
       const progress = full > 0 ? Math.min(1, Math.max(0, 1 - remainingMs() / full)) : 0;
       const lw = Math.max(2 * dpr, R * 0.1);
       const top = -Math.PI / 2; // 12 o'clock
@@ -2225,17 +2221,52 @@ function createRenderer(services) {
       }
     };
 
+    const btn = (label, cls, disabled, onClick) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = `pomo-btn${cls ? ' ' + cls : ''}`;
+      b.textContent = label;
+      b.disabled = !interactive || disabled; // static preview: controls are inert
+      if (interactive && !disabled) b.addEventListener('click', onClick);
+      return b;
+    };
+
+    // Two rows share the controls strip: the default Start/Stop/Break/Reset, and
+    // the Break choice (short/long + close). Rebuilt on every state change.
+    const renderControls = () => {
+      controls.textContent = '';
+      if (breakMenu) {
+        controls.append(
+          btn(`${shortMin}m`, '', false, () => { breakMenu = false; act('break', shortMin); }),
+          btn(`${longMin}m`, '', false, () => { breakMenu = false; act('break', longMin); }),
+          st.queuedBreakMin
+            ? btn('None', '', false, () => { breakMenu = false; act('break', 0); }) // clear the queued break
+            : btn('✕', '', false, () => { breakMenu = false; renderControls(); }),
+        );
+      } else {
+        controls.append(
+          btn('Start', 'pomo-primary', st.running, () => act('start')),
+          btn('Stop', '', !st.running, () => act('pause')),
+          btn('Break', st.queuedBreakMin ? 'queued' : '', false, () => { breakMenu = true; renderControls(); }),
+          btn('Reset', '', false, () => act('reset')),
+        );
+      }
+    };
+
     const applyState = () => {
       phaseEl.textContent = POMO_PHASE_LABEL[st.phase] || 'Focus';
-      el.classList.toggle('pomo-break', st.phase !== 'focus');
+      el.classList.toggle('pomo-break', st.phase === 'break');
       timeEl.textContent = fmt(remainingMs());
-      primaryBtn.textContent = st.running ? 'Pause' : 'Start';
+      // A queued break (during focus) is shown as a small sub-line so the Break
+      // button stays short.
+      hintEl.textContent = (st.phase === 'focus' && st.queuedBreakMin) ? `${st.queuedBreakMin}m break next` : '';
       renderPips();
+      renderControls();
       draw();
     };
 
-    async function act(action) {
-      const res = await svc.control(action, cfg);
+    async function act(action, breakMin) {
+      const res = await svc.control(action, cfg, breakMin);
       if (res && res.ok && res.state) { st = res.state; applyState(); }
     }
 
@@ -2248,7 +2279,7 @@ function createRenderer(services) {
       try {
         if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const now = audioCtx.currentTime;
-        const notes = newPhase !== 'focus' ? [660, 495] : [495, 660];
+        const notes = newPhase === 'break' ? [660, 495] : [495, 660];
         notes.forEach((f, i) => {
           const osc = audioCtx.createOscillator();
           const gain = audioCtx.createGain();
@@ -2277,6 +2308,7 @@ function createRenderer(services) {
         const off = svc.onChanged((msg) => {
           if (!msg || !msg.state) return;
           st = msg.state;
+          breakMenu = false; // a state change from elsewhere closes an open choice
           applyState();
           if (msg.event === 'phase-end' && o.sound !== false) playChime(st.phase);
         });
@@ -2289,7 +2321,7 @@ function createRenderer(services) {
     } else {
       // Static preview: a representative mid-focus frame so the box reads well on
       // the editor stage / library card without any live service.
-      st = { phase: 'focus', running: false, endsAt: null, remainingMs: Math.round(durationMs('focus') * 0.62), completedFocus: 1 };
+      st = { phase: 'focus', running: false, endsAt: null, remainingMs: Math.round(o.focusMin * 60000 * 0.62), breakMin: null, queuedBreakMin: null, completedFocus: 1 };
       applyState();
     }
   }
