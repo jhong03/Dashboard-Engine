@@ -59,6 +59,8 @@
   "manager.assistant.modelId": "ID del modelo",
   "manager.assistant.voiceForReplies": "Voz para las respuestas habladas",
   "manager.assistant.speakAloud": "Leer las respuestas en voz alta (con la voz elegida arriba)",
+  "manager.assistant.contextLimit": "Memoria de conversación (mensajes recientes enviados)",
+  "manager.assistant.contextHint": "Cuántos mensajes recientes se envían al modelo en cada turno. Un número más bajo mantiene rápidos los modelos pequeños o locales y dentro de su límite de contexto; súbelo si tu modelo tiene una ventana de contexto grande. El chat completo siempre se guarda en el disco.",
   "manager.assistant.persona": "Personalidad: cómo se comporta tu asistente",
   "manager.assistant.startFromPreset": "Empezar desde un ejemplo…",
   "manager.assistant.group.english": "Inglés",

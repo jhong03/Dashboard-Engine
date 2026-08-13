@@ -68,6 +68,12 @@ const renderer = AegisComponents.createRenderer({
     history: () => aegis.assistantHistory(),
     reset: () => aegis.assistantReset(),
     onStream: (cb) => aegis.onAssistantStream(cb),
+    // Multiple local chat sessions.
+    sessions: () => aegis.assistantSessions(),
+    sessionNew: () => aegis.assistantSessionNew(),
+    sessionSwitch: (id) => aegis.assistantSessionSwitch(id),
+    sessionRename: (id, title) => aegis.assistantSessionRename(id, title),
+    sessionDelete: (id) => aegis.assistantSessionDelete(id),
   },
   // Now playing (Windows media session) — desktop only, so editor/manager
   // previews render the nowplaying component as a static placeholder.

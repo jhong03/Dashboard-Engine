@@ -2486,8 +2486,10 @@ function createRenderer(services) {
   // transcript is restored from main (persisted to disk) for real history.
   const chat = {
     panel: null, log: null, input: null, sendBtn: null,
+    titleEl: null, sessionsPanel: null, sessionsList: null,
     built: false, busy: false, audioCtx: null, anchor: null, moved: false,
     stream: null, // { el, id, buf } for the reply currently streaming in
+    sessions: [], activeId: null, sessionsOpen: false, // the local chat list
   };
 
   // One reused AudioContext for spoken replies. Reusing a single context (the
@@ -2516,15 +2518,27 @@ function createRenderer(services) {
     return m;
   };
 
-  // Repaint the panel from main's saved transcript (history + traceability).
-  const renderChatHistory = async () => {
+  // ── Chat sessions (multiple local conversations) ────────────────────────────
+  const relTimeShort = (ms) => {
+    if (!ms) return '';
+    const s = Math.max(0, (Date.now() - ms) / 1000);
+    if (s < 60) return 'now';
+    const m = Math.floor(s / 60); if (m < 60) return `${m}m`;
+    const h = Math.floor(m / 60); if (h < 24) return `${h}h`;
+    return `${Math.floor(h / 24)}d`;
+  };
+
+  const setHeaderTitle = () => {
+    if (!chat.titleEl) return;
+    const active = chat.sessions.find((s) => s.id === chat.activeId);
+    const label = (active && active.title) ? active.title : 'New chat';
+    chat.titleEl.textContent = label;
+    chat.titleEl.title = label;
+  };
+
+  const paintThread = (thread) => {
     chat.log.textContent = '';
-    let thread = [];
-    if (services.assistant.history) {
-      const res = await services.assistant.history();
-      if (res && res.ok && Array.isArray(res.thread)) thread = res.thread;
-    }
-    if (thread.length === 0) {
+    if (!Array.isArray(thread) || thread.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'ac-empty';
       empty.textContent = 'No conversation yet — ask me anything.';
@@ -2533,6 +2547,103 @@ function createRenderer(services) {
     }
     for (const m of thread) addChatMsg(m.role === 'user' ? 'you' : 'bot', m.content);
     chat.log.scrollTop = chat.log.scrollHeight;
+  };
+
+  const closeSessions = () => {
+    chat.sessionsOpen = false;
+    if (chat.sessionsPanel) chat.sessionsPanel.classList.remove('open');
+  };
+
+  const switchSession = async (id) => {
+    if (id === chat.activeId) { closeSessions(); return; }
+    const res = await services.assistant.sessionSwitch(id);
+    applySessions(res);
+    paintThread(res && res.thread);
+    closeSessions();
+    chat.input.focus();
+  };
+
+  const newChatSession = async () => {
+    const res = await services.assistant.sessionNew();
+    applySessions(res);
+    paintThread(res && res.thread); // a fresh, empty chat
+    closeSessions();
+    chat.input.focus();
+  };
+
+  const deleteSession = async (id) => {
+    const res = await services.assistant.sessionDelete(id);
+    applySessions(res);
+    paintThread(res && res.thread); // active may have changed
+  };
+
+  const startRename = (row, s) => {
+    const input = document.createElement('input');
+    input.className = 'ac-sess-rename';
+    input.type = 'text';
+    input.value = s.title || '';
+    input.maxLength = 60;
+    input.placeholder = 'Name this chat';
+    let done = false;
+    const commit = async (save) => {
+      if (done) return; done = true;
+      const val = input.value.trim();
+      if (save && val) applySessions(await services.assistant.sessionRename(s.id, val));
+      else renderSessions();
+    };
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); commit(true); }
+      else if (e.key === 'Escape') { e.preventDefault(); commit(false); }
+    });
+    input.addEventListener('blur', () => commit(true));
+    row.textContent = '';
+    row.appendChild(input);
+    input.focus();
+    input.select();
+  };
+
+  const renderSessions = () => {
+    if (!chat.sessionsList) return;
+    chat.sessionsList.textContent = '';
+    for (const s of chat.sessions) {
+      const row = document.createElement('div');
+      row.className = `ac-sess${s.id === chat.activeId ? ' active' : ''}`;
+      const name = document.createElement('button');
+      name.type = 'button';
+      name.className = 'ac-sess-name';
+      name.textContent = s.title || 'New chat';
+      name.title = s.title || 'New chat';
+      name.addEventListener('click', () => switchSession(s.id));
+      const time = document.createElement('span');
+      time.className = 'ac-sess-time';
+      time.textContent = relTimeShort(s.updatedAt);
+      const ren = document.createElement('button');
+      ren.type = 'button'; ren.className = 'ac-sess-act'; ren.textContent = '✎'; ren.title = 'Rename';
+      ren.addEventListener('click', (e) => { e.stopPropagation(); startRename(row, s); });
+      const del = document.createElement('button');
+      del.type = 'button'; del.className = 'ac-sess-act'; del.textContent = '×'; del.title = 'Delete';
+      del.addEventListener('click', (e) => { e.stopPropagation(); deleteSession(s.id); });
+      row.append(name, time, ren, del);
+      chat.sessionsList.appendChild(row);
+    }
+  };
+
+  // Adopt a {sessions, activeId} payload (from history() or any session op).
+  function applySessions(res) {
+    if (!res || !res.ok) return;
+    if (Array.isArray(res.sessions)) chat.sessions = res.sessions;
+    if (typeof res.activeId === 'string') chat.activeId = res.activeId;
+    setHeaderTitle();
+    renderSessions();
+  }
+
+  // Repaint the panel from main's saved transcript + session list (one call).
+  const renderChatHistory = async () => {
+    if (services.assistant.history) {
+      const res = await services.assistant.history();
+      if (res && res.ok) { applySessions(res); paintThread(res.thread); return; }
+    }
+    paintThread([]);
   };
 
   const chatSend = async () => {
@@ -2557,6 +2668,8 @@ function createRenderer(services) {
     } else {
       reply.textContent = res.text;
       chat.log.scrollTop = chat.log.scrollHeight;
+      // The active session may have just been auto-titled from this first message.
+      if (services.assistant.sessions) services.assistant.sessions().then(applySessions);
       const cfg = await services.assistant.config();
       if (cfg && cfg.ok && cfg.config.speak) {
         const spoken = await services.assistant.speak(res.text);
@@ -2596,6 +2709,11 @@ function createRenderer(services) {
 
     const head = document.createElement('div');
     head.className = 'ac-panel-head';
+    const sessionsBtn = document.createElement('button');
+    sessionsBtn.type = 'button';
+    sessionsBtn.className = 'ac-panel-sessions-btn';
+    sessionsBtn.textContent = '☰';
+    sessionsBtn.title = 'Chats';
     const title = document.createElement('span');
     title.className = 'ac-panel-title';
     title.textContent = 'Assistant';
@@ -2607,7 +2725,18 @@ function createRenderer(services) {
     closeBtn.type = 'button';
     closeBtn.className = 'ac-panel-close';
     closeBtn.textContent = '×';
-    head.append(title, clearBtn, closeBtn);
+    head.append(sessionsBtn, title, clearBtn, closeBtn);
+
+    // Chat switcher: a compact dropdown of local conversations, overlaying the log.
+    const sessionsPanel = document.createElement('div');
+    sessionsPanel.className = 'ac-sessions';
+    const newBtn = document.createElement('button');
+    newBtn.type = 'button';
+    newBtn.className = 'ac-sessions-new';
+    newBtn.textContent = '+ New chat';
+    const sessionsList = document.createElement('div');
+    sessionsList.className = 'ac-sessions-list';
+    sessionsPanel.append(newBtn, sessionsList);
 
     const log = document.createElement('div');
     log.className = 'ac-panel-log';
@@ -2629,9 +2758,11 @@ function createRenderer(services) {
     sendBtn.textContent = 'Send';
     form.append(mark, input, sendBtn);
 
-    panel.append(head, log, form);
+    panel.append(head, sessionsPanel, log, form);
     document.body.appendChild(panel);
-    chat.panel = panel; chat.log = log; chat.input = input; chat.sendBtn = sendBtn; chat.built = true;
+    chat.panel = panel; chat.log = log; chat.input = input; chat.sendBtn = sendBtn;
+    chat.titleEl = title; chat.sessionsPanel = sessionsPanel; chat.sessionsList = sessionsList;
+    chat.built = true;
 
     form.addEventListener('submit', (e) => { e.preventDefault(); chatSend(); });
     input.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeChatPanel(); });
@@ -2640,6 +2771,17 @@ function createRenderer(services) {
       await services.assistant.reset();
       await renderChatHistory();
       chat.input.focus();
+    });
+    // Sessions: toggle the switcher; new-chat; close it on a click elsewhere.
+    sessionsBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      chat.sessionsOpen = !chat.sessionsOpen;
+      sessionsPanel.classList.toggle('open', chat.sessionsOpen);
+      if (chat.sessionsOpen) renderSessions();
+    });
+    newBtn.addEventListener('click', () => newChatSession());
+    panel.addEventListener('mousedown', (e) => {
+      if (chat.sessionsOpen && !sessionsPanel.contains(e.target) && e.target !== sessionsBtn) closeSessions();
     });
     // Dismiss on an outside click (but not on any assistant console trigger).
     document.addEventListener('mousedown', (e) => {

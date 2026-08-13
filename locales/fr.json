@@ -59,6 +59,8 @@
   "manager.assistant.modelId": "Identifiant du modèle",
   "manager.assistant.voiceForReplies": "Voix des réponses parlées",
   "manager.assistant.speakAloud": "Lire les réponses à voix haute (avec la voix choisie ci-dessus)",
+  "manager.assistant.contextLimit": "Mémoire de conversation (messages récents envoyés)",
+  "manager.assistant.contextHint": "Combien de messages récents sont envoyés au modèle à chaque tour. Un nombre plus faible garde les petits modèles ou les modèles locaux rapides et dans leur limite de contexte ; augmentez-le si votre modèle a une grande fenêtre de contexte. La conversation complète est toujours conservée sur le disque.",
   "manager.assistant.persona": "Personnalité — le comportement de votre assistant",
   "manager.assistant.startFromPreset": "Partir d’un préréglage…",
   "manager.assistant.group.english": "Anglais",

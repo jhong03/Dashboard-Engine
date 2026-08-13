@@ -120,6 +120,11 @@
           <p class="hint" data-i18n-html="manager.assistant.voiceHint">Pick the voice that matches your persona's <strong>language</strong> — a Chinese persona spoken by an English voice comes out garbled. Presets for each language are listed here, and picking a language persona above auto-selects a matching one. To switch between a female and a male voice, pick that language's preset — <strong>male voices</strong> are available for English, Spanish and French (the “· Male” presets); Chinese, Japanese and Korean are female-only for now. Your own <strong>Voice tuning</strong> profiles appear here too. “Default voice” is English and does <em>not</em> follow your tuning.</p>
           <label class="cfg-check"><input id="ai-speak" type="checkbox"><span data-i18n="manager.assistant.speakAloud">Speak replies aloud (in the voice picked above)</span></label>
 
+          <label class="cfg-field"><span data-i18n="manager.assistant.contextLimit">Conversation memory (recent messages sent)</span>
+            <input id="ai-context-limit" type="number" min="2" max="500" step="1">
+          </label>
+          <p class="hint" data-i18n="manager.assistant.contextHint">How many recent messages are sent to the model each turn. A lower number keeps small or local models fast and within their context limit; raise it if your model has a large context window. The full chat is always kept on disk.</p>
+
           <label class="cfg-field"><span data-i18n="manager.assistant.persona">Persona — how your assistant behaves</span>
             <select id="ai-persona-preset">
               <option value="" data-i18n="manager.assistant.startFromPreset">Start from a preset…</option>

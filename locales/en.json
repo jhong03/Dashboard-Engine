@@ -59,6 +59,8 @@
   "manager.assistant.modelId": "Model id",
   "manager.assistant.voiceForReplies": "Voice for spoken replies",
   "manager.assistant.speakAloud": "Speak replies aloud (in the voice picked above)",
+  "manager.assistant.contextLimit": "Conversation memory (recent messages sent)",
+  "manager.assistant.contextHint": "How many recent messages are sent to the model each turn. A lower number keeps small or local models fast and within their context limit; raise it if your model has a large context window. The full chat is always kept on disk.",
   "manager.assistant.persona": "Persona — how your assistant behaves",
   "manager.assistant.startFromPreset": "Start from a preset…",
   "manager.assistant.group.english": "English",

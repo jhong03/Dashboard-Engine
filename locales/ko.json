@@ -59,6 +59,8 @@
   "manager.assistant.modelId": "모델 ID",
   "manager.assistant.voiceForReplies": "음성 답변용 목소리",
   "manager.assistant.speakAloud": "답변을 소리내어 읽기(위에서 선택한 목소리로)",
+  "manager.assistant.contextLimit": "대화 메모리 (전송되는 최근 메시지 수)",
+  "manager.assistant.contextHint": "매 턴마다 모델에 전송되는 최근 메시지 수입니다. 값이 낮을수록 소형 또는 로컬 모델이 빠르게 유지되고 컨텍스트 한도 내에 들어옵니다. 모델의 컨텍스트 창이 크면 값을 높이세요. 전체 대화는 항상 디스크에 저장됩니다.",
   "manager.assistant.persona": "페르소나 — 어시스턴트가 행동하는 방식",
   "manager.assistant.startFromPreset": "프리셋에서 시작…",
   "manager.assistant.group.english": "영어",

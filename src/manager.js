@@ -1588,6 +1588,7 @@ async function renderAssistantCfg() {
   $('ai-persona').value = c.persona || '';
   renderAssistantPresets(c.personaPresets || []);
   $('ai-speak').checked = c.speak !== false;
+  $('ai-context-limit').value = c.contextLimit || 12;
   $('ai-key').value = '';
   $('ai-key-state').textContent = c.hasKey
     ? t('manager.assistant.keySaved')
@@ -1699,6 +1700,7 @@ async function saveAssistant() {
     persona: $('ai-persona').value,
     speak: $('ai-speak').checked,
     voiceProfile: $('ai-voice').value,
+    contextLimit: Number($('ai-context-limit').value) || 12,
   };
   const key = $('ai-key').value;
   if (key.trim() !== '') patch.apiKey = key; // only set when the user typed one

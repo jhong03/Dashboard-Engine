@@ -59,6 +59,8 @@
   "manager.assistant.modelId": "模型 ID",
   "manager.assistant.voiceForReplies": "朗读回复的语音",
   "manager.assistant.speakAloud": "朗读回复（使用上方所选的语音）",
+  "manager.assistant.contextLimit": "对话记忆（发送的近期消息数）",
+  "manager.assistant.contextHint": "每轮发送给模型的近期消息数量。较低的数值可让小型或本地模型保持快速并处于其上下文限制内；如果你的模型有较大的上下文窗口，可以调高。完整对话始终保存在磁盘上。",
   "manager.assistant.persona": "人格——你的助手的行为方式",
   "manager.assistant.startFromPreset": "从预设开始…",
   "manager.assistant.group.english": "英语",

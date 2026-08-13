@@ -59,6 +59,8 @@
   "manager.assistant.modelId": "モデル ID",
   "manager.assistant.voiceForReplies": "読み上げる返答の声",
   "manager.assistant.speakAloud": "返答を読み上げる（上で選んだ声で）",
+  "manager.assistant.contextLimit": "会話メモリ（送信する直近のメッセージ数）",
+  "manager.assistant.contextHint": "各ターンでモデルに送信する直近のメッセージ数です。小さい値にすると、小型モデルやローカルモデルが高速に保たれ、コンテキスト上限内に収まります。大きなコンテキストウィンドウを持つモデルなら増やせます。会話全体は常にディスクに保存されます。",
   "manager.assistant.persona": "ペルソナ——アシスタントの振る舞い方",
   "manager.assistant.startFromPreset": "プリセットから始める…",
   "manager.assistant.group.english": "英語",

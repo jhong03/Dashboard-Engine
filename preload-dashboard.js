@@ -78,6 +78,12 @@ const bridge = {
   assistantHistory: () => ipcRenderer.invoke('aegis:assistant:history'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
   onAssistantStream: subscription('aegis:assistant:stream'), // live reply tokens
+  // Multiple local chat sessions (personal data, never in a pack).
+  assistantSessions: () => ipcRenderer.invoke('aegis:assistant:sessions'),
+  assistantSessionNew: () => ipcRenderer.invoke('aegis:assistant:session:new'),
+  assistantSessionSwitch: (id) => ipcRenderer.invoke('aegis:assistant:session:switch', String(id)),
+  assistantSessionRename: (id, title) => ipcRenderer.invoke('aegis:assistant:session:rename', { id: String(id), title: String(title) }),
+  assistantSessionDelete: (id) => ipcRenderer.invoke('aegis:assistant:session:delete', String(id)),
   // Spoken system-health alerts. Main gates on the opt-in setting
   // + rate-limits, and returns PCM to play (or a skipped result).
   healthAlert: (payload) => ipcRenderer.invoke('aegis:health:alert', {
