@@ -61,6 +61,9 @@
 
   <!-- capture-clock.js FIRST (no-op unless ?capture=1): routes every rAF/clock
        read through the trailer recorder's virtual clock. -->
+  <!-- Dev-only perf HUD (?perf=1 / DE_PERF); loads first so it can instrument
+       timers/rafs before any app code registers them. Inert otherwise. -->
+  <script src="perf-hud.js"></script>
   <script src="capture-clock.js"></script>
   <!-- i18n.js FIRST: it defines window.t / I18n.applyDom and translates the
        static [data-i18n] markup before the app scripts run. -->

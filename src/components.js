@@ -657,7 +657,7 @@ function setupAmbienceParticles(root, pack, opts, reduced) {
   const observer = new ResizeObserver(resize);
   observer.observe(canvas);
   resize(); // draws a static frame when reduced
-  return { canvas, observer, step: stepParticles, draw };
+  return { canvas, observer, step: stepParticles, draw, count };
 }
 
 // Own the SINGLE motion loop for a surface: ambience particles AND background
@@ -676,6 +676,7 @@ function applyAmbience(root, pack, opts) {
   const reduced = (opts && opts.staticAmbience === true)
     || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   const particles = setupAmbienceParticles(root, pack, opts, reduced);
+  if (window.AegisPerf) window.AegisPerf.setParticles(particles ? particles.count : 0);
   const bg = root.__aegisBg;                       // built by applyBackground
   const bgMoving = !reduced && !!(bg && bg.needsMotion);
 

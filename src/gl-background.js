@@ -27,6 +27,11 @@
   const DRIFT_REF = 20;
   const DRIFT_BASE_FREQ = 0.32;
 
+  // Perf HUD accounting (dev-only). Module-level so the HUD sums every GL handle
+  // live in this window; guarded so it is free when the HUD is off.
+  let _perfTex = 0, _perfBytes = 0;
+  function pushPerf() { if (window.AegisPerf) window.AegisPerf.reportGL(_perfTex, _perfBytes); }
+
   let _supported = null;
   function supported() {
     // Reliable off switch (a bad/slow GPU, or forcing the DOM path for testing):
@@ -223,13 +228,18 @@
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       // 1px placeholder so a not-yet-loaded texture samples transparent, not error.
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
+      _perfTex++; pushPerf();
       return t;
     }
 
     function uploadImage(rec, imgOrCanvas, w, h) {
       gl.bindTexture(gl.TEXTURE_2D, rec.tex);
       gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-      try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgOrCanvas); rec.texW = w; rec.texH = h; rec.ready = true; } catch (e) { /* leave placeholder */ }
+      try {
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, imgOrCanvas);
+        rec.texW = w; rec.texH = h; rec.ready = true;
+        _perfBytes += (w * h * 4) - (rec.bytes || 0); rec.bytes = w * h * 4; pushPerf();
+      } catch (e) { /* leave placeholder */ }
     }
 
     // Build per-layer GL state.
@@ -269,7 +279,22 @@
       if (maskFx && assets[maskFx.mask]) {
         rec.maskTex = newTex();
         const mimg = new Image();
-        mimg.onload = () => { gl.bindTexture(gl.TEXTURE_2D, rec.maskTex); try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, mimg); } catch (e) {} };
+        mimg.onload = () => {
+          gl.bindTexture(gl.TEXTURE_2D, rec.maskTex);
+          // Downscale an oversized mask to the GPU's limit — one warning, never a
+          // GL error. A grayscale mask only needs the .r channel, but decoding it
+          // as RGBA is simplest and portable across WebGL1/2.
+          let src = mimg, w = mimg.naturalWidth, h = mimg.naturalHeight;
+          if (w > maxTex || h > maxTex) {
+            const scale = maxTex / Math.max(w, h);
+            const oc = document.createElement('canvas');
+            oc.width = Math.max(1, Math.floor(w * scale)); oc.height = Math.max(1, Math.floor(h * scale));
+            oc.getContext('2d').drawImage(mimg, 0, 0, oc.width, oc.height);
+            src = oc; w = oc.width; h = oc.height;
+            console.warn(`[gl-background] mask "${maskFx.mask}" downscaled to ${w}×${h} (GPU max ${maxTex}).`);
+          }
+          try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, src); rec.maskBytes = w * h * 4; _perfBytes += rec.maskBytes; pushPerf(); } catch (e) {}
+        };
         mimg.src = assets[maskFx.mask];
       }
       // Motion params (mirror the DOM path so GL/DOM parallax match).
@@ -367,7 +392,10 @@
         if (rec.video && rec.video.readyState >= 2) {
           gl.bindTexture(gl.TEXTURE_2D, rec.tex);
           gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
-          try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, rec.video); rec.texW = rec.video.videoWidth || rec.texW; rec.texH = rec.video.videoHeight || rec.texH; rec.ready = true; } catch (e) {}
+          try {
+            gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, rec.video); rec.texW = rec.video.videoWidth || rec.texW; rec.texH = rec.video.videoHeight || rec.texH; rec.ready = true;
+            const nb = rec.texW * rec.texH * 4; if (nb !== rec.bytes) { _perfBytes += nb - (rec.bytes || 0); rec.bytes = nb; pushPerf(); }
+          } catch (e) {}
         }
         if (!rec.ready) continue;
 
@@ -428,7 +456,13 @@
     function resume() { prevT = 0; }
     function destroy() {
       try {
-        for (const rec of glLayers) { if (rec.tex) gl.deleteTexture(rec.tex); if (rec.maskTex) gl.deleteTexture(rec.maskTex); if (rec.program) gl.deleteProgram(rec.program); }
+        for (const rec of glLayers) {
+          if (rec.tex) { gl.deleteTexture(rec.tex); _perfTex--; }
+          if (rec.maskTex) { gl.deleteTexture(rec.maskTex); _perfTex--; }
+          _perfBytes -= (rec.bytes || 0) + (rec.maskBytes || 0);
+          if (rec.program) gl.deleteProgram(rec.program);
+        }
+        pushPerf();
         if (quad) gl.deleteBuffer(quad);
         const lose = gl.getExtension('WEBGL_lose_context'); if (lose) lose.loseContext();
       } catch (e) {}

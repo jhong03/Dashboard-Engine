@@ -12,6 +12,7 @@
     "calibrate": "node scripts/calibrate.js",
     "audition": "node scripts/audition.js",
     "selftest": "node scripts/selftest.js",
+    "perf": "node scripts/perf.js",
     "packs": "node scripts/packs.js",
     "i18n:export": "node scripts/i18n-csv.js export",
     "i18n:import": "node scripts/i18n-csv.js import",
