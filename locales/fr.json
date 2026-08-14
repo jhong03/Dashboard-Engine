@@ -409,7 +409,7 @@
   "create.skin.layers.term": "Couches d’arrière-plan",
   "create.skin.layers.def": "empilez jusqu’à 6 couches image/vidéo avec une profondeur de parallaxe (0–1) + dérive — le curseur donne à la scène une profondeur 3D.",
   "create.skin.effects.term": "Effets d’arrière-plan",
-  "create.skin.effects.def": "jusqu’à 3 effets de shader WebGL par couche : ripple · sway · drift-warp · pulse · cursor-ripple (repli en douceur vers une image statique sans WebGL).",
+  "create.skin.effects.def": "jusqu'à 3 effets de shader WebGL par calque — ripple, sway, drift-warp, pulse, cursor-ripple, waves, shimmer, shake, spin, scroll, chroma-shift — chacun pouvant être limité par un masque peint ou une région (repli sur une image statique sans WebGL).",
   "create.prop.0.effect": "recolorer une entrée de palette",
   "create.prop.1.effect": "choisir l’effet de particules",
   "create.prop.2.effect": "densité des particules (0,05–1)",

@@ -409,7 +409,7 @@
   "create.skin.layers.term": "Background layers",
   "create.skin.layers.def": "stack up to 6 image/video layers with a parallax depth (0–1) + drift — the cursor gives the scene 3-D depth.",
   "create.skin.effects.term": "Background effects",
-  "create.skin.effects.def": "up to 3 WebGL shader effects per layer: ripple · sway · drift-warp · pulse · cursor-ripple (fail-soft to a static image without WebGL).",
+  "create.skin.effects.def": "up to 3 WebGL shader effects per layer — ripple, sway, drift-warp, pulse, cursor-ripple, waves, shimmer, shake, spin, scroll, chroma-shift — each scoped by an optional painted mask or region (fail-soft to a static image without WebGL).",
   "create.prop.0.effect": "recolour a palette entry",
   "create.prop.1.effect": "choose the particle effect",
   "create.prop.2.effect": "particle density (0.05–1)",

@@ -409,7 +409,7 @@
   "create.skin.layers.term": "背景レイヤー",
   "create.skin.layers.def": "画像／動画レイヤーを最大 6 枚重ね、パララックス深度（0–1）+ ドリフト付き——カーソルがシーンに 3D の奥行きを与えます。",
   "create.skin.effects.term": "背景エフェクト",
-  "create.skin.effects.def": "レイヤーごとに最大 3 つの WebGL シェーダーエフェクト：ripple · sway · drift-warp · pulse · cursor-ripple（WebGL がなければ静止画へ穏やかにフォールバック）。",
+  "create.skin.effects.def": "レイヤーごとに最大 3 つの WebGL シェーダー効果——ripple・sway・drift-warp・pulse・cursor-ripple・waves・shimmer・shake・spin・scroll・chroma-shift——それぞれ描いたマスクや領域で範囲を限定できます（WebGL がなければ静止画像にフォールバック）。",
   "create.prop.0.effect": "パレット項目を再着色",
   "create.prop.1.effect": "パーティクル効果を選択",
   "create.prop.2.effect": "パーティクル密度（0.05–1）",

@@ -409,7 +409,7 @@
   "create.skin.layers.term": "배경 레이어",
   "create.skin.layers.def": "이미지/동영상 레이어를 최대 6개 쌓고 시차 깊이(0–1) + 드리프트를 적용 — 커서가 장면에 3D 깊이를 더합니다.",
   "create.skin.effects.term": "배경 효과",
-  "create.skin.effects.def": "레이어당 최대 3개의 WebGL 셰이더 효과: ripple · sway · drift-warp · pulse · cursor-ripple(WebGL이 없으면 정적 이미지로 부드럽게 대체).",
+  "create.skin.effects.def": "레이어당 최대 3개의 WebGL 셰이더 효과 — ripple, sway, drift-warp, pulse, cursor-ripple, waves, shimmer, shake, spin, scroll, chroma-shift — 각 효과는 그린 마스크나 영역으로 범위를 제한할 수 있습니다(WebGL이 없으면 정적 이미지로 대체).",
   "create.prop.0.effect": "팔레트 항목 다시 칠하기",
   "create.prop.1.effect": "파티클 효과 선택",
   "create.prop.2.effect": "파티클 밀도(0.05–1)",

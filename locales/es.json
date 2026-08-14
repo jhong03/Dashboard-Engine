@@ -409,7 +409,7 @@
   "create.skin.layers.term": "Capas de fondo",
   "create.skin.layers.def": "apila hasta 6 capas de imagen/vídeo con una profundidad de paralaje (0-1) y deriva; el cursor da profundidad 3D a la escena.",
   "create.skin.effects.term": "Efectos de fondo",
-  "create.skin.effects.def": "hasta 3 efectos de sombreado WebGL por capa: ripple · sway · drift-warp · pulse · cursor-ripple (recurre a una imagen estática sin WebGL).",
+  "create.skin.effects.def": "hasta 3 efectos de sombreador WebGL por capa — ripple, sway, drift-warp, pulse, cursor-ripple, waves, shimmer, shake, spin, scroll, chroma-shift — cada uno limitable con una máscara pintada o una región (si no hay WebGL, se muestra una imagen estática).",
   "create.prop.0.effect": "recolorear una entrada de la paleta",
   "create.prop.1.effect": "elegir el efecto de partículas",
   "create.prop.2.effect": "densidad de partículas (0,05-1)",

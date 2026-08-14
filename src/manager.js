@@ -1884,7 +1884,7 @@ const CREATE_SKIN = [
   ['Textures', 'scanlines · grid · glow · vignette, each 0–1.'],
   ['Wallpaper', 'an image (≤5 MB) or a muted looping video (mp4/webm, ≤30 MB), with fit + focal point.'],
   ['Background layers', 'stack up to 6 image/video layers with a parallax depth (0–1) + drift — the cursor gives the scene 3-D depth.'],
-  ['Background effects', 'up to 3 WebGL shader effects per layer: ripple · sway · drift-warp · pulse · cursor-ripple (fail-soft to a static image without WebGL).'],
+  ['Background effects', 'up to 3 WebGL shader effects per layer — ripple · sway · drift-warp · pulse · cursor-ripple · waves · shimmer · shake · spin · scroll · chroma-shift — each scoped by an optional painted mask or region (fail-soft to a static image without WebGL).'],
 ];
 
 const CREATE_PROPS = [

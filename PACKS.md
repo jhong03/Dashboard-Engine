@@ -153,13 +153,25 @@ as a static image — the pack still works, it simply doesn't animate.
 | `sway` | `speed` 0–3, `strength` 0–1, `direction` 0–360 | a gentle corner-anchored sway |
 | `drift-warp` | `speed` 0–3, `scale` 0.5–8 | slow noise-flow warp (mist, heat-haze) |
 | `pulse` | `speed` 0–3, `amount` 0–1, `paletteKey` (a palette key or null) | brightness pulse, or a tint toward a palette colour |
-| `cursor-ripple` | `strength` 0–1, `decay` 0.2–3 | expanding rings that follow the cursor |
+| `cursor-ripple` | `strength` 0–1, `speed` 0.2–3, `decay` 0.2–3 | expanding rings that follow the cursor |
+| `waves` | `angle` 0–360, `wavelength` 0.5–8, `speed` 0–3, `strength` 0–1 | a travelling sine ripple marching along `angle` (water, flags) |
+| `shimmer` | `density` 0–1, `speed` 0–3 | sparse sparkle glints, gated by the mask/region (glints on water, motes) |
+| `shake` | `speed` 0–3, `amplitude` 0–1 | a small whole-layer jitter; `amplitude` is capped tiny on purpose |
+| `spin` | `speed` 0–3, `radius` 0.05–1 | a swirl centred on the region (or layer centre), easing off past `radius` |
+| `scroll` | `angle` 0–360, `speed` 0–3 | scrolls the layer along `angle` and wraps — best with a **tileable** texture (clouds, starfields) |
+| `chroma-shift` | `amount` 0–1, `speed` 0–3 | a subtle oscillating RGB split; `amount` is capped small so it reads as a shimmer, not a broken image |
 
 - **Region** (optional, per effect) — confine the effect to part of the layer:
   `"region": { "shape": "rect" | "ellipse", "x": 0–100, "y": 0–100, "w": 0–100, "h": 0–100, "feather": 0–50 }`
   (percent of the layer; `feather` softens the edge).
-- **Mask** (optional, per effect) — `"mask": "assets/mask.png"` multiplies the
-  effect by the mask's brightness (white = full effect, black = none).
+- **Mask** (optional, per effect) — `"mask": "assets/mask.png"`, a grayscale PNG
+  that multiplies the effect's strength pixel-by-pixel (white = full effect,
+  black = none, grey = partial). The mask maps across the **whole surface** (it's
+  sampled in the same space you see), so paint it over the layer as it renders.
+  **A mask overrides a region** — if you set both, the region is dropped and the
+  mask wins. Oversized masks are downscaled to the GPU's limit with a warning
+  (keep them ≤ 2048 px). The easiest way to make one is the editor's painter
+  (below) — you rarely hand-author a mask PNG.
 - **Taste + the quality floor.** Keep `amount`/`strength` low — these read best as
   subtle ambience, not a screensaver. The refreshed `vaporwave`, `sakura` and
   `neon-cyberpunk` seeds are worked examples.
@@ -167,7 +179,26 @@ as a static image — the pack still works, it simply doesn't animate.
   (a full-screen app / battery pauses them). Reduced motion renders one static
   frame. Prefer one or two gentle effects over stacking three loud ones.
 - **Author it** in the editor (Skin tab → a layer's **Effects (WebGL)** section:
-  add/reorder/remove, param sliders, optional region).
+  add/reorder/remove, param sliders, and either a numeric **region** or a painted
+  **mask**).
+
+#### Painting a mask
+
+Open the editor (Skin tab → a background layer → **Effects (WebGL)** → add an
+effect → **Paint mask**). A full-screen painter shows the layer with your mask as
+a red overlay:
+
+- **Brush** — set *Size*, *Softness* (hard → feathered), and *Opacity*; paint
+  where the effect should show. **Eraser** removes; **Clear** wipes; **Invert**
+  flips the whole mask; **Undo/Redo** (or `Ctrl+Z` / `Ctrl+Y`) step through
+  strokes; `Esc` cancels.
+- **Save mask** flattens what you painted into a grayscale PNG stored in the
+  pack's `assets/` (as `mask-<id>.png`) and sets the effect's `mask`. Painting a
+  mask removes any region on that effect (mask wins).
+- Removing the effect (or **Remove mask**) deletes the orphaned mask from the
+  pack, so nothing dead ships.
+- A worked example: put a `ripple` on a lake layer, paint the water, and only the
+  water ripples — the sky stays still.
 
 ## Components
 

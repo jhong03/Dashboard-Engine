@@ -377,7 +377,7 @@
   "create.skin.layers.term": "背景圖層",
   "create.skin.layers.def": "最多堆疊 6 個圖片/影片圖層，帶視差深度（0–1）+ 漂移——游標為場景帶來 3D 縱深。",
   "create.skin.effects.term": "背景特效",
-  "create.skin.effects.def": "每個圖層最多 3 個 WebGL 著色器特效：ripple · sway · drift-warp · pulse · cursor-ripple（無 WebGL 時優雅回退為靜態圖片）。",
+  "create.skin.effects.def": "每個圖層最多 3 個 WebGL 著色器效果——ripple、sway、drift-warp、pulse、cursor-ripple、waves、shimmer、shake、spin、scroll、chroma-shift——每個都可用繪製的遮罩或區域限定（無 WebGL 時回退為靜態影像）。",
   "create.prop.0.effect": "重新著色某個配色項",
   "create.prop.1.effect": "選擇粒子效果",
   "create.prop.2.effect": "粒子密度（0.05–1）",
