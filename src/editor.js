@@ -1507,7 +1507,7 @@ function renderLayerEffects(card, layer) {
     tools.className = 'ed-bg-layer-tools';
     tools.appendChild(mkTool('↑', t('editor.insp.tool.earlier'), j > 0, () => { [layer.effects[j - 1], layer.effects[j]] = [layer.effects[j], layer.effects[j - 1]]; renderAll(); }));
     tools.appendChild(mkTool('↓', t('editor.insp.tool.later'), j < layer.effects.length - 1, () => { [layer.effects[j + 1], layer.effects[j]] = [layer.effects[j], layer.effects[j + 1]]; renderAll(); }));
-    tools.appendChild(mkTool('×', t('editor.insp.btn.remove'), true, () => { layer.effects.splice(j, 1); renderAll(); }));
+    tools.appendChild(mkTool('×', t('editor.insp.btn.remove'), true, () => { removeEffect(layer, j); renderAll(); }));
     fh.appendChild(tools);
     box.appendChild(fh);
 
@@ -1524,7 +1524,7 @@ function renderLayerEffects(card, layer) {
     else if (fx.type === 'scroll') { rc(t('editor.insp.field.angle'), 'angle', 0, 360, 5); rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); }
     else if (fx.type === 'chroma-shift') { rc(t('editor.insp.field.amount'), 'amount', 0, 1, 0.05); rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); }
 
-    renderEffectRegion(box, fx);
+    renderEffectScope(box, fx, layer);
     card.appendChild(box);
   });
 
@@ -1552,6 +1552,277 @@ function renderEffectRegion(box, fx) {
   rc(t('editor.insp.field.regionX'), 'x', 0, 100); rc(t('editor.insp.field.regionY'), 'y', 0, 100);
   rc(t('editor.insp.field.regionW'), 'w', 0, 100); rc(t('editor.insp.field.regionH'), 'h', 0, 100);
   rc(t('editor.insp.field.feather'), 'feather', 0, 50);
+}
+
+// An effect's scope: a PAINTED mask OR a rect/ellipse region. The engine lets a
+// mask override a region (the sanitizer drops the region when a mask is set), so
+// the UI is either/or — with a mask, show only mask controls; without one, offer
+// the painter plus the numeric region.
+function renderEffectScope(box, fx, layer) {
+  const row = document.createElement('div');
+  row.className = 'ed-fx-scope';
+  if (fx.mask) {
+    const edit = document.createElement('button');
+    edit.className = 'btn tiny';
+    edit.textContent = t('editor.insp.btn.editMask');
+    edit.addEventListener('click', () => openMaskPainter(layer, fx));
+    row.appendChild(edit);
+    const rm = document.createElement('button');
+    rm.className = 'btn tiny';
+    rm.textContent = t('editor.insp.btn.removeMask');
+    rm.addEventListener('click', () => { dropMask(fx); renderAll(); });
+    row.appendChild(rm);
+    box.appendChild(row);
+    return; // mask overrides region — no region controls
+  }
+  const paint = document.createElement('button');
+  paint.className = 'btn tiny';
+  paint.textContent = t('editor.insp.btn.paintMask');
+  paint.addEventListener('click', () => openMaskPainter(layer, fx));
+  row.appendChild(paint);
+  box.appendChild(row);
+  renderEffectRegion(box, fx); // region still available when there's no mask
+}
+
+// Is a mask asset still referenced by any effect? (Masks are per-effect unique,
+// but guard before deleting the shared bytes.)
+function maskInUse(rel) {
+  const layers = (state.pack.skin.background && state.pack.skin.background.layers) || [];
+  return layers.some((l) => (l.effects || []).some((e) => e.mask === rel));
+}
+
+// Drop a mask from an effect and clean up its now-orphaned asset (in-memory +
+// the main-side staged file), so it never rides into the saved pack.
+function dropMask(fx) {
+  const rel = fx.mask;
+  delete fx.mask;
+  if (rel && !maskInUse(rel)) {
+    delete state.assets[rel];
+    if (aegis.unstageMask) aegis.unstageMask(rel);
+  }
+}
+
+// Remove an effect, cleaning up its painted mask (an orphaned per-effect mask is
+// pure bloat — this is the "offer to delete the mask", done for the author).
+function removeEffect(layer, j) {
+  const fx = layer.effects[j];
+  if (fx && fx.mask) dropMask(fx);
+  layer.effects.splice(j, 1);
+}
+
+// ── Paint-mask tool (Phase D) ─────────────────────────────────────────────────
+// Brush a grayscale mask over the layer: white = full effect, black = none,
+// feathered between. Surface-space (matches the shader's vUV), so painting over
+// the layer as it renders maps 1:1. Saved as a grayscale PNG into the pack's
+// assets/; the GL shader multiplies effect strength by mask.r. Mask overrides
+// region (the sanitizer drops region when a mask is set).
+const MASK_MAX = 2048;    // hard cap, longest side
+const MASK_TARGET = 1600; // authored resolution (crisp, under the cap)
+const MASK_UNDO_CAP = 50; // stroke-based history depth
+const MASK_REL = /^assets\/mask-[a-z0-9]{1,16}\.png$/;
+function newMaskName() { return 'assets/mask-' + (Date.now().toString(36) + Math.random().toString(36).slice(2, 5)) + '.png'; }
+function isVideoRelPath(rel) { return /\.(mp4|webm)$/i.test(String(rel || '')); }
+
+function openMaskPainter(layer, fx) {
+  // Author at the SURFACE aspect: the mask maps across the whole surface in UV,
+  // not the image's own aspect, so shapes line up with what's on screen.
+  const skinRect = $('skin').getBoundingClientRect();
+  const aspect = skinRect.width > 0 && skinRect.height > 0 ? skinRect.width / skinRect.height : 16 / 9;
+  let W, H;
+  if (aspect >= 1) { W = Math.min(MASK_TARGET, MASK_MAX); H = Math.max(1, Math.round(W / aspect)); }
+  else { H = Math.min(MASK_TARGET, MASK_MAX); W = Math.max(1, Math.round(H * aspect)); }
+
+  // The mask canvas stores the mask as ALPHA (0..1); rgb is a red tint so the
+  // overlay reads red. On save alpha → grayscale.
+  const mask = document.createElement('canvas');
+  mask.width = W; mask.height = H;
+  const mctx = mask.getContext('2d');
+  const TINT = [230, 60, 60];
+  const tool = { size: 12, softness: 0.5, opacity: 0.85, erase: false };
+
+  // Stroke-based history: PNG dataURL snapshots (sparse masks compress tiny;
+  // freed on close). idx points at the current state.
+  let history = [];
+  let idx = -1;
+  let restoreToken = 0;
+  function pushHistory() {
+    history = history.slice(0, idx + 1);
+    history.push(mask.toDataURL('image/png'));
+    if (history.length > MASK_UNDO_CAP) history.shift();
+    idx = history.length - 1;
+    updateUndoButtons();
+  }
+  function restore(dataUrl) {
+    const token = ++restoreToken;
+    const img = new Image();
+    img.onload = () => { if (token !== restoreToken) return; mctx.clearRect(0, 0, W, H); mctx.drawImage(img, 0, 0, W, H); };
+    img.src = dataUrl;
+  }
+  function undo() { if (idx > 0) { idx--; restore(history[idx]); updateUndoButtons(); } }
+  function redo() { if (idx < history.length - 1) { idx++; restore(history[idx]); updateUndoButtons(); } }
+
+  // ── Toolbar ──
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ed-maskpaint';
+  const bar = document.createElement('div');
+  bar.className = 'ed-mp-bar';
+  const title = document.createElement('span');
+  title.className = 'ed-mp-title';
+  title.textContent = `${t('editor.mask.title')} · ${fx.type}`;
+  bar.appendChild(title);
+
+  const slider = (labelKey, min, max, step, val, onInput) => {
+    const wrap = document.createElement('label');
+    wrap.className = 'ed-mp-slider';
+    const lab = document.createElement('span'); lab.textContent = t(labelKey);
+    const inp = document.createElement('input');
+    inp.type = 'range'; inp.min = min; inp.max = max; inp.step = step; inp.value = val;
+    inp.addEventListener('input', () => onInput(parseFloat(inp.value)));
+    wrap.appendChild(lab); wrap.appendChild(inp);
+    return wrap;
+  };
+  bar.appendChild(slider('editor.mask.size', 1, 40, 1, tool.size, (v) => { tool.size = v; }));
+  bar.appendChild(slider('editor.mask.softness', 0, 1, 0.05, tool.softness, (v) => { tool.softness = v; }));
+  bar.appendChild(slider('editor.mask.opacity', 0.05, 1, 0.05, tool.opacity, (v) => { tool.opacity = v; }));
+
+  const toolBtn = (labelKey, onClick, extraClass) => {
+    const b = document.createElement('button');
+    b.className = 'btn tiny' + (extraClass ? ' ' + extraClass : '');
+    b.textContent = t(labelKey);
+    b.addEventListener('click', onClick);
+    return b;
+  };
+  const eraseBtn = toolBtn('editor.mask.erase', () => { tool.erase = !tool.erase; eraseBtn.classList.toggle('active', tool.erase); });
+  bar.appendChild(eraseBtn);
+  bar.appendChild(toolBtn('editor.mask.clear', () => { mctx.clearRect(0, 0, W, H); pushHistory(); }));
+  bar.appendChild(toolBtn('editor.mask.invert', () => { invert(); pushHistory(); }));
+  const undoBtn = toolBtn('editor.mask.undo', undo);
+  const redoBtn = toolBtn('editor.mask.redo', redo);
+  bar.appendChild(undoBtn); bar.appendChild(redoBtn);
+  function updateUndoButtons() { undoBtn.disabled = idx <= 0; redoBtn.disabled = idx >= history.length - 1; }
+
+  const spacer = document.createElement('span'); spacer.className = 'ed-mp-spacer'; bar.appendChild(spacer);
+  bar.appendChild(toolBtn('common.cancel', close));
+  bar.appendChild(toolBtn('editor.mask.save', doSave, 'primary'));
+  backdrop.appendChild(bar);
+
+  // ── Stage: layer backdrop + paint canvas at the surface aspect ──
+  const stageWrap = document.createElement('div');
+  stageWrap.className = 'ed-mp-stagewrap';
+  const frame = document.createElement('div');
+  frame.className = 'ed-mp-frame';
+  frame.style.aspectRatio = `${W} / ${H}`;
+  // Its children are absolutely positioned, so give it an explicit width that
+  // fits both the viewport width and the available height at this aspect.
+  frame.style.width = `min(92vw, calc((100vh - 120px) * ${(W / H).toFixed(4)}))`;
+  if (!isVideoRelPath(layer.src) && state.assets[layer.src]) {
+    const bg = document.createElement('img');
+    bg.className = 'ed-mp-bg'; bg.src = state.assets[layer.src]; bg.alt = '';
+    frame.appendChild(bg);
+  } else {
+    const note = document.createElement('div');
+    note.className = 'ed-mp-bg ed-mp-bg-note';
+    note.textContent = t('editor.mask.videoNote');
+    frame.appendChild(note);
+  }
+  mask.className = 'ed-mp-paint';
+  frame.appendChild(mask);
+  stageWrap.appendChild(frame);
+  backdrop.appendChild(stageWrap);
+
+  // ── Painting ──
+  let painting = false, lastX = 0, lastY = 0;
+  const toCanvas = (e) => {
+    const r = mask.getBoundingClientRect();
+    return { x: (e.clientX - r.left) / r.width * W, y: (e.clientY - r.top) / r.height * H };
+  };
+  function stamp(x, y) {
+    const radius = Math.max(1, tool.size / 100 * W); // size = % of surface width
+    mctx.globalCompositeOperation = tool.erase ? 'destination-out' : 'source-over';
+    const grad = mctx.createRadialGradient(x, y, Math.min(radius * (1 - tool.softness), radius - 0.5), x, y, radius);
+    grad.addColorStop(0, `rgba(${TINT[0]},${TINT[1]},${TINT[2]},${tool.opacity})`);
+    grad.addColorStop(1, `rgba(${TINT[0]},${TINT[1]},${TINT[2]},0)`);
+    mctx.fillStyle = grad;
+    mctx.beginPath(); mctx.arc(x, y, radius, 0, Math.PI * 2); mctx.fill();
+    mctx.globalCompositeOperation = 'source-over';
+  }
+  function strokeTo(x, y) {
+    const spacing = Math.max(1, (tool.size / 100 * W) / 4);
+    const n = Math.max(1, Math.round(Math.hypot(x - lastX, y - lastY) / spacing));
+    for (let i = 1; i <= n; i++) stamp(lastX + (x - lastX) * i / n, lastY + (y - lastY) * i / n);
+    lastX = x; lastY = y;
+  }
+  mask.addEventListener('pointerdown', (e) => {
+    e.preventDefault(); painting = true;
+    try { mask.setPointerCapture(e.pointerId); } catch (err) { /* older engines */ }
+    const p = toCanvas(e); lastX = p.x; lastY = p.y; stamp(p.x, p.y);
+  });
+  mask.addEventListener('pointermove', (e) => { if (painting) { const p = toCanvas(e); strokeTo(p.x, p.y); } });
+  const endStroke = () => { if (painting) { painting = false; pushHistory(); } };
+  mask.addEventListener('pointerup', endStroke);
+  mask.addEventListener('pointercancel', endStroke);
+
+  function invert() {
+    const src = mctx.getImageData(0, 0, W, H);
+    for (let i = 0; i < src.data.length; i += 4) {
+      const a = 255 - src.data[i + 3];
+      src.data[i] = TINT[0]; src.data[i + 1] = TINT[1]; src.data[i + 2] = TINT[2]; src.data[i + 3] = a;
+    }
+    mctx.putImageData(src, 0, 0);
+  }
+
+  // Save: alpha → grayscale PNG, stage it main-side, set fx.mask, drop any region.
+  async function doSave() {
+    const out = document.createElement('canvas'); out.width = W; out.height = H;
+    const octx = out.getContext('2d');
+    const src = mctx.getImageData(0, 0, W, H);
+    const dst = octx.createImageData(W, H);
+    for (let i = 0; i < src.data.length; i += 4) {
+      const a = src.data[i + 3];
+      dst.data[i] = a; dst.data[i + 1] = a; dst.data[i + 2] = a; dst.data[i + 3] = 255;
+    }
+    octx.putImageData(dst, 0, 0);
+    const dataUrl = out.toDataURL('image/png');
+    const rel = fx.mask && MASK_REL.test(fx.mask) ? fx.mask : newMaskName();
+    const res = await aegis.stageMask(rel, dataUrl);
+    if (!res || !res.ok) { setStatus((res && res.error) || t('editor.mask.saveFailed'), true); return; }
+    state.assets[rel] = dataUrl;
+    fx.mask = rel;
+    delete fx.region; // mask overrides region
+    close();
+    renderAll();
+    setStatus(t('editor.mask.saved'));
+  }
+
+  function onKey(e) {
+    if (e.key === 'Escape') { close(); }
+    else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+    else if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.key.toLowerCase() === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
+  }
+  function close() {
+    document.removeEventListener('keydown', onKey);
+    backdrop.remove();
+  }
+  document.addEventListener('keydown', onKey);
+
+  // Load an existing mask (grayscale → alpha), else start blank; then seed the
+  // undo baseline.
+  function seed() { pushHistory(); }
+  if (fx.mask && state.assets[fx.mask]) {
+    const img = new Image();
+    img.onload = () => {
+      const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
+      const tctx = tmp.getContext('2d'); tctx.drawImage(img, 0, 0, W, H);
+      const s = tctx.getImageData(0, 0, W, H);
+      const d = mctx.createImageData(W, H);
+      for (let i = 0; i < s.data.length; i += 4) { d.data[i] = TINT[0]; d.data[i + 1] = TINT[1]; d.data[i + 2] = TINT[2]; d.data[i + 3] = s.data[i]; }
+      mctx.putImageData(d, 0, 0); seed();
+    };
+    img.onerror = seed;
+    img.src = state.assets[fx.mask];
+  } else { seed(); }
+
+  document.body.appendChild(backdrop);
 }
 
 function renderPersonaTab(panel) {
