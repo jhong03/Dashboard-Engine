@@ -1353,6 +1353,28 @@ function renderFillSection(panel, skin) {
 // depth + drift. A single layer is a plain wallpaper; add more for depth. The
 // engine consumes skin.background.layers; the sanitizer keeps skin.wallpaper in
 // sync on save for older engines.
+// The engine falls back to skin.wallpaper when a pack has NO background layers
+// (legacy packs). In the editor the background-layers section IS the wallpaper,
+// so mirror skin.wallpaper to the layers on every change: an empty list must
+// clear it — otherwise the removed image reappears, both live (applyBackground's
+// fallback) and permanently (the sanitizer re-synthesizes a base layer from the
+// stale wallpaper on save). A non-empty list tracks the base (bottom) layer.
+function syncWallpaperMirror(skin) {
+  const layers = (skin.background && skin.background.layers) || [];
+  if (layers.length === 0) {
+    delete skin.wallpaper;
+    delete skin.wallpaperFit;
+    delete skin.wallpaperPosX;
+    delete skin.wallpaperPosY;
+  } else {
+    const base = layers[0];
+    skin.wallpaper = base.src;
+    if (typeof base.fit === 'string') skin.wallpaperFit = base.fit;
+    if (typeof base.posX === 'number') skin.wallpaperPosX = base.posX;
+    if (typeof base.posY === 'number') skin.wallpaperPosY = base.posY;
+  }
+}
+
 function renderBackgroundSection(panel, skin) {
   if (!skin.background || !Array.isArray(skin.background.layers)) {
     skin.background = { layers: [], parallax: { strength: 1, axis: 'both' } };
@@ -1386,9 +1408,9 @@ function renderBackgroundSection(panel, skin) {
       if (enabled) b.addEventListener('click', onClick);
       return b;
     };
-    tools.appendChild(mkTool('↑', t('editor.insp.tool.moveBack'), i > 0, () => { [bg.layers[i - 1], bg.layers[i]] = [bg.layers[i], bg.layers[i - 1]]; renderAll(); }));
-    tools.appendChild(mkTool('↓', t('editor.insp.tool.moveForward'), i < bg.layers.length - 1, () => { [bg.layers[i + 1], bg.layers[i]] = [bg.layers[i], bg.layers[i + 1]]; renderAll(); }));
-    tools.appendChild(mkTool('×', t('editor.insp.tool.removeLayer'), true, () => { bg.layers.splice(i, 1); renderAll(); }));
+    tools.appendChild(mkTool('↑', t('editor.insp.tool.moveBack'), i > 0, () => { [bg.layers[i - 1], bg.layers[i]] = [bg.layers[i], bg.layers[i - 1]]; syncWallpaperMirror(skin); renderAll(); }));
+    tools.appendChild(mkTool('↓', t('editor.insp.tool.moveForward'), i < bg.layers.length - 1, () => { [bg.layers[i + 1], bg.layers[i]] = [bg.layers[i], bg.layers[i + 1]]; syncWallpaperMirror(skin); renderAll(); }));
+    tools.appendChild(mkTool('×', t('editor.insp.tool.removeLayer'), true, () => { bg.layers.splice(i, 1); syncWallpaperMirror(skin); renderAll(); }));
     head.appendChild(tools);
     card.appendChild(head);
 
@@ -1417,6 +1439,7 @@ function renderBackgroundSection(panel, skin) {
   const addLayer = (rel) => {
     if (!rel) return;
     bg.layers.push({ src: rel, depth: bg.layers.length === 0 ? 0 : 0.5, fit: 'cover', posX: 50, posY: 50, opacity: 1, drift: { x: 0, y: 0 } });
+    syncWallpaperMirror(skin);
     renderAll();
   };
   if (bg.layers.length < 6) {
