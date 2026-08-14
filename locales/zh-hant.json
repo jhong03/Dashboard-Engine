@@ -369,7 +369,7 @@
   "create.skin.fonts.term": "字型",
   "create.skin.fonts.def": "rajdhani · system-sans · system-serif · mono（包不能自帶字型檔案）。",
   "create.skin.ambience.term": "氛圍",
-  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle，密度 0.05–1（對減弱動態安全）。",
+  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle（密度 0.05–1，支援減弱動態），或完全自訂的粒子系統（發射器、精靈、運動、顏色、游標互動）。",
   "create.skin.textures.term": "紋理",
   "create.skin.textures.def": "scanlines · grid · glow · vignette，各 0–1。",
   "create.skin.wallpaper.term": "桌布",

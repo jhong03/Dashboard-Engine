@@ -401,7 +401,7 @@
   "create.skin.fonts.term": "Polices",
   "create.skin.fonts.def": "rajdhani · system-sans · system-serif · mono (les packs ne peuvent pas fournir de fichiers de police).",
   "create.skin.ambience.term": "Ambiance",
-  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle, avec une densité de 0,05 à 1 (sans risque en mouvement réduit).",
+  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle (densité 0.05–1, compatible mouvement réduit), ou un système de particules entièrement personnalisé (émetteur, sprite, mouvement, couleur, interaction au curseur).",
   "create.skin.textures.term": "Textures",
   "create.skin.textures.def": "scanlines · grid · glow · vignette, chacune de 0 à 1.",
   "create.skin.wallpaper.term": "Fond d’écran",

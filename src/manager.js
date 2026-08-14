@@ -1880,7 +1880,7 @@ const CREATE_COMPONENTS = [
 const CREATE_SKIN = [
   ['Palette', 'void · glass · accent · accentBright · muted · warn · gold — hex colours that drive the whole look.'],
   ['Fonts', 'rajdhani · system-sans · system-serif · mono (packs can’t ship font files).'],
-  ['Ambience', 'none · embers · dust · snow · petals · rain · sparkle, with a density 0.05–1 (reduced-motion safe).'],
+  ['Ambience', 'none · embers · dust · snow · petals · rain · sparkle (density 0.05–1, reduced-motion safe), or a fully-custom particle system (emitter, sprite, motion, colour, cursor interaction).'],
   ['Textures', 'scanlines · grid · glow · vignette, each 0–1.'],
   ['Wallpaper', 'an image (≤5 MB) or a muted looping video (mp4/webm, ≤30 MB), with fit + focal point.'],
   ['Background layers', 'stack up to 6 image/video layers with a parallax depth (0–1) + drift — the cursor gives the scene 3-D depth.'],

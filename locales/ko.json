@@ -401,7 +401,7 @@
   "create.skin.fonts.term": "글꼴",
   "create.skin.fonts.def": "rajdhani · system-sans · system-serif · mono(팩은 글꼴 파일을 포함할 수 없습니다).",
   "create.skin.ambience.term": "분위기",
-  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle, 밀도 0.05–1(모션 감소에도 안전).",
+  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle(밀도 0.05–1, 모션 감소 지원), 또는 완전 사용자 지정 파티클 시스템(방출기, 스프라이트, 움직임, 색상, 커서 상호작용).",
   "create.skin.textures.term": "텍스처",
   "create.skin.textures.def": "scanlines · grid · glow · vignette, 각 0–1.",
   "create.skin.wallpaper.term": "배경화면",

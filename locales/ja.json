@@ -401,7 +401,7 @@
   "create.skin.fonts.term": "フォント",
   "create.skin.fonts.def": "rajdhani · system-sans · system-serif · mono（パックはフォントファイルを同梱できません）。",
   "create.skin.ambience.term": "雰囲気",
-  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle、密度 0.05–1（動きの軽減にも安全）。",
+  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle（密度 0.05–1、視差軽減に対応）、または完全カスタムのパーティクルシステム（エミッター・スプライト・動き・色・カーソル操作）。",
   "create.skin.textures.term": "テクスチャ",
   "create.skin.textures.def": "scanlines · grid · glow · vignette、それぞれ 0–1。",
   "create.skin.wallpaper.term": "壁紙",

@@ -401,7 +401,7 @@
   "create.skin.fonts.term": "字体",
   "create.skin.fonts.def": "rajdhani · system-sans · system-serif · mono（包不能自带字体文件）。",
   "create.skin.ambience.term": "氛围",
-  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle，密度 0.05–1（对减弱动态安全）。",
+  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle（密度 0.05–1，支持减弱动态），或完全自定义的粒子系统（发射器、精灵、运动、颜色、光标交互）。",
   "create.skin.textures.term": "纹理",
   "create.skin.textures.def": "scanlines · grid · glow · vignette，各 0–1。",
   "create.skin.wallpaper.term": "壁纸",

@@ -401,7 +401,7 @@
   "create.skin.fonts.term": "Fuentes",
   "create.skin.fonts.def": "rajdhani · system-sans · system-serif · mono (los paquetes no pueden incluir archivos de fuentes).",
   "create.skin.ambience.term": "Ambiente",
-  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle, con una densidad de 0,05 a 1 (respeta el movimiento reducido).",
+  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle (densidad 0.05–1, seguro con movimiento reducido), o un sistema de partículas totalmente personalizado (emisor, sprite, movimiento, color, interacción con el cursor).",
   "create.skin.textures.term": "Texturas",
   "create.skin.textures.def": "scanlines · grid · glow · vignette, cada una de 0 a 1.",
   "create.skin.wallpaper.term": "Fondo de pantalla",

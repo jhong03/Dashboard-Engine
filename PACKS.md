@@ -200,6 +200,62 @@ a red overlay:
 - A worked example: put a `ripple` on a lake layer, paint the water, and only the
   water ripples — the sky stays still.
 
+### Custom particles (Particle Studio)
+
+The `ambience` block above picks one of 7 built-in effects. For full control,
+set `"mode": "custom"` and describe your own particle system in `system`. The
+built-in effects are untouched — custom is a separate, fully data-driven layer
+(same single animation loop, same fps cap + freeze, reduced-motion safe).
+
+```jsonc
+"ambience": {
+  "mode": "custom",
+  "density": 0.5,                     // still scales the count (0.5 = as authored)
+  "system": {
+    "emitter": { "shape": "top", "x": 50, "y": 50 },  // where particles spawn
+    "sprite":  { "builtin": "flake" },                // or "custom": "assets/p.png"
+    "count": 90,                                       // 1–400 (hard cap)
+    "sizeMin": 0.15, "sizeMax": 0.4,                  // cqw (resolution-independent)
+    "speedMin": 2, "speedMax": 5,                     // cqw / second
+    "direction": 180, "spread": 12,                   // degrees CW from up; 180 = down
+    "gravity": 1, "wind": 0, "drag": 0,               // cqw/s² accel; drag 0–1
+    "color": { "paletteKey": "accentBright", "jitter": 0 },  // token | "custom"+"custom":"#RRGGBB"
+    "opacityLife": "constant",                        // fadeInOut | fadeOut | constant
+    "rotate": 0, "wobble": 1.2,                       // spin; side-to-side sway
+    "blend": "normal",                                // normal | screen | additive
+    "pointer": { "mode": "none", "radius": 20, "strength": 0.5 }  // none|attract|repel
+  }
+}
+```
+
+| field | values | notes |
+|---|---|---|
+| `emitter.shape` | `screen` `top` `bottom` `left` `right` `point` `mask` | `point` uses `x`/`y` (%); `mask` spawns from the bright pixels of `emitter.mask` |
+| `sprite.builtin` | `dot` `streak` `flake` `leaf` `note` `spark` `ring` | `sprite.custom` (a ≤256 px PNG) overrides it |
+| `count` | 1–400 | scaled by `density` (0.5 = as authored), hard-capped at 400 |
+| `sizeMin/Max` | 0.1–8 cqw | particle radius; cqw = % of surface width |
+| `speedMin/Max` | 0–30 cqw/s | initial speed along `direction` |
+| `direction` / `spread` | 0–360 / 0–180 | 0 = up, 90 = right, 180 = down; `spread` is the cone width |
+| `gravity` / `wind` | −20…20 | continuous down / sideways acceleration (cqw/s²) |
+| `drag` | 0–1 | slows particles over time |
+| `color` | palette token or `custom` + hex | `jitter` 0–1 varies each particle's colour |
+| `opacityLife` | `fadeInOut` `fadeOut` `constant` | how a particle's alpha behaves over its life |
+| `rotate` / `wobble` | 0–10 | spin rate / sway amount |
+| `blend` | `normal` `screen` `additive` | additive = glow |
+| `pointer` | `none` `attract` `repel` | cursor force within `radius`, strength 0–1 |
+
+- **Author it** in the editor: Skin tab → Ambience → **Customize particles…**.
+  Grouped controls (Emitter / Sprite / Motion / Color / Interaction) update the
+  stage live. **Reset to <preset>** reloads a factory starting point; **Save
+  preset** stores a named preset in the pack; **Use a preset** returns to the
+  built-in effects.
+- **Mask emitter** — pick `emitter.shape: "mask"` and paint the spawn zone (the
+  same painter as effect masks); particles appear only where you paint.
+- **Worked example (recreate snow):** `emitter.shape: "top"`, `sprite: "flake"`,
+  `direction: 180`, a little `gravity` and `wobble`, `opacityLife: "constant"` —
+  match the built-in `snow` by eye, then push it further (a mask emitter, an
+  additive glow, a custom sprite).
+
 ## Components
 
 Up to 24 components, placed freely: `rect: [x, y, w, h]` in **percent of the

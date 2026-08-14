@@ -401,7 +401,7 @@
   "create.skin.fonts.term": "Fonts",
   "create.skin.fonts.def": "rajdhani · system-sans · system-serif · mono (packs can’t ship font files).",
   "create.skin.ambience.term": "Ambience",
-  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle, with a density 0.05–1 (reduced-motion safe).",
+  "create.skin.ambience.def": "none · embers · dust · snow · petals · rain · sparkle (density 0.05–1, reduced-motion safe), or a fully-custom particle system (emitter, sprite, motion, colour, cursor interaction).",
   "create.skin.textures.term": "Textures",
   "create.skin.textures.def": "scanlines · grid · glow · vignette, each 0–1.",
   "create.skin.wallpaper.term": "Wallpaper",
