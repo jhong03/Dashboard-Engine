@@ -1454,12 +1454,18 @@ function defaultEffect(type) {
   if (type === 'sway') return { type, speed: 0.5, strength: 0.5, direction: 0 };
   if (type === 'drift-warp') return { type, speed: 0.5, scale: 3 };
   if (type === 'pulse') return { type, speed: 1, amount: 0.3, paletteKey: null };
+  if (type === 'waves') return { type, angle: 0, wavelength: 2, speed: 0.6, strength: 0.5 };
+  if (type === 'shimmer') return { type, density: 0.5, speed: 1 };
+  if (type === 'shake') return { type, speed: 1, amplitude: 0.3 };
+  if (type === 'spin') return { type, speed: 0.5, radius: 0.5 };
+  if (type === 'scroll') return { type, angle: 0, speed: 0.5 };
+  if (type === 'chroma-shift') return { type, amount: 0.4, speed: 1 };
   return { type: 'cursor-ripple', strength: 0.5, speed: 1.4, decay: 1 };
 }
 
 // Effect type ids are frozen; only the display labels localize.
 function effectAddChoices() {
-  return [['', t('editor.insp.opt.fxAdd')], ['ripple', t('editor.insp.opt.fxRipple')], ['sway', t('editor.insp.opt.fxSway')], ['drift-warp', t('editor.insp.opt.fxDriftWarp')], ['pulse', t('editor.insp.opt.fxPulse')], ['cursor-ripple', t('editor.insp.opt.fxCursorRipple')]];
+  return [['', t('editor.insp.opt.fxAdd')], ['ripple', t('editor.insp.opt.fxRipple')], ['sway', t('editor.insp.opt.fxSway')], ['drift-warp', t('editor.insp.opt.fxDriftWarp')], ['pulse', t('editor.insp.opt.fxPulse')], ['cursor-ripple', t('editor.insp.opt.fxCursorRipple')], ['waves', t('editor.insp.opt.fxWaves')], ['shimmer', t('editor.insp.opt.fxShimmer')], ['shake', t('editor.insp.opt.fxShake')], ['spin', t('editor.insp.opt.fxSpin')], ['scroll', t('editor.insp.opt.fxScroll')], ['chroma-shift', t('editor.insp.opt.fxChromaShift')]];
 }
 function paletteTintChoices() {
   return [['', t('editor.insp.opt.none')], ['accent', t('editor.insp.opt.tintAccent')], ['accentBright', t('editor.insp.opt.tintBright')], ['gold', t('editor.insp.opt.tintGold')], ['warn', t('editor.insp.opt.tintWarn')], ['muted', t('editor.insp.opt.tintMuted')]];
@@ -1511,6 +1517,12 @@ function renderLayerEffects(card, layer) {
     else if (fx.type === 'drift-warp') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.scale'), 'scale', 0.5, 8, 0.5); }
     else if (fx.type === 'pulse') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.amount'), 'amount', 0, 1, 0.05); box.appendChild(field(t('editor.insp.field.tint'), selectControl(fx.paletteKey || '', paletteTintChoices(), (v) => { fx.paletteKey = v || null; renderAll(); }))); }
     else if (fx.type === 'cursor-ripple') { rc(t('editor.insp.field.strength'), 'strength', 0, 1, 0.05); rc(t('editor.insp.field.speed'), 'speed', 0.2, 3, 0.1); rc(t('editor.insp.field.decay'), 'decay', 0.2, 3, 0.1); }
+    else if (fx.type === 'waves') { rc(t('editor.insp.field.angle'), 'angle', 0, 360, 5); rc(t('editor.insp.field.wavelength'), 'wavelength', 0.5, 8, 0.5); rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.strength'), 'strength', 0, 1, 0.05); }
+    else if (fx.type === 'shimmer') { rc(t('editor.insp.field.density'), 'density', 0, 1, 0.05); rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); }
+    else if (fx.type === 'shake') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.amplitude'), 'amplitude', 0, 1, 0.05); }
+    else if (fx.type === 'spin') { rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); rc(t('editor.insp.field.radius'), 'radius', 0.05, 1, 0.05); }
+    else if (fx.type === 'scroll') { rc(t('editor.insp.field.angle'), 'angle', 0, 360, 5); rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); }
+    else if (fx.type === 'chroma-shift') { rc(t('editor.insp.field.amount'), 'amount', 0, 1, 0.05); rc(t('editor.insp.field.speed'), 'speed', 0, 3, 0.1); }
 
     renderEffectRegion(box, fx);
     card.appendChild(box);

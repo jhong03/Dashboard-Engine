@@ -69,6 +69,12 @@
     if (types.includes('pulse')) defs.push('#define FX_PULSE');
     if (pulse && pulse.paletteKey) defs.push('#define PULSE_TINT');
     if (types.includes('cursor-ripple')) defs.push('#define FX_CURSORRIPPLE');
+    if (types.includes('waves')) defs.push('#define FX_WAVES');
+    if (types.includes('shimmer')) defs.push('#define FX_SHIMMER');
+    if (types.includes('shake')) defs.push('#define FX_SHAKE');
+    if (types.includes('spin')) defs.push('#define FX_SPIN');
+    if (types.includes('scroll')) defs.push('#define FX_SCROLL');
+    if (types.includes('chroma-shift')) defs.push('#define FX_CHROMA');
     if (region) { defs.push('#define REGION'); defs.push(`#define REGION_SHAPE ${region.region.shape === 'ellipse' ? 1 : 0}`); }
     if (mask) defs.push('#define MASK');
     defs.push(`#define MAX_RINGS ${MAX_RINGS}`);
@@ -99,6 +105,24 @@
       'uniform vec4 uRings[MAX_RINGS];', // xy=centre, z=age(s), w=active
       'uniform vec3 uCursor;', // strength, decay, speed
       '#endif',
+      '#ifdef FX_WAVES',
+      'uniform vec4 uWaves;', // angle(rad), wavelength, speed, strength
+      '#endif',
+      '#ifdef FX_SHIMMER',
+      'uniform vec2 uShimmer;', // density, speed
+      '#endif',
+      '#ifdef FX_SHAKE',
+      'uniform vec2 uShake;', // speed, amplitude
+      '#endif',
+      '#ifdef FX_SPIN',
+      'uniform vec2 uSpin;', // speed, radius falloff
+      '#endif',
+      '#ifdef FX_SCROLL',
+      'uniform vec2 uScroll;', // angle(rad), speed
+      '#endif',
+      '#ifdef FX_CHROMA',
+      'uniform vec2 uChroma;', // amount, speed
+      '#endif',
       '#ifdef REGION',
       'uniform vec4 uRegion;',  // x,y,w,h in 0..1
       'uniform float uFeather;', // 0..1
@@ -125,7 +149,8 @@
       '#ifdef MASK',
       '  amt *= texture2D(uMask, vUV).r;',
       '#endif',
-      '  vec2 disp = vec2(0.0);',
+      '  vec2 disp = vec2(0.0);',  // region/mask-gated displacement
+      '  vec2 gdisp = vec2(0.0);', // whole-layer displacement (shake), never gated
       '#ifdef FX_RIPPLE',
       '  disp += sin(vUV.yx*uRipple.y*6.28318 + uTime*uRipple.x)*uRipple.z*0.02;',
       '#endif',
@@ -134,6 +159,28 @@
       '#endif',
       '#ifdef FX_DRIFTWARP',
       '  { float n1=vnoise(vUV*uWarp.y+uTime*uWarp.x); float n2=vnoise(vUV*uWarp.y+5.2+uTime*uWarp.x*0.9); disp += (vec2(n1,n2)-0.5)*0.045; }',
+      '#endif',
+      '#ifdef FX_WAVES',
+      // Travelling sine ripple marching along `angle`; spacing set by wavelength.
+      '  { vec2 dir = vec2(cos(uWaves.x), sin(uWaves.x));',
+      '    float ph = dot(vUV, dir)/max(uWaves.y, 0.05)*6.28318 + uTime*uWaves.z;',
+      '    disp += dir * sin(ph) * uWaves.w * 0.02; }',
+      '#endif',
+      '#ifdef FX_SPIN',
+      // Swirl around the region centre (or layer centre); eases off past `radius`.
+      '  { vec2 c = vec2(0.5);',
+      '#ifdef REGION',
+      '    c = uRegion.xy + uRegion.zw*0.5;',
+      '#endif',
+      '    vec2 d = vUV - c;',
+      '    float fall = 1.0 - smoothstep(0.0, max(uSpin.y, 1e-3), length(d));',
+      '    float a = uTime*uSpin.x*fall;',
+      '    vec2 rd = vec2(d.x*cos(a) - d.y*sin(a), d.x*sin(a) + d.y*cos(a));',
+      '    disp += (rd - d); }',
+      '#endif',
+      '#ifdef FX_SHAKE',
+      // Whole-layer jitter. Amplitude ceiling is tiny on purpose (motion sickness).
+      '  gdisp += vec2(sin(uTime*uShake.x*13.0), cos(uTime*uShake.x*11.0)) * uShake.y * 0.008;',
       '#endif',
       '#ifdef FX_CURSORRIPPLE',
       // A single crisp ring per spawn, expanding at `speed` (uCursor.z) — a
@@ -146,10 +193,22 @@
       '    float pulse = exp(-front*front) * exp(-r.z*uCursor.y);',
       '    disp += normalize(dd+1e-5) * pulse * uCursor.x * 0.045; }',
       '#endif',
-      '  vec2 uv = vUV + disp*amt;',
+      '  vec2 uv = vUV + disp*amt + gdisp;',
       '  uv = (uv-0.5)/uOverscan + 0.5 + uOffset;',        // overscan + parallax/drift
       '  vec2 suv = (uv-0.5)*uFitScale + 0.5 + uFitOffset;', // object-fit cover
+      '#ifdef FX_SCROLL',
+      // Wrap-around drift (clouds/starfields). fract() tiles in-shader so it works
+      // on WebGL1 NPOT textures too; best with a seamless/tileable source.
+      '  { vec2 dir = vec2(cos(uScroll.x), sin(uScroll.x)); suv = fract(suv + dir*uTime*uScroll.y*0.05); }',
+      '#endif',
+      '#ifdef FX_CHROMA',
+      // RGB split: sample R/B at a small oscillating offset, G at centre.
+      '  vec4 col;',
+      '  { vec2 off = vec2(sin(uTime*uChroma.y), cos(uTime*uChroma.y)) * uChroma.x * 0.01 * amt;',
+      '    col = vec4(texture2D(uTex, suv+off).r, texture2D(uTex, suv).g, texture2D(uTex, suv-off).b, texture2D(uTex, suv).a); }',
+      '#else',
       '  vec4 col = texture2D(uTex, suv);',
+      '#endif',
       // Only `contain` letterboxes to transparent; cover/stretch rely on
       // CLAMP_TO_EDGE (plus effect overscan) so displaced edges never show void.
       '  if (uLetterbox > 0.5 && (suv.x < 0.0 || suv.x > 1.0 || suv.y < 0.0 || suv.y > 1.0)) col.a = 0.0;',
@@ -161,6 +220,13 @@
       '    col.rgb *= 1.0 + p;',
       '#endif',
       '  }',
+      '#endif',
+      '#ifdef FX_SHIMMER',
+      // Sparse sparkle glints, gated by the mask/region. Higher density lowers the
+      // threshold so more of the animated noise lights up.
+      '  { float n = vnoise(vUV*140.0 + uTime*uShimmer.y*2.0);',
+      '    float spark = smoothstep(1.0 - uShimmer.x*0.6 - 0.02, 1.0, n);',
+      '    col.rgb += spark * amt; }',
       '#endif',
       '  col.a *= uOpacity;',
       '  col.rgb *= col.a;', // premultiplied for ONE / ONE_MINUS_SRC_ALPHA
@@ -311,7 +377,7 @@
       // UV-displacing effects (ripple/sway/warp/cursor-ripple) push sampling
       // past the texture edge; zoom in a touch more so cover layers never smear
       // the void in at the edges.
-      const hasUvFx = (layer.effects || []).some((e) => ['ripple', 'sway', 'drift-warp', 'cursor-ripple'].includes(e.type));
+      const hasUvFx = (layer.effects || []).some((e) => ['ripple', 'sway', 'drift-warp', 'cursor-ripple', 'waves', 'spin', 'shake', 'chroma-shift'].includes(e.type));
       const over = rec.parallaxAmp + Math.max(rec.driftAmpX, rec.driftAmpY) + (hasUvFx ? 0.06 : 0);
       rec.overscan = 1 + 2 * (over + 0.005);
       rec.opacity = typeof layer.opacity === 'number' ? layer.opacity : 1;
@@ -426,6 +492,12 @@
           else if (e.type === 'drift-warp') gl.uniform2f(uloc(rec, 'uWarp'), e.speed, e.scale);
           else if (e.type === 'pulse') { gl.uniform2f(uloc(rec, 'uPulse'), e.speed, e.amount); if (e.paletteKey && opts.palette) { const c = hexToRgb(opts.palette[e.paletteKey]); const l = uloc(rec, 'uPulseColor'); if (l) gl.uniform3f(l, c[0], c[1], c[2]); } }
           else if (e.type === 'cursor-ripple') gl.uniform3f(uloc(rec, 'uCursor'), e.strength, e.decay, typeof e.speed === 'number' ? e.speed : 1.4);
+          else if (e.type === 'waves') gl.uniform4f(uloc(rec, 'uWaves'), e.angle * Math.PI / 180, e.wavelength, e.speed, e.strength);
+          else if (e.type === 'shimmer') gl.uniform2f(uloc(rec, 'uShimmer'), e.density, e.speed);
+          else if (e.type === 'shake') gl.uniform2f(uloc(rec, 'uShake'), e.speed, e.amplitude);
+          else if (e.type === 'spin') gl.uniform2f(uloc(rec, 'uSpin'), e.speed, e.radius);
+          else if (e.type === 'scroll') gl.uniform2f(uloc(rec, 'uScroll'), e.angle * Math.PI / 180, e.speed);
+          else if (e.type === 'chroma-shift') gl.uniform2f(uloc(rec, 'uChroma'), e.amount, e.speed);
           if (e.region) {
             const r = e.region;
             const l = uloc(rec, 'uRegion'); if (l) gl.uniform4f(l, r.x / 100, r.y / 100, r.w / 100, r.h / 100);
