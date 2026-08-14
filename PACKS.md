@@ -256,6 +256,56 @@ built-in effects are untouched — custom is a separate, fully data-driven layer
   match the built-in `snow` by eye, then push it further (a mask emitter, an
   additive glow, a custom sprite).
 
+## Breathing rig (living characters)
+
+The `rig` component (in the Components list below) stacks **layered PNGs** and
+brings them to life with per-layer oscillators — no bones, no mesh, transform
+only. It's the "character that feels alive" feature: a body that breathes, hair
+that sways, eyes that follow the cursor.
+
+```jsonc
+{ "type": "rig", "rect": [8, 6, 26, 60], "z": 3,
+  "options": { "layers": [                 // back-to-front, ≤ 8
+    { "src": "assets/body.png",
+      "anchor": { "x": 50, "y": 95 },       // transform pivot (% of the box); feet-ish
+      "breath": { "scale": 0.02, "speed": 0.2, "phase": 0 },  // gentle scale pulse
+      "sway":   { "rotate": 1.5, "speed": 0.15, "phase": 0 }, // degrees
+      "bob":    { "y": 0.6, "speed": 0.2, "phase": 0 },       // cqw up-down
+      "gaze":   { "x": 1, "y": 0.5 },        // cqw pull toward the cursor
+      "tiltWithPointer": 1 },                // degrees of lean toward the cursor
+    { "src": "assets/hair.png", "anchor": { "x": 50, "y": 30 },
+      "sway": { "rotate": 3, "speed": 0.15, "phase": 0.15 } } // 0.15 BEHIND the body
+  ] }
+}
+```
+
+| knob | range | what it does |
+|---|---|---|
+| `anchor.x/y` | 0–100 | the transform pivot (% of the box) — sway/breath rotate/scale about it |
+| `breath.scale` | 0–0.05 | how much the layer scale-pulses |
+| `sway.rotate` | 0–6° | side-to-side rock |
+| `bob.y` | 0–3 cqw | up-down bob |
+| `*.speed` | 0.05–1 | cycles per second for that oscillator |
+| `*.phase` | 0–1 | offset — set a layer **behind** another for lifelike lag |
+| `gaze.x/y` | 0–4 cqw | how far the layer slides toward the cursor |
+| `tiltWithPointer` | 0–4° | how much the layer leans toward the cursor |
+
+- **The phase idiom.** Give secondary layers (hair, a scarf, a tail) a phase a
+  little **behind** the body — e.g. hair `phase 0.15` when the body is `0` — so
+  they lag and the whole figure reads as one connected thing, not a rigid cut-out.
+- **Anchor placement.** A character usually pivots near its feet (`anchor.y` ~90–95)
+  so a sway rocks the whole body; hair pivots near the crown (`anchor.y` ~20–30).
+- **Pointer = the world's pointer.** Gaze/tilt follow the **same** cursor as the
+  background parallax, so the character and the scene move together. On a still
+  surface (a gallery thumbnail) or with reduced motion, the rig shows static art.
+- **Author it** in the editor: add a **Character rig** from the palette, then
+  **Add layer…** (one PNG per layer, back to front), set each layer's sliders,
+  and hit **Preview breeze** to judge the motion. Layers are ordinary pack images
+  — export/publish carries them like any art.
+- **Art tips.** Export each layer as a transparent PNG on the **same canvas size**
+  so they align; keep them modest (they scale to the component box). Motion should
+  read at the default params in a 10-second clip — subtle beats frantic.
+
 ## Components
 
 Up to 24 components, placed freely: `rect: [x, y, w, h]` in **percent of the
