@@ -98,7 +98,7 @@ function applySkin(root, pack, assets, opts) {
   applyFill(root, pack, opts);          // gradient base fill (or plain void)
   applyBackground(root, pack, assets, opts); // the layer stack owns the wallpaper
 
-  applyAmbience(root, pack, opts);
+  applyAmbience(root, pack, assets, opts);
 }
 
 // ── Base surface fill ─────────────────────────────────────────────────────────
@@ -482,8 +482,13 @@ const AMBIENCE_COLOR_KEY = {
 // { canvas, observer, step, draw } that the shared motion loop ticks, or null
 // when the pack has no ambience effect. Does NOT own a raf — applyAmbience runs
 // the single loop that also drives background parallax/drift.
-function setupAmbienceParticles(root, pack, opts, reduced) {
+function setupAmbienceParticles(root, pack, assets, opts, reduced) {
   const ambience = pack.skin.ambience || { effect: 'none', density: 0.5 };
+  // Particle Studio (Phase E): a fully-custom particle system runs through the
+  // separate data-driven engine. The 7 built-in presets below are UNTOUCHED.
+  if (ambience.mode === 'custom' && ambience.system && window.AegisParticles) {
+    return setupCustomParticles(root, pack, ambience, assets, reduced);
+  }
   const effect = ambience.effect;
   const defKey = AMBIENCE_COLOR_KEY[effect];
   if (!defKey) return null;
@@ -660,11 +665,117 @@ function setupAmbienceParticles(root, pack, opts, reduced) {
   return { canvas, observer, step: stepParticles, draw, count };
 }
 
+// Particle Studio custom mode: drive the data-driven engine (src/particles.js).
+// Same handle shape as the preset path { canvas, observer, step, draw, count },
+// so the ONE shared ambience raf ticks it with no extra wiring. The preset
+// engine above is untouched.
+function setupCustomParticles(root, pack, ambience, assets, reduced) {
+  const AP = window.AegisParticles;
+  const system = ambience.system;
+  const palette = pack.skin.palette;
+  const density = Math.min(1, Math.max(0.05, typeof ambience.density === 'number' ? ambience.density : 0.5));
+
+  // Base colour → [r,g,b]: a palette TOKEN (tracks the colourway), a custom hex,
+  // or accent as a fallback.
+  const ck = system.color.paletteKey;
+  let hex;
+  if (ck === 'custom' && typeof system.color.custom === 'string') hex = system.color.custom;
+  else hex = palette[ck] || palette.accent || '#ffffff';
+  const baseColor = hexToRgbParts(hex);
+
+  // Author's count scaled by the user's global density knob (0.5 = as authored),
+  // hard-capped at the engine's MAX_COUNT.
+  const count = Math.max(1, Math.min(AP.MAX_COUNT, Math.round(system.count * density * 2)));
+  const def = Object.assign({}, system, { count });
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'ambience-layer';
+  root.appendChild(canvas);
+  const dpr = window.devicePixelRatio || 1;
+  let cssW = 0, cssH = 0;
+  const spawnPoints = []; // mask emitter — filled async, read live by the engine
+
+  // Custom sprite image (async; the engine falls back to the builtin shape until
+  // it decodes).
+  let spriteImg = null;
+  if (system.sprite.custom && assets && assets[system.sprite.custom]) {
+    const im = new Image();
+    im.onload = () => { spriteImg = im; };
+    im.src = assets[system.sprite.custom];
+  }
+
+  // Mask emitter: precompute spawn points from the mask's bright pixels ONCE
+  // (downsampled grid, not per spawn). Pushed into spawnPoints, which the engine
+  // reads live, so it kicks in within a respawn cycle after the mask decodes.
+  if (system.emitter.shape === 'mask' && system.emitter.mask && assets && assets[system.emitter.mask]) {
+    const im = new Image();
+    im.onload = () => {
+      const GRID = 128;
+      const ar = im.naturalHeight / Math.max(1, im.naturalWidth);
+      const oc = document.createElement('canvas');
+      oc.width = GRID; oc.height = Math.max(1, Math.round(GRID * ar));
+      const octx = oc.getContext('2d');
+      octx.drawImage(im, 0, 0, oc.width, oc.height);
+      const px = octx.getImageData(0, 0, oc.width, oc.height).data;
+      for (let y = 0; y < oc.height; y++) {
+        for (let x = 0; x < oc.width; x++) {
+          const i = (y * oc.width + x) * 4;
+          const lum = (px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114) * (px[i + 3] / 255);
+          if (lum > 40) spawnPoints.push({ x: (x + 0.5) / oc.width, y: (y + 0.5) / oc.height });
+        }
+      }
+    };
+    im.src = assets[system.emitter.mask];
+  }
+
+  let sys = null;
+  const rebuild = () => { sys = AP.createParticleSystem(def, { w: cssW, h: cssH, spawnPoints }, Math.random); };
+
+  // Pointer interaction — one listener, only when the system actually reacts.
+  const ptr = { x: 0.5, y: 0.5, active: false };
+  let ptrCleanup = null;
+  if (system.pointer && system.pointer.mode !== 'none' && !reduced) {
+    const doc = root.ownerDocument || document;
+    const win = doc.defaultView || window;
+    const onMove = (e) => { ptr.x = e.clientX / (win.innerWidth || 1); ptr.y = e.clientY / (win.innerHeight || 1); ptr.active = true; };
+    doc.addEventListener('pointermove', onMove, { passive: true });
+    ptrCleanup = () => doc.removeEventListener('pointermove', onMove);
+  }
+
+  const step = (dt, t) => { if (sys) { sys.setPointer(ptr.x, ptr.y, ptr.active); sys.step(dt, t); } };
+  const draw = () => {
+    if (!sys) return;
+    const ctx2 = canvas.getContext('2d');
+    ctx2.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx2.clearRect(0, 0, cssW, cssH);
+    AP.drawParticles(ctx2, sys, def, { baseColor, refWidth: cssW, spriteImg });
+  };
+
+  const resize = () => {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return; // pre-layout: wait for the observer
+    cssW = rect.width; cssH = rect.height;
+    canvas.width = Math.max(1, Math.round(cssW * dpr));
+    canvas.height = Math.max(1, Math.round(cssH * dpr));
+    rebuild();
+    if (reduced) draw();
+  };
+  const observer = new ResizeObserver(resize);
+  observer.observe(canvas);
+  resize();
+  // Drop the pointer listener when the caller disconnects the observer (re-render
+  // / teardown), so no listener leaks across pack switches.
+  const baseDisconnect = observer.disconnect.bind(observer);
+  observer.disconnect = () => { if (ptrCleanup) { ptrCleanup(); ptrCleanup = null; } baseDisconnect(); };
+
+  return { canvas, observer, step, draw, count };
+}
+
 // Own the SINGLE motion loop for a surface: ambience particles AND background
 // parallax/drift ride the same raf (never a second one), the same fps cap, and
 // the same freeze. Called by applySkin AFTER applyBackground has built the layer
 // stack (so root.__aegisBg is ready).
-function applyAmbience(root, pack, opts) {
+function applyAmbience(root, pack, assets, opts) {
   const prev = root.__aegisAmbience;
   if (prev) {
     cancelAnimationFrame(prev.raf);
@@ -675,7 +786,7 @@ function applyAmbience(root, pack, opts) {
 
   const reduced = (opts && opts.staticAmbience === true)
     || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
-  const particles = setupAmbienceParticles(root, pack, opts, reduced);
+  const particles = setupAmbienceParticles(root, pack, assets, opts, reduced);
   if (window.AegisPerf) window.AegisPerf.setParticles(particles ? particles.count : 0);
   const bg = root.__aegisBg;                       // built by applyBackground
   const bgMoving = !reduced && !!(bg && bg.needsMotion);

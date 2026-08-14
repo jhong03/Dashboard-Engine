@@ -102,7 +102,9 @@
     const ref = W;                       // cqw reference = surface width
     const cqw = (v) => (v / 100) * ref;
     const count = Math.max(1, Math.min(MAX_COUNT, def.count | 0));
-    const spawnPoints = dims.spawnPoints && dims.spawnPoints.length ? dims.spawnPoints : null;
+    // Read the mask spawn-point list LIVE (the caller fills it after the mask
+    // image decodes) — so a mask emitter self-heals within a respawn cycle.
+    const spawnPoints = Array.isArray(dims.spawnPoints) ? dims.spawnPoints : null;
     const marginPx = cqw(def.sizeMax) * 2 + 6;
 
     function place(p, fresh) {
@@ -115,7 +117,7 @@
         case 'right': p.x = W + marginPx; p.y = rng() * H; break;
         case 'point': p.x = (em.x / 100) * W; p.y = (em.y / 100) * H; break;
         case 'mask':
-          if (spawnPoints) { const s = spawnPoints[(rng() * spawnPoints.length) | 0]; p.x = s.x * W; p.y = s.y * H; }
+          if (spawnPoints && spawnPoints.length) { const s = spawnPoints[(rng() * spawnPoints.length) | 0]; p.x = s.x * W; p.y = s.y * H; }
           else { p.x = rng() * W; p.y = rng() * H; }
           break;
         default: p.x = rng() * W; p.y = rng() * H; // screen
