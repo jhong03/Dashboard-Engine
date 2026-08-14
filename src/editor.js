@@ -1803,7 +1803,7 @@ function renderEffectScope(box, fx, layer) {
     const edit = document.createElement('button');
     edit.className = 'btn tiny';
     edit.textContent = t('editor.insp.btn.editMask');
-    edit.addEventListener('click', () => openMaskPainter(layer.src, fx.mask, (rel) => { fx.mask = rel; delete fx.region; }));
+    edit.addEventListener('click', () => openMaskPainter(layer.src, fx.mask, (rel) => { fx.mask = rel; delete fx.region; }, fx.type));
     row.appendChild(edit);
     const rm = document.createElement('button');
     rm.className = 'btn tiny';
@@ -1816,7 +1816,7 @@ function renderEffectScope(box, fx, layer) {
   const paint = document.createElement('button');
   paint.className = 'btn tiny';
   paint.textContent = t('editor.insp.btn.paintMask');
-  paint.addEventListener('click', () => openMaskPainter(layer.src, fx.mask, (rel) => { fx.mask = rel; delete fx.region; }));
+  paint.addEventListener('click', () => openMaskPainter(layer.src, fx.mask, (rel) => { fx.mask = rel; delete fx.region; }, fx.type));
   row.appendChild(paint);
   box.appendChild(row);
   renderEffectRegion(box, fx); // region still available when there's no mask
@@ -1864,7 +1864,7 @@ function isVideoRelPath(rel) { return /\.(mp4|webm)$/i.test(String(rel || '')); 
 // Paint a grayscale mask over the surface. Reusable: `backdropSrc` is the asset
 // shown underneath, `currentMask` the existing mask rel (or null), and onSave(rel)
 // receives the saved mask so the caller wires it to fx.mask / emitter.mask.
-function openMaskPainter(backdropSrc, currentMask, onSave) {
+function openMaskPainter(backdropSrc, currentMask, onSave, label) {
   // Author at the SURFACE aspect: the mask maps across the whole surface in UV,
   // not the image's own aspect, so shapes line up with what's on screen.
   const skinRect = $('skin').getBoundingClientRect();
@@ -1909,7 +1909,7 @@ function openMaskPainter(backdropSrc, currentMask, onSave) {
   bar.className = 'ed-mp-bar';
   const title = document.createElement('span');
   title.className = 'ed-mp-title';
-  title.textContent = `${t('editor.mask.title')} · ${fx.type}`;
+  title.textContent = label ? `${t('editor.mask.title')} · ${label}` : t('editor.mask.title');
   bar.appendChild(title);
 
   const slider = (labelKey, min, max, step, val, onInput) => {
