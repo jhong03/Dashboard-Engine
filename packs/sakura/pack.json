@@ -198,6 +198,22 @@
       "style": {
         "panel": false
       }
+    },
+    {
+      "type": "rig",
+      "rect": [70, 0, 28, 52],
+      "z": 1,
+      "options": {
+        "layers": [
+          { "src": "assets/rig-glow.png", "anchor": { "x": 80, "y": 15 }, "breath": { "scale": 0.03, "speed": 0.12, "phase": 0 }, "sway": { "rotate": 0, "speed": 0.1, "phase": 0 }, "bob": { "y": 0, "speed": 0.1, "phase": 0 }, "gaze": { "x": 0, "y": 0 }, "tiltWithPointer": 0 },
+          { "src": "assets/rig-branch.png", "anchor": { "x": 97, "y": 3 }, "breath": { "scale": 0, "speed": 0.1, "phase": 0 }, "sway": { "rotate": 1.2, "speed": 0.1, "phase": 0 }, "bob": { "y": 0, "speed": 0.1, "phase": 0 }, "gaze": { "x": 0, "y": 0 }, "tiltWithPointer": 0 },
+          { "src": "assets/rig-blossoms.png", "anchor": { "x": 97, "y": 3 }, "breath": { "scale": 0.02, "speed": 0.18, "phase": 0 }, "sway": { "rotate": 1.4, "speed": 0.1, "phase": 0.06 }, "bob": { "y": 0, "speed": 0.1, "phase": 0 }, "gaze": { "x": 0.6, "y": 0.3 }, "tiltWithPointer": 0.4 },
+          { "src": "assets/rig-front.png", "anchor": { "x": 60, "y": 35 }, "breath": { "scale": 0.03, "speed": 0.2, "phase": 0.2 }, "sway": { "rotate": 2.2, "speed": 0.11, "phase": 0.16 }, "bob": { "y": 0.4, "speed": 0.16, "phase": 0.1 }, "gaze": { "x": 1.2, "y": 0.6 }, "tiltWithPointer": 0.8 }
+        ]
+      },
+      "style": {
+        "panel": false
+      }
     }
   ],
   "props": [
