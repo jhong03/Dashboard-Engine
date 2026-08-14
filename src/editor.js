@@ -1145,17 +1145,37 @@ function renderSkinTab(panel) {
 
   panel.appendChild(sectionLabel(t('editor.insp.section.ambience')));
   if (!skin.ambience) skin.ambience = { effect: 'none', density: 0.5 };
-  panel.append(
-    field(t('editor.insp.field.effect'), selectControl(skin.ambience.effect, [['none', t('editor.insp.opt.effNone')], ['embers', t('editor.insp.opt.effEmbers')], ['dust', t('editor.insp.opt.effDust')], ['snow', t('editor.insp.opt.effSnow')], ['petals', t('editor.insp.opt.effPetals')], ['rain', t('editor.insp.opt.effRain')], ['sparkle', t('editor.insp.opt.effSparkle')]], (v) => { skin.ambience.effect = v; renderAll(); })),
-    field(t('editor.insp.field.density'), rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
-  );
-  // Recolour / speed / glow apply only to a real particle effect (not "none").
-  if (skin.ambience.effect !== 'none') {
+  if (skin.ambience.mode === 'custom' && skin.ambience.system) {
+    renderCustomAmbience(panel, skin);
+  } else {
     panel.append(
-      field(t('editor.insp.field.particleColor'), ambienceColorControl(skin.ambience)),
-      field(t('editor.insp.field.particleSpeed'), rangeControl(typeof skin.ambience.speed === 'number' ? skin.ambience.speed : 1, 0.2, 3, 0.1, (v) => { skin.ambience.speed = v; renderAll(); })),
-      checkControl(t('editor.insp.field.particleGlow'), !!skin.ambience.glow, (v) => { skin.ambience.glow = v; renderAll(); }),
+      field(t('editor.insp.field.effect'), selectControl(skin.ambience.effect, [['none', t('editor.insp.opt.effNone')], ['embers', t('editor.insp.opt.effEmbers')], ['dust', t('editor.insp.opt.effDust')], ['snow', t('editor.insp.opt.effSnow')], ['petals', t('editor.insp.opt.effPetals')], ['rain', t('editor.insp.opt.effRain')], ['sparkle', t('editor.insp.opt.effSparkle')]], (v) => { skin.ambience.effect = v; renderAll(); })),
+      field(t('editor.insp.field.density'), rangeControl(skin.ambience.density, 0.05, 1, 0.05, (v) => { skin.ambience.density = v; renderAll(); })),
     );
+    // Recolour / speed / glow apply only to a real particle effect (not "none").
+    if (skin.ambience.effect !== 'none') {
+      panel.append(
+        field(t('editor.insp.field.particleColor'), ambienceColorControl(skin.ambience)),
+        field(t('editor.insp.field.particleSpeed'), rangeControl(typeof skin.ambience.speed === 'number' ? skin.ambience.speed : 1, 0.2, 3, 0.1, (v) => { skin.ambience.speed = v; renderAll(); })),
+        checkControl(t('editor.insp.field.particleGlow'), !!skin.ambience.glow, (v) => { skin.ambience.glow = v; renderAll(); }),
+      );
+    }
+    // Particle Studio: fork the current effect into a fully-custom system.
+    if (window.AegisParticles) {
+      const cbtn = document.createElement('button');
+      cbtn.className = 'btn tiny';
+      cbtn.textContent = t('editor.insp.btn.customizeParticles');
+      cbtn.addEventListener('click', () => {
+        skin.ambience.system = window.AegisParticles.factoryFor(skin.ambience.effect);
+        skin.ambience.mode = 'custom';
+        renderAll();
+      });
+      panel.appendChild(field('', cbtn));
+      const hint = document.createElement('p');
+      hint.className = 'field-hint';
+      hint.textContent = t('editor.insp.customizeHint');
+      panel.appendChild(hint);
+    }
   }
 
   renderFillSection(panel, skin);
@@ -1279,6 +1299,201 @@ function ambienceColorControl(ambience) {
   custom.addEventListener('change', () => { sliderActive = false; ambience.color = custom.value; renderAll(); });
   wrap.appendChild(custom);
 
+  return wrap;
+}
+
+// ── Particle Studio: the custom-mode editor (Phase E) ─────────────────────────
+// A full data-driven particle system, grouped Emitter / Sprite / Motion / Color /
+// Interaction, live on the stage. "Use a preset" returns to the built-in effects;
+// "Reset to <preset>" reloads a factory def; user presets save into the pack.
+function renderCustomAmbience(panel, skin) {
+  const amb = skin.ambience;
+  const sys = amb.system;
+  const AP = window.AegisParticles;
+
+  const back = document.createElement('button');
+  back.className = 'btn tiny';
+  back.textContent = t('editor.insp.btn.usePreset');
+  back.addEventListener('click', () => { amb.mode = 'preset'; renderAll(); });
+  panel.appendChild(field('', back));
+  // The user's density knob still scales the custom count as a global multiplier.
+  panel.appendChild(field(t('editor.insp.field.density'), rangeControl(amb.density, 0.05, 1, 0.05, (v) => { amb.density = v; renderAll(); })));
+
+  const rc = (labelKey, obj, key, min, max, step) => panel.appendChild(field(t(labelKey), rangeControl(obj[key], min, max, step, (v) => { obj[key] = v; renderAll(); })));
+  const sel = (labelKey, obj, key, group, ids) => panel.appendChild(field(t(labelKey), selectControl(obj[key], ids.map((id) => [id, t(`editor.insp.popt.${group}.${id}`)]), (v) => { obj[key] = v; renderAll(); })));
+
+  panel.appendChild(sectionLabel(t('editor.insp.pgroup.emitter')));
+  sel('editor.insp.field.shape', sys.emitter, 'shape', 'emitter', AP.EMITTER_SHAPES);
+  if (sys.emitter.shape === 'point') { rc('editor.insp.field.emitterX', sys.emitter, 'x', 0, 100, 1); rc('editor.insp.field.emitterY', sys.emitter, 'y', 0, 100, 1); }
+  if (sys.emitter.shape === 'mask') panel.appendChild(field(t('editor.insp.field.emitterMask'), emitterMaskControl(sys)));
+
+  panel.appendChild(sectionLabel(t('editor.insp.pgroup.sprite')));
+  sel('editor.insp.field.sprite', sys.sprite, 'builtin', 'sprite', AP.BUILTIN_SPRITES);
+  panel.appendChild(field(t('editor.insp.field.customSprite'), customSpriteControl(sys)));
+
+  panel.appendChild(sectionLabel(t('editor.insp.pgroup.motion')));
+  rc('editor.insp.field.count', sys, 'count', 1, 400, 1);
+  rc('editor.insp.field.sizeMin', sys, 'sizeMin', 0.1, 8, 0.1);
+  rc('editor.insp.field.sizeMax', sys, 'sizeMax', 0.1, 8, 0.1);
+  rc('editor.insp.field.speedMin', sys, 'speedMin', 0, 30, 0.5);
+  rc('editor.insp.field.speedMax', sys, 'speedMax', 0, 30, 0.5);
+  rc('editor.insp.field.direction', sys, 'direction', 0, 360, 5);
+  rc('editor.insp.field.spread', sys, 'spread', 0, 180, 5);
+  rc('editor.insp.field.gravity', sys, 'gravity', -20, 20, 0.5);
+  rc('editor.insp.field.wind', sys, 'wind', -20, 20, 0.5);
+  rc('editor.insp.field.drag', sys, 'drag', 0, 1, 0.05);
+  rc('editor.insp.field.rotate', sys, 'rotate', 0, 10, 0.5);
+  rc('editor.insp.field.wobble', sys, 'wobble', 0, 10, 0.5);
+
+  panel.appendChild(sectionLabel(t('editor.insp.pgroup.color')));
+  panel.appendChild(field(t('editor.insp.field.particleColor'), systemColorControl(sys)));
+  rc('editor.insp.field.colorJitter', sys.color, 'jitter', 0, 1, 0.05);
+
+  panel.appendChild(sectionLabel(t('editor.insp.pgroup.interaction')));
+  sel('editor.insp.field.blend', sys, 'blend', 'blend', AP.BLENDS);
+  sel('editor.insp.field.opacityLife', sys, 'opacityLife', 'opacityLife', AP.OPACITY_LIFES);
+  sel('editor.insp.field.pointerMode', sys.pointer, 'mode', 'pointer', AP.POINTER_MODES);
+  if (sys.pointer.mode !== 'none') {
+    rc('editor.insp.field.pointerRadius', sys.pointer, 'radius', 5, 60, 1);
+    rc('editor.insp.field.pointerStrength', sys.pointer, 'strength', 0, 1, 0.05);
+  }
+
+  panel.appendChild(sectionLabel(t('editor.insp.pgroup.presets')));
+  const resetChoices = [['', t('editor.insp.opt.resetChoose')]].concat(
+    Object.keys(AP.FACTORY_PRESETS).map((k) => [k, t('editor.insp.opt.eff' + k[0].toUpperCase() + k.slice(1))]));
+  panel.appendChild(field(t('editor.insp.field.resetTo'), selectControl('', resetChoices, (v) => { if (!v) return; amb.system = AP.factoryFor(v); renderAll(); })));
+  panel.appendChild(saveAsPresetControl(amb));
+  if (Array.isArray(amb.presets) && amb.presets.length) {
+    const chips = document.createElement('div');
+    chips.className = 'ed-preset-chips';
+    amb.presets.forEach((up, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'ed-preset-chip';
+      const use = document.createElement('button');
+      use.className = 'ed-chip-use'; use.textContent = up.name;
+      use.title = t('editor.insp.presetUse');
+      use.addEventListener('click', () => { amb.system = JSON.parse(JSON.stringify(up.system)); renderAll(); });
+      const del = document.createElement('button');
+      del.className = 'ed-chip-del'; del.textContent = '×'; del.title = t('editor.insp.btn.remove');
+      del.addEventListener('click', () => { amb.presets.splice(i, 1); if (!amb.presets.length) delete amb.presets; renderAll(); });
+      chip.append(use, del);
+      chips.appendChild(chip);
+    });
+    panel.appendChild(chips);
+  }
+}
+
+// Palette-token / custom-hex swatch picker for a custom system's colour.
+function systemColorControl(sys) {
+  const palette = state.pack.skin.palette;
+  const c = sys.color;
+  const wrap = document.createElement('div');
+  wrap.className = 'fill-swatches';
+  const hasCustom = c.paletteKey === 'custom';
+  for (const key of COLORWAY_KEYS) {
+    const sw = document.createElement('button');
+    sw.type = 'button';
+    sw.className = 'fill-swatch' + (!hasCustom && c.paletteKey === key ? ' selected' : '');
+    sw.style.setProperty('--sw', palette[key] || '#000000');
+    sw.title = paletteLabel(key);
+    sw.addEventListener('click', () => { sliderActive = false; c.paletteKey = key; delete c.custom; renderAll(); });
+    wrap.appendChild(sw);
+  }
+  const custom = document.createElement('input');
+  custom.type = 'color';
+  custom.className = 'fill-swatch fill-swatch-custom' + (hasCustom ? ' selected' : '');
+  custom.value = (hasCustom && c.custom ? c.custom : (palette[c.paletteKey] || palette.accent || '#000000')).slice(0, 7);
+  custom.title = t('editor.insp.fill.custom');
+  custom.addEventListener('input', () => { sliderActive = true; c.paletteKey = 'custom'; c.custom = custom.value; renderAll(); });
+  custom.addEventListener('change', () => { sliderActive = false; c.paletteKey = 'custom'; c.custom = custom.value; renderAll(); });
+  wrap.appendChild(custom);
+  return wrap;
+}
+
+// Import / remove a custom particle sprite (≤256 px, else rejected + unstaged).
+function customSpriteControl(sys) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ed-fx-scope';
+  if (sys.sprite.custom) {
+    const name = document.createElement('span');
+    name.className = 'field-hint';
+    name.textContent = sys.sprite.custom.replace('assets/', '');
+    wrap.appendChild(name);
+    const rm = document.createElement('button');
+    rm.className = 'btn tiny';
+    rm.textContent = t('editor.insp.btn.spriteRemove');
+    rm.addEventListener('click', () => { delete sys.sprite.custom; renderAll(); });
+    wrap.appendChild(rm);
+  } else {
+    const imp = document.createElement('button');
+    imp.className = 'btn tiny';
+    imp.textContent = t('editor.insp.btn.spriteImport');
+    imp.addEventListener('click', async () => { const rel = await importSprite(); if (rel) { sys.sprite.custom = rel; renderAll(); } });
+    wrap.appendChild(imp);
+  }
+  return wrap;
+}
+
+// Paint (or clear) a mask emitter — particles spawn only in the painted zone.
+function emitterMaskControl(sys) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ed-fx-scope';
+  const skin = state.pack.skin;
+  const backdrop = (skin.background && skin.background.layers && skin.background.layers[0] && skin.background.layers[0].src) || skin.wallpaper || null;
+  const paint = document.createElement('button');
+  paint.className = 'btn tiny';
+  paint.textContent = sys.emitter.mask ? t('editor.insp.btn.editMask') : t('editor.insp.btn.paintMask');
+  paint.addEventListener('click', () => openMaskPainter(backdrop, sys.emitter.mask, (rel) => { sys.emitter.mask = rel; }));
+  wrap.appendChild(paint);
+  if (sys.emitter.mask) {
+    const rm = document.createElement('button');
+    rm.className = 'btn tiny';
+    rm.textContent = t('editor.insp.btn.removeMask');
+    rm.addEventListener('click', () => { const key = sys.emitter.mask; delete sys.emitter.mask; if (key) { delete state.assets[key]; if (aegis.unstageMask) aegis.unstageMask(key); } renderAll(); });
+    wrap.appendChild(rm);
+  }
+  return wrap;
+}
+
+// Import an image (≤256 px) as a particle sprite; oversize is rejected + cleaned.
+async function importSprite() {
+  const rel = await importImage();
+  if (!rel) return null;
+  const uri = state.assets[rel];
+  const okDims = await new Promise((res) => {
+    const im = new Image();
+    im.onload = () => res(im.naturalWidth <= 256 && im.naturalHeight <= 256);
+    im.onerror = () => res(false);
+    im.src = uri;
+  });
+  if (!okDims) {
+    delete state.assets[rel];
+    if (aegis.unstageAsset) aegis.unstageAsset(rel);
+    setStatus(t('editor.insp.spriteTooBig'), true);
+    return null;
+  }
+  return rel;
+}
+
+// Save the current custom system as a named preset in the pack (≤12, newest kept).
+function saveAsPresetControl(amb) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ed-fx-scope';
+  const input = document.createElement('input');
+  input.type = 'text'; input.maxLength = 40; input.className = 'ed-preset-name';
+  input.placeholder = t('editor.insp.presetNamePlaceholder');
+  const save = document.createElement('button');
+  save.className = 'btn tiny';
+  save.textContent = t('editor.insp.btn.savePreset');
+  save.addEventListener('click', () => {
+    const name = input.value.trim();
+    if (!name) return;
+    if (!Array.isArray(amb.presets)) amb.presets = [];
+    amb.presets.push({ name: name.slice(0, 40), system: JSON.parse(JSON.stringify(amb.system)) });
+    if (amb.presets.length > 12) amb.presets = amb.presets.slice(-12);
+    renderAll();
+  });
+  wrap.append(input, save);
   return wrap;
 }
 
@@ -1588,7 +1803,7 @@ function renderEffectScope(box, fx, layer) {
     const edit = document.createElement('button');
     edit.className = 'btn tiny';
     edit.textContent = t('editor.insp.btn.editMask');
-    edit.addEventListener('click', () => openMaskPainter(layer, fx));
+    edit.addEventListener('click', () => openMaskPainter(layer.src, fx.mask, (rel) => { fx.mask = rel; delete fx.region; }));
     row.appendChild(edit);
     const rm = document.createElement('button');
     rm.className = 'btn tiny';
@@ -1601,7 +1816,7 @@ function renderEffectScope(box, fx, layer) {
   const paint = document.createElement('button');
   paint.className = 'btn tiny';
   paint.textContent = t('editor.insp.btn.paintMask');
-  paint.addEventListener('click', () => openMaskPainter(layer, fx));
+  paint.addEventListener('click', () => openMaskPainter(layer.src, fx.mask, (rel) => { fx.mask = rel; delete fx.region; }));
   row.appendChild(paint);
   box.appendChild(row);
   renderEffectRegion(box, fx); // region still available when there's no mask
@@ -1646,7 +1861,10 @@ const MASK_REL = /^assets\/mask-[a-z0-9]{1,16}\.png$/;
 function newMaskName() { return 'assets/mask-' + (Date.now().toString(36) + Math.random().toString(36).slice(2, 5)) + '.png'; }
 function isVideoRelPath(rel) { return /\.(mp4|webm)$/i.test(String(rel || '')); }
 
-function openMaskPainter(layer, fx) {
+// Paint a grayscale mask over the surface. Reusable: `backdropSrc` is the asset
+// shown underneath, `currentMask` the existing mask rel (or null), and onSave(rel)
+// receives the saved mask so the caller wires it to fx.mask / emitter.mask.
+function openMaskPainter(backdropSrc, currentMask, onSave) {
   // Author at the SURFACE aspect: the mask maps across the whole surface in UV,
   // not the image's own aspect, so shapes line up with what's on screen.
   const skinRect = $('skin').getBoundingClientRect();
@@ -1738,9 +1956,9 @@ function openMaskPainter(layer, fx) {
   // Its children are absolutely positioned, so give it an explicit width that
   // fits both the viewport width and the available height at this aspect.
   frame.style.width = `min(92vw, calc((100vh - 120px) * ${(W / H).toFixed(4)}))`;
-  if (!isVideoRelPath(layer.src) && state.assets[layer.src]) {
+  if (backdropSrc && !isVideoRelPath(backdropSrc) && state.assets[backdropSrc]) {
     const bg = document.createElement('img');
-    bg.className = 'ed-mp-bg'; bg.src = state.assets[layer.src]; bg.alt = '';
+    bg.className = 'ed-mp-bg'; bg.src = state.assets[backdropSrc]; bg.alt = '';
     frame.appendChild(bg);
   } else {
     const note = document.createElement('div');
@@ -1806,12 +2024,11 @@ function openMaskPainter(layer, fx) {
     }
     octx.putImageData(dst, 0, 0);
     const dataUrl = out.toDataURL('image/png');
-    const rel = fx.mask && MASK_REL.test(fx.mask) ? fx.mask : newMaskName();
+    const rel = currentMask && MASK_REL.test(currentMask) ? currentMask : newMaskName();
     const res = await aegis.stageMask(rel, dataUrl);
     if (!res || !res.ok) { setStatus((res && res.error) || t('editor.mask.saveFailed'), true); return; }
     state.assets[rel] = dataUrl;
-    fx.mask = rel;
-    delete fx.region; // mask overrides region
+    onSave(rel);
     close();
     renderAll();
     setStatus(t('editor.mask.saved'));
@@ -1831,7 +2048,7 @@ function openMaskPainter(layer, fx) {
   // Load an existing mask (grayscale → alpha), else start blank; then seed the
   // undo baseline.
   function seed() { pushHistory(); }
-  if (fx.mask && state.assets[fx.mask]) {
+  if (currentMask && state.assets[currentMask]) {
     const img = new Image();
     img.onload = () => {
       const tmp = document.createElement('canvas'); tmp.width = W; tmp.height = H;
@@ -1842,7 +2059,7 @@ function openMaskPainter(layer, fx) {
       mctx.putImageData(d, 0, 0); seed();
     };
     img.onerror = seed;
-    img.src = state.assets[fx.mask];
+    img.src = state.assets[currentMask];
   } else { seed(); }
 
   document.body.appendChild(backdrop);

@@ -33,6 +33,7 @@ const bridge = {
   importVideo: (existingNames) => ipcRenderer.invoke('aegis:editor:importVideo', existingNames),
   stageMask: (rel, dataUrl) => ipcRenderer.invoke('aegis:editor:stageMask', { rel: String(rel), dataUrl: String(dataUrl) }),
   unstageMask: (rel) => ipcRenderer.invoke('aegis:editor:unstageMask', String(rel)),
+  unstageAsset: (rel) => ipcRenderer.invoke('aegis:editor:unstageAsset', String(rel)),
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
   stats: () => ipcRenderer.invoke('aegis:stats'),
   display: () => ipcRenderer.invoke('aegis:display'),
