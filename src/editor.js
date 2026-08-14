@@ -30,6 +30,7 @@ const PALETTE = [
   { type: 'text', label: 'Text', hint: 'free text block' },
   { type: 'image', label: 'Image', hint: 'pack art (assets/)' },
   { type: 'gallery', label: 'Photo gallery', hint: 'looping photo slideshow' },
+  { type: 'rig', label: 'Character rig', hint: 'layered art that breathes & follows the cursor' },
   { type: 'divider', label: 'Divider', hint: 'hairline rule' },
   { type: 'calendar', label: 'Calendar', hint: 'month grid, today marked' },
   { type: 'pomodoro', label: 'Focus timer', hint: 'Pomodoro focus / break cycles' },
@@ -78,7 +79,7 @@ const MODULE_STARTER = [
 const DEFAULT_RECTS = {
   'status': [10, 10, 40, 18], 'clock': [10, 10, 26, 20], 'analog-clock': [10, 10, 18, 28],
   'stats': [10, 10, 34, 22], 'meter': [10, 10, 14, 22], 'sparkline': [10, 10, 26, 16],
-  'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'gallery': [10, 10, 28, 34], 'divider': [10, 10, 30, 3],
+  'text': [10, 10, 24, 10], 'image': [10, 10, 24, 30], 'gallery': [10, 10, 28, 34], 'rig': [10, 8, 24, 50], 'divider': [10, 10, 30, 3],
   'calendar': [10, 10, 20, 30], 'countdown': [10, 10, 22, 16], 'weather': [10, 10, 20, 16],
   'pomodoro': [10, 10, 20, 34],
   'agenda': [10, 10, 24, 32], 'launcher': [10, 10, 28, 30], 'notifications': [10, 10, 24, 32],
@@ -99,6 +100,7 @@ function defaultOptions(type, assets) {
     'text': { text: 'New text' },
     'image': { src: firstAsset, fit: 'contain' },
     'gallery': { images: [], interval: 6, fit: 'cover', transition: 'fade', shuffle: false },
+    'rig': { layers: [] },
     'divider': { orientation: 'h' },
     'calendar': { weekStart: 'mon', showReminders: true },
     'pomodoro': { focusMin: 25, shortBreakMin: 5, longBreakMin: 15, cyclesBeforeLong: 4, sound: true, notify: true, showPips: true },
@@ -735,6 +737,86 @@ function optionFields(component, panel) {
       field(t('editor.insp.field.transition'), selectControl(o.transition, [['fade', t('editor.insp.opt.transFade')], ['none', t('editor.insp.opt.none')]], set('transition'))),
       checkControl(t('editor.insp.check.shuffleOrder'), o.shuffle, set('shuffle')),
     );
+  } else if (type === 'rig') {
+    if (!Array.isArray(o.layers)) o.layers = [];
+    if (o.layers.length === 0) {
+      const empty = document.createElement('p');
+      empty.className = 'hint';
+      empty.textContent = t('editor.insp.note.rigEmpty');
+      panel.appendChild(empty);
+    }
+    const mkTool = (glyph, title, enabled, onClick) => {
+      const b = document.createElement('button');
+      b.className = 'btn tiny'; b.textContent = glyph; b.title = title; b.disabled = !enabled;
+      if (enabled) b.addEventListener('click', onClick);
+      return b;
+    };
+    o.layers.forEach((layer, i) => {
+      // Backfill any missing sub-objects so an older/partial layer edits cleanly.
+      if (!layer.anchor) layer.anchor = { x: 50, y: 90 };
+      if (!layer.breath) layer.breath = { scale: 0, speed: 0.2, phase: 0 };
+      if (!layer.sway) layer.sway = { rotate: 0, speed: 0.2, phase: 0 };
+      if (!layer.bob) layer.bob = { y: 0, speed: 0.2, phase: 0 };
+      if (!layer.gaze) layer.gaze = { x: 0, y: 0 };
+      if (typeof layer.tiltWithPointer !== 'number') layer.tiltWithPointer = 0;
+
+      const card = document.createElement('div');
+      card.className = 'ed-bg-layer';
+      const head = document.createElement('div');
+      head.className = 'ed-bg-layer-head';
+      const name = document.createElement('span');
+      name.className = 'ed-bg-layer-name';
+      name.textContent = `${i + 1}. ${String(layer.src).replace('assets/', '')}`;
+      head.appendChild(name);
+      const tools = document.createElement('span');
+      tools.className = 'ed-bg-layer-tools';
+      tools.appendChild(mkTool('↑', t('editor.insp.tool.moveBack'), i > 0, () => { [o.layers[i - 1], o.layers[i]] = [o.layers[i], o.layers[i - 1]]; renderAll(); }));
+      tools.appendChild(mkTool('↓', t('editor.insp.tool.moveForward'), i < o.layers.length - 1, () => { [o.layers[i + 1], o.layers[i]] = [o.layers[i], o.layers[i + 1]]; renderAll(); }));
+      tools.appendChild(mkTool('×', t('editor.insp.tool.removeLayer'), true, () => { o.layers.splice(i, 1); renderAll(); }));
+      head.appendChild(tools);
+      card.appendChild(head);
+
+      const rc = (labelKey, obj, key, min, max, step) => card.appendChild(field(t(labelKey), rangeControl(obj[key], min, max, step, (v) => { obj[key] = v; renderAll(); })));
+      rc('editor.insp.field.anchorX', layer.anchor, 'x', 0, 100, 1);
+      rc('editor.insp.field.anchorY', layer.anchor, 'y', 0, 100, 1);
+      rc('editor.insp.field.breathAmount', layer.breath, 'scale', 0, 0.05, 0.005);
+      rc('editor.insp.field.breathSpeed', layer.breath, 'speed', 0.05, 1, 0.05);
+      rc('editor.insp.field.swayAmount', layer.sway, 'rotate', 0, 6, 0.5);
+      rc('editor.insp.field.swaySpeed', layer.sway, 'speed', 0.05, 1, 0.05);
+      rc('editor.insp.field.bobAmount', layer.bob, 'y', 0, 3, 0.25);
+      rc('editor.insp.field.bobSpeed', layer.bob, 'speed', 0.05, 1, 0.05);
+      rc('editor.insp.field.gazeX', layer.gaze, 'x', 0, 4, 0.25);
+      rc('editor.insp.field.gazeY', layer.gaze, 'y', 0, 4, 0.25);
+      rc('editor.insp.field.tilt', layer, 'tiltWithPointer', 0, 4, 0.25);
+      // One phase knob per layer offsets all three oscillators together — the
+      // "hair lags the body" idiom (set the hair layer's phase ~0.15 behind).
+      card.appendChild(field(t('editor.insp.field.phaseOffset'), rangeControl(layer.sway.phase, 0, 1, 0.05, (v) => { layer.breath.phase = v; layer.sway.phase = v; layer.bob.phase = v; renderAll(); })));
+      panel.appendChild(card);
+    });
+
+    if (o.layers.length < 8) {
+      const add = document.createElement('button');
+      add.className = 'btn tiny';
+      add.textContent = t('editor.insp.btn.addLayer');
+      add.addEventListener('click', async () => {
+        const rel = await importImage();
+        if (rel) { o.layers.push({ src: rel, anchor: { x: 50, y: 90 }, breath: { scale: 0.02, speed: 0.2, phase: 0 }, sway: { rotate: 0, speed: 0.2, phase: 0 }, bob: { y: 0, speed: 0.2, phase: 0 }, gaze: { x: 0, y: 0 }, tiltWithPointer: 0 }); renderAll(); }
+      });
+      panel.appendChild(add);
+    }
+    // Preview breeze: briefly amplify sway/bob so the author can judge the motion
+    // (the running rig ticker reads component.__breeze live — no re-render needed).
+    if (o.layers.length) {
+      const breeze = document.createElement('button');
+      breeze.className = 'btn tiny';
+      breeze.textContent = t('editor.insp.btn.previewBreeze');
+      breeze.addEventListener('click', () => { component.__breeze = 2.4; setStatus(t('editor.insp.breezeOn')); setTimeout(() => { component.__breeze = 1; }, 2500); });
+      panel.appendChild(breeze);
+    }
+    const hint = document.createElement('p');
+    hint.className = 'field-hint';
+    hint.textContent = t('editor.insp.rigHint');
+    panel.appendChild(hint);
   } else if (type === 'divider') {
     panel.append(field(t('editor.insp.field.direction'), selectControl(o.orientation, [['h', t('editor.insp.opt.orientH')], ['v', t('editor.insp.opt.orientV')]], set('orientation'))));
   } else if (type === 'calendar') {

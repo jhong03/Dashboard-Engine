@@ -1864,6 +1864,7 @@ const CREATE_COMPONENTS = [
   ['text', 'A styled text label', 'text'],
   ['image', 'A pack image asset', 'src (assets/…), fit (contain/cover)'],
   ['gallery', 'A looping photo slideshow', 'images (assets/…), interval, fit, transition, shuffle'],
+  ['rig', 'A breathing character: layered art that moves + follows the cursor', 'layers[] (src, anchor, breath, sway, bob, gaze, tiltWithPointer)'],
   ['divider', 'A hairline rule', 'orientation (h/v)'],
   ['calendar', 'Month calendar with your reminders', 'weekStart (sun/mon), showReminders'],
   ['pomodoro', 'A Pomodoro focus / break timer', 'focusMin, shortBreakMin, longBreakMin, cyclesBeforeLong, sound, notify, showPips'],
@@ -2092,13 +2093,14 @@ const STARTER_OPTS = {
   nowplaying: { showArt: true, showControls: true },
   visualizer: { style: 'bars' },
   text: { text: 'HELLO' }, gallery: { images: [], interval: 6, fit: 'cover' },
+  rig: { layers: [] },
 };
 
 // Category decides which region a component lands in. Bars span full width,
 // heroes are the centrepiece, rails stack in the side columns.
 function componentCategory(type) {
   if (['status', 'assistant', 'text', 'divider'].includes(type)) return 'bar';
-  if (['hud-clock', 'ring-clock', 'analog-clock', 'clock', 'calendar', 'pomodoro', 'module', 'image', 'gallery'].includes(type)) return 'hero';
+  if (['hud-clock', 'ring-clock', 'analog-clock', 'clock', 'calendar', 'pomodoro', 'module', 'image', 'gallery', 'rig'].includes(type)) return 'hero';
   return 'rail';
 }
 
@@ -3524,7 +3526,7 @@ const COMPONENT_LABELS = {
   'hud-clock': 'HUD clock', stats: 'system stats', cores: 'core load',
   sysinfo: 'system info', meter: 'meter', sparkline: 'sparkline', text: 'text',
   image: 'image', divider: 'divider', calendar: 'calendar', pomodoro: 'focus timer',
-  countdown: 'countdown',
+  rig: 'character rig', countdown: 'countdown',
   weather: 'weather', agenda: 'agenda', notifications: 'notifications',
   launcher: 'app launcher', assistant: 'AI assistant', module: 'custom module',
   mixer: 'volume mixer',
