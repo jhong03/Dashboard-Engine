@@ -791,37 +791,79 @@ function applyAmbience(root, pack, assets, opts) {
   const bg = root.__aegisBg;                       // built by applyBackground
   const bgMoving = !reduced && !!(bg && bg.needsMotion);
 
-  const state = {
-    raf: 0, paused: false,
-    canvas: particles ? particles.canvas : null,
-    observer: particles ? particles.observer : null,
-  };
-  root.__aegisAmbience = state;
-
-  // Reduced motion → particles already drew one static frame, and every layer
-  // sits at its base transform. No loop. Nothing to animate → also no loop.
-  if (reduced) return;
-  if (!particles && !bgMoving) return;
-
   // Frame budget: the engine caps fps to be a good 24/7 citizen (30 default).
   const maxFps = opts && opts.maxFps ? Math.max(1, opts.maxFps) : 30;
   const frameInterval = 1000 / maxFps;
   let last = 0;
+  const state = {
+    raf: 0, paused: false, reduced,
+    canvas: particles ? particles.canvas : null,
+    observer: particles ? particles.observer : null,
+    // External per-frame subscribers on this ONE loop: breathing rigs (Phase F),
+    // and later the timeline (Phase G) — never a second raf.
+    tickers: new Set(),
+    start: null,
+  };
+  root.__aegisAmbience = state;
+
   const alive = () => (particles ? particles.canvas.isConnected
     : (bg && bg.stack ? bg.stack.isConnected : root.isConnected));
   const loop = (t) => {
     // Frozen by the engine (full-screen app / battery) → stop cold; resume
-    // re-applies the skin and starts fresh. Self-terminate on detached DOM.
+    // re-applies the skin and starts fresh. Self-terminate on detached DOM or
+    // once there's nothing left to animate.
     if (state.paused) return;
-    if (!alive()) { if (particles) particles.observer.disconnect(); return; }
+    const work = particles || bgMoving || state.tickers.size > 0;
+    if (!alive() || !work) { if (particles) particles.observer.disconnect(); state.raf = 0; return; }
     state.raf = requestAnimationFrame(loop);
     if (t - last < frameInterval) return;
     const dt = Math.min(t - last, 100) / 1000;
     last = t;
     if (particles) { particles.step(dt, t); particles.draw(t); }
     if (bgMoving) stepBackgroundMotion(bg, dt, t);
+    if (state.tickers.size) for (const fn of state.tickers) { try { fn(dt, t); } catch (e) { /* fail soft */ } }
   };
-  state.raf = requestAnimationFrame(loop);
+  // Start the ONE shared loop — used here for ambience/background, and by
+  // registerSurfaceTick when a rig subscribes to an otherwise-still surface.
+  state.start = () => { if (!state.paused && !state.reduced && !state.raf) { last = 0; state.raf = requestAnimationFrame(loop); } };
+
+  // Reduced motion → particles already drew one static frame and every layer
+  // sits at its base transform; rigs stay still too. Otherwise auto-run when
+  // ambience or the background needs it (a rig-only pack starts it on subscribe).
+  if (reduced) return;
+  if (particles || bgMoving) state.start();
+}
+
+// Subscribe a per-frame tick fn to the surface's ONE shared animation loop
+// (breathing rigs; later the timeline). Never a second raf. Returns
+// { animating, stop }: when the surface is static/reduced, animating is false
+// and the caller should render a single resting frame instead of subscribing.
+function registerSurfaceTick(root, fn) {
+  const state = root && root.__aegisAmbience;
+  if (!state || state.reduced || typeof state.start !== 'function') return { animating: false, stop: () => {} };
+  state.tickers.add(fn);
+  state.start();
+  return { animating: true, stop: () => { state.tickers.delete(fn); } };
+}
+
+// The pointer a rig follows for gaze/tilt. When a parallax background exists we
+// share ITS lerped pointer, so the character and the world move as one; with no
+// background we track + lerp our own (same 0.08 factor). Range [-1, 1].
+function makeRigPointer(skinRoot) {
+  const bg = skinRoot && skinRoot.__aegisBg;
+  if (bg && bg.pointer) return { read: () => bg.pointer, cleanup: null };
+  const st = { x: 0, y: 0, tx: 0, ty: 0 };
+  const doc = (skinRoot && skinRoot.ownerDocument) || document;
+  const win = doc.defaultView || window;
+  const onMove = (e) => {
+    st.tx = Math.max(-1, Math.min(1, (e.clientX / (win.innerWidth || 1) - 0.5) * 2));
+    st.ty = Math.max(-1, Math.min(1, (e.clientY / (win.innerHeight || 1) - 0.5) * 2));
+  };
+  doc.addEventListener('pointermove', onMove, { passive: true });
+  return {
+    read: () => { st.x += (st.tx - st.x) * 0.08; st.y += (st.ty - st.y) * 0.08; return st; },
+    cleanup: () => doc.removeEventListener('pointermove', onMove),
+  };
 }
 
 // Stop the ambience animation without tearing down the DOM — the last frame
@@ -1870,6 +1912,55 @@ function createRenderer(services) {
     img.alt = '';
     img.src = uri;
     el.appendChild(img);
+  }
+
+  // Breathing rig (Phase F): layered PNGs that come alive via per-layer
+  // oscillators (breath=scale, sway=rotate, bob=translate) + pointer gaze/tilt.
+  // Transform-only, ticked on the ONE shared surface loop (never a second raf);
+  // halts in place on freeze; a preview/reduced-motion surface shows static art.
+  function buildRig(component, el, ctx) {
+    const layers = Array.isArray(component.options.layers) ? component.options.layers : [];
+    const built = [];
+    for (const layer of layers) {
+      const uri = ctx.assets[layer.src];
+      if (!uri) continue;
+      const d = document.createElement('div');
+      d.className = 'rig-layer';
+      d.style.backgroundImage = `url(${uri})`;
+      d.style.transformOrigin = `${layer.anchor.x}% ${layer.anchor.y}%`;
+      el.appendChild(d);
+      built.push({ el: d, layer });
+    }
+    if (!built.length) return;
+
+    const skinRoot = el.closest('.skin-root') || (el.ownerDocument && el.ownerDocument.body) || document.body;
+    const pointer = makeRigPointer(skinRoot);
+    const TAU = Math.PI * 2;
+    // Per layer each tick: translate(bob + gaze·pointer) rotate(sway·sin +
+    // tilt·pointer) scale(1 + breath·sin), about the layer's anchor. The editor's
+    // "Preview breeze" sets component.__breeze to briefly amplify sway/bob.
+    const draw = (t) => {
+      const gust = typeof component.__breeze === 'number' ? component.__breeze : 1;
+      const p = pointer.read();
+      const sec = t / 1000;
+      for (const b of built) {
+        const L = b.layer;
+        const breathe = 1 + L.breath.scale * Math.sin(TAU * (sec * L.breath.speed + L.breath.phase));
+        const rot = L.sway.rotate * gust * Math.sin(TAU * (sec * L.sway.speed + L.sway.phase)) + L.tiltWithPointer * p.x;
+        const ty = L.bob.y * gust * Math.sin(TAU * (sec * L.bob.speed + L.bob.phase)) + L.gaze.y * p.y;
+        const tx = L.gaze.x * p.x;
+        b.el.style.transform = `translate(${tx.toFixed(3)}cqw, ${ty.toFixed(3)}cqw) rotate(${rot.toFixed(3)}deg) scale(${breathe.toFixed(4)})`;
+      }
+    };
+
+    const reg = registerSurfaceTick(skinRoot, (dt, t) => draw(t));
+    if (reg.animating) {
+      live.disposers.push(() => { reg.stop(); if (pointer.cleanup) pointer.cleanup(); });
+    } else {
+      // Static surface (preview / reduced motion): one resting frame, no loop.
+      for (const b of built) b.el.style.transform = 'none';
+      if (pointer.cleanup) pointer.cleanup();
+    }
   }
 
   function buildDivider(component, el) {
@@ -3711,6 +3802,7 @@ function createRenderer(services) {
     text: buildText,
     image: buildImage,
     gallery: buildGallery,
+    rig: buildRig,
     divider: buildDivider,
     calendar: buildCalendar,
     pomodoro: buildPomodoro,

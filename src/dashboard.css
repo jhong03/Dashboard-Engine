@@ -286,6 +286,15 @@ body {
 .image-body.fit-contain { object-fit: contain; }
 .image-body.fit-cover { object-fit: cover; }
 
+/* Breathing rig (Phase F): stacked PNG layers, each animated transform-only.
+   overflow visible so bob/sway/gaze can move a layer slightly past the box. */
+.comp-rig { padding: 0; overflow: visible; background: none; border: none; }
+.rig-layer {
+  position: absolute; inset: 0;
+  background-repeat: no-repeat; background-position: center; background-size: contain;
+  will-change: transform;
+}
+
 /* Photo gallery: crossfading stacked slides that fill the component box. */
 .comp-gallery { overflow: hidden; }
 .gallery-slide {
