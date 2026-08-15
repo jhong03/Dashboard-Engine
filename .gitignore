@@ -25,7 +25,8 @@ store-assets/
 # SteamPipe build scripts — hold the machine's absolute contentroot path + build logs
 steampipe/
 
-# Kokoro dev engine (model + venv are large / downloaded, never committed)
+# Kokoro dev engine (model + venv + freeze artifacts are large, never committed)
 engine/kokoro/.venv/
+engine/kokoro/.build/
 voices/kokoro/*.onnx
 voices/kokoro/*.bin

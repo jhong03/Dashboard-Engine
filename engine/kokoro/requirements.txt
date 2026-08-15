@@ -19,3 +19,6 @@ soundfile==0.14.0
 numpy==2.5.2
 espeakng-loader==0.2.4
 phonemizer-fork==3.3.2
+
+# Build-time only (freezing the sidecar — see freeze.py). Not a runtime import.
+pyinstaller==6.22.1
