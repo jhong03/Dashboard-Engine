@@ -1266,6 +1266,8 @@ function renderSkinTab(panel) {
 
   renderFillSection(panel, skin);
   renderBackgroundSection(panel, skin);
+  renderScheduleSection(panel, skin);
+  renderTimelineSection(panel);
 }
 
 // ── Base fill (skin.background.fill) ──────────────────────────────────────────
@@ -1648,6 +1650,264 @@ function renderFillSection(panel, skin) {
     checkControl(t('editor.insp.fill.animate'), fill.animate, (v) => { fill.animate = v; renderAll(); }),
     checkControl(t('editor.insp.fill.grain'), fill.grain, (v) => { fill.grain = v; renderAll(); }),
   );
+}
+
+// ── Time-of-day schedule (Phase G) ────────────────────────────────────────────
+// Four slots (dawn/day/dusk/night), each with a start hour and a PARTIAL palette
+// override. A "Preview time" control sets pack.__previewHour (runtime only — the
+// sanitizer never emits it, so it can't be saved) so the designer can see any
+// slot on the stage without waiting for the clock.
+const SCHEDULE_PALETTE_KEYS = ['void', 'glass', 'accent', 'accentBright', 'muted', 'warn', 'gold'];
+const SCHEDULE_SLOT_DEFS = [['dawn', 5], ['day', 8], ['dusk', 17], ['night', 20]];
+
+function ensureSchedule() {
+  const skin = state.pack.skin;
+  if (!skin.schedule || typeof skin.schedule !== 'object') {
+    const slots = {};
+    for (const [name, hour] of SCHEDULE_SLOT_DEFS) slots[name] = { startHour: hour, palette: {} };
+    skin.schedule = { enabled: false, slots };
+  }
+  for (const [name, hour] of SCHEDULE_SLOT_DEFS) {
+    if (!skin.schedule.slots[name]) skin.schedule.slots[name] = { startHour: hour, palette: {} };
+    if (!skin.schedule.slots[name].palette) skin.schedule.slots[name].palette = {};
+  }
+  return skin.schedule;
+}
+
+// The slot name that the current preview hour maps to (mirrors the renderer's
+// activeScheduleSlot: greatest start ≤ hour, wrapping to the latest slot).
+function currentPreviewSlot(schedule) {
+  const h = state.pack.__previewHour;
+  if (typeof h !== 'number') return 'auto';
+  const entries = SCHEDULE_SLOT_DEFS
+    .map(([n]) => ({ n, s: schedule.slots[n].startHour }))
+    .sort((a, b) => a.s - b.s);
+  let active = entries[entries.length - 1].n;
+  for (const e of entries) if (h >= e.s) active = e.n;
+  return active;
+}
+
+function renderScheduleSection(panel, skin) {
+  panel.appendChild(sectionLabel(t('editor.insp.section.schedule')));
+  const enabled = !!(skin.schedule && skin.schedule.enabled);
+  panel.appendChild(checkControl(t('editor.insp.schedule.enable'), enabled, (v) => {
+    if (v) { ensureSchedule().enabled = true; } else if (skin.schedule) { skin.schedule.enabled = false; delete state.pack.__previewHour; }
+    renderAll();
+  }));
+  const intro = document.createElement('p');
+  intro.className = 'field-hint';
+  intro.textContent = t('editor.insp.schedule.intro');
+  panel.appendChild(intro);
+  if (!enabled) return;
+  const sched = ensureSchedule();
+
+  // Preview time (editor only) — jumps the stage to a slot's first hour.
+  const previewChoices = [['auto', t('editor.insp.schedule.previewAuto')]].concat(
+    SCHEDULE_SLOT_DEFS.map(([n]) => [n, t(`editor.insp.schedule.slot.${n}`)]));
+  panel.appendChild(field(t('editor.insp.schedule.preview'), selectControl(currentPreviewSlot(sched), previewChoices, (v) => {
+    if (v === 'auto') delete state.pack.__previewHour;
+    else state.pack.__previewHour = sched.slots[v].startHour;
+    renderAll();
+  }), null, t('editor.insp.schedule.previewHint')));
+
+  for (const [name] of SCHEDULE_SLOT_DEFS) {
+    const slot = sched.slots[name];
+    const card = document.createElement('div');
+    card.className = 'g-card';
+    const head = document.createElement('div');
+    head.className = 'g-card-head';
+    const title = document.createElement('span');
+    title.textContent = t(`editor.insp.schedule.slot.${name}`);
+    head.appendChild(title);
+    card.appendChild(head);
+    card.appendChild(field(t('editor.insp.schedule.startHour'), numberControl(slot.startHour, 0, 23, 1, (v) => {
+      slot.startHour = Math.max(0, Math.min(23, Math.round(v || 0)));
+      renderAll();
+    })));
+    renderSlotPalette(card, slot);
+    panel.appendChild(card);
+  }
+}
+
+// The palette override rows for one slot: only overridden keys appear (as a
+// swatch + remove); an "Add colour" picker offers the rest. Empty = inherit all.
+function renderSlotPalette(card, slot) {
+  for (const key of SCHEDULE_PALETTE_KEYS) {
+    if (!(key in slot.palette)) continue;
+    const row = document.createElement('div');
+    row.className = 'g-row';
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = String(slot.palette[key]).slice(0, 7);
+    input.addEventListener('input', () => { sliderActive = true; slot.palette[key] = input.value; renderAll(); });
+    input.addEventListener('change', () => { sliderActive = false; slot.palette[key] = input.value; renderAll(); });
+    const rm = document.createElement('button');
+    rm.className = 'btn tiny danger';
+    rm.textContent = '×';
+    rm.title = t('editor.insp.btn.remove');
+    rm.addEventListener('click', () => { sliderActive = false; delete slot.palette[key]; renderAll(); });
+    row.append(input, rm);
+    card.appendChild(field(paletteLabel(key), row));
+  }
+  const remaining = SCHEDULE_PALETTE_KEYS.filter((k) => !(k in slot.palette));
+  if (remaining.length) {
+    const choices = [['', t('editor.insp.schedule.addColour')]].concat(remaining.map((k) => [k, paletteLabel(k)]));
+    card.appendChild(selectControl('', choices, (v) => {
+      if (!v) return;
+      slot.palette[v] = String(state.pack.skin.palette[v] || '#3fd8ff').slice(0, 7);
+      renderAll();
+    }));
+  }
+}
+
+// ── Keyframe timeline (Phase G) ───────────────────────────────────────────────
+// pack.timeline: up to 8 tracks, each animating one numeric target over the loop
+// with up to 6 keyframes. The timeline auto-plays on the stage as you author.
+const TIMELINE_PROP_RANGE = {
+  opacity: [0, 1, 0.05], x: [-50, 50, 1], y: [-50, 50, 1], scale: [0, 3, 0.05], rotate: [-180, 180, 5],
+};
+function timelinePropChoices() {
+  return [
+    ['opacity', t('editor.insp.timeline.prop.opacity')],
+    ['x', t('editor.insp.timeline.prop.x')],
+    ['y', t('editor.insp.timeline.prop.y')],
+    ['scale', t('editor.insp.timeline.prop.scale')],
+    ['rotate', t('editor.insp.timeline.prop.rotate')],
+  ];
+}
+function trackRange(track) {
+  return track.target.kind === 'ambience' ? [0, 1, 0.05] : (TIMELINE_PROP_RANGE[track.target.prop] || [0, 1, 0.05]);
+}
+
+function ensureTimeline() {
+  if (!state.pack.timeline || typeof state.pack.timeline !== 'object') {
+    state.pack.timeline = { duration: 10, loop: 'loop', tracks: [] };
+  }
+  if (!Array.isArray(state.pack.timeline.tracks)) state.pack.timeline.tracks = [];
+  return state.pack.timeline;
+}
+
+function newTimelineTrack(duration) {
+  const hasComponents = state.pack.components.length > 0;
+  const target = hasComponents ? { kind: 'component', index: 0, prop: 'opacity' } : { kind: 'ambience', prop: 'opacity' };
+  return { target, keys: [{ t: 0, v: 1, ease: 'linear' }, { t: duration, v: 1, ease: 'linear' }] };
+}
+
+function renderTimelineSection(panel) {
+  panel.appendChild(sectionLabel(t('editor.insp.section.timeline')));
+  const has = !!state.pack.timeline;
+  panel.appendChild(checkControl(t('editor.insp.timeline.enable'), has, (v) => {
+    if (v) ensureTimeline(); else delete state.pack.timeline;
+    renderAll();
+  }));
+  const intro = document.createElement('p');
+  intro.className = 'field-hint';
+  intro.textContent = t('editor.insp.timeline.intro');
+  panel.appendChild(intro);
+  if (!has) return;
+  const tl = ensureTimeline();
+
+  panel.appendChild(field(t('editor.insp.timeline.duration'), numberControl(tl.duration, 1, 300, 1, (v) => {
+    tl.duration = Math.max(1, Math.min(300, v || 1));
+    renderAll();
+  })));
+  panel.appendChild(field(t('editor.insp.timeline.playback'), selectControl(tl.loop, [
+    ['loop', t('editor.insp.timeline.loop.loop')], ['mirror', t('editor.insp.timeline.loop.mirror')], ['once', t('editor.insp.timeline.loop.once')],
+  ], (v) => { tl.loop = v; renderAll(); })));
+
+  tl.tracks.forEach((track, i) => renderTimelineTrack(panel, tl, track, i));
+
+  if (tl.tracks.length < 8) {
+    const add = document.createElement('button');
+    add.className = 'btn tiny';
+    add.textContent = t('editor.insp.timeline.addTrack');
+    add.addEventListener('click', () => { sliderActive = false; tl.tracks.push(newTimelineTrack(tl.duration)); renderAll(); });
+    panel.appendChild(add);
+  }
+}
+
+function renderTimelineTrack(panel, tl, track, i) {
+  const card = document.createElement('div');
+  card.className = 'g-card';
+  const head = document.createElement('div');
+  head.className = 'g-card-head';
+  const title = document.createElement('span');
+  title.textContent = t('editor.insp.timeline.track', { n: i + 1 });
+  const rm = document.createElement('button');
+  rm.className = 'btn tiny danger';
+  rm.textContent = '×';
+  rm.title = t('editor.insp.btn.remove');
+  rm.addEventListener('click', () => { sliderActive = false; tl.tracks.splice(i, 1); renderAll(); });
+  head.append(title, rm);
+  card.appendChild(head);
+
+  // Target: kind (component/ambience), then component index + prop or a note.
+  const hasComponents = state.pack.components.length > 0;
+  const kindChoices = (hasComponents ? [['component', t('editor.insp.timeline.kind.component')]] : []).concat([['ambience', t('editor.insp.timeline.kind.ambience')]]);
+  card.appendChild(field(t('editor.insp.timeline.target'), selectControl(track.target.kind, kindChoices, (v) => {
+    if (v === 'ambience') track.target = { kind: 'ambience', prop: 'opacity' };
+    else track.target = { kind: 'component', index: 0, prop: 'opacity' };
+    clampTrackKeys(track);
+    renderAll();
+  })));
+
+  if (track.target.kind === 'component') {
+    const compChoices = state.pack.components.map((c, idx) => [String(idx), `${idx + 1} · ${c.type}`]);
+    card.appendChild(field(t('editor.insp.timeline.component'), selectControl(String(track.target.index), compChoices, (v) => {
+      track.target.index = Number(v); renderAll();
+    })));
+    card.appendChild(field(t('editor.insp.timeline.property'), selectControl(track.target.prop, timelinePropChoices(), (v) => {
+      track.target.prop = v; clampTrackKeys(track); renderAll();
+    })));
+  } else {
+    const note = document.createElement('p');
+    note.className = 'field-hint';
+    note.textContent = t('editor.insp.timeline.ambienceNote');
+    card.appendChild(note);
+  }
+
+  // Keyframes: time (0..duration), value (prop range), easing.
+  const [vmin, vmax, vstep] = trackRange(track);
+  track.keys.forEach((key, ki) => {
+    const row = document.createElement('div');
+    row.className = 'g-row tl-key';
+    const tIn = numberControl(key.t, 0, tl.duration, 0.5, (v) => { key.t = Math.max(0, Math.min(tl.duration, v || 0)); renderAll(); });
+    tIn.title = t('editor.insp.timeline.keyTime');
+    const vIn = numberControl(key.v, vmin, vmax, vstep, (v) => { key.v = Math.max(vmin, Math.min(vmax, typeof v === 'number' ? v : 0)); renderAll(); });
+    vIn.title = t('editor.insp.timeline.keyValue');
+    const easeSel = selectControl(key.ease || 'linear', [
+      ['linear', t('editor.insp.timeline.ease.linear')], ['in', t('editor.insp.timeline.ease.in')], ['out', t('editor.insp.timeline.ease.out')], ['inout', t('editor.insp.timeline.ease.inout')],
+    ], (v) => { key.ease = v; renderAll(); });
+    row.append(tIn, vIn, easeSel);
+    if (track.keys.length > 1) {
+      const krm = document.createElement('button');
+      krm.className = 'btn tiny danger';
+      krm.textContent = '×';
+      krm.addEventListener('click', () => { sliderActive = false; track.keys.splice(ki, 1); renderAll(); });
+      row.appendChild(krm);
+    }
+    card.appendChild(field(t('editor.insp.timeline.key', { n: ki + 1 }), row));
+  });
+  if (track.keys.length < 6) {
+    const addK = document.createElement('button');
+    addK.className = 'btn tiny';
+    addK.textContent = t('editor.insp.timeline.addKey');
+    addK.addEventListener('click', () => {
+      sliderActive = false;
+      const last = track.keys[track.keys.length - 1] || { t: 0, v: vmax };
+      track.keys.push({ t: Math.min(tl.duration, (last.t || 0) + 1), v: last.v, ease: 'linear' });
+      renderAll();
+    });
+    card.appendChild(addK);
+  }
+  panel.appendChild(card);
+}
+
+// Clamp a track's key values into the current target's range (after a kind/prop
+// change) so the live preview matches what the sanitizer will store.
+function clampTrackKeys(track) {
+  const [vmin, vmax] = trackRange(track);
+  for (const k of track.keys) k.v = Math.max(vmin, Math.min(vmax, typeof k.v === 'number' ? k.v : 0));
 }
 
 // Background = a stack of image/video layers (back-to-front) with parallax

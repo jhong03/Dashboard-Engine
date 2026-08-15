@@ -232,6 +232,22 @@ body.editor-body {
 .ed-bg-fx { border: 1px dashed var(--border); border-radius: 5px; padding: 6px; margin-bottom: 6px; }
 .ed-bg-fx .ed-bg-layer-name { text-transform: capitalize; }
 
+/* Phase G — schedule slot + timeline track cards in the Skin inspector. */
+.g-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 8px;
+  background: var(--panel-2, #1f2226);
+}
+.g-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; font-weight: 600; }
+.g-card-head span:first-child { flex: 1; }
+.g-card-head .btn.tiny { padding: 1px 6px; min-width: 22px; }
+.g-row { display: flex; align-items: center; gap: 6px; }
+.g-row input[type="color"] { flex: 1; }
+.g-row.tl-key input[type="number"] { width: 4.5em; }
+.g-row.tl-key select { flex: 1; }
+
 /* Photo gallery: the ordered, removable photo list in the inspector. */
 .gallery-editlist { display: flex; flex-direction: column; gap: 4px; }
 .gallery-editrow { display: flex; align-items: center; gap: 6px; }
