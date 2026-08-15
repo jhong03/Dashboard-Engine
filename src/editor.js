@@ -1787,10 +1787,25 @@ function ensureTimeline() {
   return state.pack.timeline;
 }
 
+// Starter keyframes that actually MOVE, so a fresh track (or a property switch)
+// shows the effect immediately instead of a flat, do-nothing 1 → 1. Each pulses
+// out and back over the loop so it reads clearly and loops seamlessly.
+function keyframeDefaults(kind, prop, duration) {
+  const mid = Math.round((duration / 2) * 2) / 2; // snap to the 0.5 s time step
+  const p = kind === 'ambience' ? 'opacity' : prop;
+  const peak = { opacity: 0.3, x: 12, y: -12, scale: 1.3, rotate: 10 }[p];
+  const base = { opacity: 1, x: 0, y: 0, scale: 1, rotate: -10 }[p];
+  return [
+    { t: 0, v: base, ease: 'inout' },
+    { t: mid, v: peak, ease: 'inout' },
+    { t: duration, v: base, ease: 'inout' },
+  ];
+}
+
 function newTimelineTrack(duration) {
   const hasComponents = state.pack.components.length > 0;
   const target = hasComponents ? { kind: 'component', index: 0, prop: 'opacity' } : { kind: 'ambience', prop: 'opacity' };
-  return { target, keys: [{ t: 0, v: 1, ease: 'linear' }, { t: duration, v: 1, ease: 'linear' }] };
+  return { target, keys: keyframeDefaults(target.kind, target.prop, duration) };
 }
 
 function renderTimelineSection(panel) {
@@ -1814,6 +1829,11 @@ function renderTimelineSection(panel) {
   panel.appendChild(field(t('editor.insp.timeline.playback'), selectControl(tl.loop, [
     ['loop', t('editor.insp.timeline.loop.loop')], ['mirror', t('editor.insp.timeline.loop.mirror')], ['once', t('editor.insp.timeline.loop.once')],
   ], (v) => { tl.loop = v; renderAll(); })));
+
+  const how = document.createElement('p');
+  how.className = 'field-hint';
+  how.textContent = t('editor.insp.timeline.howKeys');
+  panel.appendChild(how);
 
   tl.tracks.forEach((track, i) => renderTimelineTrack(panel, tl, track, i));
 
@@ -1842,12 +1862,15 @@ function renderTimelineTrack(panel, tl, track, i) {
   card.appendChild(head);
 
   // Target: kind (component/ambience), then component index + prop or a note.
+  // Changing the kind or property RESETS the keys to an animating default for
+  // the new target — its old values wouldn't mean the same thing, and a sensible
+  // moving default is far clearer than leaving stale numbers behind.
   const hasComponents = state.pack.components.length > 0;
   const kindChoices = (hasComponents ? [['component', t('editor.insp.timeline.kind.component')]] : []).concat([['ambience', t('editor.insp.timeline.kind.ambience')]]);
   card.appendChild(field(t('editor.insp.timeline.target'), selectControl(track.target.kind, kindChoices, (v) => {
     if (v === 'ambience') track.target = { kind: 'ambience', prop: 'opacity' };
     else track.target = { kind: 'component', index: 0, prop: 'opacity' };
-    clampTrackKeys(track);
+    track.keys = keyframeDefaults(track.target.kind, track.target.prop, tl.duration);
     renderAll();
   })));
 
@@ -1857,24 +1880,37 @@ function renderTimelineTrack(panel, tl, track, i) {
       track.target.index = Number(v); renderAll();
     })));
     card.appendChild(field(t('editor.insp.timeline.property'), selectControl(track.target.prop, timelinePropChoices(), (v) => {
-      track.target.prop = v; clampTrackKeys(track); renderAll();
+      track.target.prop = v; track.keys = keyframeDefaults('component', v, tl.duration); renderAll();
     })));
-  } else {
-    const note = document.createElement('p');
-    note.className = 'field-hint';
-    note.textContent = t('editor.insp.timeline.ambienceNote');
-    card.appendChild(note);
   }
 
-  // Keyframes: time (0..duration), value (prop range), easing.
+  // Plain-language explanation of what "Value" means for this target.
+  const hintKey = track.target.kind === 'ambience' ? 'ambience' : track.target.prop;
+  const vhint = document.createElement('p');
+  vhint.className = 'field-hint';
+  vhint.textContent = t(`editor.insp.timeline.hint.${hintKey}`);
+  card.appendChild(vhint);
+
+  // Column headers so the three boxes below aren't a mystery.
+  const header = document.createElement('div');
+  header.className = 'g-row tl-head';
+  for (const col of ['colTime', 'colValue', 'colEase']) {
+    const s = document.createElement('span');
+    s.textContent = t(`editor.insp.timeline.${col}`);
+    header.appendChild(s);
+  }
+  card.appendChild(header);
+
+  // Keyframes: time (0..duration) · value (prop range) · easing. Bare rows that
+  // line up under the headers (no per-row label — the columns say it all).
   const [vmin, vmax, vstep] = trackRange(track);
   track.keys.forEach((key, ki) => {
     const row = document.createElement('div');
     row.className = 'g-row tl-key';
     const tIn = numberControl(key.t, 0, tl.duration, 0.5, (v) => { key.t = Math.max(0, Math.min(tl.duration, v || 0)); renderAll(); });
-    tIn.title = t('editor.insp.timeline.keyTime');
+    tIn.title = t('editor.insp.timeline.colTime');
     const vIn = numberControl(key.v, vmin, vmax, vstep, (v) => { key.v = Math.max(vmin, Math.min(vmax, typeof v === 'number' ? v : 0)); renderAll(); });
-    vIn.title = t('editor.insp.timeline.keyValue');
+    vIn.title = t('editor.insp.timeline.colValue');
     const easeSel = selectControl(key.ease || 'linear', [
       ['linear', t('editor.insp.timeline.ease.linear')], ['in', t('editor.insp.timeline.ease.in')], ['out', t('editor.insp.timeline.ease.out')], ['inout', t('editor.insp.timeline.ease.inout')],
     ], (v) => { key.ease = v; renderAll(); });
@@ -1883,10 +1919,11 @@ function renderTimelineTrack(panel, tl, track, i) {
       const krm = document.createElement('button');
       krm.className = 'btn tiny danger';
       krm.textContent = '×';
+      krm.title = t('editor.insp.btn.remove');
       krm.addEventListener('click', () => { sliderActive = false; track.keys.splice(ki, 1); renderAll(); });
       row.appendChild(krm);
     }
-    card.appendChild(field(t('editor.insp.timeline.key', { n: ki + 1 }), row));
+    card.appendChild(row);
   });
   if (track.keys.length < 6) {
     const addK = document.createElement('button');
@@ -1901,13 +1938,6 @@ function renderTimelineTrack(panel, tl, track, i) {
     card.appendChild(addK);
   }
   panel.appendChild(card);
-}
-
-// Clamp a track's key values into the current target's range (after a kind/prop
-// change) so the live preview matches what the sanitizer will store.
-function clampTrackKeys(track) {
-  const [vmin, vmax] = trackRange(track);
-  for (const k of track.keys) k.v = Math.max(vmin, Math.min(vmax, typeof k.v === 'number' ? k.v : 0));
 }
 
 // Background = a stack of image/video layers (back-to-front) with parallax

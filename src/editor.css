@@ -247,6 +247,13 @@ body.editor-body {
 .g-row input[type="color"] { flex: 1; }
 .g-row.tl-key input[type="number"] { width: 4.5em; }
 .g-row.tl-key select { flex: 1; }
+.g-row.tl-key { margin-bottom: 4px; }
+/* Column headers above the keyframe rows — line up with the two number inputs
+   (4.5em each) + the easing select (flex). */
+.g-row.tl-head { margin: 4px 0 2px; }
+.g-row.tl-head span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-dim); }
+.g-row.tl-head span:nth-child(1), .g-row.tl-head span:nth-child(2) { width: 4.5em; flex: 0 0 auto; }
+.g-row.tl-head span:nth-child(3) { flex: 1; }
 
 /* Photo gallery: the ordered, removable photo list in the inspector. */
 .gallery-editlist { display: flex; flex-direction: column; gap: 4px; }
