@@ -2048,11 +2048,11 @@ function renderCreate() {
 // parallax depth layers; WebGL effects are added per layer in the editor.
 
 const BUILDER_PALETTES = [
-  { name: 'Cyan HUD', p: { void: '#04080F', glass: '#0A16238C', accent: '#3FD8FF', accentBright: '#7FE9FF', muted: '#5A7E93', warn: '#FFB23E', gold: '#E8C56A' } },
-  { name: 'Ember', p: { void: '#140A06', glass: '#241109A0', accent: '#FF7A3C', accentBright: '#FFC27A', muted: '#8A6A55', warn: '#FF5A5A', gold: '#E8C56A' } },
-  { name: 'Mono', p: { void: '#0B0D10', glass: '#1A1E24AA', accent: '#C7D0DA', accentBright: '#FFFFFF', muted: '#6A727C', warn: '#E0A446', gold: '#C9B27A' } },
-  { name: 'Sakura', p: { void: '#1A0E16', glass: '#2A1622A0', accent: '#FF8FC0', accentBright: '#FFC7E0', muted: '#9A7088', warn: '#FFB23E', gold: '#F0C86A' } },
-  { name: 'Matrix', p: { void: '#020A06', glass: '#0A1A10A0', accent: '#5BE58A', accentBright: '#B7FFCF', muted: '#4A7A5E', warn: '#E0C246', gold: '#B7E86A' } },
+  { id: 'cyanHud', p: { void: '#04080F', glass: '#0A16238C', accent: '#3FD8FF', accentBright: '#7FE9FF', muted: '#5A7E93', warn: '#FFB23E', gold: '#E8C56A' } },
+  { id: 'ember', p: { void: '#140A06', glass: '#241109A0', accent: '#FF7A3C', accentBright: '#FFC27A', muted: '#8A6A55', warn: '#FF5A5A', gold: '#E8C56A' } },
+  { id: 'mono', p: { void: '#0B0D10', glass: '#1A1E24AA', accent: '#C7D0DA', accentBright: '#FFFFFF', muted: '#6A727C', warn: '#E0A446', gold: '#C9B27A' } },
+  { id: 'sakura', p: { void: '#1A0E16', glass: '#2A1622A0', accent: '#FF8FC0', accentBright: '#FFC7E0', muted: '#9A7088', warn: '#FFB23E', gold: '#F0C86A' } },
+  { id: 'matrix', p: { void: '#020A06', glass: '#0A1A10A0', accent: '#5BE58A', accentBright: '#B7FFCF', muted: '#4A7A5E', warn: '#E0C246', gold: '#B7E86A' } },
 ];
 const BUILDER_TEXTURES = [
   { id: 'clean', t: { scanlines: 0, grid: 0.1, glow: 0.3, vignette: 0.3 } },
@@ -2851,7 +2851,7 @@ function renderColoursStep(el) {
   const presets = bPresetRow();
   const activePalette = BUILDER_PALETTES.find((x) => x.p.accent === builder.pack.skin.palette.accent);
   for (const preset of BUILDER_PALETTES) {
-    const b = bPreset(preset.name, activePalette === preset, () => {
+    const b = bPreset(bt('palette.' + preset.id), activePalette === preset, () => {
       builder.pack.skin.palette = { ...preset.p };
       renderColoursStep(el); schedulePreview();
     });

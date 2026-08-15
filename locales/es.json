@@ -168,6 +168,11 @@
 
   "manager.builder.ariaLabel": "Creador de paquetes",
   "manager.builder.title": "Nuevo paquete",
+  "manager.builder.palette.cyanHud": "HUD cian",
+  "manager.builder.palette.ember": "Brasa",
+  "manager.builder.palette.mono": "Mono",
+  "manager.builder.palette.sakura": "Sakura",
+  "manager.builder.palette.matrix": "Matrix",
   "manager.builder.step.background": "Fondo",
   "manager.builder.step.colours": "Colores",
   "manager.builder.step.particles": "Partículas",

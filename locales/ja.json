@@ -168,6 +168,11 @@
 
   "manager.builder.ariaLabel": "新規パックビルダー",
   "manager.builder.title": "新規パック",
+  "manager.builder.palette.cyanHud": "シアン HUD",
+  "manager.builder.palette.ember": "残り火",
+  "manager.builder.palette.mono": "モノクロ",
+  "manager.builder.palette.sakura": "桜",
+  "manager.builder.palette.matrix": "マトリックス",
   "manager.builder.step.background": "背景",
   "manager.builder.step.colours": "カラー",
   "manager.builder.step.particles": "パーティクル",

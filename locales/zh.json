@@ -168,6 +168,11 @@
 
   "manager.builder.ariaLabel": "新包构建器",
   "manager.builder.title": "新建包",
+  "manager.builder.palette.cyanHud": "青色 HUD",
+  "manager.builder.palette.ember": "余烬",
+  "manager.builder.palette.mono": "单色",
+  "manager.builder.palette.sakura": "樱花",
+  "manager.builder.palette.matrix": "矩阵",
   "manager.builder.step.background": "背景",
   "manager.builder.step.colours": "颜色",
   "manager.builder.step.particles": "粒子",

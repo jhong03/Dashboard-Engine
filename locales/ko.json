@@ -168,6 +168,11 @@
 
   "manager.builder.ariaLabel": "새 팩 빌더",
   "manager.builder.title": "새 팩",
+  "manager.builder.palette.cyanHud": "시안 HUD",
+  "manager.builder.palette.ember": "잉걸불",
+  "manager.builder.palette.mono": "모노크롬",
+  "manager.builder.palette.sakura": "사쿠라",
+  "manager.builder.palette.matrix": "매트릭스",
   "manager.builder.step.background": "배경",
   "manager.builder.step.colours": "색상",
   "manager.builder.step.particles": "파티클",

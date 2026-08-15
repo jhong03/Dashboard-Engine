@@ -168,6 +168,11 @@
 
   "manager.builder.ariaLabel": "New pack builder",
   "manager.builder.title": "New pack",
+  "manager.builder.palette.cyanHud": "Cyan HUD",
+  "manager.builder.palette.ember": "Ember",
+  "manager.builder.palette.mono": "Mono",
+  "manager.builder.palette.sakura": "Sakura",
+  "manager.builder.palette.matrix": "Matrix",
   "manager.builder.step.background": "Background",
   "manager.builder.step.colours": "Colours",
   "manager.builder.step.particles": "Particles",
