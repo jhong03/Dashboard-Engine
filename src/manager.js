@@ -2207,7 +2207,7 @@ function starterPack() {
   };
 }
 
-const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set(), depthLayers: [], parallaxStrength: 1, fill: null };
+const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set(), depthLayers: [], parallaxStrength: 1, fill: null, schedulePreset: null, timelineTarget: 0 };
 
 // Base-fill presets (a gradient wash painted behind the wallpaper stack). Mirrors
 // the editor's Skin-tab presets; stop colours are palette TOKENS so they track the
@@ -2391,6 +2391,8 @@ const BUILDER_STEPS = [
   { key: 'particles', label: 'Particles', render: renderParticlesStep },
   { key: 'type', label: 'Typography', render: renderTypeStep },
   { key: 'components', label: 'Components', render: renderComponentsStep },
+  { key: 'timeofday', label: 'Time of day', render: renderScheduleStep },
+  { key: 'animation', label: 'Animation', render: renderTimelineStep },
   { key: 'persona', label: 'Persona', render: renderPersonaStep },
   { key: 'knobs', label: 'Customize knobs', render: renderKnobsStep },
   { key: 'finish', label: 'Name & finish', render: renderFinishStep },
@@ -2492,6 +2494,8 @@ async function openBuilder() {
   builder.layout = 'command';
   builder.compOpts = {};
   builder.knobs = new Set();
+  builder.schedulePreset = null;
+  builder.timelineTarget = 0;
   applyBuilderLayout();
   $('builder-overlay').classList.remove('hidden');
   renderBuilderRail();
@@ -2910,6 +2914,122 @@ function renderTypeStep(el) {
   const sp = document.createElement('span'); sp.textContent = 'Uppercase display text';
   up.append(cb, sp);
   el.appendChild(up);
+}
+
+// ── Builder step: Time of day (Phase G schedule) ─────────────────────────────
+// Enable a time-of-day recolour with one tap. The presets derive each slot from
+// the pack's own base palette (shared with the editor via window.AegisPresets),
+// and "Preview a time" jumps the stage to a slot (runtime-only __previewHour;
+// the sanitizer strips it, so it never persists).
+function renderScheduleStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Time of day', 'Recolour your dashboard as the day passes — dawn, day, dusk, night. Pick a look built from your own colours; fine-tune each slot in the editor afterwards.'));
+  const skin = builder.pack.skin;
+  const enabled = !!(skin.schedule && skin.schedule.enabled);
+
+  const lookLabel = document.createElement('span');
+  lookLabel.className = 'b-sublabel';
+  lookLabel.textContent = 'Look';
+  el.appendChild(lookLabel);
+  const row = bPresetRow();
+  row.appendChild(bPreset('Off', !enabled, () => {
+    if (skin.schedule) skin.schedule.enabled = false;
+    delete builder.pack.__previewHour;
+    renderScheduleStep(el); schedulePreview();
+  }));
+  for (const preset of window.AegisPresets.SCHEDULE_PRESETS) {
+    row.appendChild(bPreset(preset.label, enabled && builder.schedulePreset === preset.id, () => {
+      skin.schedule = { enabled: true, slots: window.AegisPresets.buildScheduleSlots(skin.palette, preset.id) };
+      builder.schedulePreset = preset.id;
+      delete builder.pack.__previewHour;
+      renderScheduleStep(el); schedulePreview();
+    }));
+  }
+  el.appendChild(row);
+  if (!enabled) return;
+
+  const prevLabel = document.createElement('span');
+  prevLabel.className = 'b-sublabel';
+  prevLabel.textContent = 'Preview a time';
+  el.appendChild(prevLabel);
+  const prow = bPresetRow();
+  const cur = builder.pack.__previewHour;
+  const isAuto = typeof cur !== 'number';
+  const slots = skin.schedule.slots;
+  prow.appendChild(bPreset('Now', isAuto, () => { delete builder.pack.__previewHour; renderScheduleStep(el); updateBuilderPreview(); }));
+  for (const [name, label] of [['dawn', 'Dawn'], ['day', 'Day'], ['dusk', 'Dusk'], ['night', 'Night']]) {
+    prow.appendChild(bPreset(label, !isAuto && cur === slots[name].startHour, () => {
+      builder.pack.__previewHour = slots[name].startHour;
+      renderScheduleStep(el); updateBuilderPreview();
+    }));
+  }
+  el.appendChild(prow);
+}
+
+// ── Builder step: Animation (Phase G timeline motions) ───────────────────────
+// Tap a ready-made motion to add a looping track (shared window.AegisPresets).
+// Component motions target the chosen widget; Twinkle animates the ambience.
+const BUILDER_MOTION_PROP = { opacity: 'fade', x: 'move X', y: 'move Y', scale: 'scale', rotate: 'rotate' };
+function renderTimelineStep(el) {
+  el.textContent = '';
+  el.appendChild(stepHead('Animation', 'Add gentle looping motion to your widgets — float, pulse, breathe, spin. Tap a motion to add it (the preview plays it live); fine-tune the keyframes in the editor.'));
+  const comps = builder.pack.components || [];
+
+  if (comps.length) {
+    const tf = bField('Animate which widget');
+    const sel = document.createElement('select');
+    comps.forEach((c, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${i + 1} · ${c.type}`; sel.appendChild(o); });
+    if (typeof builder.timelineTarget !== 'number' || builder.timelineTarget >= comps.length) builder.timelineTarget = 0;
+    sel.value = String(builder.timelineTarget);
+    sel.addEventListener('change', () => { builder.timelineTarget = Number(sel.value); });
+    tf.appendChild(sel);
+    el.appendChild(tf);
+  } else {
+    const p = document.createElement('p');
+    p.className = 'hint';
+    p.textContent = 'Add some components in the previous step to animate them — or add the ambience Twinkle below.';
+    el.appendChild(p);
+  }
+
+  const mLabel = document.createElement('span');
+  mLabel.className = 'b-sublabel';
+  mLabel.textContent = 'Add a motion';
+  el.appendChild(mLabel);
+  const row = bPresetRow();
+  for (const motion of window.AegisPresets.TIMELINE_MOTIONS) {
+    if (motion.kind === 'component' && !comps.length) continue;
+    row.appendChild(bPreset(motion.label, false, () => {
+      if (!builder.pack.timeline) builder.pack.timeline = { duration: 8, loop: 'mirror', tracks: [] };
+      if (builder.pack.timeline.tracks.length >= 8) return;
+      const track = window.AegisPresets.buildMotionTrack(motion.id, builder.pack.timeline.duration, builder.timelineTarget || 0);
+      if (track) builder.pack.timeline.tracks.push(track);
+      renderTimelineStep(el); schedulePreview();
+    }));
+  }
+  el.appendChild(row);
+
+  const tl = builder.pack.timeline;
+  if (tl && tl.tracks.length) {
+    const aLabel = document.createElement('span');
+    aLabel.className = 'b-sublabel';
+    aLabel.textContent = `Added (${tl.tracks.length})`;
+    el.appendChild(aLabel);
+    tl.tracks.forEach((tr, i) => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'b-motion-row';
+      const nm = document.createElement('span');
+      nm.textContent = tr.target.kind === 'ambience'
+        ? 'Ambience — twinkle'
+        : `Widget ${tr.target.index + 1} — ${BUILDER_MOTION_PROP[tr.target.prop] || tr.target.prop}`;
+      const rm = libButton('×', () => {
+        tl.tracks.splice(i, 1);
+        if (!tl.tracks.length) delete builder.pack.timeline;
+        renderTimelineStep(el); schedulePreview();
+      }, 'tiny danger');
+      rowEl.append(nm, rm);
+      el.appendChild(rowEl);
+    });
+  }
 }
 
 function renderComponentsStep(el) {

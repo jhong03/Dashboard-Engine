@@ -1688,79 +1688,14 @@ function currentPreviewSlot(schedule) {
 }
 
 // ── Schedule palette presets ──────────────────────────────────────────────────
-// Derive each slot's colours from the pack's OWN base palette (lightness / warmth
-// shifts), so a preset stays coherent with any design instead of imposing fixed
-// colours. Day always inherits the base ({} = no override).
-function clamp01(x) { return Math.max(0, Math.min(1, x)); }
-function hexToHsl(hex) {
-  const h = hex.replace('#', '');
-  const r = parseInt(h.slice(0, 2), 16) / 255, g = parseInt(h.slice(2, 4), 16) / 255, b = parseInt(h.slice(4, 6), 16) / 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
-  let hue = 0;
-  if (d) {
-    if (max === r) hue = ((g - b) / d) % 6;
-    else if (max === g) hue = (b - r) / d + 2;
-    else hue = (r - g) / d + 4;
-    hue *= 60; if (hue < 0) hue += 360;
-  }
-  const l = (max + min) / 2;
-  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
-  return { h: hue, s, l };
-}
-function hslToHex(h, s, l) {
-  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
-  let r = 0, g = 0, b = 0;
-  if (h < 60) [r, g, b] = [c, x, 0]; else if (h < 120) [r, g, b] = [x, c, 0];
-  else if (h < 180) [r, g, b] = [0, c, x]; else if (h < 240) [r, g, b] = [0, x, c];
-  else if (h < 300) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x];
-  const to2 = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
-  return `#${to2(r)}${to2(g)}${to2(b)}`;
-}
-function withL(hex, dl) { const c = hexToHsl(hex); return hslToHex(c.h, c.s, clamp01(c.l + dl)); }
-function withSL(hex, ds, dl) { const c = hexToHsl(hex); return hslToHex(c.h, clamp01(c.s + ds), clamp01(c.l + dl)); }
-// COMMIT a hue (warm ~30°, gold ~45°, cool ~220°), keeping the pack's saturation
-// and lightness (with small tweaks). A fractional hue-nudge can't be used: warming
-// a cyan accent lands it in GREEN — the ugly middle — instead of orange, so the
-// preset must actually reach the target hue for "warm/cool" to read correctly.
-function setHue(hex, hue, ds, dl) {
-  const c = hexToHsl(hex);
-  return hslToHex(((hue % 360) + 360) % 360, clamp01(c.s + (ds || 0)), clamp01(c.l + (dl || 0)));
-}
-
-// Bold enough to read at a glance — a reference preset that barely changes
-// isn't a useful reference. Each recolours void + accent + accentBright (the
-// bright highlight on active text/values) with a clear brightness swing across
-// the day (dawn bright, night dim) on top of the hue shift.
-const SCHEDULE_PRESETS = [
-  // Brightness only — universal, never clashes with any base hue.
-  { id: 'dayNight', build: (v, a, ab) => ({
-    dawn: { void: withL(v, 0.06), accent: withL(a, 0.08), accentBright: withL(ab, 0.05) },
-    day: {},
-    dusk: { void: withL(v, -0.07), accent: withSL(a, 0, -0.10), accentBright: withSL(ab, 0, -0.09) },
-    night: { void: withL(v, -0.16), accent: withSL(a, -0.18, -0.24), accentBright: withSL(ab, -0.15, -0.22) },
-  }) },
-  // Warm mornings/evenings, cool nights — commits warm/cool hues + a bright→dim swing.
-  { id: 'warmCool', build: (v, a, ab) => ({
-    dawn: { void: setHue(v, 28, 0.08, 0.06), accent: setHue(a, 32, 0.10, 0.12), accentBright: setHue(ab, 34, 0.06, 0.06) },
-    day: {},
-    dusk: { void: setHue(v, 16, 0.12, -0.03), accent: setHue(a, 14, 0.16, -0.10), accentBright: setHue(ab, 20, 0.10, -0.08) },
-    night: { void: setHue(v, 222, 0.10, -0.04), accent: setHue(a, 218, 0.02, -0.20), accentBright: setHue(ab, 216, -0.05, -0.18) },
-  }) },
-  // Golden dawn & dusk, deep-blue night.
-  { id: 'golden', build: (v, a, ab) => ({
-    dawn: { void: setHue(v, 34, 0.10, 0.06), accent: setHue(a, 44, 0.30, 0.10), accentBright: setHue(ab, 46, 0.20, 0.06) },
-    day: {},
-    dusk: { void: setHue(v, 24, 0.14, -0.03), accent: setHue(a, 30, 0.32, -0.06), accentBright: setHue(ab, 36, 0.22, -0.05) },
-    night: { void: setHue(v, 236, 0.12, -0.05), accent: setHue(a, 228, 0.08, -0.22), accentBright: setHue(ab, 226, 0.02, -0.18) },
-  }) },
-];
-
-function applySchedulePreset(preset) {
+// The preset data + colour math live in the shared window.AegisPresets module
+// (src/pack-presets.js), so the editor and the from-scratch builder use ONE
+// source. Day always inherits the base ({} = no override).
+function applySchedulePreset(presetId) {
   const sched = ensureSchedule();
   sched.enabled = true;
-  const base = state.pack.skin.palette;
-  const built = preset.build(base.void || '#04080F', base.accent || '#3FD8FF', base.accentBright || '#7FE9FF');
-  for (const [name] of SCHEDULE_SLOT_DEFS) sched.slots[name].palette = built[name] || {};
+  const slots = window.AegisPresets.buildScheduleSlots(state.pack.skin.palette, presetId);
+  if (slots) for (const [name] of SCHEDULE_SLOT_DEFS) sched.slots[name].palette = slots[name].palette;
   delete state.pack.__previewHour;
   renderAll();
 }
@@ -1832,11 +1767,11 @@ function renderScheduleSection(panel, skin) {
   panel.appendChild(phint);
   const chips = document.createElement('div');
   chips.className = 'tl-presets';
-  for (const preset of SCHEDULE_PRESETS) {
+  for (const preset of window.AegisPresets.SCHEDULE_PRESETS) {
     const chip = document.createElement('button');
     chip.className = 'btn tiny';
     chip.textContent = t(`editor.insp.schedule.preset.${preset.id}`);
-    chip.addEventListener('click', () => { sliderActive = false; applySchedulePreset(preset); });
+    chip.addEventListener('click', () => { sliderActive = false; applySchedulePreset(preset.id); });
     chips.appendChild(chip);
   }
   const clear = document.createElement('button');
@@ -1944,18 +1879,8 @@ function newTimelineTrack(duration) {
   return { target, keys: keyframeDefaults(target.kind, target.prop, duration) };
 }
 
-// Ready-made motions — reference presets the user taps to add a tuned track,
-// then tweaks. Each is loop-safe (starts and ends on the same value) so it reads
-// cleanly whichever playback mode is on. Keys are functions of the loop length.
-const TIMELINE_MOTIONS = [
-  { id: 'float',   kind: 'component', prop: 'y',       keys: (D) => [{ t: 0, v: 0 }, { t: D / 2, v: -6 }, { t: D, v: 0 }] },
-  { id: 'breathe', kind: 'component', prop: 'scale',   keys: (D) => [{ t: 0, v: 1 }, { t: D / 2, v: 1.08 }, { t: D, v: 1 }] },
-  { id: 'pulse',   kind: 'component', prop: 'opacity', keys: (D) => [{ t: 0, v: 1 }, { t: D / 2, v: 0.4 }, { t: D, v: 1 }] },
-  { id: 'sway',    kind: 'component', prop: 'rotate',  keys: (D) => [{ t: 0, v: -4 }, { t: D / 2, v: 4 }, { t: D, v: -4 }] },
-  { id: 'drift',   kind: 'component', prop: 'x',       keys: (D) => [{ t: 0, v: 0 }, { t: D / 2, v: 14 }, { t: D, v: 0 }] },
-  { id: 'fade',    kind: 'component', prop: 'opacity', keys: (D) => [{ t: 0, v: 0 }, { t: D * 0.2, v: 1 }, { t: D * 0.8, v: 1 }, { t: D, v: 0 }] },
-  { id: 'twinkle', kind: 'ambience',  prop: 'opacity', keys: (D) => [{ t: 0, v: 1 }, { t: D / 2, v: 0.3 }, { t: D, v: 1 }] },
-];
+// Ready-made motions live in the shared window.AegisPresets module so the editor
+// and the from-scratch builder share ONE source.
 
 // Which component a new preset targets: the one selected on the stage, else the
 // first. (The user can re-point it in the track's Component dropdown afterwards.)
@@ -1964,15 +1889,10 @@ function presetTargetComponent() {
   return (typeof state.selected === 'number' && state.selected >= 0 && state.selected < n) ? state.selected : 0;
 }
 
-function addTimelineMotion(tl, motion) {
+function addTimelineMotion(tl, motionId) {
   if (tl.tracks.length >= 8) return;
-  const D = tl.duration;
-  const snap = (x) => Math.max(0, Math.min(D, Math.round(x * 2) / 2)); // to the 0.5 s time step
-  const keys = motion.keys(D).map((k) => ({ t: snap(k.t), v: k.v, ease: 'inout' }));
-  const target = motion.kind === 'ambience'
-    ? { kind: 'ambience', prop: 'opacity' }
-    : { kind: 'component', index: presetTargetComponent(), prop: motion.prop };
-  tl.tracks.push({ target, keys });
+  const track = window.AegisPresets.buildMotionTrack(motionId, tl.duration, presetTargetComponent());
+  if (track) tl.tracks.push(track);
 }
 
 function renderTimelineSection(panel) {
@@ -2014,13 +1934,13 @@ function renderTimelineSection(panel) {
   panel.appendChild(phint);
   const chips = document.createElement('div');
   chips.className = 'tl-presets';
-  for (const motion of TIMELINE_MOTIONS) {
+  for (const motion of window.AegisPresets.TIMELINE_MOTIONS) {
     if (motion.kind === 'component' && !hasComponents) continue; // needs a component to animate
     const chip = document.createElement('button');
     chip.className = 'btn tiny';
     chip.textContent = t(`editor.insp.timeline.motion.${motion.id}`);
     chip.disabled = tl.tracks.length >= 8;
-    chip.addEventListener('click', () => { sliderActive = false; addTimelineMotion(tl, motion); renderAll(); });
+    chip.addEventListener('click', () => { sliderActive = false; addTimelineMotion(tl, motion.id); renderAll(); });
     chips.appendChild(chip);
   }
   panel.appendChild(chips);
