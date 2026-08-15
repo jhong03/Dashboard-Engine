@@ -374,7 +374,7 @@ function createEditorWindow(packId) {
     },
   });
   editorWindow.loadFile(path.join(__dirname, 'src', 'editor.html'), {
-    query: { pack: packId || 'jarvis', perf: envFlag('PERF') ? '1' : '' },
+    query: { pack: packId || 'jarvis', perf: envFlag('PERF') ? '1' : '', fakeHour: envFlag('FAKE_HOUR') || '' },
   });
   editorWindow.on('closed', () => { editorWindow = null; });
 }
@@ -485,7 +485,7 @@ async function createDashboardWindow() {
     },
   });
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
-    query: { pack: envFlag('PACK') || '', nogl: envFlag('NO_GL') ? '1' : '', perf: envFlag('PERF') ? '1' : '' },
+    query: { pack: envFlag('PACK') || '', nogl: envFlag('NO_GL') ? '1' : '', perf: envFlag('PERF') ? '1' : '', fakeHour: envFlag('FAKE_HOUR') || '' },
   });
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
   // Push the current power state on first load and every reload/hot-reload, so

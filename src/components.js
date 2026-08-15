@@ -62,15 +62,38 @@ function rgba(hex, alpha) {
   return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha)).toFixed(3)})`;
 }
 
+const PALETTE_KEYS = ['void', 'glass', 'accent', 'accentBright', 'muted', 'warn', 'gold'];
+
+// Dev override for the time-of-day schedule: DE_FAKE_HOUR → ?fakeHour=<0-23> on
+// the desktop/editor URL forces the schedule to a given hour (null = real clock).
+let QUERY_FAKE_HOUR = null;
+try {
+  const rawHour = new URLSearchParams(location.search).get('fakeHour');
+  if (rawHour !== null && rawHour !== '') {
+    const n = parseInt(rawHour, 10);
+    if (Number.isFinite(n)) QUERY_FAKE_HOUR = ((n % 24) + 24) % 24;
+  }
+} catch (e) { /* no location (node harness) → real clock */ }
+
+// Linear-interpolate two hex colours (alpha ignored — the palette pipeline feeds
+// every colour through rgba() with its OWN opacity, never the hex's 4th byte, so
+// hexToRgbParts dropping an 8-digit alpha is exactly right here). f in [0,1].
+function lerpColor(a, b, f) {
+  const ca = hexToRgbParts(a), cb = hexToRgbParts(b);
+  const to2 = (n) => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
+  return `#${to2(ca[0] + (cb[0] - ca[0]) * f)}${to2(ca[1] + (cb[1] - ca[1]) * f)}${to2(ca[2] + (cb[2] - ca[2]) * f)}`;
+}
+
 // ── Skin application ────────────────────────────────────────────────────────
 // `root` is the element acting as the skin surface (the desktop's <body>, or
 // the editor's canvas div). Vars cascade from it; textures/wallpaper attach
 // to it via the .skin-root CSS hooks.
 
-function applySkin(root, pack, assets, opts) {
-  const { palette, typography, texture, shape } = pack.skin;
+// Paint the palette-derived CSS custom properties. Extracted from applySkin so
+// the time-of-day schedule (Phase G) can re-paint them each frame during a slot
+// crossfade, feeding a lerped palette through the exact same derivations.
+function setPaletteVars(root, palette, texture, shape) {
   const s = root.style;
-
   s.setProperty('--void', palette.void);
   s.setProperty('--accent', palette.accent);
   s.setProperty('--accent-bright', palette.accentBright);
@@ -86,6 +109,16 @@ function applySkin(root, pack, assets, opts) {
   s.setProperty('--scan-ink', rgba('#000000', 0.5 * texture.scanlines));
   s.setProperty('--grid-ink', rgba(palette.accent, 0.12 * texture.grid));
   s.setProperty('--vignette-ink', rgba('#000000', 0.85 * texture.vignette));
+  s.backgroundColor = palette.void;
+}
+
+function applySkin(root, pack, assets, opts) {
+  const { palette, typography, texture, shape } = pack.skin;
+  const s = root.style;
+
+  // Time-of-day (Phase G): paint the current slot's palette immediately so the
+  // first frame is already correct; applySchedule crossfades on slot changes.
+  setPaletteVars(root, effectiveScheduledPalette(pack, opts) || palette, texture, shape);
 
   s.setProperty('--radius', `${shape.radius}px`);
   s.setProperty('--ls', `${typography.letterSpacing}em`);
@@ -94,11 +127,11 @@ function applySkin(root, pack, assets, opts) {
   root.classList.add('skin-root');
   root.classList.toggle('uppercase', typography.uppercase);
   root.classList.toggle('notches', shape.cornerNotches);
-  s.backgroundColor = palette.void;
   applyFill(root, pack, opts);          // gradient base fill (or plain void)
   applyBackground(root, pack, assets, opts); // the layer stack owns the wallpaper
 
   applyAmbience(root, pack, assets, opts);
+  applySchedule(root, pack, opts);      // time-of-day palette crossfade (Phase G)
 }
 
 // ── Base surface fill ─────────────────────────────────────────────────────────
@@ -864,6 +897,210 @@ function makeRigPointer(skinRoot) {
     read: () => { st.x += (st.tx - st.x) * 0.08; st.y += (st.ty - st.y) * 0.08; return st; },
     cleanup: () => doc.removeEventListener('pointermove', onMove),
   };
+}
+
+// ── Time-of-day schedule (Phase G) ──────────────────────────────────────────
+// skin.schedule recolours the palette across four slots (dawn/day/dusk/night)
+// as the local clock passes each slot's start hour. Only palette tokens change
+// (the CSS custom properties + surface void colour); the change crossfades over
+// SCHEDULE_FADE_MS, driven by the ONE shared loop — never a second raf, and it
+// stops dead with the loop on freeze. The gradient base fill and particle colour
+// are baked at setup and don't recolour mid-run (documented in PACKS.md).
+
+const SCHEDULE_SLOT_NAMES = ['dawn', 'day', 'dusk', 'night'];
+const SCHEDULE_FADE_MS = 2000;
+const SCHEDULE_CHECK_SEC = 60; // re-evaluate the active slot ~once a minute
+
+// The forced hour for previews/dev, else the real local hour. pack.__previewHour
+// is a runtime-only field the editor sets to preview a slot; ?fakeHour is the
+// DE_FAKE_HOUR dev override. Neither is persisted or sanitized into a pack.
+function resolveScheduleHour(pack) {
+  const pv = pack && pack.__previewHour;
+  if (typeof pv === 'number' && Number.isFinite(pv)) return ((Math.floor(pv) % 24) + 24) % 24;
+  if (QUERY_FAKE_HOUR !== null) return QUERY_FAKE_HOUR;
+  return new Date().getHours();
+}
+
+// The active slot for `hour`: order the four slots by start hour and pick the
+// one whose start is the greatest that is still ≤ hour, wrapping (before the
+// earliest start = the latest slot, i.e. yesterday's night). Robust to any
+// per-pack start hours.
+function activeScheduleSlot(schedule, hour) {
+  const entries = SCHEDULE_SLOT_NAMES
+    .map((name) => schedule.slots[name] && { name, startHour: schedule.slots[name].startHour, palette: schedule.slots[name].palette })
+    .filter((e) => e && typeof e.startHour === 'number')
+    .sort((a, b) => a.startHour - b.startHour);
+  if (!entries.length) return null;
+  let active = entries[entries.length - 1]; // wrap: before the first start = last slot
+  for (const e of entries) if (hour >= e.startHour) active = e;
+  return active;
+}
+
+// Base palette with the given slot's partial overrides layered on top.
+function mergePalette(base, override) {
+  const out = {};
+  for (const k of PALETTE_KEYS) out[k] = (override && override[k]) || base[k];
+  return out;
+}
+
+function lerpPalette(from, to, f) {
+  const out = {};
+  for (const k of PALETTE_KEYS) out[k] = lerpColor(from[k], to[k], f);
+  return out;
+}
+
+// The palette to paint right now given the schedule (or null when there is no
+// active schedule → the base palette is used). Called from applySkin's first
+// paint AND for static previews, so a thumbnail shows the current slot too.
+function effectiveScheduledPalette(pack, opts) {
+  const sched = pack.skin.schedule;
+  if (!sched || !sched.enabled) return null;
+  const slot = activeScheduleSlot(sched, resolveScheduleHour(pack));
+  if (!slot) return null;
+  return mergePalette(pack.skin.palette, slot.palette);
+}
+
+function applySchedule(root, pack, opts) {
+  const sched = pack.skin.schedule;
+  if (!sched || !sched.enabled) return;
+  const reduced = (opts && opts.staticAmbience === true)
+    || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Static/preview surface: the first paint already shows the current slot and
+  // registerSurfaceTick would decline — nothing to animate.
+  if (reduced) return;
+
+  const { palette, texture, shape } = pack.skin;
+  const initSlot = activeScheduleSlot(sched, resolveScheduleHour(pack));
+  const state = {
+    slotKey: initSlot ? initSlot.name : null,
+    current: mergePalette(palette, initSlot ? initSlot.palette : {}),
+    fade: null,
+    sinceCheck: 0,
+  };
+
+  const tick = (dt, t) => {
+    // Re-check the active slot about once a wall-clock minute. dt-accumulated so
+    // it pauses with the loop on freeze; the rest of the time this is two float
+    // ops and a return — negligible on the shared frame.
+    if (!state.fade) {
+      state.sinceCheck += dt;
+      if (state.sinceCheck >= SCHEDULE_CHECK_SEC) {
+        state.sinceCheck = 0;
+        const slot = activeScheduleSlot(sched, resolveScheduleHour(pack));
+        if (slot && slot.name !== state.slotKey) {
+          const to = mergePalette(palette, slot.palette);
+          state.fade = { from: state.current, to, t0: t };
+          state.slotKey = slot.name;
+          state.current = to;
+        }
+      }
+    }
+    if (state.fade) {
+      const f = Math.min(1, (t - state.fade.t0) / SCHEDULE_FADE_MS);
+      setPaletteVars(root, lerpPalette(state.fade.from, state.fade.to, f), texture, shape);
+      if (f >= 1) state.fade = null;
+    }
+  };
+  // Rides the shared loop (like a rig): a schedule-only pack starts the loop on
+  // subscribe; a stale ticker is dropped when applySkin rebuilds __aegisAmbience.
+  registerSurfaceTick(root, tick);
+}
+
+// ── Keyframe timeline (Phase G) ──────────────────────────────────────────────
+// pack.timeline animates a whitelist of numeric targets (component opacity /
+// x / y / scale / rotate, and ambience canvas opacity) over a looping duration,
+// evaluated INSIDE the shared loop. Component transform props are composed into
+// ONE transform per element (translate·rotate·scale), preserving the element's
+// base style rotate. rotate is additive on the base; x/y are cqw offsets; scale
+// and opacity are absolute.
+
+const TIMELINE_PROP_DEFAULT = { opacity: 1, x: 0, y: 0, scale: 1, rotate: 0 };
+
+function easeFn(ease, x) {
+  if (ease === 'in') return x * x;
+  if (ease === 'out') return 1 - (1 - x) * (1 - x);
+  if (ease === 'inout') return x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
+  return x; // linear
+}
+
+// Value of one track at position `pos` (seconds). Before the first key holds its
+// value, after the last holds its value; between two keys the SEGMENT eases with
+// the destination key's easing.
+function evalTrack(track, pos) {
+  const keys = track.keys;
+  if (pos <= keys[0].t) return keys[0].v;
+  const last = keys[keys.length - 1];
+  if (pos >= last.t) return last.v;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k0 = keys[i], k1 = keys[i + 1];
+    if (pos >= k0.t && pos <= k1.t) {
+      const span = k1.t - k0.t;
+      const lin = span > 0 ? (pos - k0.t) / span : 1;
+      return k0.v + (k1.v - k0.v) * easeFn(k1.ease, lin);
+    }
+  }
+  return last.v;
+}
+
+// Subscribe the timeline to a surface's shared loop. Returns a disposer (or null
+// for a static/reduced surface, where it applies the pos-0 resting frame once).
+function setupTimeline(skinRoot, pack, elements) {
+  const tl = pack.timeline;
+  if (!tl || !Array.isArray(tl.tracks) || !tl.tracks.length) return null;
+
+  // Which component elements are animated, plus their base transform values.
+  const bases = new Map();
+  for (const tr of tl.tracks) {
+    if (tr.target.kind !== 'component') continue;
+    const el = elements[tr.target.index];
+    if (!el || bases.has(tr.target.index)) continue;
+    const st = (pack.components[tr.target.index] && pack.components[tr.target.index].style) || {};
+    bases.set(tr.target.index, {
+      el,
+      baseRotate: typeof st.rotate === 'number' ? st.rotate : 0,
+      baseOpacity: typeof st.opacity === 'number' ? st.opacity : 1,
+    });
+  }
+  const ambienceCanvas = skinRoot.__aegisAmbience && skinRoot.__aegisAmbience.canvas;
+
+  const evalAt = (pos) => {
+    const acc = new Map();
+    for (const [i, b] of bases) acc.set(i, { x: 0, y: 0, scale: 1, rotate: b.baseRotate, opacity: b.baseOpacity });
+    let ambienceOpacity = null;
+    for (const tr of tl.tracks) {
+      const v = evalTrack(tr, pos);
+      if (tr.target.kind === 'ambience') { ambienceOpacity = v; continue; }
+      const a = acc.get(tr.target.index);
+      if (!a) continue;
+      const b = bases.get(tr.target.index);
+      if (tr.target.prop === 'opacity') a.opacity = v;
+      else if (tr.target.prop === 'rotate') a.rotate = b.baseRotate + v;
+      else a[tr.target.prop] = v; // x, y (cqw offset) or scale (absolute)
+    }
+    for (const [i, a] of acc) {
+      const b = bases.get(i);
+      b.el.style.opacity = String(a.opacity);
+      b.el.style.transform = `translate(${a.x.toFixed(3)}cqw, ${a.y.toFixed(3)}cqw) rotate(${a.rotate.toFixed(3)}deg) scale(${a.scale.toFixed(4)})`;
+    }
+    if (ambienceOpacity !== null && ambienceCanvas) ambienceCanvas.style.opacity = String(ambienceOpacity);
+  };
+
+  const D = tl.duration;
+  let t0 = null;
+  const tick = (dt, t) => {
+    if (t0 === null) t0 = t;
+    const elapsed = (t - t0) / 1000;
+    let pos;
+    if (tl.loop === 'once') pos = Math.min(elapsed, D);
+    else if (tl.loop === 'mirror') { const c = elapsed % (2 * D); pos = c <= D ? c : 2 * D - c; }
+    else pos = elapsed % D; // loop
+    evalAt(pos);
+  };
+
+  const reg = registerSurfaceTick(skinRoot, tick);
+  if (reg.animating) return () => reg.stop();
+  evalAt(0); // static/reduced preview: the resting (first-keyframe) frame, no loop
+  return null;
 }
 
 // Stop the ambience animation without tearing down the DOM — the last frame
@@ -3863,6 +4100,10 @@ function createRenderer(services) {
       elements.push(el);
     }
     startTelemetry();
+    // Keyframe timeline (Phase G): subscribes to the shared loop; the disposer
+    // rides live.disposers so the next render()/freeze unsubscribes it.
+    const tlDispose = setupTimeline(skinRoot, pack, elements);
+    if (tlDispose) live.disposers.push(tlDispose);
     return elements;
   }
 
