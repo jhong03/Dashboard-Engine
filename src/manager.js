@@ -2874,32 +2874,33 @@ function renderParticlesStep(el) {
   }
   el.appendChild(fxRow);
 
-  if (amb.effect === 'none') return; // nothing more to tune without particles
+  // A preset effect's own knobs (colour / density / speed / glow). Skipped for
+  // 'none' — but the "Customize particles…" fork below stays available so you
+  // can build a custom system from scratch even without a preset.
+  if (amb.effect !== 'none') {
+    const colLabel = document.createElement('span');
+    colLabel.className = 'b-sublabel';
+    colLabel.textContent = 'Colour';
+    el.appendChild(colLabel);
+    el.appendChild(builderAmbienceColorControl(amb, el));
 
-  // Colour swatches.
-  const colLabel = document.createElement('span');
-  colLabel.className = 'b-sublabel';
-  colLabel.textContent = 'Colour';
-  el.appendChild(colLabel);
-  el.appendChild(builderAmbienceColorControl(amb, el));
+    if (typeof amb.speed !== 'number') amb.speed = 1;
+    el.appendChild(bRangeField('Density', amb.density, 0.05, 1, 0.05, (v) => v.toFixed(2), (v) => { amb.density = v; schedulePreview(); }));
+    el.appendChild(bRangeField('Speed', amb.speed, 0.2, 3, 0.1, (v) => `${v.toFixed(1)}x`, (v) => { amb.speed = v; schedulePreview(); }));
 
-  // Density + speed (labelled ranges with a live readout).
-  if (typeof amb.speed !== 'number') amb.speed = 1;
-  el.appendChild(bRangeField('Density', amb.density, 0.05, 1, 0.05, (v) => v.toFixed(2), (v) => { amb.density = v; schedulePreview(); }));
-  el.appendChild(bRangeField('Speed', amb.speed, 0.2, 3, 0.1, (v) => `${v.toFixed(1)}x`, (v) => { amb.speed = v; schedulePreview(); }));
+    const glow = bField('Glow');
+    const lab = document.createElement('label');
+    lab.style.display = 'inline-flex'; lab.style.alignItems = 'center'; lab.style.gap = '6px';
+    const cb = document.createElement('input');
+    cb.type = 'checkbox'; cb.checked = !!amb.glow;
+    cb.addEventListener('change', () => { amb.glow = cb.checked; schedulePreview(); });
+    lab.append(cb, document.createTextNode('Luminous blend (particles brighten where they overlap)'));
+    glow.appendChild(lab);
+    el.appendChild(glow);
+  }
 
-  // Glow toggle.
-  const glow = bField('Glow');
-  const lab = document.createElement('label');
-  lab.style.display = 'inline-flex'; lab.style.alignItems = 'center'; lab.style.gap = '6px';
-  const cb = document.createElement('input');
-  cb.type = 'checkbox'; cb.checked = !!amb.glow;
-  cb.addEventListener('change', () => { amb.glow = cb.checked; schedulePreview(); });
-  lab.append(cb, document.createTextNode('Luminous blend (particles brighten where they overlap)'));
-  glow.appendChild(lab);
-  el.appendChild(glow);
-
-  // Fork into a fully-custom particle system (Particle Studio).
+  // Fork into a fully-custom particle system (Particle Studio) — ALWAYS offered
+  // (from 'none' it starts from a sane default system via factoryFor).
   if (window.AegisParticles) {
     const cust = libButton('Customize particles…', () => {
       amb.system = window.AegisParticles.factoryFor(amb.effect);
