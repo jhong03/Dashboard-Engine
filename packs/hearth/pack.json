@@ -48,10 +48,10 @@
     "schedule": {
       "enabled": true,
       "slots": {
-        "dawn": { "startHour": 6, "palette": { "void": "#211610", "accent": "#F0A968", "accentBright": "#FCE3B8" } },
+        "dawn": { "startHour": 6, "palette": { "void": "#2A1B10", "accent": "#FFC078", "accentBright": "#FFE8C4" } },
         "day": { "startHour": 9, "palette": {} },
-        "dusk": { "startHour": 17, "palette": { "void": "#150B06", "accent": "#EC8A44", "accentBright": "#F7C98C" } },
-        "night": { "startHour": 20, "palette": { "void": "#0E0805", "glass": "#241A10", "accent": "#C9743E", "accentBright": "#E7B888", "muted": "#7A6350" } }
+        "dusk": { "startHour": 17, "palette": { "void": "#1C0D05", "accent": "#E56A28", "accentBright": "#F4AE5E" } },
+        "night": { "startHour": 20, "palette": { "void": "#080402", "glass": "#1C130B", "accent": "#9A4A2A", "accentBright": "#C07850", "muted": "#6B5040" } }
       }
     }
   },

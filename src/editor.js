@@ -1727,27 +1727,31 @@ function setHue(hex, hue, ds, dl) {
   return hslToHex(((hue % 360) + 360) % 360, clamp01(c.s + (ds || 0)), clamp01(c.l + (dl || 0)));
 }
 
+// Bold enough to read at a glance — a reference preset that barely changes
+// isn't a useful reference. Each recolours void + accent + accentBright (the
+// bright highlight on active text/values) with a clear brightness swing across
+// the day (dawn bright, night dim) on top of the hue shift.
 const SCHEDULE_PRESETS = [
-  // Brightness only — universal and never clashes with any base hue.
-  { id: 'dayNight', build: (v, a) => ({
-    dawn: { void: withL(v, 0.03), accent: withL(a, 0.02) },
+  // Brightness only — universal, never clashes with any base hue.
+  { id: 'dayNight', build: (v, a, ab) => ({
+    dawn: { void: withL(v, 0.06), accent: withL(a, 0.08), accentBright: withL(ab, 0.05) },
     day: {},
-    dusk: { void: withL(v, -0.05), accent: withSL(a, 0, -0.03) },
-    night: { void: withL(v, -0.12), accent: withSL(a, -0.12, -0.10) },
+    dusk: { void: withL(v, -0.07), accent: withSL(a, 0, -0.10), accentBright: withSL(ab, 0, -0.09) },
+    night: { void: withL(v, -0.16), accent: withSL(a, -0.18, -0.24), accentBright: withSL(ab, -0.15, -0.22) },
   }) },
-  // Warm mornings/evenings, cool nights — commits warm/cool accent hues.
-  { id: 'warmCool', build: (v, a) => ({
-    dawn: { void: setHue(v, 28, 0.06, 0.03), accent: setHue(a, 34, 0.05, 0.04) },
+  // Warm mornings/evenings, cool nights — commits warm/cool hues + a bright→dim swing.
+  { id: 'warmCool', build: (v, a, ab) => ({
+    dawn: { void: setHue(v, 28, 0.08, 0.06), accent: setHue(a, 32, 0.10, 0.12), accentBright: setHue(ab, 34, 0.06, 0.06) },
     day: {},
-    dusk: { void: setHue(v, 20, 0.08, -0.03), accent: setHue(a, 22, 0.08, -0.01) },
-    night: { void: setHue(v, 224, 0.05, -0.06), accent: setHue(a, 220, 0, -0.05) },
+    dusk: { void: setHue(v, 16, 0.12, -0.03), accent: setHue(a, 14, 0.16, -0.10), accentBright: setHue(ab, 20, 0.10, -0.08) },
+    night: { void: setHue(v, 222, 0.10, -0.04), accent: setHue(a, 218, 0.02, -0.20), accentBright: setHue(ab, 216, -0.05, -0.18) },
   }) },
   // Golden dawn & dusk, deep-blue night.
-  { id: 'golden', build: (v, a) => ({
-    dawn: { void: setHue(v, 32, 0.06, 0.03), accent: setHue(a, 45, 0.15, 0.05) },
+  { id: 'golden', build: (v, a, ab) => ({
+    dawn: { void: setHue(v, 34, 0.10, 0.06), accent: setHue(a, 44, 0.30, 0.10), accentBright: setHue(ab, 46, 0.20, 0.06) },
     day: {},
-    dusk: { void: setHue(v, 26, 0.09, -0.03), accent: setHue(a, 38, 0.18, 0) },
-    night: { void: setHue(v, 232, 0.06, -0.07), accent: setHue(a, 226, 0.02, -0.05) },
+    dusk: { void: setHue(v, 24, 0.14, -0.03), accent: setHue(a, 30, 0.32, -0.06), accentBright: setHue(ab, 36, 0.22, -0.05) },
+    night: { void: setHue(v, 236, 0.12, -0.05), accent: setHue(a, 228, 0.08, -0.22), accentBright: setHue(ab, 226, 0.02, -0.18) },
   }) },
 ];
 
@@ -1755,7 +1759,7 @@ function applySchedulePreset(preset) {
   const sched = ensureSchedule();
   sched.enabled = true;
   const base = state.pack.skin.palette;
-  const built = preset.build(base.void || '#04080F', base.accent || '#3FD8FF');
+  const built = preset.build(base.void || '#04080F', base.accent || '#3FD8FF', base.accentBright || '#7FE9FF');
   for (const [name] of SCHEDULE_SLOT_DEFS) sched.slots[name].palette = built[name] || {};
   delete state.pack.__previewHour;
   renderAll();
