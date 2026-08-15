@@ -1938,22 +1938,27 @@ function createRenderer(services) {
     const TAU = Math.PI * 2;
     // Per layer each tick: translate(bob + gaze·pointer) rotate(sway·sin +
     // tilt·pointer) scale(1 + breath·sin), about the layer's anchor. The editor's
-    // "Preview breeze" sets component.__breeze to briefly amplify sway/bob.
-    const draw = (t) => {
-      const gust = typeof component.__breeze === 'number' ? component.__breeze : 1;
+    // "Preview breeze" sets component.__breezeGust (0..1), which decays here and
+    // adds a clear extra sway/bob to EVERY layer — so the motion is easy to judge
+    // even on layers whose own sway is low.
+    const draw = (dt, t) => {
+      const gust = typeof component.__breezeGust === 'number' && component.__breezeGust > 0 ? component.__breezeGust : 0;
+      if (gust > 0) component.__breezeGust = Math.max(0, gust - dt / 2.5); // ~2.5 s fade-out
       const p = pointer.read();
       const sec = t / 1000;
-      for (const b of built) {
-        const L = b.layer;
-        const breathe = 1 + L.breath.scale * Math.sin(TAU * (sec * L.breath.speed + L.breath.phase));
-        const rot = L.sway.rotate * gust * Math.sin(TAU * (sec * L.sway.speed + L.sway.phase)) + L.tiltWithPointer * p.x;
-        const ty = L.bob.y * gust * Math.sin(TAU * (sec * L.bob.speed + L.bob.phase)) + L.gaze.y * p.y;
+      for (let i = 0; i < built.length; i++) {
+        const b = built[i], L = b.layer;
+        const gustRot = gust * 5 * Math.sin(sec * 3 + i * 0.6);   // extra degrees, staggered per layer
+        const gustBob = gust * 1.4 * Math.sin(sec * 2.6 + i * 0.5); // extra cqw
+        const breathe = 1 + L.breath.scale * (1 + gust) * Math.sin(TAU * (sec * L.breath.speed + L.breath.phase));
+        const rot = L.sway.rotate * Math.sin(TAU * (sec * L.sway.speed + L.sway.phase)) + gustRot + L.tiltWithPointer * p.x;
+        const ty = L.bob.y * Math.sin(TAU * (sec * L.bob.speed + L.bob.phase)) + gustBob + L.gaze.y * p.y;
         const tx = L.gaze.x * p.x;
         b.el.style.transform = `translate(${tx.toFixed(3)}cqw, ${ty.toFixed(3)}cqw) rotate(${rot.toFixed(3)}deg) scale(${breathe.toFixed(4)})`;
       }
     };
 
-    const reg = registerSurfaceTick(skinRoot, (dt, t) => draw(t));
+    const reg = registerSurfaceTick(skinRoot, (dt, t) => draw(dt, t));
     if (reg.animating) {
       live.disposers.push(() => { reg.stop(); if (pointer.cleanup) pointer.cleanup(); });
     } else {

@@ -776,21 +776,23 @@ function optionFields(component, panel) {
       head.appendChild(tools);
       card.appendChild(head);
 
-      const rc = (labelKey, obj, key, min, max, step) => card.appendChild(field(t(labelKey), rangeControl(obj[key], min, max, step, (v) => { obj[key] = v; renderAll(); })));
-      rc('editor.insp.field.anchorX', layer.anchor, 'x', 0, 100, 1);
+      // A short plain-language hint on the first control of each group explains
+      // what it does; the paired speed/second-axis control just carries its label.
+      const rc = (labelKey, obj, key, min, max, step, hintKey) => card.appendChild(field(t(labelKey), rangeControl(obj[key], min, max, step, (v) => { obj[key] = v; renderAll(); }), null, hintKey ? t(hintKey) : undefined));
+      rc('editor.insp.field.anchorX', layer.anchor, 'x', 0, 100, 1, 'editor.insp.hint.anchor');
       rc('editor.insp.field.anchorY', layer.anchor, 'y', 0, 100, 1);
-      rc('editor.insp.field.breathAmount', layer.breath, 'scale', 0, 0.05, 0.005);
+      rc('editor.insp.field.breathAmount', layer.breath, 'scale', 0, 0.05, 0.005, 'editor.insp.hint.breath');
       rc('editor.insp.field.breathSpeed', layer.breath, 'speed', 0.05, 1, 0.05);
-      rc('editor.insp.field.swayAmount', layer.sway, 'rotate', 0, 6, 0.5);
+      rc('editor.insp.field.swayAmount', layer.sway, 'rotate', 0, 6, 0.5, 'editor.insp.hint.sway');
       rc('editor.insp.field.swaySpeed', layer.sway, 'speed', 0.05, 1, 0.05);
-      rc('editor.insp.field.bobAmount', layer.bob, 'y', 0, 3, 0.25);
+      rc('editor.insp.field.bobAmount', layer.bob, 'y', 0, 3, 0.25, 'editor.insp.hint.bob');
       rc('editor.insp.field.bobSpeed', layer.bob, 'speed', 0.05, 1, 0.05);
-      rc('editor.insp.field.gazeX', layer.gaze, 'x', 0, 4, 0.25);
+      rc('editor.insp.field.gazeX', layer.gaze, 'x', 0, 4, 0.25, 'editor.insp.hint.gaze');
       rc('editor.insp.field.gazeY', layer.gaze, 'y', 0, 4, 0.25);
-      rc('editor.insp.field.tilt', layer, 'tiltWithPointer', 0, 4, 0.25);
+      rc('editor.insp.field.tilt', layer, 'tiltWithPointer', 0, 4, 0.25, 'editor.insp.hint.tilt');
       // One phase knob per layer offsets all three oscillators together — the
       // "hair lags the body" idiom (set the hair layer's phase ~0.15 behind).
-      card.appendChild(field(t('editor.insp.field.phaseOffset'), rangeControl(layer.sway.phase, 0, 1, 0.05, (v) => { layer.breath.phase = v; layer.sway.phase = v; layer.bob.phase = v; renderAll(); })));
+      card.appendChild(field(t('editor.insp.field.phaseOffset'), rangeControl(layer.sway.phase, 0, 1, 0.05, (v) => { layer.breath.phase = v; layer.sway.phase = v; layer.bob.phase = v; renderAll(); }), null, t('editor.insp.hint.phase')));
       panel.appendChild(card);
     });
 
@@ -810,7 +812,9 @@ function optionFields(component, panel) {
       const breeze = document.createElement('button');
       breeze.className = 'btn tiny';
       breeze.textContent = t('editor.insp.btn.previewBreeze');
-      breeze.addEventListener('click', () => { component.__breeze = 2.4; setStatus(t('editor.insp.breezeOn')); setTimeout(() => { component.__breeze = 1; }, 2500); });
+      // A one-shot gust the rig ticker fades out over ~2.5 s (adds a clear extra
+      // sway/bob to every layer, so the motion is easy to judge).
+      breeze.addEventListener('click', () => { component.__breezeGust = 1; setStatus(t('editor.insp.breezeOn')); });
       panel.appendChild(breeze);
     }
     const hint = document.createElement('p');
