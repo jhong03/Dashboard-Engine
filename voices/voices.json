@@ -361,18 +361,18 @@
     {
       "id": "en_male",
       "engine": "kokoro",
-      "voiceName": "bm_lewis",
+      "voiceName": "bm_daniel",
       "langCode": "en-gb",
       "sex": "M",
       "accent": "British (RP)",
       "language": "English",
       "displayName": "English — Male",
-      "descriptor": "British RP male (Kokoro bm_lewis)",
+      "descriptor": "British RP male (Kokoro bm_daniel)",
       "licence": "Apache-2.0",
       "licenceUrl": "https://www.apache.org/licenses/LICENSE-2.0",
-      "attribution": "Kokoro-82M (hexgrad), Apache-2.0 — voice bm_lewis",
+      "attribution": "Kokoro-82M (hexgrad), Apache-2.0 — voice bm_daniel",
       "provenance": "Kokoro ONNX (shared model)",
-      "wpmAtScale1": 135
+      "wpmAtScale1": 154
     },
     {
       "id": "es_male",
