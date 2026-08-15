@@ -1933,7 +1933,9 @@ function createRenderer(services) {
     }
     if (!built.length) return;
 
-    const skinRoot = el.closest('.skin-root') || (el.ownerDocument && el.ownerDocument.body) || document.body;
+    // ctx.skinRoot is resolved from the attached canvas (el isn't in the DOM yet
+    // while this builder runs, so el.closest can't find the skin root).
+    const skinRoot = (ctx && ctx.skinRoot) || el.closest('.skin-root') || (el.ownerDocument && el.ownerDocument.body) || document.body;
     const pointer = makeRigPointer(skinRoot);
     const TAU = Math.PI * 2;
     // Per layer each tick: translate(bob + gaze·pointer) rotate(sway·sin +
@@ -3838,7 +3840,11 @@ function createRenderer(services) {
     cleanup();
     canvasEl.textContent = '';
     canvasEl.style.inset = `${pack.canvas.padding}%`;
-    const ctx = { pack, assets };
+    // The surface (skin) root — resolved from canvasEl, which IS attached (each
+    // component `el` is still detached while its builder runs, so el.closest()
+    // can't find it). Rigs subscribe their tick to this root's shared loop.
+    const skinRoot = canvasEl.closest('.skin-root') || canvasEl.parentElement || (canvasEl.ownerDocument && canvasEl.ownerDocument.body) || document.body;
+    const ctx = { pack, assets, skinRoot };
     const elements = [];
 
     for (const component of pack.components) {
