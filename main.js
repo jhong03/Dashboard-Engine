@@ -1491,6 +1491,18 @@ function captureTrailerClip(packId, outDir, opts) {
           if (ready) break;
           await new Promise((r) => setTimeout(r, 150));
         }
+        // Optional VISIBLE cursor drawn INTO the page (so it captures perfectly in
+        // sync with whatever the pointer drives — e.g. a character rig's gaze). The
+        // synthetic pointer already moves per frame; this element just tracks it.
+        if (opts && opts.cursor) {
+          await win.webContents.executeJavaScript(`(function(){
+            var c=document.getElementById('__cur'); if(!c){c=document.createElement('div');c.id='__cur';
+            c.style.cssText='position:fixed;left:0;top:0;width:40px;height:40px;z-index:2147483647;pointer-events:none;margin:-3px 0 0 -5px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.55));';
+            c.innerHTML='<svg width="40" height="40" viewBox="0 0 24 24"><path d="M5 2.5 L5 20.5 L10.2 15.3 L13.4 21.6 L16.3 20.3 L13.1 14.2 L20.4 14.2 Z" fill="#fff" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+            document.body.appendChild(c);
+            window.addEventListener('pointermove',function(e){c.style.left=e.clientX+'px';c.style.top=e.clientY+'px';},{passive:true});}
+          })();`).catch(() => {});
+        }
         // DETERMINISTIC capture: advance the virtual clock (capture-clock.js) a
         // fixed 1/fps per frame and grab it — so the output is a perfect `fps`
         // regardless of how slowly the off-screen compositor paints. Captions are
@@ -1499,8 +1511,17 @@ function captureTrailerClip(packId, outDir, opts) {
         for (let i = 0; i < total; i++) {
           const vt = (i * 1000) / fps;
           const t = i / total;
-          const px = Math.round(W / 2 + W * 0.41 * Math.sin(t * 6.283));
-          const py = Math.round(H / 2 + H * 0.36 * Math.sin(t * 12.566 + 1));
+          let px, py;
+          if (opts && opts.cursorPath === 'circle') {
+            // A clean slow loop (upper-centre, near a top-corner rig) so a viewer
+            // reads the cursor tracing a circle and the rig's gaze following it.
+            const a = t * 6.283 - 1.571; // start at the top, go clockwise
+            px = Math.round(W / 2 + W * 0.30 * Math.cos(a));
+            py = Math.round(H * 0.46 + H * 0.30 * Math.sin(a));
+          } else {
+            px = Math.round(W / 2 + W * 0.41 * Math.sin(t * 6.283));
+            py = Math.round(H / 2 + H * 0.36 * Math.sin(t * 12.566 + 1));
+          }
           await win.webContents.executeJavaScript('window.__cap && window.__cap.step(' + vt + ',' + px + ',' + py + ')').catch(() => {});
           await new Promise((r) => setTimeout(r, 16)); // let the compositor paint the stepped frame
           const img = await win.webContents.capturePage();
@@ -2209,9 +2230,10 @@ if (IS_SESSION) {
       const secs = Number(envFlag('TRAILER_SECS')) || 6;
       const caps = (envFlag('CAPTIONS') || '').split('|');
       const fakeHour = envFlag('FAKE_HOUR'); // forces a time-of-day slot for the schedule beat
+      const cursor = !!envFlag('TRAILER_CURSOR'); // draw a visible cursor on a slow circle (rig-gaze demo)
       (async () => {
         for (let k = 0; k < ids.length; k++) {
-          const n = await captureTrailerClip(ids[k], path.join(dir, ids[k]), { seconds: secs, caption: (caps[k] || '').trim(), fakeHour });
+          const n = await captureTrailerClip(ids[k], path.join(dir, ids[k]), { seconds: secs, caption: (caps[k] || '').trim(), fakeHour, cursor, cursorPath: cursor ? 'circle' : null });
           console.log(`[trailer] ${ids[k]}: ${n} frames`);
         }
         app.quit();
