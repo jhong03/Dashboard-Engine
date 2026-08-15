@@ -2055,10 +2055,10 @@ const BUILDER_PALETTES = [
   { name: 'Matrix', p: { void: '#020A06', glass: '#0A1A10A0', accent: '#5BE58A', accentBright: '#B7FFCF', muted: '#4A7A5E', warn: '#E0C246', gold: '#B7E86A' } },
 ];
 const BUILDER_TEXTURES = [
-  { name: 'Clean', t: { scanlines: 0, grid: 0.1, glow: 0.3, vignette: 0.3 } },
-  { name: 'Grid', t: { scanlines: 0.05, grid: 0.5, glow: 0.35, vignette: 0.3 } },
-  { name: 'Scanline', t: { scanlines: 0.4, grid: 0.15, glow: 0.4, vignette: 0.35 } },
-  { name: 'Deep glow', t: { scanlines: 0, grid: 0.05, glow: 0.7, vignette: 0.5 } },
+  { id: 'clean', t: { scanlines: 0, grid: 0.1, glow: 0.3, vignette: 0.3 } },
+  { id: 'grid', t: { scanlines: 0.05, grid: 0.5, glow: 0.35, vignette: 0.3 } },
+  { id: 'scanline', t: { scanlines: 0.4, grid: 0.15, glow: 0.4, vignette: 0.35 } },
+  { id: 'deepGlow', t: { scanlines: 0, grid: 0.05, glow: 0.7, vignette: 0.5 } },
 ];
 const BUILDER_EFFECTS = ['none', 'embers', 'dust', 'snow', 'petals', 'rain', 'sparkle'];
 // Chip glyph + friendly name per effect (the picker reads as a lively row, not a
@@ -2148,18 +2148,20 @@ function stackVertical(region, n) {
 
 // Which selected components expose a quick option in the Components step, so a
 // creator can set the few things that would otherwise render "unset".
+// labelKey → bt('qopt.<labelKey>'); select `options` are value ids resolved via
+// `optResolve` ('bind' → editor.insp.bind.*, 'clock' → qopt.24h/12h).
 const BUILDER_QUICK_OPTS = {
   weather: [
-    { key: 'place', label: 'Place name', kind: 'text' },
-    { key: 'lat', label: 'Latitude', kind: 'number', min: -90, max: 90 },
-    { key: 'lon', label: 'Longitude', kind: 'number', min: -180, max: 180 },
+    { key: 'place', labelKey: 'place', kind: 'text' },
+    { key: 'lat', labelKey: 'lat', kind: 'number', min: -90, max: 90 },
+    { key: 'lon', labelKey: 'lon', kind: 'number', min: -180, max: 180 },
   ],
-  meter: [{ key: 'bind', label: 'Reads', kind: 'select', options: [['cpu', 'CPU'], ['mem', 'Memory'], ['disk', 'Disk'], ['battery', 'Battery']] }],
-  sparkline: [{ key: 'bind', label: 'Reads', kind: 'select', options: [['cpu', 'CPU'], ['mem', 'Memory'], ['disk', 'Disk'], ['battery', 'Battery']] }],
-  'hud-clock': [{ key: 'format', label: 'Clock', kind: 'select', options: [['24h', '24-hour'], ['12h', '12-hour']] }],
-  clock: [{ key: 'format', label: 'Clock', kind: 'select', options: [['24h', '24-hour'], ['12h', '12-hour']] }],
-  agenda: [{ key: 'days', label: 'Days ahead', kind: 'number', min: 1, max: 14 }],
-  pomodoro: [{ key: 'focusMin', label: 'Focus minutes', kind: 'number', min: 1, max: 180 }],
+  meter: [{ key: 'bind', labelKey: 'reads', kind: 'select', options: ['cpu', 'mem', 'disk', 'battery'], optResolve: 'bind' }],
+  sparkline: [{ key: 'bind', labelKey: 'reads', kind: 'select', options: ['cpu', 'mem', 'disk', 'battery'], optResolve: 'bind' }],
+  'hud-clock': [{ key: 'format', labelKey: 'clock', kind: 'select', options: ['24h', '12h'], optResolve: 'clock' }],
+  clock: [{ key: 'format', labelKey: 'clock', kind: 'select', options: ['24h', '12h'], optResolve: 'clock' }],
+  agenda: [{ key: 'days', labelKey: 'days', kind: 'number', min: 1, max: 14 }],
+  pomodoro: [{ key: 'focusMin', labelKey: 'focus', kind: 'number', min: 1, max: 180 }],
 };
 
 // User-adjustable "Customize knobs" the creator can expose (→ pack.props). The
@@ -2284,7 +2286,7 @@ function builderFillColorControl(stop, el) {
     sw.type = 'button';
     sw.className = 'fill-swatch' + (isToken && stop.color === key ? ' selected' : '');
     sw.style.setProperty('--sw', palette[key] || '#000000');
-    sw.title = BUILDER_PALETTE_NAMES[key];
+    sw.title = t('editor.insp.pal.' + key);
     sw.addEventListener('click', () => { stop.color = key; rerender(); });
     wrap.appendChild(sw);
   }
@@ -2321,7 +2323,7 @@ function builderAmbienceColorControl(ambience, el) {
     sw.type = 'button';
     sw.className = 'fill-swatch' + (activeKey === key ? ' selected' : '');
     sw.style.setProperty('--sw', palette[key] || '#000000');
-    sw.title = BUILDER_PALETTE_NAMES[key];
+    sw.title = t('editor.insp.pal.' + key);
     sw.addEventListener('click', () => { ambience.colorKey = key; delete ambience.color; rerender(); });
     wrap.appendChild(sw);
   }
@@ -2417,6 +2419,14 @@ const BUILDER_STEPS = [
   { key: 'finish', label: 'Name & finish', render: renderFinishStep },
 ];
 
+// Builder localization helpers. bt() is the manager.builder.* namespace; the
+// rest reuse existing key families so labels stay consistent with the editor.
+function bt(key, params) { return t('manager.builder.' + key, params); }
+function builderEffectName(e) { return t('manager.customize.effect.' + e); }
+function builderCompName(type) { return bt('compName.' + type); }
+const BUILDER_FONT_KEY = { 'system-sans': 'systemSans', 'system-serif': 'serif', mono: 'mono' };
+function builderFontLabel(val) { return val === 'rajdhani' ? bt('font.rajdhani') : t('editor.insp.font.' + (BUILDER_FONT_KEY[val] || 'systemSans')); }
+
 // Small control helpers (keep step renderers readable).
 function bField(label, hint) {
   const w = document.createElement('label');
@@ -2482,7 +2492,7 @@ function renderBuilderRail() {
     num.className = 'builder-step-num';
     num.textContent = String(idx + 1);
     const lab = document.createElement('span');
-    lab.textContent = s.label;
+    lab.textContent = bt('step.' + s.key);
     b.append(num, lab);
     b.addEventListener('click', () => gotoBuilderStep(idx));
     rail.appendChild(b);
@@ -2495,7 +2505,7 @@ function gotoBuilderStep(i) {
   BUILDER_STEPS[builder.step].render($('builder-step'));
   const last = builder.step === BUILDER_STEPS.length - 1;
   $('builder-back').disabled = builder.step === 0;
-  $('builder-next').textContent = last ? 'Create & open in editor' : 'Next';
+  $('builder-next').textContent = last ? bt('nav.create') : t('common.next');
   $('builder-status').textContent = '';
   updateBuilderPreview();
 }
@@ -2532,23 +2542,23 @@ function closeBuilder() {
 async function finishBuilder() {
   builder.pack.props = buildBuilderProps();
   syncBuilderBackground(); // carry any parallax depth layers into the pack
-  $('builder-status').textContent = 'Creating…';
+  $('builder-status').textContent = bt('status.creating');
   const out = await aegis.builderCreate(builder.pack, true);
-  if (!out.ok) { $('builder-status').textContent = out.error || 'Could not create the pack.'; return; }
+  if (!out.ok) { $('builder-status').textContent = out.error || bt('status.createError'); return; }
   closeBuilder();
   await refreshLibrary();
-  libStatus(`Created “${out.id}”. Opening the editor to fine-tune…`);
+  libStatus(bt('status.created', { id: out.id }));
 }
 
 // Create the pack, then open the Workshop publish dialog (no editor).
 async function finishBuilderAndPublish() {
   const st = await aegis.workshopStatus();
-  if (!st.available) { $('builder-status').textContent = st.reason || 'Steam Workshop isn’t available (start Steam and sign in).'; return; }
+  if (!st.available) { $('builder-status').textContent = st.reason || bt('status.workshopUnavailable'); return; }
   builder.pack.props = buildBuilderProps();
   syncBuilderBackground(); // carry any parallax depth layers into the pack
-  $('builder-status').textContent = 'Creating…';
+  $('builder-status').textContent = bt('status.creating');
   const out = await aegis.builderCreate(builder.pack, false); // don't open the editor
-  if (!out.ok) { $('builder-status').textContent = out.error || 'Could not create the pack.'; return; }
+  if (!out.ok) { $('builder-status').textContent = out.error || bt('status.createError'); return; }
   closeBuilder();
   await refreshLibrary();
   const item = library.localPacks.find((p) => p.id === out.id);
@@ -2565,24 +2575,24 @@ async function finishBuilderAndPublish() {
 
 function renderBgStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Background', 'Start with a base colour and a surface feel. The engine draws grids, scanlines, glow, and vignette for you — no image needed. Or bring your own.'));
+  el.appendChild(stepHead(bt('step.background'), bt('desc.background')));
 
-  const base = bField('Base colour');
+  const base = bField(bt('bg.baseColour'));
   base.appendChild(bColorInput(builder.pack.skin.palette.void, (v) => { builder.pack.skin.palette.void = v; schedulePreview(); }));
   el.appendChild(base);
 
   const feelLabel = document.createElement('span');
   feelLabel.className = 'b-sublabel';
-  feelLabel.textContent = 'Surface feel';
+  feelLabel.textContent = bt('bg.surfaceFeel');
   el.appendChild(feelLabel);
   const feel = bPresetRow();
   const currentFeel = () => {
     const t = builder.pack.skin.texture;
     const match = BUILDER_TEXTURES.find((x) => x.t.scanlines === t.scanlines && x.t.grid === t.grid && x.t.glow === t.glow && x.t.vignette === t.vignette);
-    return match ? match.name : null;
+    return match ? match.id : null;
   };
   for (const preset of BUILDER_TEXTURES) {
-    feel.appendChild(bPreset(preset.name, currentFeel() === preset.name, () => {
+    feel.appendChild(bPreset(bt('tex.' + preset.id), currentFeel() === preset.id, () => {
       builder.pack.skin.texture = { ...preset.t };
       renderBgStep(el); schedulePreview();
     }));
@@ -2592,11 +2602,11 @@ function renderBgStep(el) {
   // Texture — fine-tune the surface (the "Surface feel" presets set these at once).
   const texHead = document.createElement('span');
   texHead.className = 'b-sublabel';
-  texHead.textContent = 'Texture';
+  texHead.textContent = bt('bg.texture');
   el.appendChild(texHead);
   for (const key of BUILDER_TEXTURE_KEYS) {
     if (typeof builder.pack.skin.texture[key] !== 'number') builder.pack.skin.texture[key] = 0;
-    const f = bField(BUILDER_TEXTURE_NAMES[key]);
+    const f = bField(bt('texname.' + key));
     const r = document.createElement('input');
     r.type = 'range'; r.min = '0'; r.max = '1'; r.step = '0.05';
     r.value = String(builder.pack.skin.texture[key]);
@@ -2611,12 +2621,12 @@ function renderBgStep(el) {
   // tokens so they follow the Colours step.
   const fillHead = document.createElement('span');
   fillHead.className = 'b-sublabel';
-  fillHead.textContent = 'Base fill';
+  fillHead.textContent = bt('bg.baseFill');
   el.appendChild(fillHead);
   const fillRow = bPresetRow();
   const activeFillId = builder.fill ? (builder.fill.preset || builder.fill.type) : 'none';
   for (const preset of BUILDER_FILL_PRESETS) {
-    fillRow.appendChild(bPreset(BUILDER_FILL_NAMES[preset.id] || preset.id, activeFillId === preset.id, () => {
+    fillRow.appendChild(bPreset(t('editor.insp.fill.style.' + preset.id), activeFillId === preset.id, () => {
       applyBuilderFill(preset.id);
       renderBgStep(el); schedulePreview();
     }));
@@ -2630,11 +2640,11 @@ function renderBgStep(el) {
     // along the gradient (0–100). Mesh fills blend without positions, so no slider.
     const stopsHead = document.createElement('span');
     stopsHead.className = 'b-sublabel';
-    stopsHead.textContent = 'Colour stops';
+    stopsHead.textContent = bt('bg.colourStops');
     el.appendChild(stopsHead);
 
     fill.stops.forEach((stop, i) => {
-      const f = bField(`Stop ${i + 1}`);
+      const f = bField(bt('bg.stop', { n: i + 1 }));
       const stack = document.createElement('div');
       stack.className = 'fill-stop';
       stack.appendChild(builderFillColorControl(stop, el));
@@ -2645,13 +2655,13 @@ function renderBgStep(el) {
         const pos = document.createElement('input');
         pos.type = 'range'; pos.min = '0'; pos.max = '100'; pos.step = '1';
         pos.value = String(typeof stop.at === 'number' ? stop.at : 0);
-        pos.title = 'Position';
+        pos.title = bt('bg.position');
         pos.addEventListener('input', () => { stop.at = Number(pos.value); schedulePreview(); });
         bottom.appendChild(pos);
       }
       const rm = libButton('×', () => { fill.stops.splice(i, 1); renderBgStep(el); schedulePreview(); }, 'tiny danger');
       rm.disabled = fill.stops.length <= 2; // a gradient needs at least two stops
-      rm.title = 'Remove this stop';
+      rm.title = bt('bg.removeStop');
       rm.style.marginLeft = 'auto'; // keep it right-aligned even for mesh (no slider)
       bottom.appendChild(rm);
       stack.appendChild(bottom);
@@ -2659,7 +2669,7 @@ function renderBgStep(el) {
       el.appendChild(f);
     });
     if (fill.stops.length < 6) {
-      const add = libButton('+ Add colour stop', () => {
+      const add = libButton(bt('bg.addStop'), () => {
         const last = fill.stops[fill.stops.length - 1];
         fill.stops.push({ color: last ? last.color : 'accent', at: 100 });
         renderBgStep(el); schedulePreview();
@@ -2669,14 +2679,14 @@ function renderBgStep(el) {
 
     // Angle (linear/conic) and origin (radial/conic) — same geometry the editor exposes.
     if (fill.type === 'linear' || fill.type === 'conic') {
-      el.appendChild(bRangeField('Angle', Math.round(fill.angle), 0, 360, 5, (v) => `${v}°`, (v) => { fill.angle = v; schedulePreview(); }));
+      el.appendChild(bRangeField(bt('bg.angle'), Math.round(fill.angle), 0, 360, 5, (v) => `${v}°`, (v) => { fill.angle = v; schedulePreview(); }));
     }
     if (fill.type === 'radial' || fill.type === 'conic') {
-      el.appendChild(bRangeField('Origin X', fill.posX, 0, 100, 1, (v) => `${v}%`, (v) => { fill.posX = v; schedulePreview(); }));
-      el.appendChild(bRangeField('Origin Y', fill.posY, 0, 100, 1, (v) => `${v}%`, (v) => { fill.posY = v; schedulePreview(); }));
+      el.appendChild(bRangeField(bt('bg.originX'), fill.posX, 0, 100, 1, (v) => `${v}%`, (v) => { fill.posX = v; schedulePreview(); }));
+      el.appendChild(bRangeField(bt('bg.originY'), fill.posY, 0, 100, 1, (v) => `${v}%`, (v) => { fill.posY = v; schedulePreview(); }));
     }
 
-    const toggles = bField('Movement & grain');
+    const toggles = bField(bt('bg.movementGrain'));
     const mkChk = (label, get, set) => {
       const lab = document.createElement('label');
       lab.style.display = 'inline-flex'; lab.style.alignItems = 'center'; lab.style.gap = '5px'; lab.style.marginRight = '14px';
@@ -2688,8 +2698,8 @@ function renderBgStep(el) {
     };
     const wrap = document.createElement('div');
     wrap.append(
-      mkChk('Slow drift', () => !!builder.fill.animate, (v) => { builder.fill.animate = v; }),
-      mkChk('Film grain', () => !!builder.fill.grain, (v) => { builder.fill.grain = v; }),
+      mkChk(bt('bg.slowDrift'), () => !!builder.fill.animate, (v) => { builder.fill.animate = v; }),
+      mkChk(bt('bg.filmGrain'), () => !!builder.fill.grain, (v) => { builder.fill.grain = v; }),
     );
     toggles.appendChild(wrap);
     el.appendChild(toggles);
@@ -2697,16 +2707,16 @@ function renderBgStep(el) {
 
   const imgLabel = document.createElement('span');
   imgLabel.className = 'b-sublabel';
-  imgLabel.textContent = 'Your own image (optional)';
+  imgLabel.textContent = bt('bg.yourImage');
   el.appendChild(imgLabel);
   const imgNote = document.createElement('p');
   imgNote.className = 'hint';
-  imgNote.textContent = 'Use an image (≤5 MB) or a looping video (mp4/webm, ≤30 MB, always muted) as the wallpaper. Note: publishing a pack with copyrighted characters/art can be taken down — for public packs, use original or licensed art.';
+  imgNote.textContent = bt('bg.imageNote');
   el.appendChild(imgNote);
   const imgRow = document.createElement('div');
   imgRow.className = 'b-presets';
   const isVideoWp = /\.(mp4|webm)$/i.test(builder.pack.skin.wallpaper || '');
-  imgRow.appendChild(libButton(builder.pack.skin.wallpaper && !isVideoWp ? 'Replace image…' : 'Choose an image…', async () => {
+  imgRow.appendChild(libButton(builder.pack.skin.wallpaper && !isVideoWp ? bt('bg.replaceImage') : bt('bg.chooseImage'), async () => {
     const out = await aegis.builderImportImage([]);
     if (out.error === null && !out.ok) return; // cancelled
     if (!out.ok) { $('builder-status').textContent = out.error; return; }
@@ -2714,7 +2724,7 @@ function renderBgStep(el) {
     builder.wallpaperUri = out.uri;
     renderBgStep(el); updateBuilderPreview();
   }));
-  imgRow.appendChild(libButton(isVideoWp ? 'Replace video…' : 'Choose a video…', async () => {
+  imgRow.appendChild(libButton(isVideoWp ? bt('bg.replaceVideo') : bt('bg.chooseVideo'), async () => {
     const out = await aegis.builderImportVideo([]);
     if (out.error === null && !out.ok) return; // cancelled
     if (!out.ok) { $('builder-status').textContent = out.error; return; }
@@ -2723,7 +2733,7 @@ function renderBgStep(el) {
     renderBgStep(el); updateBuilderPreview();
   }));
   if (builder.pack.skin.wallpaper) {
-    imgRow.appendChild(libButton(isVideoWp ? 'Remove video' : 'Remove image', () => {
+    imgRow.appendChild(libButton(isVideoWp ? bt('bg.removeVideo') : bt('bg.removeImage'), () => {
       builder.pack.skin.wallpaper = null;
       builder.wallpaperUri = null;
       renderBgStep(el); updateBuilderPreview();
@@ -2735,12 +2745,12 @@ function renderBgStep(el) {
   if (builder.pack.skin.wallpaper) {
     const adjLabel = document.createElement('span');
     adjLabel.className = 'b-sublabel';
-    adjLabel.textContent = 'Fit & crop';
+    adjLabel.textContent = bt('bg.fitCrop');
     el.appendChild(adjLabel);
 
     const fits = bPresetRow();
-    for (const [val, label] of [['cover', 'Fill (crop)'], ['contain', 'Fit whole'], ['stretch', 'Stretch']]) {
-      fits.appendChild(bPreset(label, (builder.pack.skin.wallpaperFit || 'cover') === val, () => {
+    for (const [val, labelKey] of [['cover', 'fillCrop'], ['contain', 'fitWhole'], ['stretch', 'stretch']]) {
+      fits.appendChild(bPreset(bt('bg.' + labelKey), (builder.pack.skin.wallpaperFit || 'cover') === val, () => {
         builder.pack.skin.wallpaperFit = val;
         renderBgStep(el); schedulePreview();
       }));
@@ -2751,7 +2761,7 @@ function renderBgStep(el) {
     if ((builder.pack.skin.wallpaperFit || 'cover') !== 'stretch') {
       const posNote = document.createElement('p');
       posNote.className = 'hint';
-      posNote.textContent = 'Position — drag to choose which part of the image is shown.';
+      posNote.textContent = bt('bg.posNote');
       el.appendChild(posNote);
       const mkPos = (axis, label) => {
         const f = bField(label);
@@ -2762,9 +2772,9 @@ function renderBgStep(el) {
         f.appendChild(r);
         el.appendChild(f);
       };
-      mkPos('wallpaperPosX', 'Horizontal');
-      mkPos('wallpaperPosY', 'Vertical');
-      el.appendChild(libButton('Center', () => {
+      mkPos('wallpaperPosX', bt('bg.horizontal'));
+      mkPos('wallpaperPosY', bt('bg.vertical'));
+      el.appendChild(libButton(bt('bg.center'), () => {
         builder.pack.skin.wallpaperPosX = 50;
         builder.pack.skin.wallpaperPosY = 50;
         renderBgStep(el); schedulePreview();
@@ -2776,7 +2786,7 @@ function renderBgStep(el) {
       if (!builder.pack.skin.wallpaperVideo || typeof builder.pack.skin.wallpaperVideo.playbackRate !== 'number') {
         builder.pack.skin.wallpaperVideo = { playbackRate: 1 };
       }
-      const speed = bField('Playback speed');
+      const speed = bField(bt('bg.playbackSpeed'));
       const sr = document.createElement('input');
       sr.type = 'range'; sr.min = '0.25'; sr.max = '2'; sr.step = '0.05';
       sr.value = String(builder.pack.skin.wallpaperVideo.playbackRate);
@@ -2790,21 +2800,21 @@ function renderBgStep(el) {
     // (fit, position, opacity, drift) lives in the editor after you create.
     const depthLabel = document.createElement('span');
     depthLabel.className = 'b-sublabel';
-    depthLabel.textContent = 'Depth layers (optional)';
+    depthLabel.textContent = bt('bg.depthLayers');
     el.appendChild(depthLabel);
     const depthNote = document.createElement('p');
     depthNote.className = 'hint';
-    depthNote.textContent = 'Add layers in front of the wallpaper for a parallax effect — each moves with the cursor by its depth. Fine-tune them in the editor.';
+    depthNote.textContent = bt('bg.depthNote');
     el.appendChild(depthNote);
 
     builder.depthLayers.forEach((d, i) => {
-      const row = bField(`Layer ${i + 2}${/\.(mp4|webm)$/i.test(d.src) ? ' (video)' : ''} · depth`);
+      const row = bField(bt('bg.layerDepth', { n: i + 2 }) + (/\.(mp4|webm)$/i.test(d.src) ? ' ' + bt('bg.videoTag') : ''));
       const dr = document.createElement('input');
       dr.type = 'range'; dr.min = '0'; dr.max = '1'; dr.step = '0.05';
       dr.value = String(d.depth);
       dr.addEventListener('input', () => { d.depth = Number(dr.value); schedulePreview(); });
       row.appendChild(dr);
-      row.appendChild(libButton('Remove', () => { builder.depthLayers.splice(i, 1); renderBgStep(el); updateBuilderPreview(); }, 'tiny danger'));
+      row.appendChild(libButton(bt('bg.remove'), () => { builder.depthLayers.splice(i, 1); renderBgStep(el); updateBuilderPreview(); }, 'tiny danger'));
       el.appendChild(row);
     });
 
@@ -2817,13 +2827,13 @@ function renderBgStep(el) {
         renderBgStep(el); updateBuilderPreview();
       };
       const addRow = bPresetRow();
-      addRow.appendChild(libButton('Add image layer…', () => addDepth(aegis.builderImportImage), 'tiny'));
-      addRow.appendChild(libButton('Add video layer…', () => addDepth(aegis.builderImportVideo), 'tiny'));
+      addRow.appendChild(libButton(bt('bg.addImageLayer'), () => addDepth(aegis.builderImportImage), 'tiny'));
+      addRow.appendChild(libButton(bt('bg.addVideoLayer'), () => addDepth(aegis.builderImportVideo), 'tiny'));
       el.appendChild(addRow);
     }
 
     if (builder.depthLayers.length) {
-      const strength = bField('Parallax strength');
+      const strength = bField(bt('bg.parallaxStrength'));
       const pr = document.createElement('input');
       pr.type = 'range'; pr.min = '0'; pr.max = '2'; pr.step = '0.1';
       pr.value = String(builder.parallaxStrength);
@@ -2836,7 +2846,7 @@ function renderBgStep(el) {
 
 function renderColoursStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Colours', 'Pick a palette, then tweak the accents. These drive every component’s look.'));
+  el.appendChild(stepHead(bt('step.colours'), bt('desc.colours')));
 
   const presets = bPresetRow();
   const activePalette = BUILDER_PALETTES.find((x) => x.p.accent === builder.pack.skin.palette.accent);
@@ -2855,15 +2865,8 @@ function renderColoursStep(el) {
 
   // Plain-language names + a line saying what each colour actually paints — the raw
   // token names (muted/gold) told you nothing about what you'd get.
-  const COLOUR_FIELDS = [
-    ['accent', 'Accent', 'Main colour — clock rings, gauges, bars, borders and glow.'],
-    ['accentBright', 'Bright accent', 'Brighter tone — headings, the time and key numbers.'],
-    ['muted', 'Secondary text', 'Dim tone for labels, units and less-important text.'],
-    ['warn', 'Warning', 'Alerts and critical readings — high CPU, low battery.'],
-    ['gold', 'Extra accent', 'A second accent for small details, like timestamps and badges.'],
-  ];
-  for (const [key, label, hint] of COLOUR_FIELDS) {
-    const f = bField(label, hint);
+  for (const key of ['accent', 'accentBright', 'muted', 'warn', 'gold']) {
+    const f = bField(t('editor.insp.pal.' + key), bt('colourHint.' + key));
     f.appendChild(bColorInput(builder.pack.skin.palette[key], (v) => { builder.pack.skin.palette[key] = v; schedulePreview(); }));
     el.appendChild(f);
   }
@@ -2871,7 +2874,7 @@ function renderColoursStep(el) {
 
 function renderParticlesStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Particles', 'An optional drifting-particle layer over the background. Recolour it, set the speed, and add a glow. Reduced-motion safe.'));
+  el.appendChild(stepHead(bt('step.particles'), bt('desc.particles')));
   const amb = builder.pack.skin.ambience;
 
   // Custom particle system (Particle Studio) — a simplified guided version; the
@@ -2884,11 +2887,11 @@ function renderParticlesStep(el) {
   // Effect — glyph chips (matches the Surface-feel / Base-fill picker style).
   const fxLabel = document.createElement('span');
   fxLabel.className = 'b-sublabel';
-  fxLabel.textContent = 'Effect';
+  fxLabel.textContent = bt('particles.effect');
   el.appendChild(fxLabel);
   const fxRow = bPresetRow();
   for (const e of BUILDER_EFFECTS) {
-    fxRow.appendChild(bPreset(`${BUILDER_EFFECT_GLYPHS[e] || ''}  ${BUILDER_EFFECT_NAMES[e]}`, amb.effect === e, () => {
+    fxRow.appendChild(bPreset(`${BUILDER_EFFECT_GLYPHS[e] || ''}  ${builderEffectName(e)}`, amb.effect === e, () => {
       amb.effect = e;
       renderParticlesStep(el); schedulePreview();
     }));
@@ -2901,21 +2904,21 @@ function renderParticlesStep(el) {
   if (amb.effect !== 'none') {
     const colLabel = document.createElement('span');
     colLabel.className = 'b-sublabel';
-    colLabel.textContent = 'Colour';
+    colLabel.textContent = bt('particles.colour');
     el.appendChild(colLabel);
     el.appendChild(builderAmbienceColorControl(amb, el));
 
     if (typeof amb.speed !== 'number') amb.speed = 1;
-    el.appendChild(bRangeField('Density', amb.density, 0.05, 1, 0.05, (v) => v.toFixed(2), (v) => { amb.density = v; schedulePreview(); }));
-    el.appendChild(bRangeField('Speed', amb.speed, 0.2, 3, 0.1, (v) => `${v.toFixed(1)}x`, (v) => { amb.speed = v; schedulePreview(); }));
+    el.appendChild(bRangeField(bt('particles.density'), amb.density, 0.05, 1, 0.05, (v) => v.toFixed(2), (v) => { amb.density = v; schedulePreview(); }));
+    el.appendChild(bRangeField(bt('particles.speed'), amb.speed, 0.2, 3, 0.1, (v) => `${v.toFixed(1)}x`, (v) => { amb.speed = v; schedulePreview(); }));
 
-    const glow = bField('Glow');
+    const glow = bField(bt('particles.glow'));
     const lab = document.createElement('label');
     lab.style.display = 'inline-flex'; lab.style.alignItems = 'center'; lab.style.gap = '6px';
     const cb = document.createElement('input');
     cb.type = 'checkbox'; cb.checked = !!amb.glow;
     cb.addEventListener('change', () => { amb.glow = cb.checked; schedulePreview(); });
-    lab.append(cb, document.createTextNode('Luminous blend (particles brighten where they overlap)'));
+    lab.append(cb, document.createTextNode(bt('particles.glowDesc')));
     glow.appendChild(lab);
     el.appendChild(glow);
   }
@@ -2923,7 +2926,7 @@ function renderParticlesStep(el) {
   // Fork into a fully-custom particle system (Particle Studio) — ALWAYS offered
   // (from 'none' it starts from a sane default system via factoryFor).
   if (window.AegisParticles) {
-    const cust = libButton('Customize particles…', () => {
+    const cust = libButton(bt('particles.customize'), () => {
       amb.system = window.AegisParticles.factoryFor(amb.effect);
       amb.mode = 'custom';
       renderParticlesStep(el); schedulePreview();
@@ -2931,7 +2934,7 @@ function renderParticlesStep(el) {
     el.appendChild(cust);
     const chint = document.createElement('p');
     chint.className = 'hint';
-    chint.textContent = 'Build your own — a custom emitter, sprite, motion, colour and cursor interaction. Start here; fine-tune everything in the editor.';
+    chint.textContent = bt('particles.customizeHint');
     el.appendChild(chint);
   }
 }
@@ -2945,40 +2948,41 @@ function renderBuilderCustomParticles(el, amb) {
   const AP = window.AegisParticles;
   const sys = amb.system;
 
-  el.appendChild(libButton('◂ Back to preset effects', () => {
+  el.appendChild(libButton(bt('cp.back'), () => {
     amb.mode = 'preset';
     renderParticlesStep(el); schedulePreview();
   }, 'tiny'));
 
   const startLabel = document.createElement('span');
   startLabel.className = 'b-sublabel';
-  startLabel.textContent = 'Start from';
+  startLabel.textContent = bt('cp.startFrom');
   el.appendChild(startLabel);
   const frow = bPresetRow();
   for (const key of BUILDER_CUSTOM_FACTORIES) {
-    frow.appendChild(bPreset(BUILDER_EFFECT_NAMES[key] || key, false, () => {
+    frow.appendChild(bPreset(builderEffectName(key), false, () => {
       amb.system = AP.factoryFor(key);
       renderParticlesStep(el); schedulePreview();
     }));
   }
   el.appendChild(frow);
 
-  el.appendChild(bRangeField('Count', sys.count, 1, 400, 1, (v) => String(Math.round(v)), (v) => { sys.count = Math.round(v); schedulePreview(); }));
-  el.appendChild(bRangeField('Size', sys.sizeMax, 0.1, 4, 0.1, (v) => v.toFixed(1), (v) => { sys.sizeMax = v; sys.sizeMin = Math.max(0.1, v * 0.5); schedulePreview(); }));
-  el.appendChild(bRangeField('Speed', sys.speedMax, 0, 30, 0.5, (v) => v.toFixed(1), (v) => { sys.speedMax = v; sys.speedMin = Math.max(0, v * 0.5); schedulePreview(); }));
-  el.appendChild(bRangeField('Spread', sys.spread, 0, 180, 5, (v) => `${Math.round(v)}°`, (v) => { sys.spread = v; schedulePreview(); }));
+  el.appendChild(bRangeField(bt('cp.count'), sys.count, 1, 400, 1, (v) => String(Math.round(v)), (v) => { sys.count = Math.round(v); schedulePreview(); }));
+  el.appendChild(bRangeField(bt('cp.size'), sys.sizeMax, 0.1, 4, 0.1, (v) => v.toFixed(1), (v) => { sys.sizeMax = v; sys.sizeMin = Math.max(0.1, v * 0.5); schedulePreview(); }));
+  el.appendChild(bRangeField(bt('cp.speed'), sys.speedMax, 0, 30, 0.5, (v) => v.toFixed(1), (v) => { sys.speedMax = v; sys.speedMin = Math.max(0, v * 0.5); schedulePreview(); }));
+  el.appendChild(bRangeField(bt('cp.spread'), sys.spread, 0, 180, 5, (v) => `${Math.round(v)}°`, (v) => { sys.spread = v; schedulePreview(); }));
 
   const blLabel = document.createElement('span');
   blLabel.className = 'b-sublabel';
-  blLabel.textContent = 'Blend';
+  blLabel.textContent = bt('cp.blend');
   el.appendChild(blLabel);
   const blrow = bPresetRow();
-  for (const [val, label] of BUILDER_BLENDS) {
-    blrow.appendChild(bPreset(label, sys.blend === val, () => { sys.blend = val; renderParticlesStep(el); schedulePreview(); }));
+  const BLEND_KEY = { normal: 'normal', screen: 'screen', additive: 'glow' };
+  for (const [val] of BUILDER_BLENDS) {
+    blrow.appendChild(bPreset(bt('blend.' + BLEND_KEY[val]), sys.blend === val, () => { sys.blend = val; renderParticlesStep(el); schedulePreview(); }));
   }
   el.appendChild(blrow);
 
-  const cf = bField('Colour');
+  const cf = bField(bt('cp.colour'));
   const resolved = sys.color.paletteKey === 'custom'
     ? (sys.color.custom || '#ffffff')
     : (builder.pack.skin.palette[sys.color.paletteKey] || '#ffffff');
@@ -2989,7 +2993,7 @@ function renderBuilderCustomParticles(el, amb) {
   // built-in shape. Staged now; carried into the pack on create.
   const spLabel = document.createElement('span');
   spLabel.className = 'b-sublabel';
-  spLabel.textContent = 'Sprite image';
+  spLabel.textContent = bt('cp.spriteImage');
   el.appendChild(spLabel);
   const spRow = document.createElement('div');
   spRow.className = 'b-motion-row';
@@ -2997,22 +3001,22 @@ function renderBuilderCustomParticles(el, amb) {
     const nm = document.createElement('span');
     nm.textContent = sys.sprite.custom.replace('assets/', '');
     spRow.appendChild(nm);
-    spRow.appendChild(libButton('Remove', () => { delete sys.sprite.custom; renderParticlesStep(el); schedulePreview(); }, 'tiny danger'));
+    spRow.appendChild(libButton(bt('cp.remove'), () => { delete sys.sprite.custom; renderParticlesStep(el); schedulePreview(); }, 'tiny danger'));
   } else {
-    spRow.appendChild(libButton('Import image…', async () => {
+    spRow.appendChild(libButton(bt('cp.importImage'), async () => {
       const rel = await builderImportSprite();
       if (rel) { sys.sprite.custom = rel; renderParticlesStep(el); schedulePreview(); }
     }, 'tiny'));
     const hint = document.createElement('span');
     hint.style.fontSize = '11px'; hint.style.opacity = '0.72';
-    hint.textContent = 'PNG or WebP, up to 256×256 px';
+    hint.textContent = bt('cp.spriteHint');
     spRow.appendChild(hint);
   }
   el.appendChild(spRow);
 
   const note = document.createElement('p');
   note.className = 'hint';
-  note.textContent = 'Emitter position, physics (gravity/wind/drag), a painted spawn mask and cursor interaction: fine-tune in the editor.';
+  note.textContent = bt('cp.note');
   el.appendChild(note);
 }
 
@@ -3031,7 +3035,7 @@ async function builderImportSprite() {
   });
   if (!okDims) {
     if (aegis.unstageAsset) aegis.unstageAsset(out.rel);
-    $('builder-status').textContent = 'That sprite is too large — use an image up to 256×256 px.';
+    $('builder-status').textContent = bt('cp.tooLarge');
     return null;
   }
   builder.customAssets[out.rel] = out.uri; // feed the live preview
@@ -3040,12 +3044,12 @@ async function builderImportSprite() {
 
 function renderTypeStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Typography', 'The display font and casing. Readouts always use a mono face.'));
+  el.appendChild(stepHead(bt('step.type'), bt('desc.type')));
 
-  const font = bField('Display font');
+  const font = bField(bt('type.displayFont'));
   const sel = document.createElement('select');
-  for (const [val, label] of BUILDER_FONTS) {
-    const o = document.createElement('option'); o.value = val; o.textContent = label; sel.appendChild(o);
+  for (const [val] of BUILDER_FONTS) {
+    const o = document.createElement('option'); o.value = val; o.textContent = builderFontLabel(val); sel.appendChild(o);
   }
   sel.value = builder.pack.skin.typography.display;
   sel.addEventListener('change', () => { builder.pack.skin.typography.display = sel.value; schedulePreview(); });
@@ -3056,7 +3060,7 @@ function renderTypeStep(el) {
   up.className = 'cfg-check';
   const cb = document.createElement('input'); cb.type = 'checkbox'; cb.checked = builder.pack.skin.typography.uppercase;
   cb.addEventListener('change', () => { builder.pack.skin.typography.uppercase = cb.checked; schedulePreview(); });
-  const sp = document.createElement('span'); sp.textContent = 'Uppercase display text';
+  const sp = document.createElement('span'); sp.textContent = bt('type.uppercase');
   up.append(cb, sp);
   el.appendChild(up);
 }
@@ -3068,22 +3072,22 @@ function renderTypeStep(el) {
 // the sanitizer strips it, so it never persists).
 function renderScheduleStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Time of day', 'Recolour your dashboard as the day passes — dawn, day, dusk, night. Pick a look built from your own colours; fine-tune each slot in the editor afterwards.'));
+  el.appendChild(stepHead(bt('step.timeofday'), bt('desc.timeofday')));
   const skin = builder.pack.skin;
   const enabled = !!(skin.schedule && skin.schedule.enabled);
 
   const lookLabel = document.createElement('span');
   lookLabel.className = 'b-sublabel';
-  lookLabel.textContent = 'Look';
+  lookLabel.textContent = bt('tod.look');
   el.appendChild(lookLabel);
   const row = bPresetRow();
-  row.appendChild(bPreset('Off', !enabled, () => {
+  row.appendChild(bPreset(bt('tod.off'), !enabled, () => {
     if (skin.schedule) skin.schedule.enabled = false;
     delete builder.pack.__previewHour;
     renderScheduleStep(el); schedulePreview();
   }));
   for (const preset of window.AegisPresets.SCHEDULE_PRESETS) {
-    row.appendChild(bPreset(preset.label, enabled && builder.schedulePreset === preset.id, () => {
+    row.appendChild(bPreset(t('editor.insp.schedule.preset.' + preset.id), enabled && builder.schedulePreset === preset.id, () => {
       skin.schedule = { enabled: true, slots: window.AegisPresets.buildScheduleSlots(skin.palette, preset.id) };
       builder.schedulePreset = preset.id;
       delete builder.pack.__previewHour;
@@ -3095,15 +3099,15 @@ function renderScheduleStep(el) {
 
   const prevLabel = document.createElement('span');
   prevLabel.className = 'b-sublabel';
-  prevLabel.textContent = 'Preview a time';
+  prevLabel.textContent = bt('tod.previewTime');
   el.appendChild(prevLabel);
   const prow = bPresetRow();
   const cur = builder.pack.__previewHour;
   const isAuto = typeof cur !== 'number';
   const slots = skin.schedule.slots;
-  prow.appendChild(bPreset('Now', isAuto, () => { delete builder.pack.__previewHour; renderScheduleStep(el); updateBuilderPreview(); }));
-  for (const [name, label] of [['dawn', 'Dawn'], ['day', 'Day'], ['dusk', 'Dusk'], ['night', 'Night']]) {
-    prow.appendChild(bPreset(label, !isAuto && cur === slots[name].startHour, () => {
+  prow.appendChild(bPreset(bt('tod.now'), isAuto, () => { delete builder.pack.__previewHour; renderScheduleStep(el); updateBuilderPreview(); }));
+  for (const name of ['dawn', 'day', 'dusk', 'night']) {
+    prow.appendChild(bPreset(bt('tod.' + name), !isAuto && cur === slots[name].startHour, () => {
       builder.pack.__previewHour = slots[name].startHour;
       renderScheduleStep(el); updateBuilderPreview();
     }));
@@ -3117,13 +3121,13 @@ function renderScheduleStep(el) {
 const BUILDER_MOTION_PROP = { opacity: 'fade', x: 'move X', y: 'move Y', scale: 'scale', rotate: 'rotate' };
 function renderTimelineStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Animation', 'Add gentle looping motion to your widgets — float, pulse, breathe, spin. Tap a motion to add it (the preview plays it live); fine-tune the keyframes in the editor.'));
+  el.appendChild(stepHead(bt('step.animation'), bt('desc.animation')));
   const comps = builder.pack.components || [];
 
   if (comps.length) {
-    const tf = bField('Animate which widget');
+    const tf = bField(bt('anim.animateWidget'));
     const sel = document.createElement('select');
-    comps.forEach((c, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${i + 1} · ${c.type}`; sel.appendChild(o); });
+    comps.forEach((c, i) => { const o = document.createElement('option'); o.value = String(i); o.textContent = `${i + 1} · ${builderCompName(c.type)}`; sel.appendChild(o); });
     if (typeof builder.timelineTarget !== 'number' || builder.timelineTarget >= comps.length) builder.timelineTarget = 0;
     sel.value = String(builder.timelineTarget);
     sel.addEventListener('change', () => { builder.timelineTarget = Number(sel.value); });
@@ -3132,18 +3136,18 @@ function renderTimelineStep(el) {
   } else {
     const p = document.createElement('p');
     p.className = 'hint';
-    p.textContent = 'Add some components in the previous step to animate them — or add the ambience Twinkle below.';
+    p.textContent = bt('anim.noComps');
     el.appendChild(p);
   }
 
   const mLabel = document.createElement('span');
   mLabel.className = 'b-sublabel';
-  mLabel.textContent = 'Add a motion';
+  mLabel.textContent = bt('anim.addMotion');
   el.appendChild(mLabel);
   const row = bPresetRow();
   for (const motion of window.AegisPresets.TIMELINE_MOTIONS) {
     if (motion.kind === 'component' && !comps.length) continue;
-    row.appendChild(bPreset(motion.label, false, () => {
+    row.appendChild(bPreset(t('editor.insp.timeline.motion.' + motion.id), false, () => {
       if (!builder.pack.timeline) builder.pack.timeline = { duration: 8, loop: 'mirror', tracks: [] };
       if (builder.pack.timeline.tracks.length >= 8) return;
       const track = window.AegisPresets.buildMotionTrack(motion.id, builder.pack.timeline.duration, builder.timelineTarget || 0);
@@ -3157,15 +3161,15 @@ function renderTimelineStep(el) {
   if (tl && tl.tracks.length) {
     const aLabel = document.createElement('span');
     aLabel.className = 'b-sublabel';
-    aLabel.textContent = `Added (${tl.tracks.length})`;
+    aLabel.textContent = bt('anim.added', { n: tl.tracks.length });
     el.appendChild(aLabel);
     tl.tracks.forEach((tr, i) => {
       const rowEl = document.createElement('div');
       rowEl.className = 'b-motion-row';
       const nm = document.createElement('span');
       nm.textContent = tr.target.kind === 'ambience'
-        ? 'Ambience — twinkle'
-        : `Widget ${tr.target.index + 1} — ${BUILDER_MOTION_PROP[tr.target.prop] || tr.target.prop}`;
+        ? bt('anim.ambienceTwinkle')
+        : bt('anim.widget', { n: tr.target.index + 1, prop: bt('animprop.' + tr.target.prop) });
       const rm = libButton('×', () => {
         tl.tracks.splice(i, 1);
         if (!tl.tracks.length) delete builder.pack.timeline;
@@ -3179,31 +3183,31 @@ function renderTimelineStep(el) {
 
 function renderComponentsStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Components', 'Tick what to include and pick a layout — they’re auto-arranged into the template. Fine-tune the exact placement in the editor afterwards.'));
+  el.appendChild(stepHead(bt('step.components'), bt('desc.components')));
 
   const layoutLabel = document.createElement('span');
   layoutLabel.className = 'b-sublabel';
-  layoutLabel.textContent = 'Layout';
+  layoutLabel.textContent = bt('comp.layout');
   el.appendChild(layoutLabel);
   const layouts = bPresetRow();
   for (const L of BUILDER_LAYOUTS) {
-    const b = bPreset(L.name, builder.layout === L.key, () => {
+    const b = bPreset(bt('layout.' + L.key), builder.layout === L.key, () => {
       builder.layout = L.key;
       applyBuilderLayout();
       renderComponentsStep(el); schedulePreview();
     });
-    b.title = L.desc;
+    b.title = bt('layout.' + L.key + 'Desc');
     layouts.appendChild(b);
   }
   el.appendChild(layouts);
 
   const compLabel = document.createElement('span');
   compLabel.className = 'b-sublabel';
-  compLabel.textContent = `Components (${builder.selected.length})`;
+  compLabel.textContent = bt('comp.count', { n: builder.selected.length });
   el.appendChild(compLabel);
   const grid = document.createElement('div');
   grid.className = 'b-comp-grid';
-  for (const [type, label] of BUILDER_COMPONENTS) {
+  for (const [type] of BUILDER_COMPONENTS) {
     const row = document.createElement('label');
     row.className = 'cfg-check';
     const cb = document.createElement('input');
@@ -3218,7 +3222,7 @@ function renderComponentsStep(el) {
       schedulePreview();
     });
     const sp = document.createElement('span');
-    sp.textContent = label;
+    sp.textContent = builderCompName(type);
     row.append(cb, sp);
     grid.appendChild(row);
   }
@@ -3230,14 +3234,14 @@ function renderComponentsStep(el) {
   if (withOpts.length) {
     const optLabel = document.createElement('span');
     optLabel.className = 'b-sublabel';
-    optLabel.textContent = 'Quick options';
+    optLabel.textContent = bt('comp.quickOptions');
     el.appendChild(optLabel);
     for (const type of withOpts) {
       const group = document.createElement('div');
       group.className = 'b-optgroup';
       const gl = document.createElement('div');
       gl.className = 'b-optgroup-title';
-      gl.textContent = (BUILDER_COMPONENTS.find(([t]) => t === type) || [, type])[1];
+      gl.textContent = builderCompName(type);
       group.appendChild(gl);
       for (const spec of BUILDER_QUICK_OPTS[type]) group.appendChild(buildQuickOpt(type, spec));
       el.appendChild(group);
@@ -3256,11 +3260,12 @@ function buildQuickOpt(type, spec) {
     applyBuilderLayout();
     schedulePreview();
   };
-  const f = bField(spec.label);
+  const f = bField(bt('qopt.' + spec.labelKey));
   if (spec.kind === 'select') {
     const sel = document.createElement('select');
-    for (const [v, l] of spec.options) { const o = document.createElement('option'); o.value = v; o.textContent = l; sel.appendChild(o); }
-    sel.value = String(val != null ? val : spec.options[0][0]);
+    const optLabel = (v) => spec.optResolve === 'bind' ? t('editor.insp.bind.' + v) : bt('qopt.' + v);
+    for (const v of spec.options) { const o = document.createElement('option'); o.value = v; o.textContent = optLabel(v); sel.appendChild(o); }
+    sel.value = String(val != null ? val : spec.options[0]);
     sel.addEventListener('change', () => set(sel.value));
     f.appendChild(sel);
   } else if (spec.kind === 'number') {
@@ -3280,7 +3285,7 @@ function buildQuickOpt(type, spec) {
 
 function renderKnobsStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Customize knobs', 'Optionally let subscribers tweak your pack without editing it (Wallpaper-Engine style). Whatever you tick becomes an adjustable control in the pack’s Customize panel; its starting value is what you set here.'));
+  el.appendChild(stepHead(bt('step.knobs'), bt('desc.knobs')));
   for (const k of BUILDER_KNOBS) {
     const row = document.createElement('label');
     row.className = 'cfg-check';
@@ -3289,7 +3294,7 @@ function renderKnobsStep(el) {
     cb.checked = builder.knobs.has(k.key);
     cb.addEventListener('change', () => { if (cb.checked) builder.knobs.add(k.key); else builder.knobs.delete(k.key); });
     const sp = document.createElement('span');
-    sp.textContent = k.label;
+    sp.textContent = knobLabelText(k.label);
     row.append(cb, sp);
     el.appendChild(row);
   }
@@ -3297,21 +3302,21 @@ function renderKnobsStep(el) {
 
 function renderPersonaStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Persona', 'Who is this dashboard? The name and lines it speaks. (The spoken voice is tuned separately in Voice tuning.)'));
+  el.appendChild(stepHead(bt('step.persona'), bt('desc.persona')));
 
-  const pname = bField('Persona name');
+  const pname = bField(bt('persona.name'));
   const pIn = document.createElement('input'); pIn.type = 'text'; pIn.maxLength = 40; pIn.value = builder.pack.persona.name;
   pIn.addEventListener('input', () => { builder.pack.persona.name = pIn.value; schedulePreview(); });
   pname.appendChild(pIn);
   el.appendChild(pname);
 
-  const tag = bField('Tagline');
+  const tag = bField(bt('persona.tagline'));
   const tIn = document.createElement('input'); tIn.type = 'text'; tIn.maxLength = 80; tIn.value = builder.pack.persona.tagline;
   tIn.addEventListener('input', () => { builder.pack.persona.tagline = tIn.value; schedulePreview(); });
   tag.appendChild(tIn);
   el.appendChild(tag);
 
-  const lines = bField('Spoken lines (one per line)');
+  const lines = bField(bt('persona.lines'));
   const ta = document.createElement('textarea'); ta.rows = 5;
   ta.value = (builder.pack.persona.lines || []).join('\n');
   ta.addEventListener('input', () => {
@@ -3324,34 +3329,35 @@ function renderPersonaStep(el) {
 
 function renderFinishStep(el) {
   el.textContent = '';
-  el.appendChild(stepHead('Name & finish', 'Name your pack and add your author name, review what’s included, then create it.'));
+  el.appendChild(stepHead(bt('step.finish'), bt('desc.finish')));
 
-  const name = bField('Pack name');
+  const name = bField(bt('finish.packName'));
   const nIn = document.createElement('input'); nIn.type = 'text'; nIn.maxLength = 60; nIn.value = builder.pack.name;
   nIn.addEventListener('input', () => { builder.pack.name = nIn.value; });
   name.appendChild(nIn);
   el.appendChild(name);
 
-  const author = bField('Author (you)');
+  const author = bField(bt('finish.author'));
   const aIn = document.createElement('input'); aIn.type = 'text'; aIn.maxLength = 60; aIn.value = builder.pack.author || '';
-  aIn.placeholder = 'Your name or handle';
+  aIn.placeholder = bt('finish.authorPlaceholder');
   aIn.addEventListener('input', () => { builder.pack.author = aIn.value; });
   author.appendChild(aIn);
   el.appendChild(author);
 
   const reviewLabel = document.createElement('span');
   reviewLabel.className = 'b-sublabel';
-  reviewLabel.textContent = 'Review';
+  reviewLabel.textContent = bt('finish.review');
   el.appendChild(reviewLabel);
   const summary = document.createElement('ul');
   summary.className = 'b-summary';
+  const skin = builder.pack.skin;
   const items = [
-    `Layout: ${(BUILDER_LAYOUTS.find((l) => l.key === builder.layout) || {}).name || builder.layout}`,
-    `Components: ${builder.pack.components.length} — ${builder.selected.join(', ') || 'none'}`,
-    `Background: ${builder.pack.skin.wallpaper ? 'your image' : 'engine-drawn (' + builder.pack.skin.palette.void + ')'}`,
-    `Accent: ${builder.pack.skin.palette.accent} · Particles: ${builder.pack.skin.ambience.effect} · Font: ${builder.pack.skin.typography.display}`,
-    `Persona: ${builder.pack.persona.name || '—'}`,
-    `Customize knobs: ${builder.knobs.size ? [...builder.knobs].length + ' exposed' : 'none'}`,
+    bt('finish.reviewLayout', { v: bt('layout.' + builder.layout) }),
+    bt('finish.reviewComponents', { n: builder.pack.components.length, list: builder.selected.map(builderCompName).join(', ') || bt('finish.componentsNone') }),
+    skin.wallpaper ? bt('finish.reviewBgImage') : bt('finish.reviewBgEngine', { colour: skin.palette.void }),
+    bt('finish.reviewAccent', { accent: skin.palette.accent, particles: builderEffectName(skin.ambience.effect), font: builderFontLabel(skin.typography.display) }),
+    bt('finish.reviewPersona', { name: builder.pack.persona.name || '—' }),
+    bt('finish.reviewKnobs', { v: builder.knobs.size ? bt('finish.knobsExposed', { n: builder.knobs.size }) : bt('finish.knobsNone') }),
   ];
   for (const it of items) { const li = document.createElement('li'); li.textContent = it; summary.appendChild(li); }
   el.appendChild(summary);
@@ -3359,7 +3365,7 @@ function renderFinishStep(el) {
   if (!builder.selected.length) {
     const warn = document.createElement('p');
     warn.className = 'hint';
-    warn.textContent = 'No components selected — a default set will be added so the pack isn’t empty.';
+    warn.textContent = bt('finish.noComponents');
     el.appendChild(warn);
   }
 
@@ -3367,7 +3373,7 @@ function renderFinishStep(el) {
   // editor). The nav "Next" button remains "Create & open in editor".
   const pubRow = document.createElement('div');
   pubRow.className = 'b-presets';
-  pubRow.appendChild(libButton('Create & publish to Workshop…', () => finishBuilderAndPublish()));
+  pubRow.appendChild(libButton(bt('finish.createPublish'), () => finishBuilderAndPublish()));
   el.appendChild(pubRow);
 }
 
