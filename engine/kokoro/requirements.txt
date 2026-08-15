@@ -1,0 +1,21 @@
+# Kokoro TTS dev engine — Python deps for engine/kokoro/kokoro_sidecar.py.
+#
+# Build the dev venv (Python 3.12; 3.14 is too new for onnxruntime wheels):
+#   py -3.12 -m venv engine/kokoro/.venv
+#   engine/kokoro/.venv/Scripts/python -m pip install -r engine/kokoro/requirements.txt
+#
+# Model files (gitignored, ~350 MB total) go in voices/kokoro/:
+#   kokoro-v1.0.onnx   (the 82M ONNX net)
+#   voices-v1.0.bin    (packed voice embeddings)
+#
+# Shipping: freeze this sidecar with PyInstaller --onedir to bin/kokoro/kokoro-engine(.exe),
+# same pattern as the MeloTTS engine (lib/kokoro.js finds the frozen binary first).
+# en/es males use espeak phonemisation (bundled via espeakng-loader). zh/ja males
+# would additionally need misaki[zh]/misaki[ja] — not installed here.
+
+kokoro-onnx==0.5.0
+onnxruntime==1.28.0
+soundfile==0.14.0
+numpy==2.5.2
+espeakng-loader==0.2.4
+phonemizer-fork==3.3.2

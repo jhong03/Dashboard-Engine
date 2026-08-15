@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 
 const piper = require('../lib/piper');
+const kokoro = require('../lib/kokoro');
 const dsp = require('../lib/dsp');
 const analyze = require('../lib/analyze');
 const bank = require('../lib/voicebank');
@@ -38,12 +39,16 @@ async function renderPreset(entry, manifest, piperPath, ffmpegPath) {
     return;
   }
 
-  const modelPath = bank.modelPathFor(APP_ROOT, voice);
   const baselineWpm = voice.wpmAtScale1 || undefined;
-  // Multi-speaker models (VCTK — our British MALE en_male is speaker p226) need
-  // the speaker index, exactly like the app's synthClip; without it Piper defaults
-  // to speaker 0 (p225, female), so a male preset auditions as a woman.
-  const { pcm, sampleRate } = await piper.synthesize(AUDITION_TEXT, profile, modelPath, piperPath, { baselineWpm, speaker: voice.speaker });
+  let pcm, sampleRate;
+  if (bank.engineOf(voice) === 'kokoro') {
+    ({ pcm, sampleRate } = await kokoro.synthesize(AUDITION_TEXT, profile, APP_ROOT, { voice: voice.voiceName, lang: voice.langCode, baselineWpm }));
+  } else {
+    // Multi-speaker Piper models (VCTK) need the speaker index, like synthClip;
+    // without it Piper defaults to speaker 0, so a male preset auditions as a woman.
+    const modelPath = bank.modelPathFor(APP_ROOT, voice);
+    ({ pcm, sampleRate } = await piper.synthesize(AUDITION_TEXT, profile, modelPath, piperPath, { baselineWpm, speaker: voice.speaker }));
+  }
   const wet = await dsp.applyDsp(pcm, sampleRate, profile, ffmpegPath);
 
   const outFile = path.join(OUT_DIR, `audition-${file.replace(/\.json$/, '')}.wav`);
@@ -82,6 +87,9 @@ async function main() {
   }
   console.log('');
   console.log(`Listen in ${path.relative(APP_ROOT, OUT_DIR)}${path.sep}`);
+  // Warm engines (Kokoro) keep a child process alive, which would keep node from
+  // exiting — shut it down so the CLI returns.
+  try { kokoro.killEngine(); } catch { /* ignore */ }
 }
 
 main().catch((err) => {

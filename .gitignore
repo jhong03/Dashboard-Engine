@@ -24,3 +24,8 @@ __pycache__/
 store-assets/
 # SteamPipe build scripts — hold the machine's absolute contentroot path + build logs
 steampipe/
+
+# Kokoro dev engine (model + venv are large / downloaded, never committed)
+engine/kokoro/.venv/
+voices/kokoro/*.onnx
+voices/kokoro/*.bin
