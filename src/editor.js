@@ -1781,14 +1781,41 @@ function renderScheduleSection(panel, skin) {
   if (!enabled) return;
   const sched = ensureSchedule();
 
-  // Preview time (editor only) — jumps the stage to a slot's first hour.
+  // Preview time (editor only) — CROSSFADES the stage to a slot (so the 2 s
+  // transition is visible) rather than jumping. 'Auto' returns to the real clock.
   const previewChoices = [['auto', t('editor.insp.schedule.previewAuto')]].concat(
     SCHEDULE_SLOT_DEFS.map(([n]) => [n, t(`editor.insp.schedule.slot.${n}`)]));
   panel.appendChild(field(t('editor.insp.schedule.preview'), selectControl(currentPreviewSlot(sched), previewChoices, (v) => {
-    if (v === 'auto') delete state.pack.__previewHour;
-    else state.pack.__previewHour = sched.slots[v].startHour;
-    renderAll();
+    if (v === 'auto') { delete state.pack.__previewHour; renderAll(); return; }
+    const hour = sched.slots[v].startHour;
+    state.pack.__previewHour = hour;
+    const sch = document.getElementById('skin').__aegisSchedule;
+    if (sch && typeof sch.transitionTo === 'function') sch.transitionTo(hour); // crossfade, don't jump
+    else renderAll();
   }), null, t('editor.insp.schedule.previewHint')));
+
+  // "Play the day" — step dawn → day → dusk → night with the real 2 s crossfades,
+  // so the whole cycle is visible on demand (no waiting for a clock boundary).
+  const playRow = document.createElement('div');
+  playRow.className = 'tl-presets';
+  const play = document.createElement('button');
+  play.className = 'btn tiny';
+  play.textContent = t('editor.insp.schedule.playDay');
+  play.addEventListener('click', () => {
+    const sch = document.getElementById('skin').__aegisSchedule;
+    if (!sch || typeof sch.transitionTo !== 'function') return;
+    const order = ['dawn', 'day', 'dusk', 'night'];
+    let i = 0;
+    const step = () => {
+      const name = order[i];
+      sch.transitionTo(sched.slots[name].startHour);
+      state.pack.__previewHour = sched.slots[name].startHour;
+      if (++i < order.length) setTimeout(step, 2800); // fade (2 s) + a short hold
+    };
+    step();
+  });
+  playRow.appendChild(play);
+  panel.appendChild(playRow);
 
   // Palette presets — fill the four slots from the pack's base colours.
   const plabel = document.createElement('div');

@@ -663,6 +663,7 @@
   "editor.insp.schedule.preset.warmCool": "暖 ↔ 冷",
   "editor.insp.schedule.preset.golden": "黄金时刻",
   "editor.insp.schedule.preset.clear": "清除覆盖",
+  "editor.insp.schedule.playDay": "播放一整天",
   "editor.insp.section.timeline": "动画时间轴",
   "editor.insp.timeline.enable": "启用时间轴",
   "editor.insp.timeline.intro": "在循环周期内为组件和氛围制作关键帧——淡入淡出、滑动、脉动或旋转。",

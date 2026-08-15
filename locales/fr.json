@@ -663,6 +663,7 @@
   "editor.insp.schedule.preset.warmCool": "Chaud ↔ froid",
   "editor.insp.schedule.preset.golden": "Heure dorée",
   "editor.insp.schedule.preset.clear": "Effacer les remplacements",
+  "editor.insp.schedule.playDay": "Lire la journée",
   "editor.insp.section.timeline": "Chronologie d'animation",
   "editor.insp.timeline.enable": "Activer la chronologie",
   "editor.insp.timeline.intro": "Animez les widgets et l'ambiance sur un cycle en boucle : fondu, glissement, pulsation ou rotation.",

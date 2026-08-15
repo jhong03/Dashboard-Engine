@@ -628,6 +628,7 @@
   "editor.insp.schedule.preset.warmCool": "暖 ↔ 冷",
   "editor.insp.schedule.preset.golden": "黃金時刻",
   "editor.insp.schedule.preset.clear": "清除覆蓋",
+  "editor.insp.schedule.playDay": "播放一整天",
   "editor.insp.section.timeline": "動畫時間軸",
   "editor.insp.timeline.enable": "啟用時間軸",
   "editor.insp.timeline.intro": "在循環週期內為元件與氛圍製作關鍵影格——淡入淡出、滑動、脈動或旋轉。",

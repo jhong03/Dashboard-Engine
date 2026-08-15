@@ -663,6 +663,7 @@
   "editor.insp.schedule.preset.warmCool": "暖 ↔ 寒",
   "editor.insp.schedule.preset.golden": "ゴールデンアワー",
   "editor.insp.schedule.preset.clear": "上書きをクリア",
+  "editor.insp.schedule.playDay": "1日を再生",
   "editor.insp.section.timeline": "アニメーションタイムライン",
   "editor.insp.timeline.enable": "タイムラインを有効にする",
   "editor.insp.timeline.intro": "ループする周期でウィジェットやアンビエンスにキーフレームを付けます——フェード、スライド、パルス、回転。",

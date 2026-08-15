@@ -961,6 +961,7 @@ function effectiveScheduledPalette(pack, opts) {
 }
 
 function applySchedule(root, pack, opts) {
+  root.__aegisSchedule = null;
   const sched = pack.skin.schedule;
   if (!sched || !sched.enabled) return;
   const reduced = (opts && opts.staticAmbience === true)
@@ -978,6 +979,14 @@ function applySchedule(root, pack, opts) {
     sinceCheck: 0,
   };
 
+  // Begin a crossfade from the currently-painted palette to `to`. t0 is anchored
+  // on the first tick so the fade is timed off real frames, not the trigger.
+  const startFade = (to, slotName) => {
+    state.fade = { from: state.current, to, t0: null };
+    state.current = to;
+    if (slotName) state.slotKey = slotName;
+  };
+
   const tick = (dt, t) => {
     // Re-check the active slot about once a wall-clock minute. dt-accumulated so
     // it pauses with the loop on freeze; the rest of the time this is two float
@@ -987,15 +996,11 @@ function applySchedule(root, pack, opts) {
       if (state.sinceCheck >= SCHEDULE_CHECK_SEC) {
         state.sinceCheck = 0;
         const slot = activeScheduleSlot(sched, resolveScheduleHour(pack));
-        if (slot && slot.name !== state.slotKey) {
-          const to = mergePalette(palette, slot.palette);
-          state.fade = { from: state.current, to, t0: t };
-          state.slotKey = slot.name;
-          state.current = to;
-        }
+        if (slot && slot.name !== state.slotKey) startFade(mergePalette(palette, slot.palette), slot.name);
       }
     }
     if (state.fade) {
+      if (state.fade.t0 === null) state.fade.t0 = t;
       const f = Math.min(1, (t - state.fade.t0) / SCHEDULE_FADE_MS);
       setPaletteVars(root, lerpPalette(state.fade.from, state.fade.to, f), texture, shape);
       if (f >= 1) state.fade = null;
@@ -1004,6 +1009,18 @@ function applySchedule(root, pack, opts) {
   // Rides the shared loop (like a rig): a schedule-only pack starts the loop on
   // subscribe; a stale ticker is dropped when applySkin rebuilds __aegisAmbience.
   registerSurfaceTick(root, tick);
+
+  // Editor/dev affordance: crossfade to a given hour's slot ON DEMAND (the
+  // Preview-time picker and the "Play the day" button) so the 2 s transition is
+  // visible without waiting for a real clock boundary.
+  root.__aegisSchedule = {
+    transitionTo(hour) {
+      const slot = activeScheduleSlot(sched, ((Math.floor(hour) % 24) + 24) % 24);
+      if (!slot) return;
+      startFade(mergePalette(palette, slot.palette), slot.name);
+      registerSurfaceTick(root, tick); // make sure the loop is running to advance it
+    },
+  };
 }
 
 // ── Keyframe timeline (Phase G) ──────────────────────────────────────────────

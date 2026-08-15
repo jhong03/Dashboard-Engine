@@ -663,6 +663,7 @@
   "editor.insp.schedule.preset.warmCool": "Warm ↔ cool",
   "editor.insp.schedule.preset.golden": "Golden hour",
   "editor.insp.schedule.preset.clear": "Clear overrides",
+  "editor.insp.schedule.playDay": "Play through the day",
   "editor.insp.section.timeline": "Animation timeline",
   "editor.insp.timeline.enable": "Enable timeline",
   "editor.insp.timeline.intro": "Keyframe widgets and ambience over a looping cycle — fade, slide, pulse or spin.",

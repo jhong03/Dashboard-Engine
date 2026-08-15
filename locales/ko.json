@@ -663,6 +663,7 @@
   "editor.insp.schedule.preset.warmCool": "따뜻함 ↔ 차가움",
   "editor.insp.schedule.preset.golden": "골든 아워",
   "editor.insp.schedule.preset.clear": "재정의 지우기",
+  "editor.insp.schedule.playDay": "하루 재생",
   "editor.insp.section.timeline": "애니메이션 타임라인",
   "editor.insp.timeline.enable": "타임라인 사용",
   "editor.insp.timeline.intro": "반복 주기 동안 위젯과 앰비언스에 키프레임을 지정합니다 — 페이드, 슬라이드, 펄스, 회전.",
