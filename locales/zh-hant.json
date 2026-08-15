@@ -148,6 +148,7 @@
   "manager.settings.about.openError": "無法開啟宣告檔案。",
   "manager.builder.ariaLabel": "新包構建器",
   "manager.builder.title": "新建包",
+  "manager.builder.intro": "這是一個快速起點——在此選擇整體結構（外觀、元件、動態）。之後可在編輯器中微調每個細節。",
   "manager.builder.steps": "步驟",
   "manager.builder.livePreview": "即時預覽",
   "manager.welcome.title": "歡迎使用 Dashboard Engine",

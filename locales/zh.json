@@ -168,6 +168,7 @@
 
   "manager.builder.ariaLabel": "新包构建器",
   "manager.builder.title": "新建包",
+  "manager.builder.intro": "这是一个快速起点——在此选择整体结构（外观、组件、动效）。之后可在编辑器中微调每个细节。",
   "manager.builder.steps": "步骤",
   "manager.builder.livePreview": "实时预览",
 

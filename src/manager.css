@@ -484,6 +484,18 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .builder-title { margin: 0; font-size: 16px; font-weight: 600; }
+/* Always-on banner: sets the expectation that the builder is for overall
+   structure and the editor is where you fine-tune. */
+.builder-intro {
+  margin: 0;
+  padding: 9px 18px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-dim);
+  background: var(--panel-2, #1f2226);
+  border-bottom: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+}
 .builder-body { flex: 1; display: flex; min-height: 0; }
 .builder-rail {
   flex: 0 0 190px;

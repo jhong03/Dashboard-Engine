@@ -168,6 +168,7 @@
 
   "manager.builder.ariaLabel": "New pack builder",
   "manager.builder.title": "New pack",
+  "manager.builder.intro": "This is a quick starting point — choose the overall structure here (the look, the widgets, the motion). You'll fine-tune every detail in the editor afterwards.",
   "manager.builder.steps": "Steps",
   "manager.builder.livePreview": "Live preview",
 

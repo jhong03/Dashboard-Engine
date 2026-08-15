@@ -168,6 +168,7 @@
 
   "manager.builder.ariaLabel": "새 팩 빌더",
   "manager.builder.title": "새 팩",
+  "manager.builder.intro": "여기는 빠른 출발점입니다 — 전체 구조(모양, 위젯, 움직임)를 여기서 고르세요. 세부 사항은 나중에 에디터에서 다듬습니다.",
   "manager.builder.steps": "단계",
   "manager.builder.livePreview": "실시간 미리보기",
 

@@ -168,6 +168,7 @@
 
   "manager.builder.ariaLabel": "新規パックビルダー",
   "manager.builder.title": "新規パック",
+  "manager.builder.intro": "ここは手早い出発点です——全体の構成（見た目・ウィジェット・動き）をここで選びます。細かな調整はあとでエディターで行います。",
   "manager.builder.steps": "ステップ",
   "manager.builder.livePreview": "ライブプレビュー",
 

@@ -168,6 +168,7 @@
 
   "manager.builder.ariaLabel": "Creador de paquetes",
   "manager.builder.title": "Nuevo paquete",
+  "manager.builder.intro": "Este es un punto de partida rápido: elige aquí la estructura general (el aspecto, los widgets, el movimiento). Ajustarás cada detalle en el editor después.",
   "manager.builder.steps": "Pasos",
   "manager.builder.livePreview": "Vista previa en vivo",
 
