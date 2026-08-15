@@ -1277,6 +1277,21 @@ function captureEditorTrailer(outDir, opts) {
           if (ready) break;
           await new Promise((r) => setTimeout(r, 150));
         }
+        // Mask-painter beat: open the paint-mask tool (pre-painted) and hold, so the
+        // trailer can show the "paint effects onto a region" feature.
+        if (opts && opts.mask) {
+          await win.webContents.executeJavaScript('window.__editorDemoApi.openMaskDemo(); true;').catch(() => {});
+          await new Promise((r) => setTimeout(r, 900)); // let the backdrop + mask images decode
+          const mtotal = Math.max(1, Math.round(((opts.seconds || 4)) * fps));
+          for (let i = 0; i < mtotal; i++) {
+            await win.webContents.executeJavaScript(`window.__cap && window.__cap.step(${(i * 1000) / fps});`).catch(() => {});
+            await new Promise((r) => setTimeout(r, 16));
+            const img = await win.webContents.capturePage();
+            fs.writeFileSync(path.join(outDir, `f${String(i).padStart(4, '0')}.png`), img.toPNG());
+            frame = i + 1;
+          }
+          clearTimeout(guard); finish(frame); return;
+        }
         await win.webContents.executeJavaScript(buildEditorTimeline()).catch(() => {});
         const durMs = await win.webContents.executeJavaScript('window.__demo.duration()').catch(() => 5000);
         const total = Math.max(1, Math.round(((durMs + 900) / 1000) * fps)); // +0.9s tail so the last action settles
@@ -1356,6 +1371,103 @@ function trailerGalleryPack(imageRels) {
       { type: 'ring-clock', rect: [4, 9, 23, 26], z: 2, style: trailerStyle({}), options: { style: 'halo', showDate: true } },
       { type: 'weather', rect: [4, 38, 23, 9], z: 2, style: trailerStyle({ panel: true, padding: 16 }), options: { lat: 0, lon: 0, place: null, details: true, compact: true } },
       { type: 'sysinfo', rect: [4, 49, 23, 22], z: 2, style: trailerStyle({ panel: true, padding: 10 }), options: { memory: true, disk: true, uptime: true, host: false, statusText: null } },
+    ],
+  };
+}
+
+// A shared dark, sci-fi skin for the feature-showcase trailer dashboards below,
+// with a soft radial base fill so the frame isn't flat. `over` tweaks per-pack.
+function trailerSkin(over) {
+  return Object.assign({
+    palette: { void: '#05090F', glass: '#0C1A2A', accent: '#4DDDFF', accentBright: '#A5F2FF', muted: '#8FB6CC', warn: '#FFB23E', gold: '#E8C56A' },
+    typography: { display: 'rajdhani', uppercase: true, letterSpacing: 0.2 },
+    texture: { scanlines: 0, grid: 0.05, glow: 0.5, vignette: 0.5 },
+    shape: { cornerNotches: true, borderOpacity: 0.28, panelOpacity: 0.66, radius: 10 },
+    ambience: { effect: 'none', density: 0.4 }, wallpaper: null,
+    background: { fill: { type: 'radial', posX: 30, posY: 22, angle: 0, stops: [{ color: '#132338', at: 0 }, { color: '#05090F', at: 100 }], animate: false, grain: false } },
+  }, over || {});
+}
+
+// "Command center" — a launcher (pinned/recent/open apps) as the hero, with a
+// clock, weather and a now-playing widget. Shows the desktop-manager side: apps,
+// media, at a glance. Demo services (trailer-dash.js) populate every panel.
+function trailerCommandPack() {
+  return {
+    schema: 2, id: '_trailer-command', name: 'Command Center',
+    persona: { name: 'Dashboard', tagline: 'DESKTOP', lines: ['Everything at hand.'] },
+    skin: trailerSkin(), canvas: { padding: 0 }, props: [],
+    components: [
+      { type: 'text', rect: [4, 3.5, 52, 4.6], z: 3, style: trailerStyle({ align: 'left', fontScale: 1.0, glow: 0.4 }), options: { text: 'COMMAND CENTER' } },
+      { type: 'launcher', rect: [4, 11, 53, 51], z: 2, style: trailerStyle({ panel: true, padding: 16 }), options: { label: 'APPS', pinned: true, recent: true, running: true, iconSize: 'l', labels: true } },
+      { type: 'notifications', rect: [4, 64, 53, 25], z: 2, style: trailerStyle({ panel: true, padding: 14 }), options: { label: 'NOTIFICATIONS' } },
+      { type: 'ring-clock', rect: [63, 9, 33, 33], z: 2, style: trailerStyle({}), options: { style: 'halo', showDate: true } },
+      { type: 'weather', rect: [63, 45, 33, 9], z: 2, style: trailerStyle({ panel: true, padding: 16 }), options: { lat: 0, lon: 0, place: null, details: true, compact: true } },
+      { type: 'nowplaying', rect: [63, 58, 33, 31], z: 2, style: trailerStyle({ panel: true, padding: 14 }), options: { label: 'NOW PLAYING', showArt: true, showControls: true } },
+    ],
+  };
+}
+
+// "Sound" — the audio visualizer as the star: a full-bleed reactive bloom behind
+// a bars spectrum, with the now-playing track and a clock. Synthetic audio drives
+// the visualizers so the beat actually pulses (see trailer-dash.js / components.js).
+function trailerVizPack() {
+  return {
+    schema: 2, id: '_trailer-viz', name: 'Sound',
+    persona: { name: 'Dashboard', tagline: 'AUDIO', lines: ['Turn it up.'] },
+    skin: trailerSkin({
+      palette: { void: '#070510', glass: '#160E2A', accent: '#FF5CC8', accentBright: '#8FE6FF', muted: '#B79AD6', warn: '#FFB23E', gold: '#E8C56A' },
+      background: { fill: { type: 'radial', posX: 50, posY: 55, angle: 0, stops: [{ color: '#1A1030', at: 0 }, { color: '#070510', at: 100 }], animate: false, grain: false } },
+    }),
+    canvas: { padding: 0 }, props: [],
+    components: [
+      { type: 'visualizer', rect: [5, 33, 90, 55], z: 1, style: trailerStyle({ panel: true, padding: 18 }), options: { style: 'bars' } },
+      { type: 'nowplaying', rect: [24, 9, 52, 16], z: 2, style: trailerStyle({ panel: true, padding: 16 }), options: { label: 'NOW PLAYING', showArt: true, showControls: true } },
+    ],
+  };
+}
+
+// "Studio" — three productivity widgets side by side: a Pomodoro focus timer, a
+// per-app volume mixer, and a calendar planner. The "look how much it does" beat.
+function trailerStudioPack() {
+  return {
+    schema: 2, id: '_trailer-studio', name: 'Studio',
+    persona: { name: 'Dashboard', tagline: 'FOCUS', lines: ['Get it done.'] },
+    skin: trailerSkin(), canvas: { padding: 0 }, props: [],
+    components: [
+      { type: 'text', rect: [4, 3.5, 40, 4.6], z: 3, style: trailerStyle({ align: 'left', fontScale: 1.0, glow: 0.4 }), options: { text: 'STUDIO' } },
+      { type: 'pomodoro', rect: [4, 11, 29, 62], z: 2, style: trailerStyle({ panel: true, padding: 14 }), options: { focusMin: 25, shortBreakMin: 5, longBreakMin: 15, showPips: true, notify: false, sound: false } },
+      { type: 'mixer', rect: [36, 11, 28, 78], z: 2, style: trailerStyle({ panel: true, padding: 14 }), options: { label: 'VOLUME', showMaster: true } },
+      { type: 'calendar', rect: [67, 11, 29, 78], z: 2, style: trailerStyle({ panel: true, padding: 12 }), options: { label: 'PLANNER' } },
+      { type: 'weather', rect: [4, 78, 29, 9], z: 2, style: trailerStyle({ panel: true, padding: 16 }), options: { lat: 0, lon: 0, place: null, details: true, compact: true } },
+    ],
+  };
+}
+
+// "Particle Studio" — a dense, glowing CUSTOM particle system (Phase E) rising
+// over a warm gradient, with a hero clock. Shows that designers build their own
+// particles (count/size/speed/colour/blend), not just pick a preset.
+function trailerParticlesPack() {
+  return {
+    schema: 2, id: '_trailer-particles', name: 'Particle Studio',
+    persona: { name: 'Dashboard', tagline: 'PARTICLES', lines: ['Make it yours.'] },
+    skin: trailerSkin({
+      palette: { void: '#0A0510', glass: '#1C1020', accent: '#FF8A3D', accentBright: '#FFD08A', muted: '#D6A88C', warn: '#FFB23E', gold: '#E8C56A' },
+      ambience: {
+        mode: 'custom', effect: 'custom', density: 0.6,
+        system: {
+          emitter: { shape: 'bottom', x: 50, y: 50 }, sprite: { builtin: 'spark' },
+          count: 200, sizeMin: 0.12, sizeMax: 0.45, speedMin: 2, speedMax: 6,
+          direction: 0, spread: 32, gravity: -1.1, wind: 0.4, drag: 0.05,
+          color: { paletteKey: 'accent', jitter: 0.5 }, opacityLife: 'fadeOut',
+          rotate: 0, wobble: 1.4, blend: 'additive', pointer: { mode: 'none', radius: 24, strength: 0.6 },
+        },
+      },
+      background: { fill: { type: 'radial', posX: 50, posY: 82, angle: 0, stops: [{ color: '#2C1222', at: 0 }, { color: '#0A0510', at: 100 }], animate: false, grain: false } },
+    }),
+    canvas: { padding: 0 }, props: [],
+    components: [
+      { type: 'text', rect: [0, 11, 100, 6], z: 2, style: trailerStyle({ align: 'center', fontScale: 1.1, glow: 0.5 }), options: { text: 'PARTICLE STUDIO' } },
+      { type: 'ring-clock', rect: [38, 31, 24, 33], z: 2, style: trailerStyle({}), options: { style: 'halo', showDate: true } },
     ],
   };
 }
@@ -2064,6 +2176,13 @@ if (IS_SESSION) {
         .catch((e) => { console.log(`[editor-trailer] failed: ${e && e.message}`); app.quit(); });
       return;
     }
+    // DE_MASK_TRAILER=<dir>: capture the paint-mask tool (masks/effects beat).
+    if (envFlag('MASK_TRAILER')) {
+      captureEditorTrailer(envFlag('MASK_TRAILER'), { pack: envFlag('MASK_TRAILER_PACK') || 'neon-cyberpunk', mask: true, seconds: Number(envFlag('MASK_SECS')) || 4 })
+        .then((n) => { console.log(`[mask-trailer] ${n} frames -> ${envFlag('MASK_TRAILER')}`); app.quit(); })
+        .catch((e) => { console.log(`[mask-trailer] failed: ${e && e.message}`); app.quit(); });
+      return;
+    }
     // DE_LOWERTHIRDS=<dir> + DE_LT_CAPTIONS="a|b|c": render the caption banners.
     if (envFlag('LOWERTHIRDS')) {
       const caps = (envFlag('LT_CAPTIONS') || '').split('|').map((s) => s.trim()).filter(Boolean);
@@ -2104,6 +2223,15 @@ if (IS_SESSION) {
           try { assets[rel] = `data:${s.m};base64,${fs.readFileSync(s.p).toString('base64')}`; imgs.push(rel); } catch (e) { /* skip */ }
         });
         spec = { pack: trailerGalleryPack(imgs), assets, transparent: false };
+        opts = { transparent: false, seconds: 6, fps: 30 };
+      } else if (kind === 'command' || kind === 'viz' || kind === 'studio' || kind === 'particles') {
+        // Feature-showcase dashboards (launcher / audio visualizer / productivity /
+        // custom particles), rendered opaque over their own base fill. Demo services
+        // populate them.
+        const pack = kind === 'command' ? trailerCommandPack()
+          : kind === 'viz' ? trailerVizPack()
+            : kind === 'particles' ? trailerParticlesPack() : trailerStudioPack();
+        spec = { pack, assets: {}, transparent: false };
         opts = { transparent: false, seconds: 6, fps: 30 };
       } else {
         spec = { pack: trailerHudPack(), assets: {}, transparent: true };

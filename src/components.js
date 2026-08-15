@@ -3663,6 +3663,36 @@ function createRenderer(services) {
   }
   function vizStopLoop() { if (viz.raf) { cancelAnimationFrame(viz.raf); viz.raf = 0; } }
 
+  // Marketing/trailer capture ONLY: drive every visualizer with synthetic "music"
+  // so a captured beat shows them reacting, without live system audio (which an
+  // offscreen render can't get). Guarded by window.__vizSynthetic, which only the
+  // trailer tooling (trailer-dash.js) ever sets — production never runs this.
+  function vizStartSyntheticLoop() {
+    if (viz.raf) return;
+    const t0 = (window.performance && performance.now()) || 0;
+    const freq = new Uint8Array(256), time = new Uint8Array(512);
+    const loop = () => {
+      viz.raf = requestAnimationFrame(loop);
+      if (viz.drawers.size === 0) return;
+      const t = (((window.performance && performance.now()) || 0) - t0) / 1000;
+      const kick = Math.pow(0.5 + 0.5 * Math.sin(t * Math.PI * 2 * 1.9), 4); // ~2 Hz beat
+      // Several travelling "formants" so the whole spectrum dances (not just bass),
+      // with only a mild high-frequency rolloff so the right of the bars stays lively.
+      for (let i = 0; i < 256; i++) {
+        const v = 0.5 * Math.sin(i * 0.05 - t * 4) + 0.3 * Math.sin(i * 0.13 + t * 2.5) + 0.2 * Math.sin(i * 0.31 - t * 6);
+        const amp = (0.55 + 0.45 * v) * (0.6 + 0.4 * kick) * (1 - 0.32 * (i / 256));
+        freq[i] = Math.max(6, Math.min(255, 34 + 224 * amp));
+      }
+      for (let i = 0; i < 512; i++) {
+        const x = i / 511;
+        const w = Math.sin(x * Math.PI * 5 + t * 7) + 0.4 * Math.sin(x * Math.PI * 11 - t * 5);
+        time[i] = 128 + 72 * w * (0.5 + 0.5 * kick);
+      }
+      for (const d of viz.drawers) { try { d(freq, time); } catch (e) { /* one bad drawer won't stop the rest */ } }
+    };
+    viz.raf = requestAnimationFrame(loop);
+  }
+
   function vizEnsureRunning() {
     vizAcquire().then((ok) => {
       if (ok) {
@@ -3687,7 +3717,8 @@ function createRenderer(services) {
   // leaves (freeze / re-render), the loop stops and capture is suspended.
   function vizAddDrawer(fn) {
     viz.drawers.add(fn);
-    vizEnsureRunning();
+    if (window.__vizSynthetic) vizStartSyntheticLoop(); // trailer capture only
+    else vizEnsureRunning();
     return () => {
       viz.drawers.delete(fn);
       // Only stop the DRAW loop when nothing's on screen — keep the audio graph

@@ -2866,6 +2866,27 @@ function exposeEditorDemoApi() {
       renderAll();
     },
     renderAll() { renderAll(); },
+    // Marketing tooling: open the paint-mask tool over the loaded pack's wallpaper
+    // with a hand-painted-looking mask already applied, so a trailer beat can show
+    // the "paint effects onto a region" feature (masks) as a finished-looking shot.
+    openMaskDemo() {
+      const layers = (state.pack.skin.background && state.pack.skin.background.layers) || [];
+      let rel = state.pack.skin.wallpaper;
+      for (const L of layers) { if (L && L.src && !/\.(mp4|webm)$/i.test(L.src) && state.assets[L.src]) { rel = L.src; break; } }
+      if (!rel || !state.assets[rel]) return;
+      const c = document.createElement('canvas'); c.width = 480; c.height = 270;
+      const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
+      const blob = (cx, cy, r) => {
+        const g = x.createRadialGradient(cx, cy, 0, cx, cy, r);
+        g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.65, 'rgba(255,255,255,0.92)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill();
+      };
+      for (let i = 0; i < 11; i++) blob(52 + i * 37, 205 - Math.sin(i * 0.6) * 16, 44); // a painted band along the lower skyline
+      blob(360, 150, 58); blob(408, 176, 46);
+      const maskRel = 'mask-demo.png';
+      state.assets[maskRel] = c.toDataURL('image/png');
+      openMaskPainter(rel, maskRel, () => {}, 'Ripple');
+    },
   };
   window.__demoReady = true;
 }
