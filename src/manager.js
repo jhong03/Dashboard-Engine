@@ -1587,6 +1587,7 @@ async function renderAssistantCfg() {
   $('ai-model').value = c.model || '';
   $('ai-persona').value = c.persona || '';
   renderAssistantPresets(c.personaPresets || []);
+  syncPersonaPresetDropdown(); // reflect the saved persona in the preset dropdown
   $('ai-speak').checked = c.speak !== false;
   $('ai-context-limit').value = c.contextLimit || 12;
   $('ai-key').value = '';
@@ -1692,6 +1693,20 @@ function prewarmSelectedVoice() {
   if (voiceId) aegis.voicePrewarm(voiceId);
 }
 
+// Keep the persona dropdown reflecting the active persona: select the preset
+// whose text matches the system-prompt box, or the "Start from a preset…"
+// placeholder once the text is edited into something custom.
+function syncPersonaPresetDropdown() {
+  const sel = $('ai-persona-preset');
+  if (!sel) return;
+  const text = $('ai-persona').value;
+  let match = '';
+  for (const key of Object.keys(ASSISTANT_PRESETS)) {
+    if (ASSISTANT_PRESETS[key] === text) { match = key; break; }
+  }
+  sel.value = match;
+}
+
 async function saveAssistant() {
   const patch = {
     provider: 'openai',
@@ -1708,9 +1723,10 @@ async function saveAssistant() {
 }
 
 function wireAssistantCfg() {
-  // Picking a preset fills the system-prompt box; it's a one-shot action (not
-  // persistent state), so reset the dropdown after applying so the user can
-  // pick again or keep editing the text.
+  // Picking a preset fills the system-prompt box AND stays selected in the
+  // dropdown, so it's clear which persona is active. Editing the prompt into
+  // something that no longer matches a preset falls the dropdown back to the
+  // "Start from a preset…" placeholder (see the input listener below).
   $('ai-persona-preset').addEventListener('change', (e) => {
     const key = e.target.value;
     const preset = ASSISTANT_PRESETS[key];
@@ -1722,8 +1738,11 @@ function wireAssistantCfg() {
       // an English accent. Auto-selecting a matching voice keeps them in step.
       autoSelectVoiceForPersona(key);
     }
-    e.target.value = '';
   });
+
+  // As soon as the user edits the prompt, the dropdown may no longer describe it
+  // — re-sync (shows the matching preset, or the placeholder when it's custom).
+  $('ai-persona').addEventListener('input', syncPersonaPresetDropdown);
 
   // Picking a voice pre-warms its HD engine so the Test below is snappy.
   $('ai-voice').addEventListener('change', prewarmSelectedVoice);
@@ -1824,7 +1843,7 @@ function renderAssistantPresets(presets) {
     const use = document.createElement('button');
     use.type = 'button'; use.className = 'ai-preset-use'; use.textContent = p.name;
     use.title = t('manager.assistant.usePersona');
-    use.addEventListener('click', () => { $('ai-persona').value = p.prompt; });
+    use.addEventListener('click', () => { $('ai-persona').value = p.prompt; syncPersonaPresetDropdown(); });
     const del = document.createElement('button');
     del.type = 'button'; del.className = 'ai-preset-del'; del.textContent = '×';
     del.title = t('manager.assistant.deletePersona', { name: p.name });
