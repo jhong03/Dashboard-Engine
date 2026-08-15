@@ -247,15 +247,20 @@ body.editor-body {
 .g-card-head .btn.tiny { padding: 1px 6px; min-width: 22px; }
 .g-row { display: flex; align-items: center; gap: 6px; }
 .g-row input[type="color"] { flex: 1; }
-.g-row.tl-key input[type="number"] { width: 4.5em; }
-.g-row.tl-key select { flex: 1; }
+/* Keyframe rows and their column header share ONE grid so Time / Value / Ease /
+   remove line up exactly (a flex layout drifted as the inputs varied in width). */
+.g-row.tl-head, .g-row.tl-key {
+  display: grid;
+  /* time / value are just small numbers; give the easing dropdown the room. */
+  grid-template-columns: minmax(34px, 0.8fr) minmax(34px, 0.8fr) minmax(78px, 2fr) 20px;
+  gap: 6px;
+  align-items: center;
+}
 .g-row.tl-key { margin-bottom: 4px; }
-/* Column headers above the keyframe rows — line up with the two number inputs
-   (4.5em each) + the easing select (flex). */
-.g-row.tl-head { margin: 4px 0 2px; }
-.g-row.tl-head span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-dim); }
-.g-row.tl-head span:nth-child(1), .g-row.tl-head span:nth-child(2) { width: 4.5em; flex: 0 0 auto; }
-.g-row.tl-head span:nth-child(3) { flex: 1; }
+.g-row.tl-head { margin: 6px 0 2px; }
+.g-row.tl-key input[type="number"], .g-row.tl-key select { width: 100%; min-width: 0; }
+.g-row.tl-key .btn.tiny { min-width: 0; padding: 1px 0; }
+.g-row.tl-head span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Photo gallery: the ordered, removable photo list in the inspector. */
 .gallery-editlist { display: flex; flex-direction: column; gap: 4px; }
