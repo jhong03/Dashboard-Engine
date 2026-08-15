@@ -24,7 +24,7 @@ const OUT_DIR = path.join(APP_ROOT, 'out');
 // One fixed line for every preset so renders are comparable; long enough to
 // hear pacing, pauses and the DSP character.
 const AUDITION_TEXT =
-  'Good evening. All systems are online, and every diagnostic reports nominal performance across the board.';
+  'Good evening, sir. All systems are online, and every diagnostic reports nominal performance across the board.';
 
 async function renderPreset(entry, manifest, piperPath, ffmpegPath) {
   const { file, profile } = entry;
