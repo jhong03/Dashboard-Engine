@@ -1517,7 +1517,8 @@ function captureTrailerClip(packId, outDir, opts) {
         finish(frame);
       }
     });
-    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), capture: '1' } });
+    // fakeHour forces a time-of-day slot (for the schedule beat); '' = real clock.
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), capture: '1', fakeHour: (opts && opts.fakeHour != null) ? String(opts.fakeHour) : '' } });
   });
 }
 
@@ -2207,13 +2208,15 @@ if (IS_SESSION) {
       const ids = (envFlag('PACKS') || 'jarvis').split(',').map((s) => s.trim()).filter(Boolean);
       const secs = Number(envFlag('TRAILER_SECS')) || 6;
       const caps = (envFlag('CAPTIONS') || '').split('|');
+      const fakeHour = envFlag('FAKE_HOUR'); // forces a time-of-day slot for the schedule beat
       (async () => {
         for (let k = 0; k < ids.length; k++) {
-          const n = await captureTrailerClip(ids[k], path.join(dir, ids[k]), { seconds: secs, caption: (caps[k] || '').trim() });
+          const n = await captureTrailerClip(ids[k], path.join(dir, ids[k]), { seconds: secs, caption: (caps[k] || '').trim(), fakeHour });
           console.log(`[trailer] ${ids[k]}: ${n} frames`);
         }
         app.quit();
       })();
+      return; // capture-only run — don't also spawn the live engine
     }
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) openFirstWindows();
