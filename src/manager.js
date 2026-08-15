@@ -1886,6 +1886,8 @@ const CREATE_SKIN = [
   ['Wallpaper', 'an image (≤5 MB) or a muted looping video (mp4/webm, ≤30 MB), with fit + focal point.'],
   ['Background layers', 'stack up to 6 image/video layers with a parallax depth (0–1) + drift — the cursor gives the scene 3-D depth.'],
   ['Background effects', 'up to 3 WebGL shader effects per layer — ripple · sway · drift-warp · pulse · cursor-ripple · waves · shimmer · shake · spin · scroll · chroma-shift — each scoped by an optional painted mask or region (fail-soft to a static image without WebGL).'],
+  ['Time of day', 'recolour the palette across four slots — dawn · day · dusk · night — each with a start hour and a partial override; the active slot crossfades over 2 s as the clock passes it.'],
+  ['Animation timeline', 'keyframe component opacity / move / scale / rotate and ambience opacity over a looping cycle — up to 8 tracks, 6 keys each, loop / ping-pong / once, four easings.'],
 ];
 
 const CREATE_PROPS = [
@@ -1995,7 +1997,7 @@ function renderCreate() {
   root.appendChild(createSection(t('create.section.skin')));
   const skinList = document.createElement('div');
   skinList.className = 'create-deflist';
-  const SKIN_SLUGS = ['palette', 'fonts', 'ambience', 'textures', 'wallpaper', 'layers', 'effects'];
+  const SKIN_SLUGS = ['palette', 'fonts', 'ambience', 'textures', 'wallpaper', 'layers', 'effects', 'schedule', 'timeline'];
   CREATE_SKIN.forEach((_, i) => {
     const slug = SKIN_SLUGS[i];
     const row = document.createElement('div');

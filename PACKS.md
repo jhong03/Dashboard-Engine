@@ -306,6 +306,81 @@ that sways, eyes that follow the cursor.
   so they align; keep them modest (they scale to the component box). Motion should
   read at the default params in a 10-second clip — subtle beats frantic.
 
+## Time of day (`skin.schedule`)
+
+Recolour the whole dashboard as the local clock passes through four slots —
+**dawn, day, dusk, night**. Each slot names a start hour and a *partial* palette
+override: only the colours you set change, the rest keep your base palette. When
+the active slot changes the palette **crossfades over 2 seconds**.
+
+```jsonc
+"skin": {
+  "palette": { "accent": "#3FD8FF", "void": "#04080F", ... },   // your base
+  "schedule": {
+    "enabled": true,
+    "slots": {
+      "dawn":  { "startHour": 5,  "palette": { "accent": "#FFB27A", "void": "#0C0A12" } },
+      "day":   { "startHour": 8,  "palette": {} },               // {} = base palette
+      "dusk":  { "startHour": 17, "palette": { "accent": "#FF8A5B", "void": "#160A10" } },
+      "night": { "startHour": 20, "palette": { "accent": "#5B7BFF", "void": "#02040A" } }
+    }
+  }
+}
+```
+
+- **What changes:** the seven palette tokens (`void`, `glass`, `accent`,
+  `accentBright`, `muted`, `warn`, `gold`) — so component chrome, glow, borders
+  and the surface colour shift together. The gradient base fill and particle
+  colours are baked at load and don't recolour mid-run; drive the mood through
+  the palette tokens.
+- **Slots wrap.** A slot runs until the next slot's start hour; `night` wraps
+  past midnight to `dawn`. Start hours are yours to set (they needn't be the
+  defaults), but the order stays dawn → day → dusk → night.
+- **Author it** in the editor's Skin tab → **Time of day**: toggle it on, set
+  each slot's colours, and use **Preview time** to jump the stage to any slot.
+- **Dev override:** launch with `DE_FAKE_HOUR=19` to force the clock to 7 pm.
+
+## Animation timeline (`pack.timeline`)
+
+Keyframe a handful of numeric targets over a looping cycle — fade a widget in
+and out, slide it, pulse its scale, spin it, or breathe the ambience layer.
+
+```jsonc
+"timeline": {
+  "duration": 8,            // seconds, 1–300
+  "loop": "loop",           // loop | mirror (ping-pong) | once
+  "tracks": [               // ≤ 8 tracks
+    { "target": { "kind": "component", "index": 2, "prop": "y" },
+      "keys": [             // ≤ 6, sorted by time
+        { "t": 0, "v": 0,  "ease": "linear" },
+        { "t": 4, "v": -6, "ease": "inout" },   // move up 6 cqw by the half-loop
+        { "t": 8, "v": 0,  "ease": "inout" } ] },
+    { "target": { "kind": "ambience", "prop": "opacity" },
+      "keys": [ { "t": 0, "v": 1 }, { "t": 4, "v": 0.3 }, { "t": 8, "v": 1 } ] }
+  ]
+}
+```
+
+| target | `prop` | range | what it animates |
+|---|---|---|---|
+| `component` (by `index`) | `opacity` | 0–1 | the widget's opacity |
+| | `x` / `y` | ±50 cqw | a translate offset |
+| | `scale` | 0–3 | scale (1 = normal) |
+| | `rotate` | ±180° | rotation, **added** to the component's base tilt |
+| `ambience` | `opacity` | 0–1 | fades the whole particle layer |
+
+- **Easing** is per key and governs the segment arriving at it: `linear`,
+  `in`, `out`, `inout`. Before the first key / after the last, the value holds.
+- **Composed transforms.** All of a component's animated transform props combine
+  into one transform (translate · rotate · scale) and preserve its base style
+  rotate, so multiple tracks on the same widget cooperate.
+- **One shared loop.** The timeline (and the schedule) ride the *same* animation
+  frame as ambience and parallax — never a second loop — so they honour the fps
+  cap and freeze with the wallpaper. On a still surface (thumbnail, reduced
+  motion) the timeline shows its first-keyframe resting frame.
+- **Author it** in the editor's Skin tab → **Animation timeline**: it plays live
+  on the stage as you add tracks and keys.
+
 ## Components
 
 Up to 24 components, placed freely: `rect: [x, y, w, h]` in **percent of the
