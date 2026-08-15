@@ -2853,6 +2853,13 @@ function renderParticlesStep(el) {
   el.appendChild(stepHead('Particles', 'An optional drifting-particle layer over the background. Recolour it, set the speed, and add a glow. Reduced-motion safe.'));
   const amb = builder.pack.skin.ambience;
 
+  // Custom particle system (Particle Studio) — a simplified guided version; the
+  // full studio (sprite import, mask emitter, physics) is in the editor.
+  if (amb.mode === 'custom' && amb.system && window.AegisParticles) {
+    renderBuilderCustomParticles(el, amb);
+    return;
+  }
+
   // Effect — glyph chips (matches the Surface-feel / Base-fill picker style).
   const fxLabel = document.createElement('span');
   fxLabel.className = 'b-sublabel';
@@ -2891,6 +2898,75 @@ function renderParticlesStep(el) {
   lab.append(cb, document.createTextNode('Luminous blend (particles brighten where they overlap)'));
   glow.appendChild(lab);
   el.appendChild(glow);
+
+  // Fork into a fully-custom particle system (Particle Studio).
+  if (window.AegisParticles) {
+    const cust = libButton('Customize particles…', () => {
+      amb.system = window.AegisParticles.factoryFor(amb.effect);
+      amb.mode = 'custom';
+      renderParticlesStep(el); schedulePreview();
+    }, 'tiny');
+    el.appendChild(cust);
+    const chint = document.createElement('p');
+    chint.className = 'hint';
+    chint.textContent = 'Build your own — a custom emitter, sprite, motion, colour and cursor interaction. Start here; fine-tune everything in the editor.';
+    el.appendChild(chint);
+  }
+}
+
+// Simplified custom-particle controls for the builder. The big knobs (count /
+// size / speed / spread / blend / colour) + a "Start from" factory picker; the
+// full studio is in the editor. Shares window.AegisParticles with the editor.
+const BUILDER_CUSTOM_FACTORIES = ['snow', 'embers', 'dust', 'petals', 'rain', 'sparkle'];
+const BUILDER_BLENDS = [['normal', 'Normal'], ['screen', 'Screen'], ['additive', 'Glow']];
+function renderBuilderCustomParticles(el, amb) {
+  const AP = window.AegisParticles;
+  const sys = amb.system;
+
+  el.appendChild(libButton('◂ Back to preset effects', () => {
+    amb.mode = 'preset';
+    renderParticlesStep(el); schedulePreview();
+  }, 'tiny'));
+
+  const startLabel = document.createElement('span');
+  startLabel.className = 'b-sublabel';
+  startLabel.textContent = 'Start from';
+  el.appendChild(startLabel);
+  const frow = bPresetRow();
+  for (const key of BUILDER_CUSTOM_FACTORIES) {
+    frow.appendChild(bPreset(BUILDER_EFFECT_NAMES[key] || key, false, () => {
+      amb.system = AP.factoryFor(key);
+      renderParticlesStep(el); schedulePreview();
+    }));
+  }
+  el.appendChild(frow);
+
+  el.appendChild(bRangeField('Count', sys.count, 1, 400, 1, (v) => String(Math.round(v)), (v) => { sys.count = Math.round(v); schedulePreview(); }));
+  el.appendChild(bRangeField('Size', sys.sizeMax, 0.1, 4, 0.1, (v) => v.toFixed(1), (v) => { sys.sizeMax = v; sys.sizeMin = Math.max(0.1, v * 0.5); schedulePreview(); }));
+  el.appendChild(bRangeField('Speed', sys.speedMax, 0, 30, 0.5, (v) => v.toFixed(1), (v) => { sys.speedMax = v; sys.speedMin = Math.max(0, v * 0.5); schedulePreview(); }));
+  el.appendChild(bRangeField('Spread', sys.spread, 0, 180, 5, (v) => `${Math.round(v)}°`, (v) => { sys.spread = v; schedulePreview(); }));
+
+  const blLabel = document.createElement('span');
+  blLabel.className = 'b-sublabel';
+  blLabel.textContent = 'Blend';
+  el.appendChild(blLabel);
+  const blrow = bPresetRow();
+  for (const [val, label] of BUILDER_BLENDS) {
+    blrow.appendChild(bPreset(label, sys.blend === val, () => { sys.blend = val; renderParticlesStep(el); schedulePreview(); }));
+  }
+  el.appendChild(blrow);
+
+  const cf = bField('Colour');
+  const resolved = sys.color.paletteKey === 'custom'
+    ? (sys.color.custom || '#ffffff')
+    : (builder.pack.skin.palette[sys.color.paletteKey] || '#ffffff');
+  cf.appendChild(bColorInput(resolved, (v) => { sys.color = { ...sys.color, paletteKey: 'custom', custom: v }; schedulePreview(); }));
+  el.appendChild(cf);
+
+  const note = document.createElement('p');
+  note.className = 'hint';
+  note.textContent = 'Sprite shape, custom images, emitter position, physics (gravity/wind/drag) and cursor interaction: fine-tune in the editor.';
+  el.appendChild(note);
 }
 
 function renderTypeStep(el) {
