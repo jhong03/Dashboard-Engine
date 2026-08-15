@@ -2226,7 +2226,7 @@ function starterPack() {
   };
 }
 
-const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set(), depthLayers: [], parallaxStrength: 1, fill: null, schedulePreset: null, timelineTarget: 0 };
+const builder = { step: 0, pack: null, renderer: null, wallpaperUri: null, selected: [], layout: 'command', compOpts: {}, knobs: new Set(), depthLayers: [], parallaxStrength: 1, fill: null, schedulePreset: null, timelineTarget: 0, customAssets: {} };
 
 // Base-fill presets (a gradient wash painted behind the wallpaper stack). Mirrors
 // the editor's Skin-tab presets; stop colours are palette TOKENS so they track the
@@ -2466,6 +2466,7 @@ function updateBuilderPreview() {
   const assets = {};
   if (builder.pack.skin.wallpaper && builder.wallpaperUri) assets[builder.pack.skin.wallpaper] = builder.wallpaperUri;
   for (const d of builder.depthLayers) if (d.uri) assets[d.src] = d.uri; // extra parallax layers
+  Object.assign(assets, builder.customAssets); // imported custom-particle sprite(s)
   renderPackInto(el, builder.pack, assets, builder.renderer);
 }
 
@@ -2515,6 +2516,7 @@ async function openBuilder() {
   builder.knobs = new Set();
   builder.schedulePreset = null;
   builder.timelineTarget = 0;
+  builder.customAssets = {};
   applyBuilderLayout();
   $('builder-overlay').classList.remove('hidden');
   renderBuilderRail();
@@ -2983,10 +2985,57 @@ function renderBuilderCustomParticles(el, amb) {
   cf.appendChild(bColorInput(resolved, (v) => { sys.color = { ...sys.color, paletteKey: 'custom', custom: v }; schedulePreview(); }));
   el.appendChild(cf);
 
+  // Custom sprite image — import your own PNG/WebP (≤256×256) instead of a
+  // built-in shape. Staged now; carried into the pack on create.
+  const spLabel = document.createElement('span');
+  spLabel.className = 'b-sublabel';
+  spLabel.textContent = 'Sprite image';
+  el.appendChild(spLabel);
+  const spRow = document.createElement('div');
+  spRow.className = 'b-motion-row';
+  if (sys.sprite.custom) {
+    const nm = document.createElement('span');
+    nm.textContent = sys.sprite.custom.replace('assets/', '');
+    spRow.appendChild(nm);
+    spRow.appendChild(libButton('Remove', () => { delete sys.sprite.custom; renderParticlesStep(el); schedulePreview(); }, 'tiny danger'));
+  } else {
+    spRow.appendChild(libButton('Import image…', async () => {
+      const rel = await builderImportSprite();
+      if (rel) { sys.sprite.custom = rel; renderParticlesStep(el); schedulePreview(); }
+    }, 'tiny'));
+    const hint = document.createElement('span');
+    hint.style.fontSize = '11px'; hint.style.opacity = '0.72';
+    hint.textContent = 'PNG or WebP, up to 256×256 px';
+    spRow.appendChild(hint);
+  }
+  el.appendChild(spRow);
+
   const note = document.createElement('p');
   note.className = 'hint';
-  note.textContent = 'Sprite shape, custom images, emitter position, physics (gravity/wind/drag) and cursor interaction: fine-tune in the editor.';
+  note.textContent = 'Emitter position, physics (gravity/wind/drag), a painted spawn mask and cursor interaction: fine-tune in the editor.';
   el.appendChild(note);
+}
+
+// Import a custom particle sprite via the builder's image dialog, enforcing the
+// same ≤256×256 cap as the editor. Stashes the data URI for the live preview and
+// returns the asset rel (or null if cancelled / too large). Main already staged
+// the bytes, so builder:create carries them into the pack.
+async function builderImportSprite() {
+  const out = await aegis.builderImportImage([]);
+  if (!out || !out.ok || !out.rel) return null;
+  const okDims = await new Promise((res) => {
+    const im = new Image();
+    im.onload = () => res(im.naturalWidth <= 256 && im.naturalHeight <= 256);
+    im.onerror = () => res(false);
+    im.src = out.uri;
+  });
+  if (!okDims) {
+    if (aegis.unstageAsset) aegis.unstageAsset(out.rel);
+    $('builder-status').textContent = 'That sprite is too large — use an image up to 256×256 px.';
+    return null;
+  }
+  builder.customAssets[out.rel] = out.uri; // feed the live preview
+  return out.rel;
 }
 
 function renderTypeStep(el) {
