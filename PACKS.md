@@ -336,8 +336,10 @@ the active slot changes the palette **crossfades over 2 seconds**.
 - **Slots wrap.** A slot runs until the next slot's start hour; `night` wraps
   past midnight to `dawn`. Start hours are yours to set (they needn't be the
   defaults), but the order stays dawn → day → dusk → night.
-- **Author it** in the editor's Skin tab → **Time of day**: toggle it on, set
-  each slot's colours, and use **Preview time** to jump the stage to any slot.
+- **Author it** in the editor's Skin tab → **Time of day**: toggle it on, tap a
+  **palette preset** (Day & night, Warm ↔ cool, Golden hour) to fill the four
+  slots from your own base colours as a starting point, tweak per-slot colours,
+  and use **Preview time** to jump the stage to any slot.
 - **Dev override:** launch with `DE_FAKE_HOUR=19` to force the clock to 7 pm.
 
 ## Animation timeline (`pack.timeline`)

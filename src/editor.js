@@ -1687,6 +1687,86 @@ function currentPreviewSlot(schedule) {
   return active;
 }
 
+// ── Schedule palette presets ──────────────────────────────────────────────────
+// Derive each slot's colours from the pack's OWN base palette (lightness / warmth
+// shifts), so a preset stays coherent with any design instead of imposing fixed
+// colours. Day always inherits the base ({} = no override).
+function clamp01(x) { return Math.max(0, Math.min(1, x)); }
+function hexToHsl(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.slice(0, 2), 16) / 255, g = parseInt(h.slice(2, 4), 16) / 255, b = parseInt(h.slice(4, 6), 16) / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), d = max - min;
+  let hue = 0;
+  if (d) {
+    if (max === r) hue = ((g - b) / d) % 6;
+    else if (max === g) hue = (b - r) / d + 2;
+    else hue = (r - g) / d + 4;
+    hue *= 60; if (hue < 0) hue += 360;
+  }
+  const l = (max + min) / 2;
+  const s = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+  return { h: hue, s, l };
+}
+function hslToHex(h, s, l) {
+  const c = (1 - Math.abs(2 * l - 1)) * s, x = c * (1 - Math.abs((h / 60) % 2 - 1)), m = l - c / 2;
+  let r = 0, g = 0, b = 0;
+  if (h < 60) [r, g, b] = [c, x, 0]; else if (h < 120) [r, g, b] = [x, c, 0];
+  else if (h < 180) [r, g, b] = [0, c, x]; else if (h < 240) [r, g, b] = [0, x, c];
+  else if (h < 300) [r, g, b] = [x, 0, c]; else [r, g, b] = [c, 0, x];
+  const to2 = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
+  return `#${to2(r)}${to2(g)}${to2(b)}`;
+}
+function withL(hex, dl) { const c = hexToHsl(hex); return hslToHex(c.h, c.s, clamp01(c.l + dl)); }
+function withSL(hex, ds, dl) { const c = hexToHsl(hex); return hslToHex(c.h, clamp01(c.s + ds), clamp01(c.l + dl)); }
+// COMMIT a hue (warm ~30°, gold ~45°, cool ~220°), keeping the pack's saturation
+// and lightness (with small tweaks). A fractional hue-nudge can't be used: warming
+// a cyan accent lands it in GREEN — the ugly middle — instead of orange, so the
+// preset must actually reach the target hue for "warm/cool" to read correctly.
+function setHue(hex, hue, ds, dl) {
+  const c = hexToHsl(hex);
+  return hslToHex(((hue % 360) + 360) % 360, clamp01(c.s + (ds || 0)), clamp01(c.l + (dl || 0)));
+}
+
+const SCHEDULE_PRESETS = [
+  // Brightness only — universal and never clashes with any base hue.
+  { id: 'dayNight', build: (v, a) => ({
+    dawn: { void: withL(v, 0.03), accent: withL(a, 0.02) },
+    day: {},
+    dusk: { void: withL(v, -0.05), accent: withSL(a, 0, -0.03) },
+    night: { void: withL(v, -0.12), accent: withSL(a, -0.12, -0.10) },
+  }) },
+  // Warm mornings/evenings, cool nights — commits warm/cool accent hues.
+  { id: 'warmCool', build: (v, a) => ({
+    dawn: { void: setHue(v, 28, 0.06, 0.03), accent: setHue(a, 34, 0.05, 0.04) },
+    day: {},
+    dusk: { void: setHue(v, 20, 0.08, -0.03), accent: setHue(a, 22, 0.08, -0.01) },
+    night: { void: setHue(v, 224, 0.05, -0.06), accent: setHue(a, 220, 0, -0.05) },
+  }) },
+  // Golden dawn & dusk, deep-blue night.
+  { id: 'golden', build: (v, a) => ({
+    dawn: { void: setHue(v, 32, 0.06, 0.03), accent: setHue(a, 45, 0.15, 0.05) },
+    day: {},
+    dusk: { void: setHue(v, 26, 0.09, -0.03), accent: setHue(a, 38, 0.18, 0) },
+    night: { void: setHue(v, 232, 0.06, -0.07), accent: setHue(a, 226, 0.02, -0.05) },
+  }) },
+];
+
+function applySchedulePreset(preset) {
+  const sched = ensureSchedule();
+  sched.enabled = true;
+  const base = state.pack.skin.palette;
+  const built = preset.build(base.void || '#04080F', base.accent || '#3FD8FF');
+  for (const [name] of SCHEDULE_SLOT_DEFS) sched.slots[name].palette = built[name] || {};
+  delete state.pack.__previewHour;
+  renderAll();
+}
+
+function clearScheduleOverrides() {
+  const sched = ensureSchedule();
+  for (const [name] of SCHEDULE_SLOT_DEFS) sched.slots[name].palette = {};
+  renderAll();
+}
+
 function renderScheduleSection(panel, skin) {
   panel.appendChild(sectionLabel(t('editor.insp.section.schedule')));
   const enabled = !!(skin.schedule && skin.schedule.enabled);
@@ -1709,6 +1789,31 @@ function renderScheduleSection(panel, skin) {
     else state.pack.__previewHour = sched.slots[v].startHour;
     renderAll();
   }), null, t('editor.insp.schedule.previewHint')));
+
+  // Palette presets — fill the four slots from the pack's base colours.
+  const plabel = document.createElement('div');
+  plabel.className = 'g-sub';
+  plabel.textContent = t('editor.insp.schedule.presets');
+  panel.appendChild(plabel);
+  const phint = document.createElement('p');
+  phint.className = 'field-hint';
+  phint.textContent = t('editor.insp.schedule.presetsHint');
+  panel.appendChild(phint);
+  const chips = document.createElement('div');
+  chips.className = 'tl-presets';
+  for (const preset of SCHEDULE_PRESETS) {
+    const chip = document.createElement('button');
+    chip.className = 'btn tiny';
+    chip.textContent = t(`editor.insp.schedule.preset.${preset.id}`);
+    chip.addEventListener('click', () => { sliderActive = false; applySchedulePreset(preset); });
+    chips.appendChild(chip);
+  }
+  const clear = document.createElement('button');
+  clear.className = 'btn tiny';
+  clear.textContent = t('editor.insp.schedule.preset.clear');
+  clear.addEventListener('click', () => { sliderActive = false; clearScheduleOverrides(); });
+  chips.appendChild(clear);
+  panel.appendChild(chips);
 
   for (const [name] of SCHEDULE_SLOT_DEFS) {
     const slot = sched.slots[name];
