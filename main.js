@@ -1317,17 +1317,23 @@ function captureEditorTrailer(outDir, opts) {
             await writeFrame();
           }
           await new Promise((r) => setTimeout(r, 700)); // GL texture decode + first render settle
-          // Phase B: the masked ripple animates; the cursor drifts over the painted band.
+          // Phase B: the cursor sweeps the painted band and cursor-ripple rings emanate
+          // from it (masked to that region). The GL reads the pointer as clientX/innerWidth
+          // = surface UV, but the editor stage doesn't fill the window — so drive the GL
+          // pointer in WINDOW-normalized coords (u*W, v*H) while placing the VISIBLE cursor
+          // at the stage-relative screen position, so ring and cursor coincide.
           const stage = await win.webContents.executeJavaScript(`(function(){var s=document.getElementById('skin'); if(!s) return null; var r=s.getBoundingClientRect(); return {l:r.left,t:r.top,w:r.width,h:r.height};})();`).catch(() => null);
           const Bn = Math.round(3.6 * fps);
           for (let i = 0; i < Bn; i++) {
             const vt = (i * 1000) / fps;
             let ptr = '';
             if (stage) {
-              const u = 0.2 + 0.6 * (0.5 - 0.5 * Math.cos((i / Bn) * Math.PI * 2)); // sweep across
-              const px = Math.round(stage.l + stage.w * u), py = Math.round(stage.t + stage.h * 0.78);
-              await win.webContents.executeJavaScript(`window.__setCur(${px},${py},false);`).catch(() => {});
-              ptr = ',' + px + ',' + py;
+              const u = 0.18 + 0.64 * (i / (Bn - 1)); // sweep left→right across the painted band
+              const v = 0.76;
+              const cx = Math.round(stage.l + stage.w * u), cy = Math.round(stage.t + stage.h * v); // visible cursor
+              const gx = Math.round(u * W), gy = Math.round(v * H); // GL pointer (window-normalized → surface UV)
+              await win.webContents.executeJavaScript(`window.__setCur(${cx},${cy},false);`).catch(() => {});
+              ptr = ',' + gx + ',' + gy;
             }
             await win.webContents.executeJavaScript(`window.__cap && window.__cap.step(${vt}${ptr});`).catch(() => {});
             await new Promise((r) => setTimeout(r, 18));
@@ -1695,6 +1701,68 @@ function captureTrailerClip(packId, outDir, opts) {
     });
     // fakeHour forces a time-of-day slot (for the schedule beat); '' = real clock.
     win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), capture: '1', fakeHour: (opts && opts.fakeHour != null) ? String(opts.fakeHour) : '' } });
+  });
+}
+
+// Capture a TIMELAPSE of a scheduled pack (the "It shifts through your day" beat):
+// per frame we fast-forward the clock (setClockMs — the clocks read it) AND sweep
+// the schedule palette (setHour — continuous dawn→day→dusk→night), while the
+// animation clock (vt) advances gently so the ambience stays smooth. Deterministic
+// offscreen frames → fNNNN.jpg, encoded to MP4 externally.
+function captureTimelapse(packId, outDir, opts) {
+  const fs = require('fs');
+  const fps = 30;
+  const seconds = (opts && opts.seconds) || 7;
+  const W = 1600, H = 900;
+  const fromHour = (opts && opts.fromHour != null) ? opts.fromHour : 5;
+  const toHour = (opts && opts.toHour != null) ? opts.toHour : 23;
+  const mid = new Date(); mid.setHours(0, 0, 0, 0); const midnightMs = mid.getTime();
+  return new Promise((resolve) => {
+    try { fs.mkdirSync(outDir, { recursive: true }); } catch (e) { /* exists */ }
+    let win = new BrowserWindow({
+      width: W, height: H, useContentSize: true, enableLargerThanScreen: true,
+      show: false, frame: false, skipTaskbar: true, backgroundColor: '#04080F',
+      webPreferences: {
+        ...COMMON_WEB_PREFERENCES,
+        preload: path.join(__dirname, 'preload-dashboard.js'),
+        offscreen: true, backgroundThrottling: false,
+      },
+    });
+    try { win.setBounds({ x: 0, y: 0, width: W, height: H }); } catch (e) { /* clamp */ }
+    let settled = false, frame = 0;
+    const finish = (n) => { if (settled) return; settled = true; if (win && !win.isDestroyed()) win.destroy(); win = null; resolve(n); };
+    const total = Math.max(1, Math.round(seconds * fps));
+    const guard = setTimeout(() => finish(frame), (total * 0.4 + 60) * 1000);
+    win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(frame); });
+    win.webContents.on('did-finish-load', async () => {
+      try {
+        const start = Date.now();
+        while (Date.now() - start < 12000) {
+          if (await win.webContents.executeJavaScript('window.__shotReady === true').catch(() => false)) break;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+        const buffers = [];
+        for (let i = 0; i < total; i++) {
+          const p = total > 1 ? i / (total - 1) : 0;
+          const hour = fromHour + (toHour - fromHour) * p;
+          const clockMs = midnightMs + Math.round(hour * 3600000);
+          const vt = i * 100; // ~3x ambience (dt is clamped to 0.1 s) — a gentle timelapse drift
+          await win.webContents.executeJavaScript(
+            `(function(){ if(window.__cap){window.__cap.setClockMs(${clockMs});} var s=document.body.__aegisSchedule; if(s&&s.setHour){s.setHour(${hour});} if(window.__cap){window.__cap.step(${vt});} })();`,
+          ).catch(() => {});
+          await new Promise((r) => setTimeout(r, 24)); // paint + let the clocks' interval re-read the clock
+          const img = await win.webContents.capturePage();
+          buffers.push(img.toJPEG(90));
+          frame = i + 1;
+        }
+        clearTimeout(guard);
+        for (let j = 0; j < buffers.length; j++) {
+          try { fs.writeFileSync(path.join(outDir, 'f' + String(j + 1).padStart(4, '0') + '.jpg'), buffers[j]); } catch (e) { /* skip */ }
+        }
+        finish(buffers.length);
+      } catch (e) { clearTimeout(guard); finish(frame); }
+    });
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), capture: '1', fakeHour: '' } });
   });
 }
 
@@ -2217,6 +2285,15 @@ if (IS_SESSION) {
       captureEditorTrailer(envFlag('EDITOR_TRAILER'), { pack: envFlag('EDITOR_TRAILER_PACK') || 'neon-cyberpunk' })
         .then((n) => { console.log(`[editor-trailer] ${n} frames -> ${envFlag('EDITOR_TRAILER')}`); app.quit(); })
         .catch((e) => { console.log(`[editor-trailer] failed: ${e && e.message}`); app.quit(); });
+      return;
+    }
+    // DE_TIMELAPSE=<dir>: capture the time-of-day timelapse beat (clock + palette
+    // fast-forward through the day). DE_TL_PACK / DE_TL_SECS / DE_TL_FROM / DE_TL_TO.
+    if (envFlag('TIMELAPSE')) {
+      const num = (k, d) => { const v = envFlag(k); return (v != null && v !== '') ? Number(v) : d; };
+      captureTimelapse(envFlag('TL_PACK') || 'hearth', envFlag('TIMELAPSE'), { seconds: num('TL_SECS', 7), fromHour: num('TL_FROM', 5), toHour: num('TL_TO', 23) })
+        .then((n) => { console.log(`[timelapse] ${n} frames -> ${envFlag('TIMELAPSE')}`); app.quit(); })
+        .catch((e) => { console.log(`[timelapse] failed: ${e && e.message}`); app.quit(); });
       return;
     }
     // DE_MASK_TRAILER=<dir>: capture the paint-mask tool (masks/effects beat).

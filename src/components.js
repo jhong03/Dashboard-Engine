@@ -1020,6 +1020,28 @@ function applySchedule(root, pack, opts) {
       startFade(mergePalette(palette, slot.palette), slot.name);
       registerSurfaceTick(root, tick); // make sure the loop is running to advance it
     },
+    // Marketing timelapse: set the palette CONTINUOUSLY for a fractional hour,
+    // interpolating (smoothstep) between the two surrounding slots so a fast-
+    // forwarded day sweeps smoothly through dawn→day→dusk→night. Drives the
+    // palette directly (no fade); state kept in sync so the auto-ticker won't fight.
+    setHour(hour) {
+      hour = ((hour % 24) + 24) % 24;
+      const entries = SCHEDULE_SLOT_NAMES
+        .map((name) => sched.slots[name] && { name, startHour: sched.slots[name].startHour, palette: sched.slots[name].palette })
+        .filter((e) => e && typeof e.startHour === 'number')
+        .sort((a, b) => a.startHour - b.startHour);
+      if (!entries.length) return;
+      let pi = entries.length - 1;
+      for (let i = 0; i < entries.length; i++) if (hour >= entries[i].startHour) pi = i;
+      const prev = entries[pi], next = entries[(pi + 1) % entries.length];
+      let span = next.startHour - prev.startHour; if (span <= 0) span += 24;
+      let into = hour - prev.startHour; if (into < 0) into += 24;
+      let f = Math.max(0, Math.min(1, into / span));
+      f = f * f * (3 - 2 * f); // smoothstep: linger near each slot, transition between
+      const pal = lerpPalette(mergePalette(palette, prev.palette), mergePalette(palette, next.palette), f);
+      setPaletteVars(root, pal, texture, shape);
+      state.slotKey = prev.name; state.fade = null;
+    },
   };
 }
 

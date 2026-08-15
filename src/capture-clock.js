@@ -29,8 +29,13 @@
   // rather than jumping in real wall-clock time during the slow capture.
   var RealDate = Date;
   var base = RealDate.now();
+  // A timelapse capture (the "It shifts through your day" beat) sets an ABSOLUTE
+  // now here so the clock fast-forwards independently of the animation clock (vt),
+  // keeping the ambience smooth while the hours fly by. null → follow base + vt.
+  var clockOverride = null;
+  function curMs() { return clockOverride != null ? clockOverride : base + vt; }
   function VDate(a, b, c, d, e, f, g) {
-    if (arguments.length === 0) return new RealDate(base + vt);
+    if (arguments.length === 0) return new RealDate(curMs());
     switch (arguments.length) {
       case 1: return new RealDate(a);
       case 2: return new RealDate(a, b);
@@ -41,7 +46,7 @@
       default: return new RealDate(a, b, c, d, e, f, g);
     }
   }
-  VDate.now = function () { return base + vt; };
+  VDate.now = function () { return curMs(); };
   VDate.parse = RealDate.parse;
   VDate.UTC = RealDate.UTC;
   VDate.prototype = RealDate.prototype;
@@ -69,5 +74,7 @@
       callbacks = [];
       for (var i = 0; i < run.length; i++) { try { run[i](vt); } catch (e) { /* keep going */ } }
     },
+    // Timelapse: set the clock's absolute "now" (ms); null clears it.
+    setClockMs: function (ms) { clockOverride = (ms == null ? null : ms); },
   };
 })();
