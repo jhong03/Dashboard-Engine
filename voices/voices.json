@@ -1,5 +1,5 @@
 {
-  "comment": "Voice bank manifest. FEMALE voices are MeloTTS (myshell-ai, MIT) across six languages (en/es/fr/zh/ja/ko) — each a full MeloTTS (PyTorch) checkpoint + that language's sentence-BERT, rendered by one shared frozen engine (engines.melotts_full); MeloTTS is the quality floor the owner accepts. MALE voices are Piper (small ONNX, downloaded from the official rhasspy/piper-voices repo): en_male = VCTK p226 (CC-BY-4.0), es_male = davefx (CC0), fr_male = UPMC pierre (CC-BY-SA-4.0). zh/ja/ko are FEMALE-ONLY for now — no commercially-licensable male neural TTS covers Mandarin/Japanese/Korean (Piper has no ja/ko; Kokoro's CJK males are below the quality floor; every Korean-capable open model is voice-cloning or GPU-only). English HD (female) is bundled in the Steam depot for an instant first-run voice; the rest download on demand. sha256/sizeBytes are enforced by the downloader. wpmAtScale1 null = default baseline. The `excluded` list below is the historical Piper-era licence audit, kept for record.",
+  "comment": "Voice bank manifest. FEMALE voices are MeloTTS (myshell-ai, MIT) across six languages (en/es/fr/zh/ja/ko) — each a full MeloTTS (PyTorch) checkpoint + that language's sentence-BERT, rendered by one shared frozen engine (engines.melotts_full); MeloTTS is the quality floor the owner accepts. MALE voices are Piper (small ONNX, downloaded from the official rhasspy/piper-voices repo): en_male = VCTK p232 Southern England / RP (CC-BY-4.0), es_male = davefx (CC0), fr_male = UPMC pierre (CC-BY-SA-4.0). zh/ja/ko are FEMALE-ONLY for now — no commercially-licensable male neural TTS covers Mandarin/Japanese/Korean (Piper has no ja/ko; Kokoro's CJK males are below the quality floor; every Korean-capable open model is voice-cloning or GPU-only). English HD (female) is bundled in the Steam depot for an instant first-run voice; the rest download on demand. sha256/sizeBytes are enforced by the downloader. wpmAtScale1 null = default baseline. The `excluded` list below is the historical Piper-era licence audit, kept for record.",
   "audited": "2026-08-01",
   "auditSource": "https://huggingface.co/rhasspy/piper-voices/tree/v1.0.0",
   "defaultVoice": "en_us_hd",
@@ -361,22 +361,22 @@
     {
       "id": "en_male",
       "model": "en_GB-vctk-medium.onnx",
-      "speaker": 95,
+      "speaker": 60,
       "sex": "M",
-      "accent": "British (Surrey)",
+      "accent": "British (Southern England / RP)",
       "language": "English",
       "displayName": "English — Male",
-      "descriptor": "British male (Piper VCTK p226)",
+      "descriptor": "British male (Piper VCTK p232, Southern England)",
       "licence": "CC-BY-4.0",
       "licenceUrl": "https://creativecommons.org/licenses/by/4.0/",
-      "attribution": "CSTR VCTK Corpus (speaker p226), CC BY 4.0",
+      "attribution": "CSTR VCTK Corpus (speaker p232), CC BY 4.0",
       "provenance": "Piper multi-speaker VCTK model",
       "downloadUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/vctk/medium/en_GB-vctk-medium.onnx",
       "configUrl": "https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_GB/vctk/medium/en_GB-vctk-medium.onnx.json",
       "sha256": "4e9fc85ab9009385319fc6bae7f55577f8a2d7ee77fd9159a5500eb6531f41e6",
       "sizeBytes": 76952753,
       "sampleRate": 22050,
-      "wpmAtScale1": null
+      "wpmAtScale1": 206
     },
     {
       "id": "es_male",
