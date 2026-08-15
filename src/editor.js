@@ -2876,9 +2876,9 @@ function exposeEditorDemoApi() {
       for (const L of layers) { if (L && L.src && !/\.(mp4|webm)$/i.test(L.src) && state.assets[L.src]) { layer = L; break; } }
       if (!layer) return;
       // A cursor-ripple we'll confine to the painted region on "Save" — rings
-      // emanate from the cursor, visible only where the mask is painted. Max
-      // strength + slow decay so the rings read clearly on the dark water.
-      layer.effects = [{ type: 'cursor-ripple', strength: 1, speed: 1, decay: 0.5 }];
+      // emanate from the cursor, visible only where the mask is painted. Gentle
+      // values (owner-tuned) so the rings look soft and smooth, not stiff.
+      layer.effects = [{ type: 'cursor-ripple', strength: 0.3, speed: 1, decay: 0.6 }];
       const fx = layer.effects[0];
       const c = document.createElement('canvas'); c.width = 480; c.height = 270;
       const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);

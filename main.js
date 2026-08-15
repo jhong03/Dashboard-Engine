@@ -1328,8 +1328,13 @@ function captureEditorTrailer(outDir, opts) {
             const vt = (i * 1000) / fps;
             let ptr = '';
             if (stage) {
-              const u = 0.18 + 0.64 * (i / (Bn - 1)); // sweep left→right across the painted band
-              const v = 0.76;
+              // A smooth, organic path: eased horizontal sweep + a gentle vertical
+              // drift, so the cursor (and the rings it sheds) glide rather than track
+              // a stiff straight line.
+              const p = i / (Bn - 1);
+              const eased = p * p * (3 - 2 * p); // smoothstep
+              const u = 0.16 + 0.68 * eased;
+              const v = 0.74 + 0.045 * Math.sin(p * Math.PI * 2);
               const cx = Math.round(stage.l + stage.w * u), cy = Math.round(stage.t + stage.h * v); // visible cursor
               const gx = Math.round(u * W), gy = Math.round(v * H); // GL pointer (window-normalized → surface UV)
               await win.webContents.executeJavaScript(`window.__setCur(${cx},${cy},false);`).catch(() => {});
