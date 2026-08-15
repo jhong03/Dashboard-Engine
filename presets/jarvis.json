@@ -10,6 +10,6 @@
     "fallback": { "engine": "system", "match": "United Kingdom" }
   },
   "prosody": { "pitchShift": -1.5, "rate": 125, "expressiveness": 0.85, "steadiness": 0.9, "pauseSentence": 300, "pauseComma": 85 },
-  "timbre": { "warmth": 3.5, "resonance": 3.5, "brightness": 3.5, "presence": 3.5, "sibilance": -1.5, "breath": 0 },
+  "timbre": { "warmth": 3.5, "resonance": 5, "brightness": 3.5, "presence": 3.5, "sibilance": -1.5, "breath": 0 },
   "character": { "compression": 0.72, "radioFilter": 0, "reverb": { "mix": 0, "size": 0.3 }, "bitcrush": 0, "chorus": 0 }
 }
