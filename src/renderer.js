@@ -36,6 +36,7 @@ const GROUPS = [
     container: 'group-timbre',
     params: [
       { path: 'timbre.warmth', label: 'Warmth', hint: 'fuller, deeper low end', tech: 'low shelf · 180 Hz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
+      { path: 'timbre.resonance', label: 'Resonance', hint: 'warm, magnetic body', tech: 'bell · 300 Hz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
       { path: 'timbre.brightness', label: 'Brightness', hint: 'crisp, airy highs', tech: 'high shelf · 5.5 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
       { path: 'timbre.presence', label: 'Presence', hint: 'up-front vs distant', tech: 'bell · 2.8 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
       { path: 'timbre.sibilance', label: 'Harshness', hint: 'tame hissy “s” and “t” sounds', tech: 'de-ess · 7 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
