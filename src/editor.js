@@ -2867,13 +2867,17 @@ function exposeEditorDemoApi() {
     },
     renderAll() { renderAll(); },
     // Marketing tooling: open the paint-mask tool over the loaded pack's wallpaper
-    // with a hand-painted-looking mask already applied, so a trailer beat can show
-    // the "paint effects onto a region" feature (masks) as a finished-looking shot.
+    // with a hand-painted-looking mask already applied AND a ripple effect staged on
+    // the layer, so a trailer beat can show the "paint effects onto a region" flow
+    // (paint -> Save -> the ripple plays only on the painted area).
     openMaskDemo() {
       const layers = (state.pack.skin.background && state.pack.skin.background.layers) || [];
-      let rel = state.pack.skin.wallpaper;
-      for (const L of layers) { if (L && L.src && !/\.(mp4|webm)$/i.test(L.src) && state.assets[L.src]) { rel = L.src; break; } }
-      if (!rel || !state.assets[rel]) return;
+      let layer = null;
+      for (const L of layers) { if (L && L.src && !/\.(mp4|webm)$/i.test(L.src) && state.assets[L.src]) { layer = L; break; } }
+      if (!layer) return;
+      // One clear ripple we'll confine to the painted region on "Save".
+      layer.effects = [{ type: 'ripple', speed: 1.4, scale: 4, strength: 0.85 }];
+      const fx = layer.effects[0];
       const c = document.createElement('canvas'); c.width = 480; c.height = 270;
       const x = c.getContext('2d'); x.fillStyle = '#000'; x.fillRect(0, 0, c.width, c.height);
       const blob = (cx, cy, r) => {
@@ -2885,7 +2889,17 @@ function exposeEditorDemoApi() {
       blob(360, 150, 58); blob(408, 176, 46);
       const maskRel = 'mask-demo.png';
       state.assets[maskRel] = c.toDataURL('image/png');
-      openMaskPainter(rel, maskRel, () => {}, 'Ripple');
+      state.__maskDemo = { fx, maskRel };
+      openMaskPainter(layer.src, maskRel, (rel) => { fx.mask = rel; delete fx.region; }, 'Ripple');
+    },
+    // Marketing tooling: deterministically "Save" — confine the ripple to the
+    // painted mask, dismiss the painter, re-render. Avoids the staging IPC so the
+    // trailer capture is reliable; the visual is the real paint -> Save -> effect.
+    applyMaskDemo() {
+      const d = state.__maskDemo; if (!d) return;
+      d.fx.mask = d.maskRel; delete d.fx.region;
+      const p = document.querySelector('.ed-maskpaint'); if (p) p.remove();
+      renderAll();
     },
   };
   window.__demoReady = true;

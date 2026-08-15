@@ -1277,18 +1277,61 @@ function captureEditorTrailer(outDir, opts) {
           if (ready) break;
           await new Promise((r) => setTimeout(r, 150));
         }
-        // Mask-painter beat: open the paint-mask tool (pre-painted) and hold, so the
-        // trailer can show the "paint effects onto a region" feature.
+        // Mask-painter beat: (A) a cursor moves to "Save mask" and clicks it, then
+        // (B) the ripple effect plays confined to the painted region — the full
+        // "paint effects onto a region" showcase flow.
         if (opts && opts.mask) {
           await win.webContents.executeJavaScript('window.__editorDemoApi.openMaskDemo(); true;').catch(() => {});
-          await new Promise((r) => setTimeout(r, 900)); // let the backdrop + mask images decode
-          const mtotal = Math.max(1, Math.round(((opts.seconds || 4)) * fps));
-          for (let i = 0; i < mtotal; i++) {
-            await win.webContents.executeJavaScript(`window.__cap && window.__cap.step(${(i * 1000) / fps});`).catch(() => {});
-            await new Promise((r) => setTimeout(r, 16));
+          await new Promise((r) => setTimeout(r, 1000)); // painter + mask/backdrop decode
+          // A visible cursor that tracks window.__setCur; locate the Save button.
+          const btn = await win.webContents.executeJavaScript(`(function(){
+            var c=document.getElementById('__cur'); if(!c){c=document.createElement('div');c.id='__cur';
+            c.style.cssText='position:fixed;left:0;top:0;width:40px;height:40px;z-index:2147483647;pointer-events:none;margin:-3px 0 0 -5px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.55));';
+            c.innerHTML='<svg width="40" height="40" viewBox="0 0 24 24"><path d="M5 2.5 L5 20.5 L10.2 15.3 L13.4 21.6 L16.3 20.3 L13.1 14.2 L20.4 14.2 Z" fill="#fff" stroke="#0A0A0A" stroke-width="1.1" stroke-linejoin="round"/></svg>';
+            document.body.appendChild(c);}
+            window.__setCur=function(x,y,down){c.style.left=x+'px';c.style.top=y+'px';c.style.transform=down?'scale(0.82)':'scale(1)';};
+            var b=document.querySelector('.ed-mp-bar .btn.primary');
+            var r=b?b.getBoundingClientRect():{left:1480,top:16,width:80,height:26};
+            return {x:Math.round(r.left+r.width/2), y:Math.round(r.top+r.height/2)};
+          })();`).catch(() => ({ x: Math.round(W * 0.95), y: 28 }));
+          const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
+          let n = 0;
+          const writeFrame = async () => {
             const img = await win.webContents.capturePage();
-            fs.writeFileSync(path.join(outDir, `f${String(i).padStart(4, '0')}.png`), img.toPNG());
-            frame = i + 1;
+            fs.writeFileSync(path.join(outDir, `f${String(n).padStart(4, '0')}.png`), img.toPNG());
+            n++; frame = n;
+          };
+          // Phase A: move the cursor from the stage to the Save button, press it.
+          const A = Math.round(2.6 * fps);
+          const sx = Math.round(W * 0.42), sy = Math.round(H * 0.62);
+          for (let i = 0; i < A; i++) {
+            const t = i / (A - 1);
+            const e = easeInOut(Math.min(1, t / 0.8)); // reach the button by 80%
+            const px = Math.round(sx + (btn.x - sx) * e), py = Math.round(sy + (btn.y - sy) * e);
+            const down = t > 0.82 && t < 0.9;
+            await win.webContents.executeJavaScript(`window.__setCur(${px},${py},${down});`).catch(() => {});
+            if (i === Math.round(A * 0.85)) {
+              await win.webContents.executeJavaScript('window.__editorDemoApi.applyMaskDemo(); true;').catch(() => {});
+            }
+            await new Promise((r) => setTimeout(r, 16));
+            await writeFrame();
+          }
+          await new Promise((r) => setTimeout(r, 700)); // GL texture decode + first render settle
+          // Phase B: the masked ripple animates; the cursor drifts over the painted band.
+          const stage = await win.webContents.executeJavaScript(`(function(){var s=document.getElementById('skin'); if(!s) return null; var r=s.getBoundingClientRect(); return {l:r.left,t:r.top,w:r.width,h:r.height};})();`).catch(() => null);
+          const Bn = Math.round(3.6 * fps);
+          for (let i = 0; i < Bn; i++) {
+            const vt = (i * 1000) / fps;
+            let ptr = '';
+            if (stage) {
+              const u = 0.2 + 0.6 * (0.5 - 0.5 * Math.cos((i / Bn) * Math.PI * 2)); // sweep across
+              const px = Math.round(stage.l + stage.w * u), py = Math.round(stage.t + stage.h * 0.78);
+              await win.webContents.executeJavaScript(`window.__setCur(${px},${py},false);`).catch(() => {});
+              ptr = ',' + px + ',' + py;
+            }
+            await win.webContents.executeJavaScript(`window.__cap && window.__cap.step(${vt}${ptr});`).catch(() => {});
+            await new Promise((r) => setTimeout(r, 18));
+            await writeFrame();
           }
           clearTimeout(guard); finish(frame); return;
         }
