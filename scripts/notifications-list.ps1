@@ -63,6 +63,7 @@ try {
     $app = ''
     try { $app = $n.AppInfo.DisplayInfo.DisplayName } catch {}
     [void]$items.Add([pscustomobject]@{
+      id    = $n.Id
       app   = $app
       title = if ($texts.Count -ge 1) { $texts[0] } else { '' }
       body  = if ($texts.Count -ge 2) { ($texts[1..($texts.Count - 1)] -join '  ') } else { '' }

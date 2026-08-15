@@ -40,7 +40,10 @@ async function renderPreset(entry, manifest, piperPath, ffmpegPath) {
 
   const modelPath = bank.modelPathFor(APP_ROOT, voice);
   const baselineWpm = voice.wpmAtScale1 || undefined;
-  const { pcm, sampleRate } = await piper.synthesize(AUDITION_TEXT, profile, modelPath, piperPath, { baselineWpm });
+  // Multi-speaker models (VCTK — our British MALE en_male is speaker p226) need
+  // the speaker index, exactly like the app's synthClip; without it Piper defaults
+  // to speaker 0 (p225, female), so a male preset auditions as a woman.
+  const { pcm, sampleRate } = await piper.synthesize(AUDITION_TEXT, profile, modelPath, piperPath, { baselineWpm, speaker: voice.speaker });
   const wet = await dsp.applyDsp(pcm, sampleRate, profile, ffmpegPath);
 
   const outFile = path.join(OUT_DIR, `audition-${file.replace(/\.json$/, '')}.wav`);

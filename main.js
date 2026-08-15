@@ -25,7 +25,7 @@ const settings = require('./lib/settings');
 const achievements = require('./lib/achievements');
 const i18n = require('./lib/i18n');
 const logger = require('./lib/logger');
-const { registerIpcHandlers, prewarmAssistantVoice } = require('./lib/ipc');
+const { registerIpcHandlers, prewarmAssistantVoice, warmupAssistant } = require('./lib/ipc');
 const { createAlertScheduler } = require('./lib/alerts');
 const { userDataDir } = require('./lib/paths');
 
@@ -500,6 +500,9 @@ async function createDashboardWindow() {
   if (!warmedVoiceOnce) {
     warmedVoiceOnce = true;
     setTimeout(() => { try { prewarmAssistantVoice(__dirname, USER_DIR); } catch (e) { /* best effort */ } }, 6000);
+    // Also preload a local LLM (Ollama/LM Studio) so the first assistant reply
+    // isn't a cold start. No-op for hosted endpoints; fail-soft.
+    setTimeout(() => { try { warmupAssistant(USER_DIR); } catch (e) { /* best effort */ } }, 7000);
   }
 
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));

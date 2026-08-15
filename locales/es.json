@@ -1,6 +1,5 @@
 {
   "app.name": "Dashboard Engine",
-
   "common.save": "Guardar",
   "common.cancel": "Cancelar",
   "common.delete": "Eliminar",
@@ -9,7 +8,6 @@
   "common.next": "Siguiente",
   "common.close": "Cerrar",
   "common.saved": "Guardado.",
-
   "tray.openManager": "Abrir el gestor",
   "tray.voiceTuning": "Ajuste de voz",
   "tray.switchPack": "Cambiar de paquete",
@@ -17,10 +15,8 @@
   "tray.resumeDesktop": "Reanudar el escritorio",
   "tray.performance": "Rendimiento",
   "tray.quit": "Salir de Dashboard Engine",
-
   "manager.topbar.onDesktop": "En tu escritorio:",
   "manager.topbar.voiceTuning": "Ajuste de voz",
-
   "manager.tab.installed": "Instalados",
   "manager.tab.browse": "Explorar",
   "manager.tab.published": "Publicados",
@@ -29,22 +25,18 @@
   "manager.tab.launcher": "Lanzador",
   "manager.tab.assistant": "Asistente",
   "manager.tab.settings": "Ajustes",
-
   "manager.search.label": "Buscar paquetes",
   "manager.search.placeholder": "Buscar paquetes",
   "manager.installFromFile": "Instalar desde archivo…",
   "manager.detail.empty": "Selecciona un paquete para ver sus detalles.",
-
   "manager.registry.label": "URL del repositorio",
   "manager.registry.placeholder": "URL del repositorio (https://…/index.json)",
   "manager.registry.subscribe": "Suscribirse",
-
   "manager.planner.prevMonth": "Mes anterior",
   "manager.planner.nextMonth": "Mes siguiente",
   "manager.planner.today": "Hoy",
   "manager.planner.addEvent": "Añadir evento",
   "manager.planner.upcoming": "Próximos",
-
   "manager.launcher.hint": "Los accesos aparecen en cualquier paquete con un componente de lanzador (añade uno desde el editor). Tus accesos y recientes son personales: nunca salen de este equipo ni entran en un paquete.",
   "manager.launcher.appToPin": "Aplicación para anclar",
   "manager.launcher.pinApp": "Anclar aplicación",
@@ -53,7 +45,6 @@
   "manager.launcher.empty": "Aún no hay nada anclado. Elige una aplicación arriba, o ancla un archivo o una carpeta.",
   "manager.launcher.unpin": "Desanclar",
   "manager.launcher.pinned": "Anclado.",
-
   "manager.assistant.baseUrl": "URL base",
   "manager.assistant.apiKey": "Clave de API",
   "manager.assistant.modelId": "ID del modelo",
@@ -100,29 +91,24 @@
   "manager.assistant.hintBusy": "el motor de voz está ocupado, inténtalo de nuevo en un momento",
   "manager.assistant.hintUnavailable": "descarga esta voz primero, o espera a que el motor HD termine de instalarse",
   "manager.assistant.hintNoResponse": "el motor de voz no respondió",
-
   "settings.language.title": "Idioma",
   "settings.language.label": "Idioma de la interfaz",
   "settings.language.auto": "Automático (sistema)",
   "settings.language.help": "Elige el idioma de la interfaz. Las traducciones de la comunidad que se añaden a la carpeta locales aparecen aquí automáticamente. El texto sin traducir se muestra en inglés.",
   "settings.language.applying": "Aplicando…",
-
   "manager.settings.display.title": "Pantalla",
   "manager.settings.display.help": "Elige en qué monitor se muestra el fondo animado. Se mueve al instante.",
   "manager.settings.display.showOn": "Mostrar el fondo en",
   "manager.settings.display.primary": "Pantalla principal (predeterminada)",
   "manager.settings.display.primaryTag": "principal",
   "manager.settings.display.moved": "Se movió el fondo a la pantalla seleccionada.",
-
   "manager.settings.startup.title": "Inicio",
   "manager.settings.startup.autostart": "Iniciar Dashboard Engine al arrancar Windows",
   "manager.settings.startup.autostartHint": "El motor se inicia discretamente en la bandeja cuando inicias sesión, así tu escritorio ya está activo, sin ninguna ventana que abrir.",
   "manager.settings.startup.unsupported": "El inicio con el sistema no está disponible en esta plataforma.",
-
   "manager.settings.voiceAlerts.title": "Avisos de voz",
   "manager.settings.voiceAlerts.speak": "Anunciar en voz alta las alertas de estado del sistema",
   "manager.settings.voiceAlerts.help": "La voz de tu asistente avisa cuando la CPU, la memoria o el disco están muy cargados, o cuando la batería está baja. Necesita un componente «Información del sistema» con las alertas de estado activas, y habla con la voz de Asistente → Voz.",
-
   "manager.settings.performance.title": "Rendimiento",
   "manager.settings.performance.help": "El fondo animado se pausa y se ralentiza como Wallpaper Engine para ser un buen ciudadano en segundo plano. Son los mismos controles que el menú Rendimiento de la bandeja.",
   "manager.settings.performance.pauseFullscreen": "Pausar cuando una aplicación a pantalla completa cubre la pantalla",
@@ -130,11 +116,9 @@
   "manager.settings.performance.fpsCap": "Límite de fotogramas",
   "manager.settings.performance.fps": "{n} fps",
   "manager.settings.performance.fpsRecommended": "{n} fps (recomendado)",
-
   "manager.settings.bgMotion.title": "Movimiento del fondo",
   "manager.settings.bgMotion.help": "Ajusta el efecto de paralaje y la deriva de profundidad en los fondos por capas: bájalo, o apágalo, si el movimiento te distrae. No afecta al rendimiento.",
   "manager.settings.bgMotion.parallax": "Paralaje y deriva",
-
   "manager.settings.weather.title": "Tiempo",
   "manager.settings.weather.yourLocation": "Tu ubicación",
   "manager.settings.weather.placeholder": "Escribe una ciudad, p. ej. Kioto",
@@ -145,27 +129,23 @@
   "manager.settings.weather.finding": "Buscando la ubicación…",
   "manager.settings.weather.notFound": "No se encontró ese lugar.",
   "manager.settings.weather.setTo": "Ubicación del tiempo fijada en {place}.",
-
   "manager.settings.music.title": "Música de fondo",
   "manager.settings.music.help": "Reproduce tu propia música en el escritorio. Los archivos se quedan en tu equipo y nunca se guardan en un paquete ni se comparten: el fondo solo los reproduce, recorriendo la lista en bucle.",
   "manager.settings.music.play": "Reproducir música de fondo",
   "manager.settings.music.volume": "Volumen",
   "manager.settings.music.add": "Añadir archivos de música…",
   "manager.settings.music.empty": "Aún no has añadido música: añade algunos archivos de audio abajo.",
-
   "manager.settings.help.title": "Ayuda",
   "manager.settings.help.welcome": "Mostrar la guía de bienvenida",
   "manager.settings.help.logs": "Abrir la carpeta de registros",
   "manager.settings.help.hint": "Si algo va mal, la carpeta de registros contiene un registro de diagnóstico (y cualquier volcado de fallos) que puedes compartir al informar de un problema. No contiene datos personales.",
   "manager.settings.help.logsError": "No se pudo abrir la carpeta de registros.",
-
   "manager.settings.about.title": "Acerca de y licencias",
   "manager.settings.about.help": "Dashboard Engine incluye software de código abierto y voces de otros creadores. El aviso siguiente los enumera con sus licencias y las atribuciones requeridas.",
   "manager.settings.about.licensesLabel": "Licencias de terceros",
   "manager.settings.about.openFile": "Abrir como archivo",
   "manager.settings.about.version": "Dashboard Engine — versión {version}",
   "manager.settings.about.openError": "No se pudo abrir el archivo de avisos.",
-
   "manager.builder.ariaLabel": "Creador de paquetes",
   "manager.builder.title": "Nuevo paquete",
   "manager.builder.palette.cyanHud": "HUD cian",
@@ -361,7 +341,6 @@
   "manager.builder.intro": "Este es un punto de partida rápido: elige aquí la estructura general (el aspecto, los widgets, el movimiento). Ajustarás cada detalle en el editor después.",
   "manager.builder.steps": "Pasos",
   "manager.builder.livePreview": "Vista previa en vivo",
-
   "manager.welcome.title": "Te damos la bienvenida a Dashboard Engine",
   "manager.welcome.lead": "Tu escritorio ahora es un panel en vivo: se dibuja directamente sobre el fondo, detrás de tus iconos. Esto es lo que puedes hacer desde aquí.",
   "manager.welcome.setupAssistant": "Configurar el asistente",
@@ -370,7 +349,6 @@
   "manager.welcome.point2": "<b>Hazlo tuyo.</b> Selecciona un paquete y usa <em>Personalizar</em> para recolorearlo, cambiar las partículas y más, o ábrelo en el editor para rehacer el diseño.",
   "manager.welcome.point3": "<b>Conéctalo a tu vida.</b> La <em>Agenda</em> pone eventos en el fondo, el <em>Lanzador</em> ancla tus aplicaciones y el <em>Asistente</em> conecta una IA local o en la nube con la que puedes hablar.",
   "manager.welcome.point4": "<b>No molesta.</b> El motor vive en la bandeja y pausa la animación cuando una app está a pantalla completa. Cierra esta ventana cuando quieras: el fondo sigue funcionando.",
-
   "manager.event.new": "Nuevo evento",
   "manager.event.edit": "Editar evento",
   "manager.event.eventLabel": "Evento",
@@ -393,7 +371,6 @@
   "manager.event.hint.timed": "Se envía una notificación de escritorio a la hora del aviso (el motor se ejecuta en la bandeja).",
   "manager.event.hint.untimed": "Dale una hora al evento para recibir una notificación de escritorio.",
   "manager.event.hint.repeating": "Los eventos que se repiten se editan como una serie completa.",
-
   "manager.detail.currentlyActive": "Actualmente en tu escritorio",
   "manager.detail.useOnDesktop": "Usar en el escritorio",
   "manager.detail.nowOnDesktop": "{name} ya está en tu escritorio.",
@@ -415,7 +392,6 @@
   "manager.detail.originFile": "instalado desde archivo",
   "manager.detail.originInstalled": "instalado",
   "manager.detail.componentsPersona": "{count} componentes · {persona}",
-
   "manager.browse.byAuthor": "{id} · v{version} · por {author}",
   "manager.browse.unknown": "desconocido",
   "manager.browse.updateTo": "Actualizar a v{version}",
@@ -429,15 +405,14 @@
   "manager.browse.noRegistries": "Aún no hay repositorios. Cualquiera puede alojar uno: es un index.json estático en cualquier servidor https (consulta PACKS.md).",
   "manager.browse.badgeUpdate": "Actualizar",
   "manager.browse.badgeInstalled": "Instalado",
-
   "manager.refresh": "Actualizar",
-
   "manager.installed.sectionInstalled": "Instalados",
   "manager.installed.sectionBuiltin": "Integrados",
   "manager.installed.empty": "Aún no hay nada instalado. Explora un repositorio o instala un paquete desde archivo.",
   "manager.installed.onDesktop": "En el escritorio",
   "manager.installed.builtin": "Integrado",
-
+  "manager.installed.master": "Principal",
+  "manager.installed.masterHint": "Tu copia principal — edítala y actualízala en el Workshop.",
   "manager.published.yourDashboards": "Tus paneles publicados",
   "manager.published.testApp": " — app de prueba (Spacewar)",
   "manager.published.openWorkshop": "Abrir el Workshop",
@@ -453,12 +428,10 @@
   "manager.published.downloadingFromSteam": "Descargando tu panel desde Steam…",
   "manager.published.downloadedOpening": "Descargado: abriéndolo en el editor.",
   "manager.published.couldNotGet": "No se pudo obtener una copia editable.",
-
   "manager.planner.addEventOn": "Añadir evento el {date}",
   "manager.planner.moreCount": "+{n} más",
   "manager.planner.nothingPlanned": "Nada planeado. Haz clic en un día del calendario para añadir un evento; los eventos con hora envían una notificación de escritorio.",
   "manager.planner.repeatsSuffix": "(se repite: {repeat})",
-
   "manager.customize.title": "Personalizar",
   "manager.customize.reset": "Restablecer valores predeterminados",
   "manager.customize.knob.accent": "Color de acento",
@@ -473,7 +446,6 @@
   "manager.customize.effect.petals": "Pétalos",
   "manager.customize.effect.rain": "Lluvia",
   "manager.customize.effect.sparkle": "Destellos",
-
   "manager.workshop.toggleDashboards": "Paneles",
   "manager.workshop.toggleVoices": "Voces",
   "manager.workshop.searchWorkshop": "Buscar en el Workshop",
@@ -505,7 +477,6 @@
   "manager.workshop.filter.Includes": "Funciones",
   "manager.workshop.filter.Compatibility": "Compatibilidad",
   "manager.workshop.unavailable": "El Steam Workshop no está disponible.",
-
   "manager.voices.search": "Buscar voces",
   "manager.voices.community": "Voces de la comunidad",
   "manager.voices.loading": "Cargando voces de la comunidad…",
@@ -534,7 +505,6 @@
   "manager.voices.openTuning": "Abrir Ajuste de voz",
   "manager.voices.downloadingFromSteam": "Descargando tu voz desde Steam…",
   "manager.voices.downloadedOpening": "Descargada: abriendo Ajuste de voz. Está en tus perfiles guardados.",
-
   "create.title": "Diseña tu propio paquete de panel",
   "create.intro": "Un paquete es un aspecto, un diseño, una personalidad y una voz: todo lo que el fondo necesita para pensar y hablar. Crea uno en el editor y compártelo en el Steam Workshop. Sin cuenta ni código (aunque puedes añadir código aislado si quieres).",
   "create.startScratch": "Empezar desde cero",
@@ -610,7 +580,6 @@
   "create.prop.2.effect": "densidad de partículas (0,05-1)",
   "create.prop.3.effect": "la intensidad de una textura (0-1)",
   "create.prop.4.effect": "muescas de esquina activadas / desactivadas",
-
   "editor.title": "Editor",
   "editor.packName": "Nombre del paquete",
   "editor.saveApply": "Guardar y aplicar",
@@ -624,7 +593,6 @@
   "editor.tab.skin": "Aspecto",
   "editor.tab.persona": "Personalidad",
   "editor.tab.customize": "Personalizar",
-
   "editor.palette.status.label": "Estado de la personalidad",
   "editor.palette.status.hint": "nombre · lema · marquesina",
   "editor.palette.clock.label": "Reloj",
@@ -677,7 +645,6 @@
   "editor.palette.assistant.hint": "abre el chat de IA",
   "editor.palette.module.label": "Módulo personalizado",
   "editor.palette.module.hint": "tu propio HTML/JS aislado",
-
   "editor.savedAsNew": "Guardado como un paquete nuevo: «{id}».",
   "editor.savedApplied": "Guardado: «{id}» ya está en tu escritorio.",
   "editor.capReached": "Este paquete ya tiene 24 componentes (el máximo).",
@@ -1197,7 +1164,6 @@
   "editor.insp.knob.grid": "Cuadrícula",
   "editor.insp.knob.vignette": "Viñeta",
   "editor.insp.knob.corner-notches": "Muescas en esquinas",
-
   "panel.title": "Ajuste de voz",
   "panel.sub": "Da forma a cómo habla una personalidad: los perfiles guardan parámetros, nunca audio.",
   "panel.engineStatus": "Estado del motor",
@@ -1216,7 +1182,6 @@
   "panel.test.replay": "Repetir",
   "panel.test.useSystemVoice": "Usar la voz del sistema",
   "panel.status.ready": "Listo.",
-
   "panel.readout.f0": "F0 medida",
   "panel.readout.dryInit": "en seco —",
   "panel.readout.dry": "en seco {v}",
@@ -1228,17 +1193,14 @@
   "panel.readout.speech": "voz {v}",
   "panel.readout.voiced": "Sonoro",
   "panel.readout.ofFrames": "de los fotogramas",
-
   "panel.profile.title": "Perfil",
   "panel.profile.name": "Nombre",
   "panel.profile.author": "Autor",
   "panel.profile.save": "Guardar perfil",
   "panel.profile.share": "Compartir en el Workshop…",
   "panel.profile.savedTo": "Guardado en profiles/{file}",
-
   "panel.reserved.notWired": "Sin conectar",
   "panel.reserved.reserved": "Reservado",
-
   "panel.param.prosody.pitchShift.label": "Tono",
   "panel.param.prosody.pitchShift.hint": "voz más aguda o más grave",
   "panel.param.prosody.pitchShift.tech": "cambio de tono · semitonos",
@@ -1290,7 +1252,6 @@
   "panel.param.character.chorus.label": "Coro",
   "panel.param.character.chorus.hint": "voz brillante y doblada",
   "panel.param.character.chorus.tech": "conjunto desafinado",
-
   "panel.voice.hdTitle": "Voz neuronal de mayor calidad: descarga más grande",
   "panel.voice.notInstalled": "No instalada",
   "panel.voice.upgrade": "Mejorar · {size}",
@@ -1302,10 +1263,8 @@
   "panel.voice.downloadingHd": "Descargando {name}: es una descarga HD grande de una sola vez.",
   "panel.voice.installed": "{name} instalada (suma de comprobación verificada).",
   "panel.voice.downloadFailed": "La descarga falló.",
-
   "panel.loadedPreset": "Ejemplo cargado: {name}",
   "panel.loadedProfile": "Perfil cargado: {name}",
-
   "panel.publish.importedTitle": "Esta voz se importó de otro creador, así que no puedes volver a publicarla como propia.",
   "panel.publish.shareTitle": "Comparte este perfil de voz en el Steam Workshop (solo parámetros, nunca audio).",
   "panel.publish.importedError": "Esta voz se importó de otro creador, así que no puedes publicarla como propia.",
@@ -1328,15 +1287,12 @@
   "panel.publish.updated": "¡Actualizada!",
   "panel.publish.published": "¡Publicada!",
   "panel.publish.acceptAgreement": "Acepta el Acuerdo Legal del Workshop en la página de Steam del elemento para que sea visible.",
-
   "panel.synth.synthesizing": "Sintetizando…",
   "panel.synth.done": "Listo.",
   "panel.synth.speakingSystem": "Hablando con la voz del sistema…",
   "panel.synth.doneSystem": "Listo (voz del sistema, sin ajustar; instala Piper para la cadena completa).",
-
   "panel.env.noPiper": "Piper no está instalado: la síntesis usa la voz del sistema.",
   "panel.env.noFfmpeg": "FFmpeg no está instalado: solo voz en bruto; el tono y el carácter se omiten.",
-
   "panel.init.noPresets": "No se encontraron ejemplos: falta la carpeta de ejemplos.",
   "panel.init.startFailed": "El panel no pudo iniciarse: {message}",
   "editor.insp.gallery.privacyWarn": "Las fotos que añadas se guardan dentro del paquete. Si lo publicas o lo compartes, se vuelven públicas: no incluyas nada privado.",

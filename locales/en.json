@@ -1,6 +1,5 @@
 {
   "app.name": "Dashboard Engine",
-
   "common.save": "Save",
   "common.cancel": "Cancel",
   "common.delete": "Delete",
@@ -9,7 +8,6 @@
   "common.next": "Next",
   "common.close": "Close",
   "common.saved": "Saved.",
-
   "tray.openManager": "Open Manager",
   "tray.voiceTuning": "Voice Tuning",
   "tray.switchPack": "Switch Pack",
@@ -17,10 +15,8 @@
   "tray.resumeDesktop": "Resume Desktop",
   "tray.performance": "Performance",
   "tray.quit": "Quit Dashboard Engine",
-
   "manager.topbar.onDesktop": "On your desktop:",
   "manager.topbar.voiceTuning": "Voice tuning",
-
   "manager.tab.installed": "Installed",
   "manager.tab.browse": "Browse",
   "manager.tab.published": "Published",
@@ -29,22 +25,18 @@
   "manager.tab.launcher": "Launcher",
   "manager.tab.assistant": "Assistant",
   "manager.tab.settings": "Settings",
-
   "manager.search.label": "Search packs",
   "manager.search.placeholder": "Search packs",
   "manager.installFromFile": "Install from file…",
   "manager.detail.empty": "Select a pack to see its details.",
-
   "manager.registry.label": "Registry URL",
   "manager.registry.placeholder": "Registry URL (https://…/index.json)",
   "manager.registry.subscribe": "Subscribe",
-
   "manager.planner.prevMonth": "Previous month",
   "manager.planner.nextMonth": "Next month",
   "manager.planner.today": "Today",
   "manager.planner.addEvent": "Add event",
   "manager.planner.upcoming": "Upcoming",
-
   "manager.launcher.hint": "Pins appear on any pack with a launcher component (drop one in via the editor). Your pins and recents are personal — they never leave this PC or enter a pack.",
   "manager.launcher.appToPin": "App to pin",
   "manager.launcher.pinApp": "Pin app",
@@ -53,7 +45,6 @@
   "manager.launcher.empty": "Nothing pinned yet. Pick an app above, or pin a file or folder.",
   "manager.launcher.unpin": "Unpin",
   "manager.launcher.pinned": "Pinned.",
-
   "manager.assistant.baseUrl": "Base URL",
   "manager.assistant.apiKey": "API key",
   "manager.assistant.modelId": "Model id",
@@ -100,29 +91,24 @@
   "manager.assistant.hintBusy": "the voice engine is busy, try again in a moment",
   "manager.assistant.hintUnavailable": "download this voice first, or wait for the HD engine to finish installing",
   "manager.assistant.hintNoResponse": "the voice engine did not respond",
-
   "settings.language.title": "Language",
   "settings.language.label": "Interface language",
   "settings.language.auto": "Automatic (system)",
   "settings.language.help": "Choose the interface language. Community translations added to the locales folder appear here automatically. Untranslated text falls back to English.",
   "settings.language.applying": "Applying…",
-
   "manager.settings.display.title": "Display",
   "manager.settings.display.help": "Choose which monitor shows the animated wallpaper. It moves right away.",
   "manager.settings.display.showOn": "Show wallpaper on",
   "manager.settings.display.primary": "Primary display (default)",
   "manager.settings.display.primaryTag": "primary",
   "manager.settings.display.moved": "Moved the wallpaper to the selected display.",
-
   "manager.settings.startup.title": "Startup",
   "manager.settings.startup.autostart": "Start Dashboard Engine when Windows starts",
   "manager.settings.startup.autostartHint": "The engine launches quietly to the tray when you sign in, so your desktop is already alive — no window to open.",
   "manager.settings.startup.unsupported": "Start-with-the-OS isn’t available on this platform.",
-
   "manager.settings.voiceAlerts.title": "Voice alerts",
   "manager.settings.voiceAlerts.speak": "Speak system-health alerts aloud",
   "manager.settings.voiceAlerts.help": "Your assistant voice announces when CPU, memory or disk run high, or the battery gets low. Needs a “System info” component with Live health alerts on, and speaks with the voice from Assistant → Voice.",
-
   "manager.settings.performance.title": "Performance",
   "manager.settings.performance.help": "The animated wallpaper pauses and throttles like Wallpaper Engine so it stays a good background citizen. These are the same controls as the tray’s Performance menu.",
   "manager.settings.performance.pauseFullscreen": "Pause when a full-screen app covers the screen",
@@ -130,11 +116,9 @@
   "manager.settings.performance.fpsCap": "Frame-rate cap",
   "manager.settings.performance.fps": "{n} fps",
   "manager.settings.performance.fpsRecommended": "{n} fps (recommended)",
-
   "manager.settings.bgMotion.title": "Background motion",
   "manager.settings.bgMotion.help": "Scales the parallax and depth drift on layered pack backgrounds — turn it down, or off, if you find the movement distracting. It doesn’t affect performance.",
   "manager.settings.bgMotion.parallax": "Parallax & drift",
-
   "manager.settings.weather.title": "Weather",
   "manager.settings.weather.yourLocation": "Your location",
   "manager.settings.weather.placeholder": "Type a city, e.g. Kyoto",
@@ -145,27 +129,23 @@
   "manager.settings.weather.finding": "Finding location…",
   "manager.settings.weather.notFound": "Could not find that place.",
   "manager.settings.weather.setTo": "Weather location set to {place}.",
-
   "manager.settings.music.title": "Background music",
   "manager.settings.music.help": "Play your own music on the desktop. Files stay on your PC and are never saved into a pack or shared — the wallpaper just plays them, looping through the list.",
   "manager.settings.music.play": "Play background music",
   "manager.settings.music.volume": "Volume",
   "manager.settings.music.add": "Add music files…",
   "manager.settings.music.empty": "No music added yet — add some audio files below.",
-
   "manager.settings.help.title": "Help",
   "manager.settings.help.welcome": "Show the welcome guide",
   "manager.settings.help.logs": "Open logs folder",
   "manager.settings.help.hint": "If something goes wrong, the logs folder holds a diagnostic log (and any crash dumps) you can share when reporting a problem. It contains no personal data.",
   "manager.settings.help.logsError": "Could not open the logs folder.",
-
   "manager.settings.about.title": "About & licenses",
   "manager.settings.about.help": "Dashboard Engine includes open-source software and voices from other creators. The notice below lists them with their licenses and required attributions.",
   "manager.settings.about.licensesLabel": "Third-party licenses",
   "manager.settings.about.openFile": "Open as a file",
   "manager.settings.about.version": "Dashboard Engine — version {version}",
   "manager.settings.about.openError": "Could not open the notices file.",
-
   "manager.builder.ariaLabel": "New pack builder",
   "manager.builder.title": "New pack",
   "manager.builder.palette.cyanHud": "Cyan HUD",
@@ -361,7 +341,6 @@
   "manager.builder.intro": "This is a quick starting point — choose the overall structure here (the look, the widgets, the motion). You'll fine-tune every detail in the editor afterwards.",
   "manager.builder.steps": "Steps",
   "manager.builder.livePreview": "Live preview",
-
   "manager.welcome.title": "Welcome to Dashboard Engine",
   "manager.welcome.lead": "Your desktop is now a live dashboard — it renders straight onto the wallpaper, behind your icons. Here's what you can do from here.",
   "manager.welcome.setupAssistant": "Set up the assistant",
@@ -370,7 +349,6 @@
   "manager.welcome.point2": "<b>Make it yours.</b> Select a pack and use <em>Customize</em> to recolour it, change the particles, and more — or open it in the editor to rebuild the layout.",
   "manager.welcome.point3": "<b>Wire in your life.</b> The <em>Planner</em> puts events on the wallpaper, <em>Launcher</em> pins your apps, and <em>Assistant</em> connects a local or hosted AI you can talk to.",
   "manager.welcome.point4": "<b>It stays out of the way.</b> The engine lives in your tray and pauses the animation for full-screen apps. Close this window anytime — the wallpaper keeps running.",
-
   "manager.event.new": "New event",
   "manager.event.edit": "Edit event",
   "manager.event.eventLabel": "Event",
@@ -393,7 +371,6 @@
   "manager.event.hint.timed": "A desktop notification fires at the alert time (the engine runs in the tray).",
   "manager.event.hint.untimed": "Give the event a time to get a desktop notification.",
   "manager.event.hint.repeating": "Repeating events edit as a whole series.",
-
   "manager.detail.currentlyActive": "Currently on your desktop",
   "manager.detail.useOnDesktop": "Use on desktop",
   "manager.detail.nowOnDesktop": "{name} is now on your desktop.",
@@ -415,7 +392,6 @@
   "manager.detail.originFile": "installed from file",
   "manager.detail.originInstalled": "installed",
   "manager.detail.componentsPersona": "{count} components · {persona}",
-
   "manager.browse.byAuthor": "{id} · v{version} · by {author}",
   "manager.browse.unknown": "unknown",
   "manager.browse.updateTo": "Update to v{version}",
@@ -429,15 +405,14 @@
   "manager.browse.noRegistries": "No registries yet. Anyone can host one — it’s a static index.json on any https server (see PACKS.md).",
   "manager.browse.badgeUpdate": "Update",
   "manager.browse.badgeInstalled": "Installed",
-
   "manager.refresh": "Refresh",
-
   "manager.installed.sectionInstalled": "Installed",
   "manager.installed.sectionBuiltin": "Built-in",
   "manager.installed.empty": "Nothing installed yet. Browse a registry or install a pack from file.",
   "manager.installed.onDesktop": "On desktop",
   "manager.installed.builtin": "Built-in",
-
+  "manager.installed.master": "Master",
+  "manager.installed.masterHint": "Your master copy — edit it and update it to the Workshop.",
   "manager.published.yourDashboards": "Your published dashboards",
   "manager.published.testApp": " — test app (Spacewar)",
   "manager.published.openWorkshop": "Open Workshop",
@@ -453,12 +428,10 @@
   "manager.published.downloadingFromSteam": "Downloading your dashboard from Steam…",
   "manager.published.downloadedOpening": "Downloaded — opening it in the editor.",
   "manager.published.couldNotGet": "Could not get an editable copy.",
-
   "manager.planner.addEventOn": "Add event on {date}",
   "manager.planner.moreCount": "+{n} more",
   "manager.planner.nothingPlanned": "Nothing planned. Click a day on the calendar to add an event — timed events raise a desktop notification.",
   "manager.planner.repeatsSuffix": "(repeats {repeat})",
-
   "manager.customize.title": "Customize",
   "manager.customize.reset": "Reset to defaults",
   "manager.customize.knob.accent": "Accent colour",
@@ -473,7 +446,6 @@
   "manager.customize.effect.petals": "Petals",
   "manager.customize.effect.rain": "Rain",
   "manager.customize.effect.sparkle": "Sparkle",
-
   "manager.workshop.toggleDashboards": "Dashboards",
   "manager.workshop.toggleVoices": "Voices",
   "manager.workshop.searchWorkshop": "Search Workshop",
@@ -505,7 +477,6 @@
   "manager.workshop.filter.Includes": "Features",
   "manager.workshop.filter.Compatibility": "Compatibility",
   "manager.workshop.unavailable": "Steam Workshop is unavailable.",
-
   "manager.voices.search": "Search voices",
   "manager.voices.community": "Community voices",
   "manager.voices.loading": "Loading community voices…",
@@ -534,7 +505,6 @@
   "manager.voices.openTuning": "Open Voice tuning",
   "manager.voices.downloadingFromSteam": "Downloading your voice from Steam…",
   "manager.voices.downloadedOpening": "Downloaded — opening Voice tuning. It’s in your saved profiles.",
-
   "create.title": "Design your own dashboard pack",
   "create.intro": "A pack is a skin, a layout, a persona, and a voice — everything the wallpaper needs to think and speak. Build one in the editor, then share it on Steam Workshop. No account, no code required (though you can add sandboxed code if you want).",
   "create.startScratch": "Start from scratch",
@@ -610,7 +580,6 @@
   "create.prop.2.effect": "particle density (0.05–1)",
   "create.prop.3.effect": "a texture’s intensity (0–1)",
   "create.prop.4.effect": "corner notches on / off",
-
   "editor.title": "Editor",
   "editor.packName": "Pack name",
   "editor.saveApply": "Save & apply",
@@ -624,7 +593,6 @@
   "editor.tab.skin": "Skin",
   "editor.tab.persona": "Persona",
   "editor.tab.customize": "Customize",
-
   "editor.palette.status.label": "Persona status",
   "editor.palette.status.hint": "name · tagline · ticker",
   "editor.palette.clock.label": "Clock",
@@ -677,7 +645,6 @@
   "editor.palette.assistant.hint": "opens the AI chat",
   "editor.palette.module.label": "Custom module",
   "editor.palette.module.hint": "your own sandboxed HTML/JS",
-
   "editor.savedAsNew": "Saved as a new pack: “{id}”.",
   "editor.savedApplied": "Saved — “{id}” is now on your desktop.",
   "editor.capReached": "This pack already has 24 components (the cap).",
@@ -1197,7 +1164,6 @@
   "editor.insp.knob.grid": "Grid",
   "editor.insp.knob.vignette": "Vignette",
   "editor.insp.knob.corner-notches": "Corner notches",
-
   "panel.title": "Voice tuning",
   "panel.sub": "Shape how a persona speaks — profiles store parameters, never audio.",
   "panel.engineStatus": "Engine status",
@@ -1216,7 +1182,6 @@
   "panel.test.replay": "Replay",
   "panel.test.useSystemVoice": "Use system voice",
   "panel.status.ready": "Ready.",
-
   "panel.readout.f0": "Measured F0",
   "panel.readout.dryInit": "dry —",
   "panel.readout.dry": "dry {v}",
@@ -1228,17 +1193,14 @@
   "panel.readout.speech": "speech {v}",
   "panel.readout.voiced": "Voiced",
   "panel.readout.ofFrames": "of frames",
-
   "panel.profile.title": "Profile",
   "panel.profile.name": "Name",
   "panel.profile.author": "Author",
   "panel.profile.save": "Save profile",
   "panel.profile.share": "Share to Workshop…",
   "panel.profile.savedTo": "Saved to profiles/{file}",
-
   "panel.reserved.notWired": "Not wired",
   "panel.reserved.reserved": "Reserved",
-
   "panel.param.prosody.pitchShift.label": "Pitch",
   "panel.param.prosody.pitchShift.hint": "higher or lower voice",
   "panel.param.prosody.pitchShift.tech": "pitch shift · semitones",
@@ -1290,7 +1252,6 @@
   "panel.param.character.chorus.label": "Chorus",
   "panel.param.character.chorus.hint": "shimmery, doubled voice",
   "panel.param.character.chorus.tech": "detuned ensemble",
-
   "panel.voice.hdTitle": "Higher-quality neural voice — larger download",
   "panel.voice.notInstalled": "Not installed",
   "panel.voice.upgrade": "Upgrade · {size}",
@@ -1302,10 +1263,8 @@
   "panel.voice.downloadingHd": "Downloading {name} — this is a large one-time HD download.",
   "panel.voice.installed": "Installed {name} (checksum verified).",
   "panel.voice.downloadFailed": "Download failed.",
-
   "panel.loadedPreset": "Loaded preset: {name}",
   "panel.loadedProfile": "Loaded profile: {name}",
-
   "panel.publish.importedTitle": "This voice was imported from another creator, so it can’t be republished as your own.",
   "panel.publish.shareTitle": "Share this voice profile on the Steam Workshop (parameters only — never audio).",
   "panel.publish.importedError": "This voice was imported from another creator, so it can’t be published as your own.",
@@ -1328,15 +1287,12 @@
   "panel.publish.updated": "Updated!",
   "panel.publish.published": "Published!",
   "panel.publish.acceptAgreement": "Accept the Workshop Legal Agreement on the item’s Steam page to make it visible.",
-
   "panel.synth.synthesizing": "Synthesizing…",
   "panel.synth.done": "Done.",
   "panel.synth.speakingSystem": "Speaking with the system voice…",
   "panel.synth.doneSystem": "Done (system voice — untuned; install Piper for the full chain).",
-
   "panel.env.noPiper": "Piper isn’t installed — synthesis falls back to the system voice.",
   "panel.env.noFfmpeg": "FFmpeg isn’t installed — raw voice only; timbre and character are bypassed.",
-
   "panel.init.noPresets": "No presets found — the presets folder is missing.",
   "panel.init.startFailed": "The panel failed to start: {message}",
   "editor.insp.gallery.privacyWarn": "Photos you add are saved inside the pack. If you publish or share it, they become public — don’t include anything private.",

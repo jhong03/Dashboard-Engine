@@ -411,6 +411,8 @@
   "manager.installed.empty": "還沒有安裝任何內容。瀏覽一個註冊源，或從檔案安裝一個包。",
   "manager.installed.onDesktop": "在桌面上",
   "manager.installed.builtin": "內建",
+  "manager.installed.master": "主副本",
+  "manager.installed.masterHint": "你的主副本——可編輯並更新到創意工坊。",
   "manager.published.yourDashboards": "你釋出的儀表盤",
   "manager.published.testApp": " —— 測試應用（Spacewar）",
   "manager.published.openWorkshop": "開啟創意工坊",

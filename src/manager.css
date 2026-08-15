@@ -150,6 +150,21 @@ body {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
 }
 .card .badge.badge-active { background: var(--accent); color: #fff; }
+/* "Master" chip (top-right) — the user's own editable, Workshop-updatable copy. */
+.card .card-master {
+  position: absolute;
+  top: 6px; right: 6px;
+  z-index: 2;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
 
 /* ── Detail sidebar ─────────────────────────────────────────────────────── */
 

@@ -2321,6 +2321,8 @@ function createRenderer(services) {
     grid.className = 'cal-grid';
     el.append(label, grid);
 
+    const byDay = new Map(); // day-of-month → this month's (non-done) reminders, for the hover peek
+
     // Interactive only where reminder-write services exist (the live desktop),
     // and only when the pack shows reminders at all. Editor/manager previews
     // omit these services, so the calendar there stays a static preview.
@@ -2337,9 +2339,15 @@ function createRenderer(services) {
       const res = await services.reminders({ from: `${prefix}01`, to: `${prefix}${String(last).padStart(2, '0')}` });
       if (!res.ok) return;
       const entries = res.occurrences || res.reminders;
-      const marked = new Set(
-        entries.filter((r) => r.date.startsWith(prefix) && !r.done).map((r) => Number(r.date.slice(8))),
-      );
+      byDay.clear();
+      const marked = new Set();
+      for (const r of entries) {
+        if (!r.date.startsWith(prefix) || r.done) continue;
+        const day = Number(r.date.slice(8));
+        marked.add(day);
+        if (!byDay.has(day)) byDay.set(day, []);
+        byDay.get(day).push(r);
+      }
       for (const cell of grid.querySelectorAll('.cal-day')) {
         cell.classList.toggle('has-rem', marked.has(Number(cell.dataset.day)));
       }
@@ -2373,6 +2381,14 @@ function createRenderer(services) {
           cell.classList.add('cal-clickable');
           cell.addEventListener('click', () => openDay(cell.dataset.iso, cell));
         }
+        // Peek this day's events on hover — after a short delay so it doesn't flash
+        // as the cursor passes over. Read-only; the click editor is separate.
+        cell.addEventListener('mouseenter', () => {
+          clearTimeout(hoverTimer);
+          const d = Number(cell.dataset.day);
+          hoverTimer = setTimeout(() => showHover(d, cell), HOVER_DELAY_MS);
+        });
+        cell.addEventListener('mouseleave', () => { clearTimeout(hoverTimer); closeHover(); });
         grid.appendChild(cell);
       }
       decorate();
@@ -2389,6 +2405,7 @@ function createRenderer(services) {
 
     const openDay = async (iso, anchor) => {
       closePopover();
+      closeHover();
       const pop = document.createElement('div');
       pop.className = 'cal-pop skin-root';
       popover = pop;
@@ -2570,6 +2587,44 @@ function createRenderer(services) {
       pop.style.left = `${Math.round(left)}px`;
       pop.style.top = `${Math.round(top)}px`;
     };
+
+    // ── Hover peek (read-only) ──────────────────────────────────────────────
+    // Hovering a day with reminders (after a short delay) floats a small,
+    // click-through list of that day's events. The click editor stays separate.
+    const HOVER_DELAY_MS = 450;
+    let hoverPop = null;
+    let hoverTimer = 0;
+    const closeHover = () => { if (hoverPop) { hoverPop.remove(); hoverPop = null; } };
+    const showHover = (day, anchor) => {
+      if (popover) return; // the click editor is open — don't stack over it
+      const items = byDay.get(day);
+      if (!items || !items.length) return;
+      closeHover();
+      const pop = document.createElement('div');
+      pop.className = 'cal-hover skin-root';
+      for (const r of items.slice(0, 6)) {
+        const row = document.createElement('div');
+        row.className = 'cal-hover-row';
+        const when = document.createElement('span');
+        when.className = 'cal-hover-when';
+        when.textContent = r.time || (r.repeat && r.repeat !== 'none' ? '↻' : '·');
+        const text = document.createElement('span');
+        text.className = 'cal-hover-text';
+        text.textContent = r.text || r.title || 'Reminder';
+        row.append(when, text);
+        pop.appendChild(row);
+      }
+      if (items.length > 6) {
+        const more = document.createElement('div');
+        more.className = 'cal-hover-more';
+        more.textContent = `+${items.length - 6} more`;
+        pop.appendChild(more);
+      }
+      hoverPop = pop;
+      document.body.appendChild(pop);
+      positionPopover(pop, anchor);
+    };
+    live.disposers.push(() => { clearTimeout(hoverTimer); closeHover(); });
 
     if (editable) {
       // Dismiss on outside click / Escape. mousedown fires before the day's
@@ -2888,12 +2943,32 @@ function createRenderer(services) {
   // Live Windows notifications (personal data; read in main). Fails soft:
   // shows how to grant access if the user hasn't, or an unavailable note.
   function buildNotifications(component, el) {
+    // Clear buttons only where we can actually dismiss (the live desktop);
+    // editor/manager previews render the sample feed read-only.
+    const interactive = !!services.notificationsDismiss;
+    const header = document.createElement('div');
+    header.className = 'notif-header';
     const label = document.createElement('span');
     label.className = 'comp-label';
     label.textContent = component.options.label || 'Notifications';
+    header.appendChild(label);
     const listEl = document.createElement('div');
     listEl.className = 'notif-feed';
-    el.append(label, listEl);
+    const clearAll = document.createElement('button');
+    clearAll.type = 'button';
+    clearAll.className = 'notif-clear-all';
+    clearAll.textContent = 'Clear all';
+    clearAll.hidden = true;
+    if (interactive) {
+      clearAll.addEventListener('click', async () => {
+        listEl.textContent = '';
+        clearAll.hidden = true;
+        try { await services.notificationsDismiss({ all: true }); } catch (e) { /* fail soft */ }
+        paint();
+      });
+      header.appendChild(clearAll);
+    }
+    el.append(header, listEl);
 
     const relTime = (iso) => {
       if (!iso) return '';
@@ -2909,6 +2984,7 @@ function createRenderer(services) {
     };
 
     const message = (text) => {
+      if (interactive) clearAll.hidden = true;
       listEl.textContent = '';
       const msg = document.createElement('div');
       msg.className = 'notif-empty';
@@ -2928,6 +3004,7 @@ function createRenderer(services) {
       }
       const items = res.notifications.slice(0, component.options.limit);
       if (items.length === 0) { message('No notifications.'); return; }
+      if (interactive) clearAll.hidden = false;
 
       listEl.textContent = '';
       for (const n of items) {
@@ -2943,6 +3020,20 @@ function createRenderer(services) {
         time.className = 'notif-time';
         time.textContent = relTime(n.time);
         head.append(app, time);
+        if (interactive && n.id != null) {
+          const x = document.createElement('button');
+          x.type = 'button';
+          x.className = 'notif-dismiss';
+          x.textContent = '×';
+          x.title = 'Dismiss';
+          x.addEventListener('click', async (ev) => {
+            ev.stopPropagation();
+            item.remove();
+            if (!listEl.querySelector('.notif-item')) message('No notifications.');
+            try { await services.notificationsDismiss({ ids: [n.id] }); } catch (e) { /* fail soft */ }
+          });
+          head.append(x);
+        }
         item.appendChild(head);
 
         if (n.title) {
@@ -3328,6 +3419,9 @@ function createRenderer(services) {
     chat.anchor = anchor;
     if (component.options.label) chat.input.placeholder = component.options.label;
     chat.panel.classList.add('open');
+    // Start loading a local model NOW (while the user reads/types) so the first
+    // reply isn't a cold start. No-op for hosted endpoints; fully fail-soft.
+    if (services.assistant && services.assistant.warmup) services.assistant.warmup().catch(() => {});
     // Anchor to the console on first open; once the user has dragged it, respect
     // where they put it. (The panel is a fixed size now, so no re-clamp needed.)
     if (!chat.moved) positionChatPanel();

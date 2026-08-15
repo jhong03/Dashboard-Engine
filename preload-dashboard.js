@@ -69,14 +69,17 @@ const bridge = {
   launcherLaunch: (id) => ipcRenderer.invoke('aegis:launcher:launch', String(id)),
   launcherFocus: (hwnd) => ipcRenderer.invoke('aegis:launcher:focus', Number(hwnd)),
   onLauncherChanged: subscription('aegis:launcher:changed'),
-  // Live Windows notifications (read-only; personal data).
+  // Live Windows notifications (read; personal data). Dismiss clears them from
+  // the Action Center — {all:true} or {ids:[…]}.
   notifications: () => ipcRenderer.invoke('aegis:notifications'),
+  notificationsDismiss: (payload) => ipcRenderer.invoke('aegis:notifications:dismiss', payload),
   // AI assistant — the `assistant` component is a real console on the desktop.
   assistantAsk: (prompt) => ipcRenderer.invoke('aegis:assistant:ask', String(prompt)),
   assistantSpeak: (text) => ipcRenderer.invoke('aegis:assistant:speak', String(text)),
   assistantConfig: () => ipcRenderer.invoke('aegis:assistant:config:get'),
   assistantHistory: () => ipcRenderer.invoke('aegis:assistant:history'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
+  assistantWarmup: () => ipcRenderer.invoke('aegis:assistant:warmup'),
   onAssistantStream: subscription('aegis:assistant:stream'), // live reply tokens
   // Multiple local chat sessions (personal data, never in a pack).
   assistantSessions: () => ipcRenderer.invoke('aegis:assistant:sessions'),

@@ -1,6 +1,5 @@
 {
   "app.name": "Dashboard Engine",
-
   "common.save": "Enregistrer",
   "common.cancel": "Annuler",
   "common.delete": "Supprimer",
@@ -9,7 +8,6 @@
   "common.next": "Suivant",
   "common.close": "Fermer",
   "common.saved": "Enregistré.",
-
   "tray.openManager": "Ouvrir le gestionnaire",
   "tray.voiceTuning": "Réglage de la voix",
   "tray.switchPack": "Changer de pack",
@@ -17,10 +15,8 @@
   "tray.resumeDesktop": "Reprendre le bureau",
   "tray.performance": "Performances",
   "tray.quit": "Quitter Dashboard Engine",
-
   "manager.topbar.onDesktop": "Sur votre bureau :",
   "manager.topbar.voiceTuning": "Réglage de la voix",
-
   "manager.tab.installed": "Installés",
   "manager.tab.browse": "Parcourir",
   "manager.tab.published": "Publiés",
@@ -29,22 +25,18 @@
   "manager.tab.launcher": "Lanceur",
   "manager.tab.assistant": "Assistant",
   "manager.tab.settings": "Paramètres",
-
   "manager.search.label": "Rechercher des packs",
   "manager.search.placeholder": "Rechercher des packs",
   "manager.installFromFile": "Installer depuis un fichier…",
   "manager.detail.empty": "Sélectionnez un pack pour voir ses détails.",
-
   "manager.registry.label": "URL du dépôt",
   "manager.registry.placeholder": "URL du dépôt (https://…/index.json)",
   "manager.registry.subscribe": "S’abonner",
-
   "manager.planner.prevMonth": "Mois précédent",
   "manager.planner.nextMonth": "Mois suivant",
   "manager.planner.today": "Aujourd’hui",
   "manager.planner.addEvent": "Ajouter un événement",
   "manager.planner.upcoming": "À venir",
-
   "manager.launcher.hint": "Les raccourcis apparaissent sur tout pack doté d’un composant lanceur (ajoutez-en un via l’éditeur). Vos raccourcis et récents sont personnels — ils ne quittent jamais ce PC et n’entrent jamais dans un pack.",
   "manager.launcher.appToPin": "Application à épingler",
   "manager.launcher.pinApp": "Épingler l’application",
@@ -53,7 +45,6 @@
   "manager.launcher.empty": "Rien d’épinglé pour l’instant. Choisissez une application ci-dessus, ou épinglez un fichier ou un dossier.",
   "manager.launcher.unpin": "Désépingler",
   "manager.launcher.pinned": "Épinglé.",
-
   "manager.assistant.baseUrl": "URL de base",
   "manager.assistant.apiKey": "Clé API",
   "manager.assistant.modelId": "Identifiant du modèle",
@@ -100,29 +91,24 @@
   "manager.assistant.hintBusy": "le moteur vocal est occupé, réessayez dans un instant",
   "manager.assistant.hintUnavailable": "téléchargez d’abord cette voix, ou attendez la fin de l’installation du moteur HD",
   "manager.assistant.hintNoResponse": "le moteur vocal n’a pas répondu",
-
   "settings.language.title": "Langue",
   "settings.language.label": "Langue de l’interface",
   "settings.language.auto": "Automatique (système)",
   "settings.language.help": "Choisissez la langue de l’interface. Les traductions communautaires ajoutées au dossier locales apparaissent ici automatiquement. Le texte non traduit revient à l’anglais.",
   "settings.language.applying": "Application…",
-
   "manager.settings.display.title": "Affichage",
   "manager.settings.display.help": "Choisissez quel écran affiche le fond d’écran animé. Il se déplace immédiatement.",
   "manager.settings.display.showOn": "Afficher le fond d’écran sur",
   "manager.settings.display.primary": "Écran principal (par défaut)",
   "manager.settings.display.primaryTag": "principal",
   "manager.settings.display.moved": "Fond d’écran déplacé vers l’écran sélectionné.",
-
   "manager.settings.startup.title": "Démarrage",
   "manager.settings.startup.autostart": "Lancer Dashboard Engine au démarrage de Windows",
   "manager.settings.startup.autostartHint": "Le moteur se lance discrètement dans la zone de notification à votre connexion, pour que votre bureau soit déjà vivant — aucune fenêtre à ouvrir.",
   "manager.settings.startup.unsupported": "Le lancement avec le système n’est pas disponible sur cette plateforme.",
-
   "manager.settings.voiceAlerts.title": "Alertes vocales",
   "manager.settings.voiceAlerts.speak": "Annoncer les alertes de santé système à voix haute",
   "manager.settings.voiceAlerts.help": "Votre voix d’assistant annonce quand le processeur, la mémoire ou le disque montent en charge, ou quand la batterie est faible. Nécessite un composant « Infos système » avec les alertes de santé en direct activées, et parle avec la voix définie dans Assistant → Voix.",
-
   "manager.settings.performance.title": "Performances",
   "manager.settings.performance.help": "Le fond d’écran animé se met en pause et se limite comme Wallpaper Engine pour rester un bon voisin en arrière-plan. Ce sont les mêmes réglages que le menu Performances de la zone de notification.",
   "manager.settings.performance.pauseFullscreen": "Mettre en pause quand une application plein écran couvre l’écran",
@@ -130,11 +116,9 @@
   "manager.settings.performance.fpsCap": "Limite d’images par seconde",
   "manager.settings.performance.fps": "{n} i/s",
   "manager.settings.performance.fpsRecommended": "{n} i/s (recommandé)",
-
   "manager.settings.bgMotion.title": "Mouvement de l’arrière-plan",
   "manager.settings.bgMotion.help": "Ajuste la parallaxe et la dérive de profondeur des arrière-plans de packs en couches — réduisez-le, ou désactivez-le, si le mouvement vous distrait. Cela n’affecte pas les performances.",
   "manager.settings.bgMotion.parallax": "Parallaxe et dérive",
-
   "manager.settings.weather.title": "Météo",
   "manager.settings.weather.yourLocation": "Votre emplacement",
   "manager.settings.weather.placeholder": "Saisissez une ville, ex. Kyoto",
@@ -145,27 +129,23 @@
   "manager.settings.weather.finding": "Recherche de l’emplacement…",
   "manager.settings.weather.notFound": "Impossible de trouver cet endroit.",
   "manager.settings.weather.setTo": "Emplacement météo défini sur {place}.",
-
   "manager.settings.music.title": "Musique de fond",
   "manager.settings.music.help": "Diffusez votre propre musique sur le bureau. Les fichiers restent sur votre PC et ne sont jamais enregistrés dans un pack ni partagés — le fond d’écran les lit simplement, en boucle sur la liste.",
   "manager.settings.music.play": "Lire la musique de fond",
   "manager.settings.music.volume": "Volume",
   "manager.settings.music.add": "Ajouter des fichiers audio…",
   "manager.settings.music.empty": "Aucune musique ajoutée pour l’instant — ajoutez des fichiers audio ci-dessous.",
-
   "manager.settings.help.title": "Aide",
   "manager.settings.help.welcome": "Afficher le guide de bienvenue",
   "manager.settings.help.logs": "Ouvrir le dossier des journaux",
   "manager.settings.help.hint": "En cas de problème, le dossier des journaux contient un journal de diagnostic (et d’éventuels rapports de plantage) que vous pouvez partager pour signaler un problème. Il ne contient aucune donnée personnelle.",
   "manager.settings.help.logsError": "Impossible d’ouvrir le dossier des journaux.",
-
   "manager.settings.about.title": "À propos et licences",
   "manager.settings.about.help": "Dashboard Engine inclut des logiciels open source et des voix d’autres créateurs. L’avis ci-dessous les énumère avec leurs licences et les attributions requises.",
   "manager.settings.about.licensesLabel": "Licences tierces",
   "manager.settings.about.openFile": "Ouvrir comme fichier",
   "manager.settings.about.version": "Dashboard Engine — version {version}",
   "manager.settings.about.openError": "Impossible d’ouvrir le fichier des avis.",
-
   "manager.builder.ariaLabel": "Créateur de nouveau pack",
   "manager.builder.title": "Nouveau pack",
   "manager.builder.palette.cyanHud": "HUD cyan",
@@ -361,7 +341,6 @@
   "manager.builder.intro": "C'est un point de départ rapide — choisissez ici la structure d'ensemble (l'allure, les widgets, le mouvement). Vous peaufinerez chaque détail dans l'éditeur ensuite.",
   "manager.builder.steps": "Étapes",
   "manager.builder.livePreview": "Aperçu en direct",
-
   "manager.welcome.title": "Bienvenue dans Dashboard Engine",
   "manager.welcome.lead": "Votre bureau est désormais un tableau de bord vivant — il s’affiche directement sur le fond d’écran, derrière vos icônes. Voici ce que vous pouvez faire d’ici.",
   "manager.welcome.setupAssistant": "Configurer l’assistant",
@@ -370,7 +349,6 @@
   "manager.welcome.point2": "<b>Personnalisez-le.</b> Sélectionnez un pack et utilisez <em>Personnaliser</em> pour le recolorer, changer les particules, et plus — ou ouvrez-le dans l’éditeur pour reconstruire la disposition.",
   "manager.welcome.point3": "<b>Reliez-le à votre vie.</b> L’<em>Agenda</em> place vos événements sur le fond d’écran, le <em>Lanceur</em> épingle vos applications, et l’<em>Assistant</em> connecte une IA locale ou hébergée à qui parler.",
   "manager.welcome.point4": "<b>Il reste discret.</b> Le moteur vit dans votre zone de notification et met l’animation en pause pour les applications plein écran. Fermez cette fenêtre quand vous voulez — le fond d’écran continue de tourner.",
-
   "manager.event.new": "Nouvel événement",
   "manager.event.edit": "Modifier l’événement",
   "manager.event.eventLabel": "Événement",
@@ -393,7 +371,6 @@
   "manager.event.hint.timed": "Une notification de bureau se déclenche à l’heure de l’alerte (le moteur tourne dans la zone de notification).",
   "manager.event.hint.untimed": "Donnez une heure à l’événement pour obtenir une notification de bureau.",
   "manager.event.hint.repeating": "Les événements récurrents se modifient comme une série entière.",
-
   "manager.detail.currentlyActive": "Actuellement sur votre bureau",
   "manager.detail.useOnDesktop": "Utiliser sur le bureau",
   "manager.detail.nowOnDesktop": "{name} est maintenant sur votre bureau.",
@@ -415,7 +392,6 @@
   "manager.detail.originFile": "installé depuis un fichier",
   "manager.detail.originInstalled": "installé",
   "manager.detail.componentsPersona": "{count} composants · {persona}",
-
   "manager.browse.byAuthor": "{id} · v{version} · par {author}",
   "manager.browse.unknown": "inconnu",
   "manager.browse.updateTo": "Mettre à jour vers v{version}",
@@ -429,15 +405,14 @@
   "manager.browse.noRegistries": "Aucun dépôt pour l’instant. Tout le monde peut en héberger un — c’est un index.json statique sur n’importe quel serveur https (voir PACKS.md).",
   "manager.browse.badgeUpdate": "Mise à jour",
   "manager.browse.badgeInstalled": "Installé",
-
   "manager.refresh": "Actualiser",
-
   "manager.installed.sectionInstalled": "Installés",
   "manager.installed.sectionBuiltin": "Intégrés",
   "manager.installed.empty": "Rien d’installé pour l’instant. Parcourez un dépôt ou installez un pack depuis un fichier.",
   "manager.installed.onDesktop": "Sur le bureau",
   "manager.installed.builtin": "Intégré",
-
+  "manager.installed.master": "Principale",
+  "manager.installed.masterHint": "Votre copie principale — modifiez-la et mettez-la à jour sur le Workshop.",
   "manager.published.yourDashboards": "Vos tableaux de bord publiés",
   "manager.published.testApp": " — application de test (Spacewar)",
   "manager.published.openWorkshop": "Ouvrir le Workshop",
@@ -453,12 +428,10 @@
   "manager.published.downloadingFromSteam": "Téléchargement de votre tableau de bord depuis Steam…",
   "manager.published.downloadedOpening": "Téléchargé — ouverture dans l’éditeur.",
   "manager.published.couldNotGet": "Impossible d’obtenir une copie modifiable.",
-
   "manager.planner.addEventOn": "Ajouter un événement le {date}",
   "manager.planner.moreCount": "+{n} de plus",
   "manager.planner.nothingPlanned": "Rien de prévu. Cliquez sur un jour du calendrier pour ajouter un événement — les événements horodatés déclenchent une notification de bureau.",
   "manager.planner.repeatsSuffix": "(se répète {repeat})",
-
   "manager.customize.title": "Personnaliser",
   "manager.customize.reset": "Réinitialiser aux valeurs par défaut",
   "manager.customize.knob.accent": "Couleur d’accent",
@@ -473,7 +446,6 @@
   "manager.customize.effect.petals": "Pétales",
   "manager.customize.effect.rain": "Pluie",
   "manager.customize.effect.sparkle": "Scintillement",
-
   "manager.workshop.toggleDashboards": "Tableaux de bord",
   "manager.workshop.toggleVoices": "Voix",
   "manager.workshop.searchWorkshop": "Rechercher dans le Workshop",
@@ -505,7 +477,6 @@
   "manager.workshop.filter.Includes": "Fonctionnalités",
   "manager.workshop.filter.Compatibility": "Compatibilité",
   "manager.workshop.unavailable": "Steam Workshop est indisponible.",
-
   "manager.voices.search": "Rechercher des voix",
   "manager.voices.community": "Voix de la communauté",
   "manager.voices.loading": "Chargement des voix de la communauté…",
@@ -534,7 +505,6 @@
   "manager.voices.openTuning": "Ouvrir le Réglage de la voix",
   "manager.voices.downloadingFromSteam": "Téléchargement de votre voix depuis Steam…",
   "manager.voices.downloadedOpening": "Téléchargé — ouverture du Réglage de la voix. Elle est dans vos profils enregistrés.",
-
   "create.title": "Concevez votre propre pack de tableau de bord",
   "create.intro": "Un pack, c’est un habillage, une disposition, une personnalité et une voix — tout ce dont le fond d’écran a besoin pour penser et parler. Créez-en un dans l’éditeur, puis partagez-le sur Steam Workshop. Aucun compte, aucun code requis (mais vous pouvez ajouter du code en bac à sable si vous le souhaitez).",
   "create.startScratch": "Partir de zéro",
@@ -610,7 +580,6 @@
   "create.prop.2.effect": "densité des particules (0,05–1)",
   "create.prop.3.effect": "l’intensité d’une texture (0–1)",
   "create.prop.4.effect": "encoches d’angle activées / désactivées",
-
   "editor.title": "Éditeur",
   "editor.packName": "Nom du pack",
   "editor.saveApply": "Enregistrer et appliquer",
@@ -624,7 +593,6 @@
   "editor.tab.skin": "Habillage",
   "editor.tab.persona": "Personnalité",
   "editor.tab.customize": "Personnaliser",
-
   "editor.palette.status.label": "État de la personnalité",
   "editor.palette.status.hint": "nom · slogan · défilement",
   "editor.palette.clock.label": "Horloge",
@@ -677,7 +645,6 @@
   "editor.palette.assistant.hint": "ouvre le chat IA",
   "editor.palette.module.label": "Module personnalisé",
   "editor.palette.module.hint": "votre propre HTML/JS en bac à sable",
-
   "editor.savedAsNew": "Enregistré comme nouveau pack : « {id} ».",
   "editor.savedApplied": "Enregistré — « {id} » est maintenant sur votre bureau.",
   "editor.capReached": "Ce pack a déjà 24 composants (la limite).",
@@ -1197,7 +1164,6 @@
   "editor.insp.knob.grid": "Grille",
   "editor.insp.knob.vignette": "Vignettage",
   "editor.insp.knob.corner-notches": "Encoches d’angle",
-
   "panel.title": "Réglage de la voix",
   "panel.sub": "Façonnez la façon dont une personnalité parle — les profils stockent des paramètres, jamais de l’audio.",
   "panel.engineStatus": "État du moteur",
@@ -1216,7 +1182,6 @@
   "panel.test.replay": "Rejouer",
   "panel.test.useSystemVoice": "Utiliser la voix système",
   "panel.status.ready": "Prêt.",
-
   "panel.readout.f0": "F0 mesurée",
   "panel.readout.dryInit": "sec —",
   "panel.readout.dry": "sec {v}",
@@ -1228,17 +1193,14 @@
   "panel.readout.speech": "parole {v}",
   "panel.readout.voiced": "Voisé",
   "panel.readout.ofFrames": "des trames",
-
   "panel.profile.title": "Profil",
   "panel.profile.name": "Nom",
   "panel.profile.author": "Auteur",
   "panel.profile.save": "Enregistrer le profil",
   "panel.profile.share": "Partager sur le Workshop…",
   "panel.profile.savedTo": "Enregistré dans profiles/{file}",
-
   "panel.reserved.notWired": "Non branché",
   "panel.reserved.reserved": "Réservé",
-
   "panel.param.prosody.pitchShift.label": "Hauteur",
   "panel.param.prosody.pitchShift.hint": "voix plus aiguë ou plus grave",
   "panel.param.prosody.pitchShift.tech": "décalage de hauteur · demi-tons",
@@ -1290,7 +1252,6 @@
   "panel.param.character.chorus.label": "Chœur",
   "panel.param.character.chorus.hint": "voix chatoyante et dédoublée",
   "panel.param.character.chorus.tech": "ensemble désaccordé",
-
   "panel.voice.hdTitle": "Voix neuronale de meilleure qualité — téléchargement plus volumineux",
   "panel.voice.notInstalled": "Non installée",
   "panel.voice.upgrade": "Améliorer · {size}",
@@ -1302,10 +1263,8 @@
   "panel.voice.downloadingHd": "Téléchargement de {name} — c’est un gros téléchargement HD, une seule fois.",
   "panel.voice.installed": "{name} installée (somme de contrôle vérifiée).",
   "panel.voice.downloadFailed": "Échec du téléchargement.",
-
   "panel.loadedPreset": "Préréglage chargé : {name}",
   "panel.loadedProfile": "Profil chargé : {name}",
-
   "panel.publish.importedTitle": "Cette voix a été importée d’un autre créateur, elle ne peut donc pas être republiée comme la vôtre.",
   "panel.publish.shareTitle": "Partagez ce profil de voix sur le Steam Workshop (paramètres seulement — jamais d’audio).",
   "panel.publish.importedError": "Cette voix a été importée d’un autre créateur, elle ne peut donc pas être publiée comme la vôtre.",
@@ -1328,15 +1287,12 @@
   "panel.publish.updated": "Mis à jour !",
   "panel.publish.published": "Publié !",
   "panel.publish.acceptAgreement": "Acceptez l’accord juridique du Workshop sur la page Steam de l’article pour le rendre visible.",
-
   "panel.synth.synthesizing": "Synthèse…",
   "panel.synth.done": "Terminé.",
   "panel.synth.speakingSystem": "Lecture avec la voix système…",
   "panel.synth.doneSystem": "Terminé (voix système — non réglée ; installez Piper pour la chaîne complète).",
-
   "panel.env.noPiper": "Piper n’est pas installé — la synthèse revient à la voix système.",
   "panel.env.noFfmpeg": "FFmpeg n’est pas installé — voix brute uniquement ; le timbre et le caractère sont contournés.",
-
   "panel.init.noPresets": "Aucun préréglage trouvé — le dossier des préréglages est manquant.",
   "panel.init.startFailed": "Le panneau n’a pas pu démarrer : {message}",
   "editor.insp.gallery.privacyWarn": "Les photos que vous ajoutez sont enregistrées dans le pack. Si vous le publiez ou le partagez, elles deviennent publiques — n’incluez rien de privé.",

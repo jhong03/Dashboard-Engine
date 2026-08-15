@@ -1,6 +1,5 @@
 {
   "app.name": "Dashboard Engine",
-
   "common.save": "保存",
   "common.cancel": "キャンセル",
   "common.delete": "削除",
@@ -9,7 +8,6 @@
   "common.next": "次へ",
   "common.close": "閉じる",
   "common.saved": "保存しました。",
-
   "tray.openManager": "マネージャーを開く",
   "tray.voiceTuning": "ボイス調整",
   "tray.switchPack": "パックを切り替え",
@@ -17,10 +15,8 @@
   "tray.resumeDesktop": "デスクトップを再開",
   "tray.performance": "パフォーマンス",
   "tray.quit": "Dashboard Engine を終了",
-
   "manager.topbar.onDesktop": "デスクトップ上：",
   "manager.topbar.voiceTuning": "ボイス調整",
-
   "manager.tab.installed": "インストール済み",
   "manager.tab.browse": "参照",
   "manager.tab.published": "公開済み",
@@ -29,22 +25,18 @@
   "manager.tab.launcher": "ランチャー",
   "manager.tab.assistant": "アシスタント",
   "manager.tab.settings": "設定",
-
   "manager.search.label": "パックを検索",
   "manager.search.placeholder": "パックを検索",
   "manager.installFromFile": "ファイルからインストール…",
   "manager.detail.empty": "詳細を見るにはパックを選択してください。",
-
   "manager.registry.label": "レジストリ URL",
   "manager.registry.placeholder": "レジストリ URL（https://…/index.json）",
   "manager.registry.subscribe": "購読",
-
   "manager.planner.prevMonth": "前の月",
   "manager.planner.nextMonth": "次の月",
   "manager.planner.today": "今日",
   "manager.planner.addEvent": "イベントを追加",
   "manager.planner.upcoming": "予定",
-
   "manager.launcher.hint": "ランチャーコンポーネントを持つパックにはピン留めが表示されます（エディターで追加できます）。ピン留めと最近使った項目は個人的なものです——この PC を離れることも、パックに入ることも決してありません。",
   "manager.launcher.appToPin": "ピン留めするアプリ",
   "manager.launcher.pinApp": "アプリをピン留め",
@@ -53,7 +45,6 @@
   "manager.launcher.empty": "まだ何もピン留めされていません。上でアプリを選ぶか、ファイルやフォルダーをピン留めしてください。",
   "manager.launcher.unpin": "ピン留めを解除",
   "manager.launcher.pinned": "ピン留めしました。",
-
   "manager.assistant.baseUrl": "ベース URL",
   "manager.assistant.apiKey": "API キー",
   "manager.assistant.modelId": "モデル ID",
@@ -100,29 +91,24 @@
   "manager.assistant.hintBusy": "ボイスエンジンがビジー状態です。少し待って再試行してください",
   "manager.assistant.hintUnavailable": "まずこの声をダウンロードするか、HD エンジンのインストール完了を待ってください",
   "manager.assistant.hintNoResponse": "ボイスエンジンが応答しませんでした",
-
   "settings.language.title": "言語",
   "settings.language.label": "インターフェースの言語",
   "settings.language.auto": "自動（システム）",
   "settings.language.help": "インターフェースの言語を選びます。locales フォルダーに追加されたコミュニティ翻訳はここに自動で表示されます。未翻訳のテキストは英語にフォールバックします。",
   "settings.language.applying": "適用中…",
-
   "manager.settings.display.title": "ディスプレイ",
   "manager.settings.display.help": "アニメーション壁紙を表示するモニターを選びます。すぐに移動します。",
   "manager.settings.display.showOn": "壁紙を表示するディスプレイ",
   "manager.settings.display.primary": "プライマリディスプレイ（デフォルト）",
   "manager.settings.display.primaryTag": "プライマリ",
   "manager.settings.display.moved": "壁紙を選択したディスプレイに移動しました。",
-
   "manager.settings.startup.title": "スタートアップ",
   "manager.settings.startup.autostart": "Windows 起動時に Dashboard Engine を起動",
   "manager.settings.startup.autostartHint": "サインイン時にエンジンが静かにトレイへ起動するので、デスクトップはすでに息づいています——開くウィンドウはありません。",
   "manager.settings.startup.unsupported": "このプラットフォームでは OS と一緒の起動は利用できません。",
-
   "manager.settings.voiceAlerts.title": "音声アラート",
   "manager.settings.voiceAlerts.speak": "システム状態アラートを読み上げる",
   "manager.settings.voiceAlerts.help": "CPU・メモリ・ディスクの使用率が高いとき、またはバッテリーが少ないときに、アシスタントの声が知らせます。「ライブ状態アラート」を有効にした「システム情報」コンポーネントが必要で、「アシスタント → 声」の声で読み上げます。",
-
   "manager.settings.performance.title": "パフォーマンス",
   "manager.settings.performance.help": "アニメーション壁紙は Wallpaper Engine のように一時停止・制限し、良き背景の一員であり続けます。これらはトレイの「パフォーマンス」メニューと同じ設定です。",
   "manager.settings.performance.pauseFullscreen": "全画面アプリが画面を覆ったら一時停止",
@@ -130,11 +116,9 @@
   "manager.settings.performance.fpsCap": "フレームレート上限",
   "manager.settings.performance.fps": "{n} fps",
   "manager.settings.performance.fpsRecommended": "{n} fps（推奨）",
-
   "manager.settings.bgMotion.title": "背景の動き",
   "manager.settings.bgMotion.help": "レイヤー化されたパック背景のパララックスと奥行きのドリフトを調整します——動きが気になる場合は下げるかオフにしてください。パフォーマンスには影響しません。",
   "manager.settings.bgMotion.parallax": "パララックスとドリフト",
-
   "manager.settings.weather.title": "天気",
   "manager.settings.weather.yourLocation": "あなたの場所",
   "manager.settings.weather.placeholder": "都市を入力、例：京都",
@@ -145,27 +129,23 @@
   "manager.settings.weather.finding": "場所を検索中…",
   "manager.settings.weather.notFound": "その場所が見つかりませんでした。",
   "manager.settings.weather.setTo": "天気の場所を {place} に設定しました。",
-
   "manager.settings.music.title": "バックグラウンドミュージック",
   "manager.settings.music.help": "デスクトップで自分の音楽を再生します。ファイルは PC に残り、パックに保存されたり共有されたりすることはありません——壁紙はリストをループ再生するだけです。",
   "manager.settings.music.play": "バックグラウンドミュージックを再生",
   "manager.settings.music.volume": "音量",
   "manager.settings.music.add": "音楽ファイルを追加…",
   "manager.settings.music.empty": "まだ音楽がありません——下でオーディオファイルを追加してください。",
-
   "manager.settings.help.title": "ヘルプ",
   "manager.settings.help.welcome": "ようこそガイドを表示",
   "manager.settings.help.logs": "ログフォルダーを開く",
   "manager.settings.help.hint": "何か問題が起きたとき、ログフォルダーには問題報告時に共有できる診断ログ（およびクラッシュダンプ）があります。個人データは含まれません。",
   "manager.settings.help.logsError": "ログフォルダーを開けませんでした。",
-
   "manager.settings.about.title": "情報とライセンス",
   "manager.settings.about.help": "Dashboard Engine には、他の制作者によるオープンソースソフトウェアと声が含まれます。下の告知はそれらをライセンスと必要な帰属表示とともに一覧します。",
   "manager.settings.about.licensesLabel": "サードパーティライセンス",
   "manager.settings.about.openFile": "ファイルとして開く",
   "manager.settings.about.version": "Dashboard Engine——バージョン {version}",
   "manager.settings.about.openError": "告知ファイルを開けませんでした。",
-
   "manager.builder.ariaLabel": "新規パックビルダー",
   "manager.builder.title": "新規パック",
   "manager.builder.palette.cyanHud": "シアン HUD",
@@ -361,7 +341,6 @@
   "manager.builder.intro": "ここは手早い出発点です——全体の構成（見た目・ウィジェット・動き）をここで選びます。細かな調整はあとでエディターで行います。",
   "manager.builder.steps": "ステップ",
   "manager.builder.livePreview": "ライブプレビュー",
-
   "manager.welcome.title": "Dashboard Engine へようこそ",
   "manager.welcome.lead": "あなたのデスクトップは、いまや生きたダッシュボードです——アイコンの後ろ、壁紙に直接描画されます。ここでできることは次のとおりです。",
   "manager.welcome.setupAssistant": "アシスタントを設定",
@@ -370,7 +349,6 @@
   "manager.welcome.point2": "<b>自分好みに。</b>パックを選んで<em>カスタマイズ</em>で色を変えたり、パーティクルを変えたり——あるいはエディターで開いてレイアウトを作り直せます。",
   "manager.welcome.point3": "<b>生活とつなぐ。</b><em>プランナー</em>は壁紙に予定を載せ、<em>ランチャー</em>はアプリをピン留めし、<em>アシスタント</em>は話せるローカル/ホスト型 AI をつなぎます。",
   "manager.welcome.point4": "<b>邪魔をしません。</b>エンジンはトレイに常駐し、全画面アプリではアニメーションを一時停止します。このウィンドウはいつでも閉じられます——壁紙は動き続けます。",
-
   "manager.event.new": "新規イベント",
   "manager.event.edit": "イベントを編集",
   "manager.event.eventLabel": "イベント",
@@ -393,7 +371,6 @@
   "manager.event.hint.timed": "アラート時刻にデスクトップ通知が出ます（エンジンはトレイで動作）。",
   "manager.event.hint.untimed": "デスクトップ通知を受け取るにはイベントに時刻を設定してください。",
   "manager.event.hint.repeating": "繰り返しイベントはシリーズ全体として編集されます。",
-
   "manager.detail.currentlyActive": "現在デスクトップに表示中",
   "manager.detail.useOnDesktop": "デスクトップで使う",
   "manager.detail.nowOnDesktop": "{name} がデスクトップに表示されました。",
@@ -415,7 +392,6 @@
   "manager.detail.originFile": "ファイルからインストール",
   "manager.detail.originInstalled": "インストール済み",
   "manager.detail.componentsPersona": "{count} 個のコンポーネント · {persona}",
-
   "manager.browse.byAuthor": "{id} · v{version} · 作者 {author}",
   "manager.browse.unknown": "不明",
   "manager.browse.updateTo": "v{version} に更新",
@@ -429,15 +405,14 @@
   "manager.browse.noRegistries": "まだレジストリはありません。誰でもホストできます——任意の https サーバー上の静的な index.json です（PACKS.md 参照）。",
   "manager.browse.badgeUpdate": "更新",
   "manager.browse.badgeInstalled": "インストール済み",
-
   "manager.refresh": "更新",
-
   "manager.installed.sectionInstalled": "インストール済み",
   "manager.installed.sectionBuiltin": "組み込み",
   "manager.installed.empty": "まだ何もインストールされていません。レジストリを参照するか、ファイルからパックをインストールしてください。",
   "manager.installed.onDesktop": "デスクトップ上",
   "manager.installed.builtin": "組み込み",
-
+  "manager.installed.master": "マスター",
+  "manager.installed.masterHint": "あなたのマスターコピー — 編集して、ワークショップに更新できます。",
   "manager.published.yourDashboards": "公開したダッシュボード",
   "manager.published.testApp": " —— テストアプリ（Spacewar）",
   "manager.published.openWorkshop": "ワークショップを開く",
@@ -453,12 +428,10 @@
   "manager.published.downloadingFromSteam": "Steam からダッシュボードをダウンロード中…",
   "manager.published.downloadedOpening": "ダウンロード完了——エディターで開いています。",
   "manager.published.couldNotGet": "編集可能なコピーを取得できませんでした。",
-
   "manager.planner.addEventOn": "{date} にイベントを追加",
   "manager.planner.moreCount": "他 +{n} 件",
   "manager.planner.nothingPlanned": "予定はありません。カレンダーの日付をクリックしてイベントを追加してください——時刻付きイベントはデスクトップ通知を出します。",
   "manager.planner.repeatsSuffix": "（{repeat} 繰り返し）",
-
   "manager.customize.title": "カスタマイズ",
   "manager.customize.reset": "デフォルトにリセット",
   "manager.customize.knob.accent": "アクセントカラー",
@@ -473,7 +446,6 @@
   "manager.customize.effect.petals": "花びら",
   "manager.customize.effect.rain": "雨",
   "manager.customize.effect.sparkle": "きらめき",
-
   "manager.workshop.toggleDashboards": "ダッシュボード",
   "manager.workshop.toggleVoices": "声",
   "manager.workshop.searchWorkshop": "ワークショップを検索",
@@ -505,7 +477,6 @@
   "manager.workshop.filter.Includes": "機能",
   "manager.workshop.filter.Compatibility": "互換性",
   "manager.workshop.unavailable": "Steam ワークショップは利用できません。",
-
   "manager.voices.search": "声を検索",
   "manager.voices.community": "コミュニティの声",
   "manager.voices.loading": "コミュニティの声を読み込み中…",
@@ -534,7 +505,6 @@
   "manager.voices.openTuning": "ボイス調整を開く",
   "manager.voices.downloadingFromSteam": "Steam から声をダウンロード中…",
   "manager.voices.downloadedOpening": "ダウンロード完了——ボイス調整を開いています。保存済みプロファイルにあります。",
-
   "create.title": "自分だけのダッシュボードパックをデザイン",
   "create.intro": "パックとは、スキン・レイアウト・ペルソナ・声のこと——壁紙が考え、話すために必要なすべてです。エディターで一つ作り、Steam ワークショップで共有しましょう。アカウントもコードも不要です（望めばサンドボックスのコードを加えることもできます）。",
   "create.startScratch": "ゼロから始める",
@@ -610,7 +580,6 @@
   "create.prop.2.effect": "パーティクル密度（0.05–1）",
   "create.prop.3.effect": "あるテクスチャの強さ（0–1）",
   "create.prop.4.effect": "コーナーノッチ オン／オフ",
-
   "editor.title": "エディター",
   "editor.packName": "パック名",
   "editor.saveApply": "保存して適用",
@@ -624,7 +593,6 @@
   "editor.tab.skin": "スキン",
   "editor.tab.persona": "ペルソナ",
   "editor.tab.customize": "カスタマイズ",
-
   "editor.palette.status.label": "ペルソナステータス",
   "editor.palette.status.hint": "名前 · タグライン · ティッカー",
   "editor.palette.clock.label": "時計",
@@ -677,7 +645,6 @@
   "editor.palette.assistant.hint": "AI チャットを開く",
   "editor.palette.module.label": "カスタムモジュール",
   "editor.palette.module.hint": "自作のサンドボックス HTML/JS",
-
   "editor.savedAsNew": "新規パックとして保存：「{id}」。",
   "editor.savedApplied": "保存しました——「{id}」がデスクトップに表示されました。",
   "editor.capReached": "このパックには既に 24 個のコンポーネントがあります（上限）。",
@@ -1197,7 +1164,6 @@
   "editor.insp.knob.grid": "グリッド",
   "editor.insp.knob.vignette": "ビネット",
   "editor.insp.knob.corner-notches": "コーナーノッチ",
-
   "panel.title": "ボイス調整",
   "panel.sub": "ペルソナの話し方を形づくります——プロファイルはパラメーターを保存し、音声は決して保存しません。",
   "panel.engineStatus": "エンジンの状態",
@@ -1216,7 +1182,6 @@
   "panel.test.replay": "再生",
   "panel.test.useSystemVoice": "システム音声を使う",
   "panel.status.ready": "準備完了。",
-
   "panel.readout.f0": "測定 F0",
   "panel.readout.dryInit": "ドライ —",
   "panel.readout.dry": "ドライ {v}",
@@ -1228,17 +1193,14 @@
   "panel.readout.speech": "発話 {v}",
   "panel.readout.voiced": "有声",
   "panel.readout.ofFrames": "フレーム中",
-
   "panel.profile.title": "プロファイル",
   "panel.profile.name": "名前",
   "panel.profile.author": "作者",
   "panel.profile.save": "プロファイルを保存",
   "panel.profile.share": "ワークショップに共有…",
   "panel.profile.savedTo": "profiles/{file} に保存しました",
-
   "panel.reserved.notWired": "未接続",
   "panel.reserved.reserved": "予約済み",
-
   "panel.param.prosody.pitchShift.label": "ピッチ",
   "panel.param.prosody.pitchShift.hint": "高い声か低い声か",
   "panel.param.prosody.pitchShift.tech": "ピッチシフト · 半音",
@@ -1290,7 +1252,6 @@
   "panel.param.character.chorus.label": "コーラス",
   "panel.param.character.chorus.hint": "きらめく、二重になった声",
   "panel.param.character.chorus.tech": "デチューンされたアンサンブル",
-
   "panel.voice.hdTitle": "より高品質なニューラル音声——より大きなダウンロード",
   "panel.voice.notInstalled": "未インストール",
   "panel.voice.upgrade": "アップグレード · {size}",
@@ -1302,10 +1263,8 @@
   "panel.voice.downloadingHd": "{name} をダウンロード中——これは大きな一度きりの HD ダウンロードです。",
   "panel.voice.installed": "{name} をインストールしました（チェックサム検証済み）。",
   "panel.voice.downloadFailed": "ダウンロードに失敗しました。",
-
   "panel.loadedPreset": "プリセットを読み込みました：{name}",
   "panel.loadedProfile": "プロファイルを読み込みました：{name}",
-
   "panel.publish.importedTitle": "この声は別の制作者からインポートされたため、自分のものとして再公開することはできません。",
   "panel.publish.shareTitle": "この音声プロファイルを Steam ワークショップで共有します（パラメーターのみ——音声は決して含みません）。",
   "panel.publish.importedError": "この声は別の制作者からインポートされたため、自分のものとして公開することはできません。",
@@ -1328,15 +1287,12 @@
   "panel.publish.updated": "更新しました！",
   "panel.publish.published": "公開しました！",
   "panel.publish.acceptAgreement": "アイテムの Steam ページでワークショップ法的合意に同意すると表示されるようになります。",
-
   "panel.synth.synthesizing": "合成中…",
   "panel.synth.done": "完了。",
   "panel.synth.speakingSystem": "システム音声で読み上げ中…",
   "panel.synth.doneSystem": "完了（システム音声——未調整。完全なチェーンには Piper をインストールしてください）。",
-
   "panel.env.noPiper": "Piper がインストールされていません——合成はシステム音声にフォールバックします。",
   "panel.env.noFfmpeg": "FFmpeg がインストールされていません——生の音声のみ。音色とキャラクターはバイパスされます。",
-
   "panel.init.noPresets": "プリセットが見つかりません——プリセットフォルダーがありません。",
   "panel.init.startFailed": "パネルの起動に失敗しました：{message}",
   "editor.insp.gallery.privacyWarn": "追加した写真はパックに保存されます。公開または共有すると写真も公開されるため、プライベートなものは追加しないでください。",

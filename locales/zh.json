@@ -1,6 +1,5 @@
 {
   "app.name": "Dashboard Engine",
-
   "common.save": "保存",
   "common.cancel": "取消",
   "common.delete": "删除",
@@ -9,7 +8,6 @@
   "common.next": "下一步",
   "common.close": "关闭",
   "common.saved": "已保存。",
-
   "tray.openManager": "打开管理器",
   "tray.voiceTuning": "语音调节",
   "tray.switchPack": "切换包",
@@ -17,10 +15,8 @@
   "tray.resumeDesktop": "恢复桌面",
   "tray.performance": "性能",
   "tray.quit": "退出 Dashboard Engine",
-
   "manager.topbar.onDesktop": "正在你的桌面上：",
   "manager.topbar.voiceTuning": "语音调节",
-
   "manager.tab.installed": "已安装",
   "manager.tab.browse": "浏览",
   "manager.tab.published": "已发布",
@@ -29,22 +25,18 @@
   "manager.tab.launcher": "启动器",
   "manager.tab.assistant": "助手",
   "manager.tab.settings": "设置",
-
   "manager.search.label": "搜索包",
   "manager.search.placeholder": "搜索包",
   "manager.installFromFile": "从文件安装…",
   "manager.detail.empty": "选择一个包以查看其详情。",
-
   "manager.registry.label": "注册源地址",
   "manager.registry.placeholder": "注册源地址（https://…/index.json）",
   "manager.registry.subscribe": "订阅",
-
   "manager.planner.prevMonth": "上个月",
   "manager.planner.nextMonth": "下个月",
   "manager.planner.today": "今天",
   "manager.planner.addEvent": "添加事件",
   "manager.planner.upcoming": "即将到来",
-
   "manager.launcher.hint": "在任何带有启动器组件的包上都会显示固定项（可通过编辑器添加一个）。你的固定项和最近项是私人的——它们绝不会离开这台电脑，也不会进入某个包。",
   "manager.launcher.appToPin": "要固定的应用",
   "manager.launcher.pinApp": "固定应用",
@@ -53,7 +45,6 @@
   "manager.launcher.empty": "还没有固定任何内容。在上方选择一个应用，或固定一个文件或文件夹。",
   "manager.launcher.unpin": "取消固定",
   "manager.launcher.pinned": "已固定。",
-
   "manager.assistant.baseUrl": "基础地址",
   "manager.assistant.apiKey": "API 密钥",
   "manager.assistant.modelId": "模型 ID",
@@ -100,29 +91,24 @@
   "manager.assistant.hintBusy": "语音引擎正忙，请稍后再试",
   "manager.assistant.hintUnavailable": "请先下载此语音，或等待 HD 引擎安装完成",
   "manager.assistant.hintNoResponse": "语音引擎没有响应",
-
   "settings.language.title": "语言",
   "settings.language.label": "界面语言",
   "settings.language.auto": "自动（系统）",
   "settings.language.help": "选择界面语言。添加到 locales 文件夹的社区翻译会自动出现在这里。未翻译的文本将回退为英语。",
   "settings.language.applying": "正在应用…",
-
   "manager.settings.display.title": "显示",
   "manager.settings.display.help": "选择哪个显示器显示动态壁纸。它会立即移动。",
   "manager.settings.display.showOn": "在此显示壁纸",
   "manager.settings.display.primary": "主显示器（默认）",
   "manager.settings.display.primaryTag": "主",
   "manager.settings.display.moved": "已将壁纸移到所选显示器。",
-
   "manager.settings.startup.title": "启动",
   "manager.settings.startup.autostart": "在 Windows 启动时运行 Dashboard Engine",
   "manager.settings.startup.autostartHint": "登录时引擎会静默启动到托盘，让你的桌面已然鲜活——无需打开任何窗口。",
   "manager.settings.startup.unsupported": "此平台不支持随系统启动。",
-
   "manager.settings.voiceAlerts.title": "语音提醒",
   "manager.settings.voiceAlerts.speak": "朗读系统健康提醒",
   "manager.settings.voiceAlerts.help": "当 CPU、内存或磁盘占用过高，或电量偏低时，你的助手语音会播报。需要一个开启了“实时健康提醒”的“系统信息”组件，并使用“助手 → 语音”中的语音朗读。",
-
   "manager.settings.performance.title": "性能",
   "manager.settings.performance.help": "动态壁纸会像 Wallpaper Engine 一样暂停和限速，以保持良好的后台表现。这些与托盘“性能”菜单中的控制项相同。",
   "manager.settings.performance.pauseFullscreen": "当全屏应用覆盖屏幕时暂停",
@@ -130,11 +116,9 @@
   "manager.settings.performance.fpsCap": "帧率上限",
   "manager.settings.performance.fps": "{n} 帧/秒",
   "manager.settings.performance.fpsRecommended": "{n} 帧/秒（推荐）",
-
   "manager.settings.bgMotion.title": "背景运动",
   "manager.settings.bgMotion.help": "调节分层包背景的视差和景深漂移——若觉得移动令人分心，可调低或关闭。它不影响性能。",
   "manager.settings.bgMotion.parallax": "视差与漂移",
-
   "manager.settings.weather.title": "天气",
   "manager.settings.weather.yourLocation": "你的位置",
   "manager.settings.weather.placeholder": "输入城市，例如 京都",
@@ -145,27 +129,23 @@
   "manager.settings.weather.finding": "正在查找位置…",
   "manager.settings.weather.notFound": "找不到该地点。",
   "manager.settings.weather.setTo": "天气位置已设置为 {place}。",
-
   "manager.settings.music.title": "背景音乐",
   "manager.settings.music.help": "在桌面上播放你自己的音乐。文件保留在你的电脑上，绝不会保存进包或被分享——壁纸只是循环播放列表中的它们。",
   "manager.settings.music.play": "播放背景音乐",
   "manager.settings.music.volume": "音量",
   "manager.settings.music.add": "添加音乐文件…",
   "manager.settings.music.empty": "还没有添加音乐——在下方添加一些音频文件。",
-
   "manager.settings.help.title": "帮助",
   "manager.settings.help.welcome": "显示欢迎指南",
   "manager.settings.help.logs": "打开日志文件夹",
   "manager.settings.help.hint": "如果出了问题，日志文件夹中会有一个诊断日志（以及任何崩溃转储），你在报告问题时可以分享。它不含任何个人数据。",
   "manager.settings.help.logsError": "无法打开日志文件夹。",
-
   "manager.settings.about.title": "关于与许可",
   "manager.settings.about.help": "Dashboard Engine 包含来自其他创作者的开源软件和语音。下方的声明列出了它们及其许可与所需署名。",
   "manager.settings.about.licensesLabel": "第三方许可",
   "manager.settings.about.openFile": "作为文件打开",
   "manager.settings.about.version": "Dashboard Engine——版本 {version}",
   "manager.settings.about.openError": "无法打开声明文件。",
-
   "manager.builder.ariaLabel": "新包构建器",
   "manager.builder.title": "新建包",
   "manager.builder.palette.cyanHud": "青色 HUD",
@@ -361,7 +341,6 @@
   "manager.builder.intro": "这是一个快速起点——在此选择整体结构（外观、组件、动效）。之后可在编辑器中微调每个细节。",
   "manager.builder.steps": "步骤",
   "manager.builder.livePreview": "实时预览",
-
   "manager.welcome.title": "欢迎使用 Dashboard Engine",
   "manager.welcome.lead": "你的桌面现在是一个鲜活的仪表盘——它直接渲染在壁纸上、图标后面。以下是你在这里能做的事。",
   "manager.welcome.setupAssistant": "设置助手",
@@ -370,7 +349,6 @@
   "manager.welcome.point2": "<b>让它属于你。</b>选择一个包，用<em>自定义</em>重新配色、更换粒子等——或在编辑器中打开它以重建布局。",
   "manager.welcome.point3": "<b>接入你的生活。</b><em>日程</em>把事件放到壁纸上，<em>启动器</em>固定你的应用，<em>助手</em>连接一个可对话的本地或托管 AI。",
   "manager.welcome.point4": "<b>它不碍事。</b>引擎驻留在托盘中，并会为全屏应用暂停动画。随时关闭此窗口——壁纸会继续运行。",
-
   "manager.event.new": "新建事件",
   "manager.event.edit": "编辑事件",
   "manager.event.eventLabel": "事件",
@@ -393,7 +371,6 @@
   "manager.event.hint.timed": "在提醒时间会弹出桌面通知（引擎运行在托盘中）。",
   "manager.event.hint.untimed": "给事件设置一个时间以获得桌面通知。",
   "manager.event.hint.repeating": "重复事件作为整个系列一起编辑。",
-
   "manager.detail.currentlyActive": "当前在你的桌面上",
   "manager.detail.useOnDesktop": "用在桌面上",
   "manager.detail.nowOnDesktop": "{name} 现已在你的桌面上。",
@@ -415,7 +392,6 @@
   "manager.detail.originFile": "从文件安装",
   "manager.detail.originInstalled": "已安装",
   "manager.detail.componentsPersona": "{count} 个组件 · {persona}",
-
   "manager.browse.byAuthor": "{id} · v{version} · 作者 {author}",
   "manager.browse.unknown": "未知",
   "manager.browse.updateTo": "更新到 v{version}",
@@ -429,15 +405,14 @@
   "manager.browse.noRegistries": "还没有注册源。任何人都可托管——它就是任意 https 服务器上的一个静态 index.json（见 PACKS.md）。",
   "manager.browse.badgeUpdate": "更新",
   "manager.browse.badgeInstalled": "已安装",
-
   "manager.refresh": "刷新",
-
   "manager.installed.sectionInstalled": "已安装",
   "manager.installed.sectionBuiltin": "内置",
   "manager.installed.empty": "还没有安装任何内容。浏览一个注册源，或从文件安装一个包。",
   "manager.installed.onDesktop": "在桌面上",
   "manager.installed.builtin": "内置",
-
+  "manager.installed.master": "主副本",
+  "manager.installed.masterHint": "你的主副本——可编辑并更新到创意工坊。",
   "manager.published.yourDashboards": "你发布的仪表盘",
   "manager.published.testApp": " —— 测试应用（Spacewar）",
   "manager.published.openWorkshop": "打开创意工坊",
@@ -453,12 +428,10 @@
   "manager.published.downloadingFromSteam": "正在从 Steam 下载你的仪表盘…",
   "manager.published.downloadedOpening": "已下载——正在编辑器中打开。",
   "manager.published.couldNotGet": "无法获取可编辑副本。",
-
   "manager.planner.addEventOn": "在 {date} 添加事件",
   "manager.planner.moreCount": "还有 +{n} 个",
   "manager.planner.nothingPlanned": "没有计划。点击日历上的某一天来添加事件——定时事件会弹出桌面通知。",
   "manager.planner.repeatsSuffix": "（每 {repeat} 重复）",
-
   "manager.customize.title": "自定义",
   "manager.customize.reset": "重置为默认",
   "manager.customize.knob.accent": "强调色",
@@ -473,7 +446,6 @@
   "manager.customize.effect.petals": "花瓣",
   "manager.customize.effect.rain": "雨",
   "manager.customize.effect.sparkle": "闪烁",
-
   "manager.workshop.toggleDashboards": "仪表盘",
   "manager.workshop.toggleVoices": "语音",
   "manager.workshop.searchWorkshop": "搜索创意工坊",
@@ -505,7 +477,6 @@
   "manager.workshop.filter.Includes": "功能",
   "manager.workshop.filter.Compatibility": "兼容性",
   "manager.workshop.unavailable": "Steam 创意工坊不可用。",
-
   "manager.voices.search": "搜索语音",
   "manager.voices.community": "社区语音",
   "manager.voices.loading": "正在加载社区语音…",
@@ -534,7 +505,6 @@
   "manager.voices.openTuning": "打开语音调节",
   "manager.voices.downloadingFromSteam": "正在从 Steam 下载你的语音…",
   "manager.voices.downloadedOpening": "已下载——正在打开语音调节。它在你保存的配置中。",
-
   "create.title": "设计你自己的仪表盘包",
   "create.intro": "一个包由外观、布局、人格和语音组成——是壁纸思考与说话所需的一切。在编辑器中构建一个，然后分享到 Steam 创意工坊。无需账户、无需代码（不过你也可以加入沙箱代码）。",
   "create.startScratch": "从零开始",
@@ -610,7 +580,6 @@
   "create.prop.2.effect": "粒子密度（0.05–1）",
   "create.prop.3.effect": "某纹理的强度（0–1）",
   "create.prop.4.effect": "边角缺口 开/关",
-
   "editor.title": "编辑器",
   "editor.packName": "包名称",
   "editor.saveApply": "保存并应用",
@@ -624,7 +593,6 @@
   "editor.tab.skin": "外观",
   "editor.tab.persona": "人格",
   "editor.tab.customize": "自定义",
-
   "editor.palette.status.label": "人格状态",
   "editor.palette.status.hint": "名称 · 标语 · 滚动条",
   "editor.palette.clock.label": "时钟",
@@ -677,7 +645,6 @@
   "editor.palette.assistant.hint": "打开 AI 聊天",
   "editor.palette.module.label": "自定义模块",
   "editor.palette.module.hint": "你自己的沙箱 HTML/JS",
-
   "editor.savedAsNew": "已保存为新包：“{id}”。",
   "editor.savedApplied": "已保存——“{id}”现已在你的桌面上。",
   "editor.capReached": "此包已有 24 个组件（上限）。",
@@ -1197,7 +1164,6 @@
   "editor.insp.knob.grid": "网格",
   "editor.insp.knob.vignette": "暗角",
   "editor.insp.knob.corner-notches": "边角缺口",
-
   "panel.title": "语音调节",
   "panel.sub": "塑造某个人格说话的方式——配置存储的是参数，绝不是音频。",
   "panel.engineStatus": "引擎状态",
@@ -1216,7 +1182,6 @@
   "panel.test.replay": "重放",
   "panel.test.useSystemVoice": "使用系统语音",
   "panel.status.ready": "就绪。",
-
   "panel.readout.f0": "测得基频 F0",
   "panel.readout.dryInit": "干声 —",
   "panel.readout.dry": "干声 {v}",
@@ -1228,17 +1193,14 @@
   "panel.readout.speech": "语音 {v}",
   "panel.readout.voiced": "有声占比",
   "panel.readout.ofFrames": "帧中",
-
   "panel.profile.title": "配置",
   "panel.profile.name": "名称",
   "panel.profile.author": "作者",
   "panel.profile.save": "保存配置",
   "panel.profile.share": "分享到创意工坊…",
   "panel.profile.savedTo": "已保存到 profiles/{file}",
-
   "panel.reserved.notWired": "未接入",
   "panel.reserved.reserved": "保留",
-
   "panel.param.prosody.pitchShift.label": "音高",
   "panel.param.prosody.pitchShift.hint": "更高或更低的嗓音",
   "panel.param.prosody.pitchShift.tech": "音高偏移 · 半音",
@@ -1290,7 +1252,6 @@
   "panel.param.character.chorus.label": "合唱",
   "panel.param.character.chorus.hint": "闪烁、加倍的嗓音",
   "panel.param.character.chorus.tech": "失谐合奏",
-
   "panel.voice.hdTitle": "更高质量的神经网络语音——更大的下载",
   "panel.voice.notInstalled": "未安装",
   "panel.voice.upgrade": "升级 · {size}",
@@ -1302,10 +1263,8 @@
   "panel.voice.downloadingHd": "正在下载 {name}——这是一次较大的一次性 HD 下载。",
   "panel.voice.installed": "已安装 {name}（校验和已验证）。",
   "panel.voice.downloadFailed": "下载失败。",
-
   "panel.loadedPreset": "已加载预设：{name}",
   "panel.loadedProfile": "已加载配置：{name}",
-
   "panel.publish.importedTitle": "此语音是从其他创作者导入的，因此无法作为你自己的重新发布。",
   "panel.publish.shareTitle": "将此语音配置分享到 Steam 创意工坊（仅参数——绝不含音频）。",
   "panel.publish.importedError": "此语音是从其他创作者导入的，因此无法作为你自己的发布。",
@@ -1328,15 +1287,12 @@
   "panel.publish.updated": "已更新！",
   "panel.publish.published": "已发布！",
   "panel.publish.acceptAgreement": "请在该物品的 Steam 页面上接受创意工坊法律协议，以使其可见。",
-
   "panel.synth.synthesizing": "正在合成…",
   "panel.synth.done": "完成。",
   "panel.synth.speakingSystem": "正在用系统语音朗读…",
   "panel.synth.doneSystem": "完成（系统语音——未经调节；安装 Piper 以获得完整链路）。",
-
   "panel.env.noPiper": "未安装 Piper——合成回退到系统语音。",
   "panel.env.noFfmpeg": "未安装 FFmpeg——仅原始语音；音色和特性被跳过。",
-
   "panel.init.noPresets": "未找到预设——预设文件夹缺失。",
   "panel.init.startFailed": "面板启动失败：{message}",
   "editor.insp.gallery.privacyWarn": "你添加的照片会保存在包中。如果你发布或分享它，这些照片将会公开——请勿添加任何私密内容。",

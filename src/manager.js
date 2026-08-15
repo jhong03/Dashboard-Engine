@@ -317,7 +317,7 @@ function monogramInto(container, name) {
 
 // ── Gallery ─────────────────────────────────────────────────────────────────
 
-function makeCard({ name, badge, badgeClass, selected, buildThumb, onSelect }) {
+function makeCard({ name, badge, badgeClass, master, selected, buildThumb, onSelect }) {
   const card = document.createElement('button');
   card.type = 'button';
   card.className = 'card';
@@ -329,6 +329,16 @@ function makeCard({ name, badge, badgeClass, selected, buildThumb, onSelect }) {
   label.className = 'card-name';
   label.textContent = name;
   card.append(thumb, label);
+  // The user's own editable copy — the one that edits in place and can be updated
+  // to the Workshop under their Steam ID (vs a read-only original that forks on
+  // edit). A corner chip so it's distinguishable from a near-identical original.
+  if (master) {
+    const m = document.createElement('span');
+    m.className = 'card-master';
+    m.textContent = t('manager.installed.master');
+    m.title = t('manager.installed.masterHint');
+    card.appendChild(m);
+  }
   if (badge) {
     const badgeEl = document.createElement('span');
     badgeEl.className = `badge${badgeClass ? ` ${badgeClass}` : ''}`;
@@ -413,6 +423,7 @@ function renderGallery() {
           name: item.name,
           badge: item.id === library.activeId ? t('manager.installed.onDesktop') : (origin === 'builtin' ? t('manager.installed.builtin') : null),
           badgeClass: item.id === library.activeId ? 'badge-active' : null,
+          master: !!item.publishable,
           selected: isSelected('local', item.id),
           buildThumb: (thumb) => imageThumbInto(thumb, item.id, item.pack),
           onSelect: () => { library.selected = { kind: 'local', item }; renderGallery(); renderDetail(); },

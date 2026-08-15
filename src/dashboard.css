@@ -468,6 +468,30 @@ body {
   white-space: nowrap;
 }
 .cal-pop-text.togglable { cursor: pointer; }
+
+/* Hover peek — a small, click-through list of a day's events. */
+.cal-hover {
+  position: fixed;
+  z-index: 90;
+  width: 220px;
+  max-width: 70vw;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--void) 90%, transparent);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: var(--accent-bright);
+  font-family: var(--font-display);
+}
+.cal-hover-row { display: flex; align-items: baseline; gap: 8px; font-size: 12px; }
+.cal-hover-when { font-family: var(--font-mono, monospace); color: var(--gold); min-width: 36px; font-size: 11px; }
+.cal-hover-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cal-hover-more { font-size: 10.5px; color: var(--muted); }
 .cal-pop-item.done .cal-pop-text {
   text-decoration: line-through;
   opacity: 0.5;
@@ -1165,11 +1189,10 @@ body {
 .notif-item:last-child { border-bottom: none; }
 .notif-head {
   display: flex;
-  justify-content: space-between;
   align-items: baseline;
   gap: 0.62cqw;
 }
-.notif-app { font-size: 0.6em; letter-spacing: 0.18em; color: var(--muted); }
+.notif-app { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.6em; letter-spacing: 0.18em; color: var(--muted); }
 .notif-time { font-family: var(--font-mono); font-size: 0.6em; color: var(--gold); flex-shrink: 0; }
 .notif-title {
   font-size: 0.86em;
@@ -1188,6 +1211,34 @@ body {
   -webkit-box-orient: vertical;
 }
 .notif-empty { font-size: 0.78em; color: var(--muted); line-height: 1.4; }
+/* Clear controls (desktop only): a header "Clear all" + a per-row × */
+.notif-header { display: flex; align-items: baseline; justify-content: space-between; gap: 0.62cqw; }
+.notif-clear-all {
+  flex-shrink: 0;
+  background: none;
+  border: 1px solid var(--hairline-dim);
+  border-radius: 4px;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-size: 0.56em;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.1cqw 0.5cqw;
+  cursor: pointer;
+}
+.notif-clear-all:hover { color: var(--accent-bright); border-color: var(--accent); }
+.notif-dismiss {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 0.95em;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.2cqw;
+  opacity: 0.55;
+}
+.notif-dismiss:hover { color: var(--accent-bright); opacity: 1; }
 
 /* countdown + weather share the big-number look */
 .countdown-value, .weather-temp { font-size: 2.6em; }

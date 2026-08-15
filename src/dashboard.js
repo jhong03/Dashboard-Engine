@@ -61,12 +61,14 @@ const renderer = AegisComponents.createRenderer({
     focus: (hwnd) => aegis.launcherFocus(hwnd),
   },
   notifications: () => aegis.notifications(),
+  notificationsDismiss: (payload) => aegis.notificationsDismiss(payload),
   assistant: {
     ask: (prompt) => aegis.assistantAsk(prompt),
     speak: (text) => aegis.assistantSpeak(text),
     config: () => aegis.assistantConfig(),
     history: () => aegis.assistantHistory(),
     reset: () => aegis.assistantReset(),
+    warmup: () => aegis.assistantWarmup(),
     onStream: (cb) => aegis.onAssistantStream(cb),
     // Multiple local chat sessions.
     sessions: () => aegis.assistantSessions(),
