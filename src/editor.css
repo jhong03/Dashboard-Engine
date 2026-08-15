@@ -240,6 +240,8 @@ body.editor-body {
   margin-bottom: 8px;
   background: var(--panel-2, #1f2226);
 }
+.g-sub { font-size: 12px; font-weight: 600; margin: 8px 0 2px; }
+.tl-presets { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
 .g-card-head { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; font-size: 12px; font-weight: 600; }
 .g-card-head span:first-child { flex: 1; }
 .g-card-head .btn.tiny { padding: 1px 6px; min-width: 22px; }

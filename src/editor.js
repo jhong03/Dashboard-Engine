@@ -1808,6 +1808,37 @@ function newTimelineTrack(duration) {
   return { target, keys: keyframeDefaults(target.kind, target.prop, duration) };
 }
 
+// Ready-made motions — reference presets the user taps to add a tuned track,
+// then tweaks. Each is loop-safe (starts and ends on the same value) so it reads
+// cleanly whichever playback mode is on. Keys are functions of the loop length.
+const TIMELINE_MOTIONS = [
+  { id: 'float',   kind: 'component', prop: 'y',       keys: (D) => [{ t: 0, v: 0 }, { t: D / 2, v: -6 }, { t: D, v: 0 }] },
+  { id: 'breathe', kind: 'component', prop: 'scale',   keys: (D) => [{ t: 0, v: 1 }, { t: D / 2, v: 1.08 }, { t: D, v: 1 }] },
+  { id: 'pulse',   kind: 'component', prop: 'opacity', keys: (D) => [{ t: 0, v: 1 }, { t: D / 2, v: 0.4 }, { t: D, v: 1 }] },
+  { id: 'sway',    kind: 'component', prop: 'rotate',  keys: (D) => [{ t: 0, v: -4 }, { t: D / 2, v: 4 }, { t: D, v: -4 }] },
+  { id: 'drift',   kind: 'component', prop: 'x',       keys: (D) => [{ t: 0, v: 0 }, { t: D / 2, v: 14 }, { t: D, v: 0 }] },
+  { id: 'fade',    kind: 'component', prop: 'opacity', keys: (D) => [{ t: 0, v: 0 }, { t: D * 0.2, v: 1 }, { t: D * 0.8, v: 1 }, { t: D, v: 0 }] },
+  { id: 'twinkle', kind: 'ambience',  prop: 'opacity', keys: (D) => [{ t: 0, v: 1 }, { t: D / 2, v: 0.3 }, { t: D, v: 1 }] },
+];
+
+// Which component a new preset targets: the one selected on the stage, else the
+// first. (The user can re-point it in the track's Component dropdown afterwards.)
+function presetTargetComponent() {
+  const n = state.pack.components.length;
+  return (typeof state.selected === 'number' && state.selected >= 0 && state.selected < n) ? state.selected : 0;
+}
+
+function addTimelineMotion(tl, motion) {
+  if (tl.tracks.length >= 8) return;
+  const D = tl.duration;
+  const snap = (x) => Math.max(0, Math.min(D, Math.round(x * 2) / 2)); // to the 0.5 s time step
+  const keys = motion.keys(D).map((k) => ({ t: snap(k.t), v: k.v, ease: 'inout' }));
+  const target = motion.kind === 'ambience'
+    ? { kind: 'ambience', prop: 'opacity' }
+    : { kind: 'component', index: presetTargetComponent(), prop: motion.prop };
+  tl.tracks.push({ target, keys });
+}
+
 function renderTimelineSection(panel) {
   panel.appendChild(sectionLabel(t('editor.insp.section.timeline')));
   const has = !!state.pack.timeline;
@@ -1834,6 +1865,29 @@ function renderTimelineSection(panel) {
   how.className = 'field-hint';
   how.textContent = t('editor.insp.timeline.howKeys');
   panel.appendChild(how);
+
+  // Ready-made motions — tap a chip to drop in a tuned track as a starting point.
+  const hasComponents = state.pack.components.length > 0;
+  const plabel = document.createElement('div');
+  plabel.className = 'g-sub';
+  plabel.textContent = t('editor.insp.timeline.motions');
+  panel.appendChild(plabel);
+  const phint = document.createElement('p');
+  phint.className = 'field-hint';
+  phint.textContent = t('editor.insp.timeline.motionsHint');
+  panel.appendChild(phint);
+  const chips = document.createElement('div');
+  chips.className = 'tl-presets';
+  for (const motion of TIMELINE_MOTIONS) {
+    if (motion.kind === 'component' && !hasComponents) continue; // needs a component to animate
+    const chip = document.createElement('button');
+    chip.className = 'btn tiny';
+    chip.textContent = t(`editor.insp.timeline.motion.${motion.id}`);
+    chip.disabled = tl.tracks.length >= 8;
+    chip.addEventListener('click', () => { sliderActive = false; addTimelineMotion(tl, motion); renderAll(); });
+    chips.appendChild(chip);
+  }
+  panel.appendChild(chips);
 
   tl.tracks.forEach((track, i) => renderTimelineTrack(panel, tl, track, i));
 

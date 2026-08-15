@@ -378,8 +378,11 @@ and out, slide it, pulse its scale, spin it, or breathe the ambience layer.
   frame as ambience and parallax — never a second loop — so they honour the fps
   cap and freeze with the wallpaper. On a still surface (thumbnail, reduced
   motion) the timeline shows its first-keyframe resting frame.
-- **Author it** in the editor's Skin tab → **Animation timeline**: it plays live
-  on the stage as you add tracks and keys.
+- **Author it** in the editor's Skin tab → **Animation timeline**: tap a
+  **ready-made motion** (Float, Breathe, Pulse, Sway, Drift, Fade in/out,
+  Twinkle) to drop in a tuned track as a starting point, then tweak its
+  keyframes — the columns are labelled Time · Value · Ease and it plays live
+  on the stage.
 
 ## Components
 
