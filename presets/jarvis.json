@@ -9,7 +9,7 @@
     "voice": "en_male",
     "fallback": { "engine": "system", "match": "United Kingdom" }
   },
-  "prosody": { "pitchShift": 0.5, "rate": 148, "expressiveness": 1.3, "steadiness": 0.8, "pauseSentence": 300, "pauseComma": 85 },
+  "prosody": { "pitchShift": 0.5, "rate": 125, "expressiveness": 0.85, "steadiness": 0.9, "pauseSentence": 300, "pauseComma": 85 },
   "timbre": { "warmth": 3.5, "resonance": 3.5, "brightness": 3.5, "presence": 3.5, "sibilance": -1.5, "breath": 0 },
-  "character": { "compression": 0.72, "radioFilter": 0, "reverb": { "mix": 0, "size": 0.3 }, "bitcrush": 0, "chorus": 0.3 }
+  "character": { "compression": 0.72, "radioFilter": 0, "reverb": { "mix": 0, "size": 0.3 }, "bitcrush": 0, "chorus": 0 }
 }
