@@ -27,11 +27,23 @@ public static class WindowList {
   [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr hWnd, uint cmd);
   [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr hWnd, int index);
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+  [DllImport("dwmapi.dll")] static extern int DwmGetWindowAttribute(IntPtr hWnd, int attr, out int val, int size);
   delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
   const int GWL_EXSTYLE = -20;
   const int WS_EX_TOOLWINDOW = 0x80;
   const uint GW_OWNER = 4;
+  const int DWMWA_CLOAKED = 14;
+
+  // A window can be WS_VISIBLE yet DWM-CLOAKED — that's how Windows keeps
+  // suspended/background UWP apps (ApplicationFrameHost, Video.UI, the Settings
+  // app, TextInputHost, virtual-desktop stragglers) out of Alt-Tab. Treat cloaked
+  // windows as not-open, exactly like the taskbar does.
+  static bool IsCloaked(IntPtr hWnd) {
+    int cloaked = 0;
+    if (DwmGetWindowAttribute(hWnd, DWMWA_CLOAKED, out cloaked, sizeof(int)) != 0) return false; // API failed → not cloaked
+    return cloaked != 0;
+  }
 
   public class Entry { public long Hwnd; public uint Pid; public string Title; }
 
@@ -41,6 +53,7 @@ public static class WindowList {
       if (!IsWindowVisible(hWnd)) return true;
       if (GetWindow(hWnd, GW_OWNER) != IntPtr.Zero) return true;            // owned popups
       if ((GetWindowLong(hWnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW) != 0) return true;
+      if (IsCloaked(hWnd)) return true;                                     // suspended/background UWP
       int len = GetWindowTextLength(hWnd);
       if (len == 0) return true;
       var sb = new StringBuilder(len + 1);
