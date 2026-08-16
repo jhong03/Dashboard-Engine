@@ -4345,6 +4345,46 @@ async function refreshLibrary() {
 // (and a sensible minimum). The width lives as --detail-w on the stable
 // .library-main element, so it survives the frequent gallery/detail re-renders;
 // it's persisted to settings so it also survives restarts.
+// Drag a .dpack (or .aegispack/.zip) anywhere onto the Manager to install it —
+// the same zip-safe path as the Install button, no dialog. The real path is
+// resolved in the preload (webUtils); the renderer only ever sees the file it
+// dropped. A full-window overlay confirms the drop target while dragging.
+function setupDropImport() {
+  const PACK_EXT = /\.(dpack|aegispack|zip)$/i;
+  const overlay = document.createElement('div');
+  overlay.id = 'drop-overlay';
+  overlay.innerHTML = '<div class="drop-card"><div class="drop-glyph">⤓</div><div class="drop-text">Drop to install pack</div></div>';
+  document.body.appendChild(overlay);
+
+  let depth = 0; // dragenter/leave fire per child — count so we hide only when truly gone
+  const hasFiles = (e) => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
+  const hide = () => { depth = 0; overlay.classList.remove('show'); };
+
+  window.addEventListener('dragenter', (e) => { if (!hasFiles(e)) return; e.preventDefault(); depth++; overlay.classList.add('show'); });
+  window.addEventListener('dragover', (e) => { if (!hasFiles(e)) return; e.preventDefault(); e.dataTransfer.dropEffect = 'copy'; });
+  window.addEventListener('dragleave', (e) => { if (!hasFiles(e)) return; depth = Math.max(0, depth - 1); if (depth === 0) hide(); });
+  window.addEventListener('drop', async (e) => {
+    if (!hasFiles(e)) return;
+    e.preventDefault();
+    hide();
+    const files = Array.from(e.dataTransfer.files || []).filter((f) => PACK_EXT.test(f.name));
+    if (!files.length) { libStatus('Drop a .dpack file to install it.', true); return; }
+    let installed = 0, lastId = '', lastErr = '';
+    for (const f of files) {
+      const p = aegis.pathForFile(f);
+      if (!p) { lastErr = 'Could not read the dropped file.'; continue; }
+      const out = await aegis.installPath(p);
+      if (out.ok) { installed += 1; lastId = out.id; } else { lastErr = out.error || 'Install failed.'; }
+    }
+    if (installed) {
+      libStatus(installed === 1 ? `Installed “${lastId}”.` : `Installed ${installed} packs.`, false);
+      await refreshLibrary();
+    } else {
+      libStatus(lastErr || 'Nothing installed.', true);
+    }
+  });
+}
+
 function setupDetailResizer() {
   const main = document.querySelector('.library-main');
   const handle = $('lib-resizer');
@@ -4459,6 +4499,7 @@ async function init() {
   });
 
   setupDetailResizer();
+  setupDropImport();
 
   const view = new URLSearchParams(location.search).get('view');
   if (['browse', 'published', 'planner', 'launcher', 'assistant', 'create', 'settings'].includes(view)) library.tab = view;

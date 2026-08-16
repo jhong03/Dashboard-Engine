@@ -890,3 +890,21 @@ body {
 .welcome-points em { font-style: normal; color: var(--accent); }
 .welcome-autostart { margin-top: 2px; }
 .welcome-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 2px; }
+
+/* Drag-drop pack install overlay — engine chrome register (quiet, native), shown
+   only while a file is dragged over the Manager. pointer-events:none so it never
+   interferes with the drop (handled on window). */
+#drop-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(4, 8, 15, 0.72);
+  pointer-events: none;
+}
+#drop-overlay.show { display: flex; }
+#drop-overlay .drop-card {
+  border: 2px dashed var(--accent);
+  border-radius: 12px; padding: 30px 46px; text-align: center;
+  background: var(--panel, #242629);
+}
+#drop-overlay .drop-glyph { font-size: 40px; line-height: 1; color: var(--accent); }
+#drop-overlay .drop-text { margin-top: 10px; font-size: 15px; color: var(--text, #e6e8eb); }

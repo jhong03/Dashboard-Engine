@@ -4,7 +4,7 @@
 // active-pack selection. It cannot render packs or reach the voice pipeline
 // (the panel and desktop windows have their own narrower bridges).
 
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webUtils } = require('electron');
 
 // UI language dictionary, fetched SYNCHRONOUSLY so the page has it before it
 // renders (no flash of untranslated text). Exposed read-only to the page world;
@@ -43,6 +43,11 @@ const bridge = {
   notifications: () => ipcRenderer.invoke('aegis:notifications'),
   display: () => ipcRenderer.invoke('aegis:display'),
   installFile: () => ipcRenderer.invoke('aegis:packs:installFile'),
+  // Drag-drop install: resolve the real path of a dropped File (webUtils runs in
+  // the preload — the renderer never sees a filesystem path except this one it
+  // dropped itself) and install it through the same zip-safe path as the dialog.
+  pathForFile: (file) => { try { return webUtils.getPathForFile(file); } catch (e) { return ''; } },
+  installPath: (p) => ipcRenderer.invoke('aegis:packs:installPath', String(p)),
   exportPack: (id) => ipcRenderer.invoke('aegis:packs:export', String(id)),
   uninstallPack: (id) => ipcRenderer.invoke('aegis:packs:uninstall', String(id)),
 
