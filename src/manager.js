@@ -547,6 +547,32 @@ function renderPublishedSection(gallery) {
   renderPublishedVoicesSection(gallery);
 }
 
+// A collapsible explainer for the master-copy publishing flow, so creators don't
+// accidentally duplicate-publish or lose the path back to updating their pack.
+// Interpolates the real (localized) UI labels — Master tag, Update, Get editable
+// copy — so the guidance always matches the buttons the user sees.
+function publishedHelpNote() {
+  const d = document.createElement('details');
+  d.className = 'pub-help';
+  const s = document.createElement('summary');
+  s.textContent = t('manager.published.help.summary');
+  d.appendChild(s);
+  const body = document.createElement('div');
+  body.className = 'pub-help-body';
+  const vars = {
+    master: t('manager.installed.master'),
+    update: t('manager.published.update'),
+    getEditable: t('manager.published.getEditable'),
+  };
+  for (const key of ['p1', 'p2', 'p3']) {
+    const p = document.createElement('p');
+    p.textContent = t(`manager.published.help.${key}`, vars);
+    body.appendChild(p);
+  }
+  d.appendChild(body);
+  return d;
+}
+
 function renderPublishedDashboards(gallery) {
   const controls = document.createElement('div');
   controls.className = 'ws-controls';
@@ -555,6 +581,7 @@ function renderPublishedDashboards(gallery) {
     libButton(t('manager.published.openWorkshop'), () => aegis.workshopOpen(), 'tiny'),
   );
   gallery.appendChild(sectionLabel(`${t('manager.published.yourDashboards')}${mine.testApp ? t('manager.published.testApp') : ''}`, [controls]));
+  gallery.appendChild(publishedHelpNote());
 
   if (!mine.loaded && !mine.loading) loadMine();
   if (mine.loading) { gallery.appendChild(hintP(t('manager.published.loadingDashboards'))); return; }

@@ -908,3 +908,23 @@ body {
 }
 #drop-overlay .drop-glyph { font-size: 40px; line-height: 1; color: var(--accent); }
 #drop-overlay .drop-text { margin-top: 10px; font-size: 15px; color: var(--text, #e6e8eb); }
+
+/* Published-tab help note — a collapsible explainer of the master-copy publishing
+   flow (engine chrome register: quiet, native). */
+.pub-help {
+  margin: 2px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel, #242629);
+}
+.pub-help > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  color: var(--text, #e6e8eb);
+  user-select: none;
+}
+.pub-help > summary::-webkit-details-marker { color: var(--accent); }
+.pub-help[open] > summary { border-bottom: 1px solid var(--border); }
+.pub-help-body { padding: 9px 12px; display: flex; flex-direction: column; gap: 6px; }
+.pub-help-body p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--text-dim, #9aa1aa); }
