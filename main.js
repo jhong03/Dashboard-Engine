@@ -164,16 +164,35 @@ function bringToFront(win) {
   win.focus();
 }
 
+// A tool window (Editor / Voice Tuning) opened from a page should GATE that page:
+// the user must close the tool before returning, so they can't drive the Manager
+// and a live editor/tuner out of sync. We do that by making the tool a MODAL child
+// of the page it was launched over — Electron disables the parent until the child
+// closes, then re-enables + refocuses it automatically.
+//
+// Returns the window to parent a new tool onto: the top-most tool window already
+// open (so a second tool stacks and the Manager stays gated until all close), else
+// the Manager if it's the active page. null → open free (tray / standalone / --edit
+// with no Manager up), so those paths behave exactly as before.
+function modalParentFor() {
+  for (const w of [editorWindow, panelWindow, managerWindow]) {
+    if (w && !w.isDestroyed() && w.isVisible()) return w;
+  }
+  return null;
+}
+
 function createPanelWindow() {
   if (panelWindow) {
     bringToFront(panelWindow);
     return;
   }
+  const parent = modalParentFor();
   panelWindow = new BrowserWindow({
     width: 1280,
     height: 860,
     minWidth: 1100, // design floor — the panel layout must never break under 1100px
     backgroundColor: '#04080F',
+    ...(parent ? { parent, modal: true } : {}),
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
       preload: path.join(__dirname, 'preload.js'),
@@ -362,12 +381,14 @@ function createEditorWindow(packId) {
     bringToFront(editorWindow);
     return;
   }
+  const parent = modalParentFor(); // gate the Manager behind the editor (see modalParentFor)
   editorWindow = new BrowserWindow({
     width: 1380,
     height: 860,
     minWidth: 1200,
     minHeight: 720,
     backgroundColor: '#04080F',
+    ...(parent ? { parent, modal: true } : {}),
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
       preload: path.join(__dirname, 'preload-editor.js'),
