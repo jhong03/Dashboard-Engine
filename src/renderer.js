@@ -39,7 +39,7 @@ const GROUPS = [
       { path: 'timbre.brightness', label: 'Brightness', hint: 'crisp, airy highs', tech: 'high shelf · 5.5 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
       { path: 'timbre.presence', label: 'Presence', hint: 'up-front vs distant', tech: 'bell · 2.8 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
       { path: 'timbre.sibilance', label: 'Harshness', hint: 'tame hissy “s” and “t” sounds', tech: 'de-ess · 7 kHz', step: 0.5, fmt: (v) => `${signed(v, 1)} dB` },
-      { path: 'timbre.breath', label: 'Breath', hint: 'breathy texture', tech: 'noise mix', step: 0.05, fmt: (v) => v.toFixed(2), reserved: 'Reserved' },
+      { path: 'timbre.breath', label: 'Breath', hint: 'breathy texture', tech: 'noise mix', step: 0.05, fmt: (v) => v.toFixed(2) },
     ],
   },
   {
