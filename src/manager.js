@@ -2607,27 +2607,6 @@ async function finishBuilder() {
   libStatus(bt('status.created', { id: out.id }));
 }
 
-// Create the pack, then open the Workshop publish dialog (no editor).
-async function finishBuilderAndPublish() {
-  const st = await aegis.workshopStatus();
-  if (!st.available) { $('builder-status').textContent = st.reason || bt('status.workshopUnavailable'); return; }
-  builder.pack.props = buildBuilderProps();
-  syncBuilderBackground(); // carry any parallax depth layers into the pack
-  $('builder-status').textContent = bt('status.creating');
-  const out = await aegis.builderCreate(builder.pack, false); // don't open the editor
-  if (!out.ok) { $('builder-status').textContent = out.error || bt('status.createError'); return; }
-  closeBuilder();
-  await refreshLibrary();
-  const item = library.localPacks.find((p) => p.id === out.id);
-  if (item) {
-    library.tab = 'installed';
-    library.selected = { kind: 'local', item };
-    renderGallery();
-    renderDetail();
-    openPublishDialog(item);
-  }
-}
-
 // ── Step renderers ───────────────────────────────────────────────────────────
 
 function renderBgStep(el) {
@@ -3426,12 +3405,9 @@ function renderFinishStep(el) {
     el.appendChild(warn);
   }
 
-  // Secondary path: create and go straight to Workshop publish (skips the
-  // editor). The nav "Next" button remains "Create & open in editor".
-  const pubRow = document.createElement('div');
-  pubRow.className = 'b-presets';
-  pubRow.appendChild(libButton(bt('finish.createPublish'), () => finishBuilderAndPublish()));
-  el.appendChild(pubRow);
+  // No "publish straight to Workshop" here: a brand-new pack should be fine-tuned
+  // in the editor first, so the only finish action is "Create & open in editor"
+  // (the nav button). Publishing happens later, from the library, once it's ready.
 }
 
 function stepHead(title, body) {
