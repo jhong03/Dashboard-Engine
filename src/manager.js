@@ -580,7 +580,11 @@ function publishedDashboardActions(item) {
   const actions = document.createElement('div');
   actions.className = 'ws-actions';
 
-  const localPack = item.localPackId ? library.localPacks.find((p) => p.id === item.localPackId) : null;
+  // The editable copy must actually BE editable (publishable) — a plain "Add to
+  // library" import is present locally but can't be edited/updated, so it doesn't
+  // count. Then "Get editable copy" stays offered and can restore the real master.
+  const mapped = item.localPackId ? library.localPacks.find((p) => p.id === item.localPackId) : null;
+  const localPack = mapped && mapped.publishable ? mapped : null;
   if (localPack) {
     actions.append(
       libButton(t('manager.published.edit'), () => aegis.openEditor(localPack.id), 'tiny'),
