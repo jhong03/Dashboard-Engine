@@ -3069,21 +3069,74 @@ function createRenderer(services) {
     sessions: [], activeId: null, sessionsOpen: false, // the local chat list
   };
 
-  // One reused AudioContext for spoken replies. Reusing a single context (the
-  // panel is built once) avoids the per-render leak the old design guarded.
-  const playAssistantPcm = (pcm, sampleRate) => {
+  // ── Spoken replies: SENTENCE-STREAMING TTS ─────────────────────────────────
+  // Instead of waiting for the whole reply and then synthesizing it, we detect
+  // each sentence AS it streams in, synthesize it, and play the clips back-to-back.
+  // The voice starts on sentence one while later sentences are still generating.
+  // One reused AudioContext (the panel is built once) avoids a per-render leak.
+
+  // Schedule a PCM clip to start exactly when the previous queued clip ends, so
+  // sentences play in order, gaplessly, with no overlap (playCursor is the audio
+  // time the next clip should begin; it never schedules in the past).
+  const scheduleClip = (pcm, sampleRate) => {
     try {
       if (!chat.audioCtx) chat.audioCtx = new AudioContext();
+      const ctx = chat.audioCtx;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
       const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength >> 1);
       const floats = new Float32Array(int16.length);
       for (let i = 0; i < int16.length; i++) floats[i] = int16[i] / 32768;
-      const buffer = chat.audioCtx.createBuffer(1, floats.length, sampleRate);
+      const buffer = ctx.createBuffer(1, floats.length, sampleRate);
       buffer.copyToChannel(floats, 0);
-      const src = chat.audioCtx.createBufferSource();
+      const src = ctx.createBufferSource();
       src.buffer = buffer;
-      src.connect(chat.audioCtx.destination);
-      src.start();
+      src.connect(ctx.destination);
+      const now = ctx.currentTime;
+      const startAt = Math.max(now, (chat.speech && chat.speech.playCursor) || now);
+      src.start(startAt);
+      if (chat.speech) chat.speech.playCursor = startAt + buffer.duration;
     } catch (err) { console.warn(`[assistant] playback: ${err.message}`); }
+  };
+
+  const resetSpeech = (speakOn) => {
+    chat.speech = { spokenLen: 0, playCursor: 0, synthing: false, queue: [], speakOn: !!speakOn };
+  };
+
+  // Synthesize queued sentences ONE at a time (serial: they finish in order and
+  // schedule gaplessly). Runs until the queue drains; re-entrant-safe.
+  const drainSpeech = async () => {
+    if (!chat.speech || chat.speech.synthing) return;
+    chat.speech.synthing = true;
+    try {
+      while (chat.speech && chat.speech.queue.length) {
+        const sentence = chat.speech.queue.shift();
+        let spoken = null;
+        try { spoken = await services.assistant.speak(sentence); } catch (e) { spoken = null; }
+        if (spoken && spoken.ok && spoken.pcm) scheduleClip(spoken.pcm, spoken.sampleRate);
+      }
+    } finally { if (chat.speech) chat.speech.synthing = false; }
+  };
+
+  // Queue any complete sentences in `fullText` past what we've already spoken. When
+  // `final`, queue everything remaining (the last sentence may lack terminal
+  // punctuation). Main sanitizes (emoji/markdown/think) + synthesizes each chunk.
+  const SENTENCE_END = /[.!?。！？…]+["'”’)\]]*(\s|$)/g;
+  const feedSpeech = (fullText, final) => {
+    if (!chat.speech || !chat.speech.speakOn || typeof fullText !== 'string') return;
+    let cut;
+    if (final) {
+      cut = fullText.length;
+    } else {
+      const re = new RegExp(SENTENCE_END.source, 'g');
+      re.lastIndex = chat.speech.spokenLen;
+      let m, last = 0;
+      while ((m = re.exec(fullText)) !== null) last = m.index + m[0].length;
+      cut = last;
+    }
+    if (cut <= chat.speech.spokenLen) return;
+    const chunk = fullText.slice(chat.speech.spokenLen, cut).trim();
+    chat.speech.spokenLen = cut;
+    if (chunk) { chat.speech.queue.push(chunk); drainSpeech(); }
   };
 
   const addChatMsg = (who, text) => {
@@ -3237,7 +3290,14 @@ function createRenderer(services) {
     // Tokens streamed from main (via onStream) append here while we await; the
     // resolved result is authoritative and reconciles any streaming artifact.
     chat.stream = { el: reply, id: null, buf: '' };
+    // Learn up-front whether to speak, so the stream handler can synth each sentence
+    // AS it arrives (the voice starts on sentence one instead of after the whole
+    // reply + full synth).
+    let speakOn = false;
+    try { const c = await services.assistant.config(); speakOn = !!(c && c.ok && c.config.speak); } catch (e) { /* default: silent */ }
+    resetSpeech(speakOn);
     const res = await services.assistant.ask(text);
+    const streamedText = chat.stream ? chat.stream.buf : '';
     chat.stream = null;
     if (!res || !res.ok) {
       reply.textContent = (res && res.error) || 'Something went wrong.';
@@ -3247,11 +3307,9 @@ function createRenderer(services) {
       chat.log.scrollTop = chat.log.scrollHeight;
       // The active session may have just been auto-titled from this first message.
       if (services.assistant.sessions) services.assistant.sessions().then(applySessions);
-      const cfg = await services.assistant.config();
-      if (cfg && cfg.ok && cfg.config.speak) {
-        const spoken = await services.assistant.speak(res.text);
-        if (spoken && spoken.ok) playAssistantPcm(spoken.pcm, spoken.sampleRate);
-      }
+      // Speak whatever hasn't been spoken yet: the trailing sentence after a stream,
+      // or (for an endpoint that didn't stream) the whole reply as sentences now.
+      if (speakOn) feedSpeech(streamedText && streamedText.trim() ? streamedText : res.text, true);
     }
     chat.busy = false;
     chat.sendBtn.disabled = false;
@@ -3406,6 +3464,8 @@ function createRenderer(services) {
           // space); interior text streams verbatim. `done` sets the trimmed final.
           chat.stream.el.textContent = chat.stream.buf.replace(/^\s+/, '');
           chat.log.scrollTop = chat.log.scrollHeight;
+          // Speak each sentence the moment it completes (no-op when speak is off).
+          feedSpeech(chat.stream.buf, false);
         }
       });
     }
