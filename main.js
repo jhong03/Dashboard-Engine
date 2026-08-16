@@ -153,6 +153,11 @@ const COMMON_WEB_PREFERENCES = {
   contextIsolation: true,
   nodeIntegration: false,
   sandbox: true,
+  // No DevTools in the SHIPPED app: it would let an end user inspect the renderer,
+  // read source, and poke at the untrusted-pack surface. Enabled only in dev so we
+  // can still debug. (Reinforced by removing the native menu + blocking the F12/
+  // Ctrl+Shift+I shortcuts below.)
+  devTools: !app.isPackaged,
 };
 
 // On Windows, focus() is a no-op for minimized OR hidden windows (a process
@@ -1997,6 +2002,23 @@ if (IS_SESSION) {
     contents.setWindowOpenHandler(() => ({ action: 'deny' }));
     contents.on('will-navigate', (event) => event.preventDefault());
     contents.on('will-redirect', (event) => event.preventDefault());
+    // Lock out DevTools + reload in the shipped app. devTools:false already stops
+    // DevTools from opening; this also kills the reload shortcut (which could reset
+    // a pack's state) and is the belt-and-suspenders for the key combos. In dev,
+    // F12 still toggles DevTools since the native menu (its usual home) is removed.
+    contents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return;
+      const key = String(input.key || '').toLowerCase();
+      const ctrlOrCmd = input.control || input.meta;
+      const isDevtools = key === 'f12' || (ctrlOrCmd && input.shift && (key === 'i' || key === 'j' || key === 'c'));
+      const isReload = ctrlOrCmd && key === 'r';
+      if (app.isPackaged) {
+        if (isDevtools || isReload) event.preventDefault();
+      } else if (key === 'f12') {
+        contents.toggleDevTools();
+        event.preventDefault();
+      }
+    });
   });
 
   // Notification click lands the user on the planner.
@@ -2098,6 +2120,10 @@ if (IS_SESSION) {
   }
 
   app.whenReady().then(() => {
+    // No native application menu. The app has its own chrome, and the default menu's
+    // View → Toggle DevTools (+ Reload) would hand end users a way into the renderer
+    // and the untrusted-pack surface. The tray menu is separate and unaffected.
+    Menu.setApplicationMenu(null);
     logEngine('INFO', `engine start — v${app.getVersion()} · electron ${process.versions.electron} · ${process.platform} · ${LAUNCHED_AT_LOGIN ? 'login' : 'manual'}`);
     // Voice models now live in user data (survive updates); bring any the owner
     // downloaded into the old in-app voices/ dir across so they aren't refetched.
