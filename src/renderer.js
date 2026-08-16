@@ -29,7 +29,6 @@ const GROUPS = [
       { path: 'prosody.expressiveness', label: 'Expressiveness', hint: 'lively vs flat and monotone', tech: 'pitch variance', step: 0.05, fmt: (v) => v.toFixed(2) },
       { path: 'prosody.steadiness', label: 'Steadiness', hint: 'even vs natural, human timing', tech: 'timing variance', step: 0.05, fmt: (v) => v.toFixed(2) },
       { path: 'prosody.pauseSentence', label: 'Sentence pause', hint: 'gap between sentences', tech: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms` },
-      { path: 'prosody.pauseComma', label: 'Comma pause', hint: 'gap at commas', tech: 'milliseconds', step: 10, fmt: (v) => `${v.toFixed(0)} ms`, reserved: 'Not wired' },
     ],
   },
   {
