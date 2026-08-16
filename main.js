@@ -224,9 +224,11 @@ function openManagerFromTray() {
 // picks up Workshop access. Packaged only — unpackaged dev uses its own client.
 function launchWorkshopSession() {
   if (!app.isPackaged) return false; // dev: Workshop runs locally, no session needed
-  if (sessionLink && sessionLink.hasSession()) return true; // already have one
-  try { shell.openExternal(`steam://rungameid/${require('./lib/workshop').STEAM_APP_ID}`); return true; }
-  catch (e) { return false; }
+  if (sessionLink && sessionLink.hasSession()) { logEngine('INFO', '[engine] workshop: session already connected'); return true; }
+  const appId = require('./lib/workshop').STEAM_APP_ID;
+  logEngine('INFO', `[engine] workshop: no session; asking Steam to launch one (steam://rungameid/${appId})`);
+  try { shell.openExternal(`steam://rungameid/${appId}`); return true; }
+  catch (e) { logEngine('WARN', `[engine] workshop: steam launch failed: ${e && e.message}`); return false; }
 }
 
 // Whether the Workshop can run right now: unpackaged dev (own client) or a live
@@ -1911,15 +1913,19 @@ function runSession() {
   const link = require('./lib/session-link');
   const workshop = require('./lib/workshop');
   const achievements = require('./lib/achievements');
+  const sessLog = (m) => logEngine('INFO', `[session ${process.pid}] session-link: ${m}`);
   const editAt = process.argv.indexOf('--edit');
   const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'jarvis' } : { cmd: 'open-manager' };
+  sessLog(`Steam launched a session (intent=${intent.cmd}); connecting to the engine`);
   app.on('window-all-closed', () => { /* a session has no windows — stay alive on the socket */ });
   app.whenReady().then(() => {
     link.connect(process.execPath, intent, {
+      log: sessLog,
       onEnd: () => app.quit(), // Manager closed (or engine gone) → session ends → Steam not playing
       onFail: () => {
-        try { require('child_process').spawn(process.execPath, [ENGINE_FLAG], { detached: true, stdio: 'ignore', windowsHide: true }).unref(); }
-        catch { /* nothing more we can do */ }
+        // Couldn't reach or start an engine on the pipe — spawn one (job-breakaway on
+        // Windows, same as the first-launch path) so the wallpaper still appears, then exit.
+        link.spawnDetachedEngine(process.execPath, sessLog);
         app.quit();
       },
       // The SESSION owns the Steam client — run the Workshop / achievement ops the
@@ -2448,16 +2454,18 @@ if (IS_SESSION) {
           onEdit: (id) => createEditorWindow(id),
           onSessionGone: () => { if (managerWindow && !managerWindow.isDestroyed()) managerWindow.close(); },
           onError: (err) => logEngine('WARN', `session-link server: ${err && err.message}`),
+          log: (m) => logEngine('INFO', `[engine ${process.pid}] session-link: ${m}`),
         });
         // The persistent engine must NEVER open its own Steam connection (Steam would
         // then track IT as "playing"). Forward every Steam op to the session, which
         // Steam launched and tracks. Packaged only — unpackaged dev has no session and
         // keeps using its own client, so Workshop still works while developing.
         if (app.isPackaged) {
-          workshop.setForwarder((method, args) =>
-            (sessionLink && sessionLink.hasSession())
-              ? sessionLink.call(method, args)
-              : Promise.resolve({ ok: false, error: 'Open the Manager from Steam to use the Workshop.' }));
+          workshop.setForwarder((method, args) => {
+            if (sessionLink && sessionLink.hasSession()) return sessionLink.call(method, args);
+            logEngine('INFO', `[engine] workshop op "${method}" requested with no Steam session — returning "open from Steam"`);
+            return Promise.resolve({ ok: false, error: 'Open the Manager from Steam to use the Workshop.' });
+          });
           achievements.setForwarder((method, args) => {
             const name = String((args && args[0]) || '');
             if (sessionLink && sessionLink.hasSession()) return sessionLink.call(method, args).catch(() => {});
