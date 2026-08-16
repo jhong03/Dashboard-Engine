@@ -35,6 +35,10 @@ const bridge = {
   unstageMask: (rel) => ipcRenderer.invoke('aegis:editor:unstageMask', String(rel)),
   unstageAsset: (rel) => ipcRenderer.invoke('aegis:editor:unstageAsset', String(rel)),
   activeSet: (id) => ipcRenderer.invoke('aegis:active:set', String(id)),
+  // Editor sidebar widths — persisted so the palette/inspector sizes stick, like the
+  // Manager's detail sidebar.
+  editorLayoutGet: () => ipcRenderer.invoke('aegis:settings:editorLayout:get'),
+  editorLayoutSet: (layout) => ipcRenderer.invoke('aegis:settings:editorLayout:set', layout),
   stats: () => ipcRenderer.invoke('aegis:stats'),
   display: () => ipcRenderer.invoke('aegis:display'),
   weather: (opts) => ipcRenderer.invoke('aegis:weather', { lat: Number(opts.lat), lon: Number(opts.lon) }),

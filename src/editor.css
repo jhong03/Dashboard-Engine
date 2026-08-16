@@ -31,7 +31,28 @@ body.editor-body {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 176px 1fr 300px;
+  /* palette | drag | stage | drag | inspector — widths are drag-resizable (see
+     setupEditorLayout in editor.js) and persist across sessions. */
+  grid-template-columns: var(--pal-w, 176px) 7px 1fr 7px var(--insp-w, 300px);
+}
+
+/* Draggable dividers between the palette/stage and stage/inspector, matching the
+   Manager's detail-sidebar resizer. */
+.ed-resizer {
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  z-index: 20;
+}
+.ed-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 50%;
+  width: 1px; transform: translateX(-50%);
+  background: var(--border);
+}
+.ed-resizer:hover::after, .ed-resizer.dragging::after {
+  width: 3px; background: var(--accent);
 }
 
 .ed-palette {
@@ -74,8 +95,11 @@ body.editor-body {
 }
 .ed-stage {
   position: relative;
-  width: min(100%, calc((100vh - 140px) * 1.6));
-  aspect-ratio: 16 / 10;
+  /* Match the real display aspect (set from aegis.display() in editor.js) so the
+     preview lines up with the desktop, instead of a fixed 16:10. Sizes to fit the
+     available height, capped by the (resizable) stage column width. */
+  width: min(100%, calc((100vh - 140px) * var(--stage-aspect-num, 1.6)));
+  aspect-ratio: var(--stage-aspect, 16 / 10);
   border: 1px solid var(--border);
   border-radius: 4px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.45);

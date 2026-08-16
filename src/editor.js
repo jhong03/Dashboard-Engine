@@ -2703,6 +2703,55 @@ async function save(applyAfter) {
 
 // ── Init ────────────────────────────────────────────────────────────────────
 
+// Drag-resize the palette (left) and inspector (right) columns, like the Manager's
+// detail sidebar. Widths persist across sessions (settings.editorLayout). Each
+// handle captures the pointer so the drag is smooth even over the stage.
+async function setupEditorLayout() {
+  const main = document.querySelector('.ed-main');
+  if (!main) return;
+  const PAL = { min: 130, max: 420 };
+  const INSP = { min: 220, max: 640 };
+  const applyPal = (px) => main.style.setProperty('--pal-w', Math.round(Math.min(PAL.max, Math.max(PAL.min, px))) + 'px');
+  const applyInsp = (px) => main.style.setProperty('--insp-w', Math.round(Math.min(INSP.max, Math.max(INSP.min, px))) + 'px');
+
+  try {
+    const r = await aegis.editorLayoutGet();
+    if (r && r.ok && r.layout) {
+      if (r.layout.pal) applyPal(r.layout.pal);
+      if (r.layout.insp) applyInsp(r.layout.insp);
+    }
+  } catch (e) { /* CSS defaults */ }
+
+  const persist = () => aegis.editorLayoutSet({
+    pal: Math.round(document.querySelector('.ed-palette').getBoundingClientRect().width),
+    insp: Math.round(document.querySelector('.ed-inspector').getBoundingClientRect().width),
+  }).catch(() => {});
+
+  const wire = (handle, col, resize) => {
+    if (!handle || !col) return;
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      try { handle.setPointerCapture(e.pointerId); } catch (err) { /* older engines */ }
+      handle.classList.add('dragging');
+      const startX = e.clientX;
+      const startW = col.getBoundingClientRect().width;
+      const move = (ev) => resize(startW, ev.clientX - startX);
+      const up = () => {
+        handle.classList.remove('dragging');
+        handle.removeEventListener('pointermove', move);
+        handle.removeEventListener('pointerup', up);
+        persist();
+      };
+      handle.addEventListener('pointermove', move);
+      handle.addEventListener('pointerup', up);
+    });
+  };
+  // Palette handle sits to the RIGHT of the palette → drag right widens it.
+  wire($('ed-resize-pal'), document.querySelector('.ed-palette'), (w, dx) => applyPal(w + dx));
+  // Inspector handle sits to the LEFT of the inspector → drag left widens it.
+  wire($('ed-resize-insp'), document.querySelector('.ed-inspector'), (w, dx) => applyInsp(w - dx));
+}
+
 async function init() {
   const packId = new URLSearchParams(location.search).get('pack') || 'jarvis';
   const loaded = await aegis.packLoad(packId);
@@ -2710,13 +2759,15 @@ async function init() {
   const all = await aegis.assetsAll(packId);
 
   // WYSIWYG: the stage takes the primary display's real aspect ratio, so
-  // what you arrange here is exactly what the desktop renders.
+  // what you arrange here is exactly what the desktop renders. Driven through CSS
+  // vars (.ed-stage reads them) so the resizable stage column stays in sync.
   const display = await aegis.display();
   if (display.ok) {
-    const stage = $('stage');
-    stage.style.aspectRatio = `${display.width} / ${display.height}`;
-    stage.style.width = `min(100%, calc((100vh - 140px) * ${(display.width / display.height).toFixed(4)}))`;
+    const root = document.documentElement;
+    root.style.setProperty('--stage-aspect', `${display.width} / ${display.height}`);
+    root.style.setProperty('--stage-aspect-num', (display.width / display.height).toFixed(4));
   }
+  await setupEditorLayout();
 
   state.baseId = packId;
   state.pack = loaded.pack;
