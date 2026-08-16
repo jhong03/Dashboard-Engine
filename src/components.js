@@ -3642,21 +3642,26 @@ function createRenderer(services) {
         list.appendChild(note);
         return;
       }
+      const savedScroll = list.scrollTop; // preserve the user's scroll across updates
       const items = itemsFrom(state);
       const wantIds = new Set(items.map((i) => i.id));
       for (const [id, h] of rows) {
         if (!wantIds.has(id) && id !== draggingId) { h.root.remove(); rows.delete(id); }
       }
+      if (note.parentNode) note.remove(); // repositioned below; keeps child indexing clean
       let anyApp = false;
-      for (const item of items) {
+      items.forEach((item, i) => {
         if (!item.master) anyApp = true;
         let h = rows.get(item.id);
         if (!h) { h = makeRow(item); rows.set(item.id, h); }
         updateRow(h, item);
-        list.appendChild(h.root); // re-append keeps declared order
-      }
+        // Only move a row when it isn't already in its slot. Re-appending an
+        // already-correct row on every ~1.2 s poll reset the list's scrollTop —
+        // that's the "drag a lower slider and it jumps to the top" bug.
+        if (list.children[i] !== h.root) list.insertBefore(h.root, list.children[i] || null);
+      });
       if (!anyApp) { note.textContent = 'No apps are playing audio.'; list.appendChild(note); }
-      else if (note.parentNode) note.remove();
+      list.scrollTop = savedScroll; // restore (e.g. when a new app row grows the list)
     }
 
     const onState = (state) => {
