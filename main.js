@@ -226,9 +226,41 @@ function launchWorkshopSession() {
   if (!app.isPackaged) return false; // dev: Workshop runs locally, no session needed
   if (sessionLink && sessionLink.hasSession()) { logEngine('INFO', '[engine] workshop: session already connected'); return true; }
   const appId = require('./lib/workshop').STEAM_APP_ID;
-  logEngine('INFO', `[engine] workshop: no session; asking Steam to launch one (steam://rungameid/${appId})`);
-  try { shell.openExternal(`steam://rungameid/${appId}`); return true; }
-  catch (e) { logEngine('WARN', `[engine] workshop: steam launch failed: ${e && e.message}`); return false; }
+
+  // Preferred path — NO Steam "launching" popup. Spawn the transient session
+  // process DIRECTLY, with the Steam app-id in its environment. steamworks.js's
+  // init(appId) registers the process with the running Steam client BY that app-id
+  // (the same mechanism dev builds use via steam_appid.txt), so the session gets
+  // Workshop access and shows "playing" only while it's alive — no steam://
+  // relaunch, no popup. It's a plain packaged launch with no flags → IS_SESSION,
+  // so runSession() connects it back to this engine over the pipe.
+  let spawnedSilent = false;
+  try {
+    require('child_process').spawn(process.execPath, [], {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+      env: { ...process.env, SteamAppId: String(appId), SteamGameId: String(appId) },
+    }).unref();
+    spawnedSilent = true;
+    logEngine('INFO', `[engine] workshop: spawned a silent session (SteamAppId=${appId}); awaiting connect`);
+  } catch (e) {
+    logEngine('WARN', `[engine] workshop: silent session spawn failed: ${e && e.message}`);
+  }
+
+  // Fallback — if the silent session doesn't register/connect shortly (e.g. the
+  // env-var registration didn't take in this build), ask Steam to launch one the
+  // classic way (a brief "launching" flash) so Workshop still works. Skipped if
+  // the silent session already connected. serve() ends any older session on the
+  // new connect, so a late silent + this fallback can't leave two "playing" procs.
+  setTimeout(() => {
+    if (sessionLink && sessionLink.hasSession()) return; // silent session worked → no popup
+    logEngine('INFO', `[engine] workshop: no session ${spawnedSilent ? 'after silent spawn' : '(silent spawn failed)'}; falling back to steam://rungameid/${appId}`);
+    try { shell.openExternal(`steam://rungameid/${appId}`); }
+    catch (e) { logEngine('WARN', `[engine] workshop: steam launch failed: ${e && e.message}`); }
+  }, spawnedSilent ? 8000 : 0);
+
+  return true;
 }
 
 // Whether the Workshop can run right now: unpackaged dev (own client) or a live
