@@ -222,9 +222,26 @@ function openManagerFromTray() {
 // The Workshop needs a Steam-tracked session (which owns the Steam client). Relaunch
 // through Steam so one spawns; the session connects to this engine and the Manager
 // picks up Workshop access. Packaged only — unpackaged dev uses its own client.
+// Non-concurrent Workshop-session launch state. Only ONE launch runs at a time:
+// while one is in flight OR a session is already connected, new launch signals are
+// IGNORED (they'd spawn phantom sessions that reopen the Manager). Cleared when a
+// session connects or the Manager closes — so the fallback timer can never fire
+// stale and trigger a spurious steam:// launch after the fact.
+let workshopLaunching = false;
+let workshopLaunchTimer = null;
+
+function clearWorkshopLaunch() {
+  workshopLaunching = false;
+  if (workshopLaunchTimer) { clearTimeout(workshopLaunchTimer); workshopLaunchTimer = null; }
+}
+
 function launchWorkshopSession() {
   if (!app.isPackaged) return false; // dev: Workshop runs locally, no session needed
-  if (sessionLink && sessionLink.hasSession()) { logEngine('INFO', '[engine] workshop: session already connected'); return true; }
+  // GATE: one-by-one. A live session (ignore until it gracefully ends) or an
+  // in-flight launch both short-circuit, so rapid open/close can't stack launches.
+  if (sessionLink && sessionLink.hasSession()) { logEngine('INFO', '[engine] workshop: session already connected — ignoring launch'); return true; }
+  if (workshopLaunching) { logEngine('INFO', '[engine] workshop: a session launch is already in progress — ignoring'); return true; }
+  workshopLaunching = true;
   const appId = require('./lib/workshop').STEAM_APP_ID;
 
   // Preferred path — NO Steam "launching" popup. Spawn the transient session
@@ -251,17 +268,19 @@ function launchWorkshopSession() {
     logEngine('WARN', `[engine] workshop: silent session spawn failed: ${e && e.message}`);
   }
 
-  // Fallback — if the silent session doesn't register/connect shortly (e.g. the
-  // env-var registration didn't take in this build), ask Steam to launch one the
-  // classic way (a brief "launching" flash) so Workshop still works. Skipped if
-  // the silent session already connected. serve() ends any older session on the
-  // new connect, so a late silent + this fallback can't leave two "playing" procs.
-  setTimeout(() => {
-    if (sessionLink && sessionLink.hasSession()) return; // silent session worked → no popup
+  // ONE cancellable fallback timer. If no session has connected by the deadline, the
+  // silent session failed to register → launch one through Steam (brief flash), then
+  // arm a give-up timeout so a total failure never blocks future launches forever.
+  // clearWorkshopLaunch() (on connect / Manager close) cancels this, so it can NEVER
+  // fire stale — the phantom-reopen bug from the previous build.
+  workshopLaunchTimer = setTimeout(() => {
+    workshopLaunchTimer = null;
+    if (sessionLink && sessionLink.hasSession()) { workshopLaunching = false; return; } // connected → done, no popup
     logEngine('INFO', `[engine] workshop: no session ${spawnedSilent ? 'after silent spawn' : '(silent spawn failed)'}; falling back to steam://rungameid/${appId}`);
     try { shell.openExternal(`steam://rungameid/${appId}`); }
     catch (e) { logEngine('WARN', `[engine] workshop: steam launch failed: ${e && e.message}`); }
-  }, spawnedSilent ? 8000 : 0);
+    workshopLaunchTimer = setTimeout(() => { workshopLaunchTimer = null; workshopLaunching = false; }, 10000);
+  }, spawnedSilent ? 5000 : 0);
 
   return true;
 }
@@ -313,6 +332,9 @@ function createManagerWindow() {
   managerWindow.on('resize', bumpBusy);
   managerWindow.on('closed', () => {
     managerWindow = null;
+    // Closing the Manager cancels any in-flight silent-session launch, so a pending
+    // fallback timer can't fire a phantom steam:// (and reopen us) after the fact.
+    clearWorkshopLaunch();
     // The Manager is the Steam "session": closing it ends the session so Steam stops
     // showing "playing" — the wallpaper (this engine) keeps running. No-op when the
     // Manager was opened outside a session (tray / first run) → no socket to signal.
@@ -1953,7 +1975,12 @@ function runSession() {
   // the Steam app-id in its env, to connect the Workshop with no popup.
   const silent = process.env.DE_SILENT_SESSION === '1';
   const editAt = process.argv.indexOf('--edit');
-  const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'jarvis' } : { cmd: 'open-manager' };
+  // A silent session exists ONLY to provide Steam for an already-open Manager, so it
+  // uses a distinct intent — the engine wires it up if the Manager is still open, or
+  // ends it (no reopen) if the Manager was closed before it finished connecting. A
+  // real (Steam-launched) session uses open-manager / edit as before.
+  const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'jarvis' }
+    : silent ? { cmd: 'workshop-session' } : { cmd: 'open-manager' };
   sessLog(`${silent ? 'silent' : 'Steam'} session (intent=${intent.cmd}); connecting to the engine`);
   app.on('window-all-closed', () => { /* a session has no windows — stay alive on the socket */ });
   app.whenReady().then(() => {
@@ -2492,9 +2519,12 @@ if (IS_SESSION) {
         const pendingAchievements = new Set();
         sessionLink = require('./lib/session-link').serve({
           onOpen: () => {
+            // A session connected → this launch succeeded: cancel the fallback timer
+            // and clear the in-flight flag so it can never fire stale.
+            clearWorkshopLaunch();
             createManagerWindow();
             // A session just connected — a Manager already open on a Workshop tab
-            // can now load it (it bounced through Steam to get here).
+            // can now load it.
             if (managerWindow && !managerWindow.isDestroyed()) {
               try { managerWindow.webContents.send('aegis:workshop:session', { connected: true }); } catch (e) { /* window gone */ }
             }
@@ -2503,8 +2533,24 @@ if (IS_SESSION) {
               pendingAchievements.clear();
             }
           },
+          // A SILENT session connected — it was spawned only to provide Steam for an
+          // already-open Manager (no popup). Cancel the launch state, then either wire
+          // it up (Manager still open → tell it Workshop is live) or end it (Manager
+          // was closed before it connected → don't reopen; let Steam return to blue).
+          onWorkshopSession: () => {
+            clearWorkshopLaunch();
+            if (managerWindow && !managerWindow.isDestroyed()) {
+              try { managerWindow.webContents.send('aegis:workshop:session', { connected: true }); } catch (e) { /* window gone */ }
+              if (pendingAchievements.size && sessionLink && sessionLink.hasSession()) {
+                for (const name of Array.from(pendingAchievements)) sessionLink.call('unlock', [name]).catch(() => {});
+                pendingAchievements.clear();
+              }
+            } else if (sessionLink) {
+              sessionLink.endSession(); // Manager gone → the silent session is pointless
+            }
+          },
           onEdit: (id) => createEditorWindow(id),
-          onSessionGone: () => { if (managerWindow && !managerWindow.isDestroyed()) managerWindow.close(); },
+          onSessionGone: () => { clearWorkshopLaunch(); if (managerWindow && !managerWindow.isDestroyed()) managerWindow.close(); },
           onError: (err) => logEngine('WARN', `session-link server: ${err && err.message}`),
           log: (m) => logEngine('INFO', `[engine ${process.pid}] session-link: ${m}`),
         });
