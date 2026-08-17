@@ -434,11 +434,18 @@ function renderGallery() {
   }
 
   // Both Workshop tabs need a Steam session; check once when entering them.
+  // wsAccess starts null (unknown) on a fresh Manager window and is resolved
+  // ASYNC by refreshWorkshopAccess. Gate on `!== true` (not `=== false`) so we
+  // only load Workshop content once a session is CONFIRMED — otherwise the
+  // synchronous first render (wsAccess still null) would fall through and fire
+  // workshopStatus/Mine/Browse with no session, which fail and leave the tab
+  // BLANK (seen in engine.log: "workshop op ... requested with no Steam session").
+  // Showing the gate while unknown is correct: no session yet either way.
   if ((library.tab === 'published' || library.tab === 'browse') && library.wsAccess === null) refreshWorkshopAccess();
 
   if (library.tab === 'published') {
     // Published is entirely Steam — gate the whole tab behind "Open in Steam".
-    if (library.wsAccess === false) { gallery.appendChild(workshopGate()); return; }
+    if (library.wsAccess !== true) { gallery.appendChild(workshopGate()); return; }
     renderPublishedSection(gallery);
     return;
   }
@@ -449,7 +456,7 @@ function renderGallery() {
   const wsBox = document.createElement('div');
   wsBox.className = 'workshop-section';
   gallery.appendChild(wsBox);
-  if (library.wsAccess === false) wsBox.appendChild(workshopGate());
+  if (library.wsAccess !== true) wsBox.appendChild(workshopGate());
   else renderWorkshopSection(wsBox);
 
   if (library.registries.length === 0) {
