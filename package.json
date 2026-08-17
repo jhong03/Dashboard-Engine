@@ -58,6 +58,10 @@
       "!scripts/{smoke,voices,calibrate,audition,selftest,packs}.js",
       "!engine/**",
       "!package-lock.json",
+      "!steampipe/**",
+      "!scratch/**",
+      "!store-assets/**",
+      "!BUILD.md",
       "!**/.git/**"
     ],
     "win": {
