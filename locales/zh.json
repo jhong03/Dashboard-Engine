@@ -1303,6 +1303,7 @@
   "editor.insp.note.editingVscode": "正在 Visual Studio Code 中编辑——保存后会自动同步到这里。",
   "editor.insp.note.vscodeMissing": "未找到 Visual Studio Code。请安装它（或将 ‘code’ 添加到 PATH），然后重试。",
   "manager.workshop.needsSteam": "浏览、订阅和发布需要通过 Steam 打开创意工坊。Steam 会显示一个短暂的启动提示——这是正常的。",
+  "manager.workshop.connecting": "正在连接 Steam…",
   "manager.workshop.openInSteam": "在 Steam 中打开创意工坊",
   "manager.workshop.openingSteam": "正在打开 Steam……"
 }

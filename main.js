@@ -240,7 +240,10 @@ function launchWorkshopSession() {
       detached: true,
       stdio: 'ignore',
       windowsHide: true,
-      env: { ...process.env, SteamAppId: String(appId), SteamGameId: String(appId) },
+      // SteamAppId/SteamGameId → sw.init registers us with Steam by app-id (no
+      // steam:// launch). DE_SILENT_SESSION → runSession verifies Steam eagerly and
+      // exits if it can't register, so the fallback below can take over.
+      env: { ...process.env, SteamAppId: String(appId), SteamGameId: String(appId), DE_SILENT_SESSION: '1' },
     }).unref();
     spawnedSilent = true;
     logEngine('INFO', `[engine] workshop: spawned a silent session (SteamAppId=${appId}); awaiting connect`);
@@ -1946,11 +1949,28 @@ function runSession() {
   const workshop = require('./lib/workshop');
   const achievements = require('./lib/achievements');
   const sessLog = (m) => logEngine('INFO', `[session ${process.pid}] session-link: ${m}`);
+  // A SILENT session is one the engine spawned directly (no steam:// launch) with
+  // the Steam app-id in its env, to connect the Workshop with no popup.
+  const silent = process.env.DE_SILENT_SESSION === '1';
   const editAt = process.argv.indexOf('--edit');
   const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'jarvis' } : { cmd: 'open-manager' };
-  sessLog(`Steam launched a session (intent=${intent.cmd}); connecting to the engine`);
+  sessLog(`${silent ? 'silent' : 'Steam'} session (intent=${intent.cmd}); connecting to the engine`);
   app.on('window-all-closed', () => { /* a session has no windows — stay alive on the socket */ });
   app.whenReady().then(() => {
+    // A silent session must PROVE it can reach Steam before claiming the Workshop
+    // role. sw.init(appId) registers this process with the running Steam client by
+    // the app-id (like steam_appid.txt in dev) and flips Steam to "playing". If it
+    // DOESN'T register in this build, exit so the engine's fallback launches one
+    // through steam:// — never leave a connected "session" that can't do Steam ops.
+    if (silent) {
+      const st = workshop.status(); // ensureClient → sw.init(appId)
+      if (!st || !st.available) {
+        sessLog(`silent session could not reach Steam (${(st && st.reason) || 'unknown'}); exiting so the engine falls back`);
+        app.quit();
+        return;
+      }
+      sessLog(`silent session reached Steam (user=${st.user || '?'}) — owning the Steam client, no popup`);
+    }
     link.connect(process.execPath, intent, {
       log: sessLog,
       onEnd: () => app.quit(), // Manager closed (or engine gone) → session ends → Steam not playing

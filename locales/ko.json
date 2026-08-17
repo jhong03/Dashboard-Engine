@@ -1303,6 +1303,7 @@
   "editor.insp.note.editingVscode": "Visual Studio Code에서 편집 중 — 저장하면 여기로 동기화됩니다.",
   "editor.insp.note.vscodeMissing": "Visual Studio Code를 찾을 수 없습니다. 설치하거나 ‘code’를 PATH에 추가한 후 다시 시도하세요.",
   "manager.workshop.needsSteam": "둘러보기, 구독, 게시는 Steam을 통해 창작마당을 엽니다. Steam에 잠깐 실행 안내가 표시되는 것은 정상입니다.",
+  "manager.workshop.connecting": "Steam에 연결 중…",
   "manager.workshop.openInSteam": "Steam에서 창작마당 열기",
   "manager.workshop.openingSteam": "Steam 여는 중…"
 }

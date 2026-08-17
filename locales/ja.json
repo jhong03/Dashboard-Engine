@@ -1303,6 +1303,7 @@
   "editor.insp.note.editingVscode": "Visual Studio Code で編集中——保存した変更はここに同期されます。",
   "editor.insp.note.vscodeMissing": "Visual Studio Code が見つかりません。インストールして（または ‘code’ を PATH に追加して）から、もう一度お試しください。",
   "manager.workshop.needsSteam": "閲覧・購読・公開するには、Steam からワークショップを開きます。Steam に短い起動ダイアログが表示されますが、正常です。",
+  "manager.workshop.connecting": "Steam に接続中…",
   "manager.workshop.openInSteam": "Steam でワークショップを開く",
   "manager.workshop.openingSteam": "Steam を開いています…"
 }

@@ -1303,6 +1303,7 @@
   "editor.insp.note.editingVscode": "Editing in Visual Studio Code — saved changes sync back here.",
   "editor.insp.note.vscodeMissing": "Visual Studio Code wasn’t found. Install it (or add ‘code’ to your PATH), then try again.",
   "manager.workshop.needsSteam": "To browse, subscribe, and publish, open the Workshop through Steam. Steam will show a brief launch prompt — that’s normal.",
+  "manager.workshop.connecting": "Connecting to Steam…",
   "manager.workshop.openInSteam": "Open Workshop in Steam",
   "manager.workshop.openingSteam": "Opening Steam…"
 }

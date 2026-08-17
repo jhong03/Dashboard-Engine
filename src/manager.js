@@ -852,13 +852,17 @@ function hintP(text) {
 function workshopGate() {
   const wrap = document.createElement('div');
   wrap.className = 'ws-gate';
-  wrap.appendChild(hintP(t('manager.workshop.needsSteam')));
+  // Opening the Manager auto-starts a silent session (wsConnecting) — show a
+  // "connecting" state while it spins up, not the manual "open from Steam" prompt.
+  // The button stays as a manual retry in case the silent connect doesn't take.
+  wrap.appendChild(hintP(t(library.wsConnecting ? 'manager.workshop.connecting' : 'manager.workshop.needsSteam')));
   const btn = document.createElement('button');
   btn.className = 'btn';
   btn.textContent = t('manager.workshop.openInSteam');
   btn.addEventListener('click', async () => {
     btn.disabled = true;
     btn.textContent = t('manager.workshop.openingSteam');
+    library.wsConnecting = true;
     try { await aegis.workshopLaunchSession(); } catch (e) { /* fail-soft */ }
   });
   wrap.appendChild(btn);
@@ -4475,14 +4479,31 @@ async function init() {
     renderDetail();
   });
 
-  // A Steam session connected (the user opened the Workshop, which bounced through
-  // Steam) — grant Workshop access and reload the Workshop views.
+  // A Steam session connected (silently spawned on Manager open, or via the gate) —
+  // grant Workshop access and reload the Workshop views.
   if (aegis.onWorkshopSession) {
     aegis.onWorkshopSession((msg) => {
       library.wsAccess = !!(msg && msg.connected);
-      if (library.wsAccess) { ws.loaded = false; mine.loaded = false; voiceWs.loaded = false; voiceMine.loaded = false; }
+      if (library.wsAccess) {
+        library.wsConnecting = false;
+        ws.loaded = false; mine.loaded = false; voiceWs.loaded = false; voiceMine.loaded = false;
+      }
       if (library.tab === 'browse' || library.tab === 'published') renderGallery();
     });
+  }
+
+  // Match Wallpaper Engine: opening the Manager (our Steam-connected UI) signals
+  // "playing" and makes the Workshop available — the wallpaper engine keeps running
+  // regardless. If the Manager opened WITHOUT a Steam session (e.g. reopened from
+  // the tray), silently start one now — no steam:// popup. Dev / an existing session
+  // report available === true, so this no-ops there.
+  if (aegis.workshopLaunchSession && aegis.workshopAvailable) {
+    aegis.workshopAvailable().then((a) => {
+      if (!(a && a.available)) {
+        library.wsConnecting = true;
+        aegis.workshopLaunchSession().catch(() => {});
+      }
+    }).catch(() => {});
   }
 
   // A pack was saved in the editor (or hot-reloaded on disk) — refresh so the
