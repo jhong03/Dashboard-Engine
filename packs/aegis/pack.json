@@ -1,16 +1,16 @@
 {
   "schema": 2,
-  "id": "jarvis",
+  "id": "aegis",
   "author": "jhong03",
   "persona": {
-    "name": "J.A.R.V.I.S",
+    "name": "Aegis",
     "tagline": "PERSONAL INTERFACE · v1.0",
     "lines": [
-      "Good evening, sir. All systems are online. How may I assist you?",
+      "Aegis online. All systems nominal.",
       "All monitoring systems active.",
-      "Standing by, sir.",
-      "At your service.",
-      "Interface nominal. Awaiting your instruction."
+      "Standing by.",
+      "Ready when you are.",
+      "Interface nominal. Awaiting input."
     ]
   },
   "skin": {
@@ -152,7 +152,7 @@
         "rotate": null
       },
       "options": {
-        "text": "J.A.R.V.I.S · PERSONAL INTERFACE"
+        "text": "AEGIS · PERSONAL INTERFACE"
       }
     },
     {
@@ -460,7 +460,7 @@
       }
     },
     {
-      "type": "hud-clock",
+      "type": "ring-clock",
       "rect": [
         30.5,
         6.5,
@@ -484,8 +484,7 @@
         "rotate": null
       },
       "options": {
-        "format": "24h",
-        "seconds": true,
+        "style": "halo",
         "showDate": true
       }
     },
@@ -632,5 +631,5 @@
       }
     }
   ],
-  "name": "J.A.R.V.I.S"
+  "name": "Aegis"
 }

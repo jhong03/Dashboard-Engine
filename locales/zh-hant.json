@@ -66,7 +66,7 @@
   "manager.assistant.modelIdHint": "你的服務商所需的確切模型名稱——從其模型頁面複製。示例：OpenRouter <code>google/gemini-2.0-flash-exp:free</code>、<code>deepseek/deepseek-chat</code> · Groq <code>llama-3.3-70b-versatile</code> · Ollama/LM Studio 本地名稱如 <code>llama3.1</code> 或 <code>qwen2.5</code> · OpenAI <code>gpt-4o-mini</code>。",
   "manager.assistant.voiceHint": "選擇與你人格<strong>語言</strong>相匹配的語音——用英語語音朗讀中文人格會含糊不清。這裡列出了每種語言的預設，在上方選擇某語言的人格會自動選中匹配的語音。要在女聲和男聲之間切換，請選擇該語言的預設——<strong>男聲</strong>可用於英語、西班牙語和法語（帶“· Male”的預設）；中文、日語和韓語目前僅有女聲。你自己的<strong>語音調節</strong>配置也會顯示在這裡。“預設語音”為英語，且<em>不</em>跟隨你的調節。",
   "manager.assistant.personaHint": "在上方選擇一個預設來填充此處，然後進行調整——或寫下你自己的並在下方儲存。回覆會被<em>朗讀出來</em>，所以請保持簡潔——不要列表或表情符號。給它一個名字和個性，並說明它應如何稱呼你（例如用你的名字）。<strong>換一種語言？</strong>選擇一個語言預設（或用任意語言編寫你的人格並讓它用該語言回覆），然後在上方選擇匹配的語音——語音庫包含英語、西班牙語、法語、中文、日語和韓語。",
-  "manager.assistant.persona.jarvis": "JARVIS——正式的管家（預設）",
+  "manager.assistant.persona.aegis": "Aegis——任務控制（預設）",
   "manager.assistant.persona.nova": "Nova——溫暖的夥伴",
   "manager.assistant.persona.sage": "Sage——沉穩的導師",
   "manager.assistant.persona.ace": "Ace——熱血教練",

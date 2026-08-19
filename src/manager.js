@@ -1575,9 +1575,9 @@ async function wireLauncherCfg() {
 // gibberish — the directive must be forceful enough that even a small local model
 // won't drift into the language the user happened to type in.
 const ASSISTANT_PRESETS = {
-  jarvis: 'Always reply in English, whatever language the user writes in; never switch languages. '
-    + 'You are JARVIS, a calm, impeccably polite AI assistant with dry British wit. '
-    + 'Address the user as "sir". Be concise — two to four sentences unless a task needs more. '
+  aegis: 'Always reply in English, whatever language the user writes in; never switch languages. '
+    + 'You are Aegis, a calm, precise mission-control operator for this machine. '
+    + 'Be concise — two to four sentences unless a task needs more. '
     + 'Never use markdown, bullet points, or emoji; reply in plain spoken sentences, as your words are read aloud.',
   nova: 'Always reply in English, whatever language the user writes in; never switch languages. '
     + 'You are Nova, a warm, upbeat, and encouraging assistant who speaks like a supportive friend. '
@@ -1617,7 +1617,7 @@ const ASSISTANT_PRESETS = {
 // Each persona preset speaks a language; map it to the HD voice that language
 // needs so picking a persona also sets a matching voice (see the change handler).
 const PERSONA_VOICE = {
-  jarvis: 'en_male', nova: 'en_us_hd', sage: 'en_us_hd', ace: 'en_us_hd', pip: 'en_us_hd',
+  aegis: 'en_male', nova: 'en_us_hd', sage: 'en_us_hd', ace: 'en_us_hd', pip: 'en_us_hd',
   es_amigo: 'es_hd', fr_ami: 'fr_hd', zh_zhushou: 'zh_hd', ja_hisho: 'ja_hd', ko_biseo: 'ko_hd',
 };
 
@@ -2051,7 +2051,7 @@ function renderCreate() {
   actions.className = 'create-actions';
   actions.appendChild(libButton(t('create.startScratch'), () => openBuilder(), 'primary'));
   actions.appendChild(libButton(t('create.openEditor'), () => {
-    aegis.openEditor(library.activeId || 'jarvis');
+    aegis.openEditor(library.activeId || 'aegis');
   }));
   actions.appendChild(libButton(t('create.readGuide'), async () => {
     const out = await aegis.openGuide();
@@ -4459,7 +4459,7 @@ function setupDetailResizer() {
 
 async function init() {
   const active = await aegis.activeGet();
-  library.activeId = active.id || 'jarvis';
+  library.activeId = active.id || 'aegis';
 
   // Warm the common English voice engines in the background the moment the Manager
   // opens — well before the user reaches Browse → Voices → Preview, the tuning

@@ -58,7 +58,7 @@ function waitForWallpaperVideo(root, timeoutMs) {
 }
 
 async function run() {
-  const id = new URLSearchParams(location.search).get('pack') || 'jarvis';
+  const id = new URLSearchParams(location.search).get('pack') || 'aegis';
   // This render becomes a PUBLIC preview image — load the SHARED (sanitized) pack
   // so the author's own content (weather location, countdown, text, labels…) is
   // shown as placeholders, exactly matching the published pack.json. One source of

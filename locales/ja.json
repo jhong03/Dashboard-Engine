@@ -66,7 +66,7 @@
   "manager.assistant.modelIdHint": "プロバイダーが求める正確なモデル名です——モデル一覧ページからコピーしてください。例：OpenRouter <code>google/gemini-2.0-flash-exp:free</code>、<code>deepseek/deepseek-chat</code> · Groq <code>llama-3.3-70b-versatile</code> · Ollama/LM Studio はローカル名（例 <code>llama3.1</code> や <code>qwen2.5</code>）· OpenAI <code>gpt-4o-mini</code>。",
   "manager.assistant.voiceHint": "ペルソナの<strong>言語</strong>に合う声を選んでください——中国語のペルソナを英語の声で読み上げると崩れて聞こえます。各言語のプリセットがここに並び、上で言語ペルソナを選ぶと合う声が自動で選ばれます。女性と男性の声を切り替えるには、その言語のプリセットを選んでください——<strong>男性の声</strong>は英語・スペイン語・フランス語で利用できます（「· Male」のプリセット）。中国語・日本語・韓国語は今のところ女性のみです。ご自身の<strong>ボイス調整</strong>プロファイルもここに表示されます。「デフォルトの声」は英語で、あなたの調整には<em>従いません</em>。",
   "manager.assistant.personaHint": "上でプリセットを選んでここを埋め、微調整してください——または自分で書いて下に保存できます。返答は<em>声に出して</em>読まれるので、簡潔に——箇条書きや絵文字は避けてください。名前と性格を与え、あなたをどう呼ぶか（例：あなたの名前で）を伝えてください。<strong>別の言語にする？</strong>言語プリセットを選ぶ（または任意の言語でペルソナを書き、その言語で返答するよう指示する）と、上で合う声を選んでください——バンクには英語・スペイン語・フランス語・中国語・日本語・韓国語が含まれます。",
-  "manager.assistant.persona.jarvis": "JARVIS——礼儀正しい執事（デフォルト）",
+  "manager.assistant.persona.aegis": "Aegis——ミッションコントロール（デフォルト）",
   "manager.assistant.persona.nova": "Nova——温かい相棒",
   "manager.assistant.persona.sage": "Sage——穏やかな師",
   "manager.assistant.persona.ace": "Ace——熱血コーチ",

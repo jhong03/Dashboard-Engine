@@ -2753,7 +2753,7 @@ async function setupEditorLayout() {
 }
 
 async function init() {
-  const packId = new URLSearchParams(location.search).get('pack') || 'jarvis';
+  const packId = new URLSearchParams(location.search).get('pack') || 'aegis';
   const loaded = await aegis.packLoad(packId);
   if (!loaded.ok) return setStatus(loaded.error, true);
   const all = await aegis.assetsAll(packId);

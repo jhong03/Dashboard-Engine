@@ -261,7 +261,7 @@ async function init() {
   if (params.get('nogl') === '1') window.__DE_DISABLE_GL = true;
   const requested = params.get('pack');
   const active = await aegis.activeGet();
-  await loadPack(requested || active.id || 'jarvis');
+  await loadPack(requested || active.id || 'aegis');
 
   // Hot reload: the active pack's directory changed on disk (author editing,
   // or the editor saving).

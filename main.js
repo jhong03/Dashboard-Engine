@@ -459,7 +459,7 @@ function createEditorWindow(packId) {
     },
   });
   editorWindow.loadFile(path.join(__dirname, 'src', 'editor.html'), {
-    query: { pack: packId || 'jarvis', perf: envFlag('PERF') ? '1' : '', fakeHour: envFlag('FAKE_HOUR') || '' },
+    query: { pack: packId || 'aegis', perf: envFlag('PERF') ? '1' : '', fakeHour: envFlag('FAKE_HOUR') || '' },
   });
   editorWindow.on('closed', () => { editorWindow = null; });
 }
@@ -763,7 +763,7 @@ function ensureAudioMixer() {
 // pack change), then reconcile the daemon's polling.
 function recomputeActivePackMixer() {
   try {
-    const id = settings.getActivePack(USER_DIR) || 'jarvis';
+    const id = settings.getActivePack(USER_DIR) || 'aegis';
     const loaded = packs.loadPack(__dirname, USER_DIR, id);
     const comps = (loaded && loaded.pack && loaded.pack.components) || [];
     activePackMixer = comps.some((c) => c && c.type === 'mixer');
@@ -812,7 +812,7 @@ function startPresenceMonitoring() {
 // habits, Dashboard Engine contents.
 function buildTrayMenu() {
   const listed = packs.listPacks(__dirname, USER_DIR);
-  const active = settings.getActivePack(USER_DIR) || 'jarvis';
+  const active = settings.getActivePack(USER_DIR) || 'aegis';
   // Localized tray labels, fail-soft: a missing key falls back to the English literal.
   const dict = i18n.getActive(USER_DIR, settings.getLocale(USER_DIR), app.getLocale()).dict;
   const tr = (key, english) => { const s = i18n.translate(dict, key); return s === key ? english : s; };
@@ -1979,7 +1979,7 @@ function runSession() {
   // uses a distinct intent — the engine wires it up if the Manager is still open, or
   // ends it (no reopen) if the Manager was closed before it finished connecting. A
   // real (Steam-launched) session uses open-manager / edit as before.
-  const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'jarvis' }
+  const intent = editAt !== -1 ? { cmd: 'edit', id: process.argv[editAt + 1] || 'aegis' }
     : silent ? { cmd: 'workshop-session' } : { cmd: 'open-manager' };
   sessLog(`${silent ? 'silent' : 'Steam'} session (intent=${intent.cmd}); connecting to the engine`);
   app.on('window-all-closed', () => { /* a session has no windows — stay alive on the socket */ });
@@ -2032,7 +2032,7 @@ function openFirstWindows() {
   const firstRun = !settings.getOnboarded(USER_DIR);
   if (!LAUNCHED_AT_LOGIN && firstRun) createManagerWindow();
   const editAt = process.argv.indexOf('--edit');
-  if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'jarvis');
+  if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'aegis');
 }
 
 // Fail soft (CLAUDE.md): a stray error in main must never crash the engine
@@ -2074,7 +2074,7 @@ if (IS_SESSION) {
     if (WANT_PANEL) return;
     // `dashboard-engine --edit <id>` from a second launch opens the editor here.
     const editAt = argv.indexOf('--edit');
-    if (editAt !== -1) createEditorWindow(argv[editAt + 1] || 'jarvis');
+    if (editAt !== -1) createEditorWindow(argv[editAt + 1] || 'aegis');
     else createManagerWindow();
   });
 
@@ -2210,6 +2210,17 @@ if (IS_SESSION) {
     // and the untrusted-pack surface. The tray menu is separate and unaffected.
     Menu.setApplicationMenu(null);
     logEngine('INFO', `engine start — v${app.getVersion()} · electron ${process.versions.electron} · ${process.platform} · ${LAUNCHED_AT_LOGIN ? 'login' : 'manual'}`);
+    // One-time id-alias migration (F4 IP remediation): the built-in default pack was
+    // renamed jarvis → aegis. A profile still pointing at the old id resolves to Aegis
+    // so it doesn't fall back to a blank pack. Fail-soft; runs once (after the rewrite
+    // the stored id is 'aegis'). A user's OWN forked pack is never named 'jarvis'
+    // (forks get a distinct id), so this only ever catches the renamed built-in.
+    try {
+      if (settings.getActivePack(USER_DIR) === 'jarvis') {
+        settings.setActivePack(USER_DIR, 'aegis');
+        logEngine('INFO', 'migrated active pack pointer jarvis → aegis (renamed default)');
+      }
+    } catch (e) { /* fail-soft: leave it; the code defaults to aegis anyway */ }
     // Voice models now live in user data (survive updates); bring any the owner
     // downloaded into the old in-app voices/ dir across so they aren't refetched.
     voicebank.migrateModelsFromAppRoot(__dirname);
@@ -2387,7 +2398,7 @@ if (IS_SESSION) {
       // The default weather location changed — repaint so any unset-location
       // weather component picks it up immediately (else it waits for its timer).
       onWeatherLocationChanged: () => {
-        const activeId = settings.getActivePack(USER_DIR) || 'jarvis';
+        const activeId = settings.getActivePack(USER_DIR) || 'aegis';
         for (const win of [dashboardWindow, managerWindow]) {
           if (win && !win.isDestroyed()) win.webContents.send('aegis:packs:changed', { id: activeId });
         }
@@ -2585,7 +2596,7 @@ if (IS_SESSION) {
     // DE_SHOTPREVIEW=<dir>: dev utility — render DE_PACK's Workshop preview to
     // <dir>/preview.png and quit, to eyeball what publish will upload.
     if (envFlag('SHOTPREVIEW')) {
-      renderPackPreview(envFlag('PACK') || 'jarvis').then((file) => {
+      renderPackPreview(envFlag('PACK') || 'aegis').then((file) => {
         const fs = require('fs');
         try {
           fs.mkdirSync(envFlag('SHOTPREVIEW'), { recursive: true });
@@ -2598,7 +2609,7 @@ if (IS_SESSION) {
     // DE_GIFPREVIEW=<dir>: dev utility — render DE_PACK's ANIMATED (GIF) Workshop
     // preview to <dir>/preview.gif and quit, to eyeball the motion + file size.
     if (envFlag('GIFPREVIEW')) {
-      renderPackPreviewGif(envFlag('PACK') || 'jarvis').then((file) => {
+      renderPackPreviewGif(envFlag('PACK') || 'aegis').then((file) => {
         const fs = require('fs');
         try {
           fs.mkdirSync(envFlag('GIFPREVIEW'), { recursive: true });
@@ -2609,13 +2620,13 @@ if (IS_SESSION) {
       });
     }
     // DE_STORESHOTS=<dir>: dev/marketing utility — render each pack in DE_PACKS
-    // (comma-separated; default jarvis,sakura,neon-cyberpunk) at DE_STORESIZE
+    // (comma-separated; default aegis,sakura,neon-cyberpunk) at DE_STORESIZE
     // (WxH, default 1920x1080) with DEMO data only (no personal info), writing
     // <dir>/<id>.png, then quit. Reuses the Workshop preview renderer.
     if (envFlag('STORESHOTS')) {
       const fs = require('fs');
       const dir = envFlag('STORESHOTS');
-      const ids = (envFlag('PACKS') || 'jarvis,sakura,neon-cyberpunk').split(',').map((s) => s.trim()).filter(Boolean);
+      const ids = (envFlag('PACKS') || 'aegis,sakura,neon-cyberpunk').split(',').map((s) => s.trim()).filter(Boolean);
       const [sw, sh] = (envFlag('STORESIZE') || '1920x1080').split('x').map((n) => parseInt(n, 10));
       (async () => {
         try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { /* best-effort */ }
@@ -2635,7 +2646,7 @@ if (IS_SESSION) {
     // MP4 externally with ffmpeg.
     if (envFlag('TRAILER')) {
       const dir = envFlag('TRAILER');
-      const ids = (envFlag('PACKS') || 'jarvis').split(',').map((s) => s.trim()).filter(Boolean);
+      const ids = (envFlag('PACKS') || 'aegis').split(',').map((s) => s.trim()).filter(Boolean);
       const secs = Number(envFlag('TRAILER_SECS')) || 6;
       const caps = (envFlag('CAPTIONS') || '').split('|');
       const fakeHour = envFlag('FAKE_HOUR'); // forces a time-of-day slot for the schedule beat

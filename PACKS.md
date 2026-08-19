@@ -469,7 +469,7 @@ Any component takes an optional `style` — every field optional, omitted means
 }
 ```
 
-The built-in pack is the worked example: `packs/jarvis/` (HUD clock, ring
+The built-in pack is the worked example: `packs/aegis/` (ring clock, ring
 meters, per-core bars, sysinfo readouts, compact weather strip, agenda +
 launcher rails, layered text panels). Copy it, rename the folder, and start
 editing — it is also the project's quality floor for pack design.
@@ -514,7 +514,7 @@ whole contract (anything else is dropped with a warning):
 | `toggle` | `shape` | `cornerNotches` | corner notches on/off |
 
 Every value is re-clamped to the field's real range, so a property can only
-move a value the skin already allows. `jarvis` ships all four control types as
+move a value the skin already allows. `aegis` ships all four control types as
 a live example.
 
 ## Module SDK
