@@ -197,6 +197,8 @@ function createPanelWindow() {
     height: 860,
     minWidth: 1100, // design floor — the panel layout must never break under 1100px
     backgroundColor: '#04080F',
+    // Dev capture only (DE_SHOT): frameless + larger-than-screen for exact-size shots.
+    ...(envFlag('SHOT') ? { frame: false, enableLargerThanScreen: true } : {}),
     ...(parent ? { parent, modal: true } : {}),
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
@@ -2045,7 +2047,7 @@ function openFirstWindows() {
   // Dev capture only (DE_SHOT): also open the Manager so app-UI store screenshots can
   // be captured past onboarding (no welcome modal). Gated on the dev env, alongside
   // DE_STORESHOTS/DE_TRAILER — never changes production behaviour.
-  if (envFlag('SHOT') && !managerWindow) createManagerWindow();
+  if (envFlag('SHOT') && !managerWindow && !WANT_PANEL) createManagerWindow();
   const editAt = process.argv.indexOf('--edit');
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'aegis');
 }
