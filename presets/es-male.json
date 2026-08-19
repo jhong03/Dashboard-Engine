@@ -5,7 +5,7 @@
   "author": "Dashboard Engine",
   "created": "2026-08-04T00:00:00.000Z",
   "base": {
-    "engine": "piper",
+    "engine": "kokoro",
     "voice": "es_male",
     "fallback": { "engine": "system", "match": "Spanish" }
   },
