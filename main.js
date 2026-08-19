@@ -2036,6 +2036,10 @@ function openFirstWindows() {
   // After onboarding, every launch (manual or at login) is silent.
   const firstRun = !settings.getOnboarded(USER_DIR);
   if (!LAUNCHED_AT_LOGIN && firstRun) createManagerWindow();
+  // Dev capture only (DE_SHOT): also open the Manager so app-UI store screenshots can
+  // be captured past onboarding (no welcome modal). Gated on the dev env, alongside
+  // DE_STORESHOTS/DE_TRAILER — never changes production behaviour.
+  if (envFlag('SHOT') && !managerWindow) createManagerWindow();
   const editAt = process.argv.indexOf('--edit');
   if (editAt !== -1) createEditorWindow(process.argv[editAt + 1] || 'aegis');
 }
