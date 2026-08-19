@@ -2242,6 +2242,15 @@ if (IS_SESSION) {
       const removed = require('./lib/assistant').migrateToLocalOnly(USER_DIR);
       if (removed) logEngine('INFO', `assistant: removed ${removed} (cloud AI path removed — local models only)`);
     } catch (e) { /* fail-soft */ }
+    // F4 (Steam review): the built-in assistant persona was renamed JARVIS → Aegis.
+    // A profile upgraded from an older build may still store the exact old default —
+    // migrate ONLY that exact string to the new default; a user's edited persona is
+    // their own and is left untouched. Fail-soft; runs once.
+    try {
+      if (require('./lib/assistant').migrateDefaultPersona(USER_DIR)) {
+        logEngine('INFO', 'assistant: migrated the old default persona JARVIS → Aegis (renamed default)');
+      }
+    } catch (e) { /* fail-soft */ }
     // Voice models now live in user data (survive updates); bring any the owner
     // downloaded into the old in-app voices/ dir across so they aren't refetched.
     voicebank.migrateModelsFromAppRoot(__dirname);
