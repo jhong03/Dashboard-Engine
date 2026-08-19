@@ -1585,7 +1585,7 @@ async function wireLauncherCfg() {
   });
 }
 
-// ── AI assistant settings (BYO OpenAI-compatible endpoint; key encrypted) ───
+// ── AI assistant settings (LOCAL OpenAI-compatible endpoint — Ollama / LM Studio; no key) ───
 
 // Ready-made assistant personas (the "system prompt") so a non-technical user
 // can pick one instead of writing a prompt from scratch. Each bakes in the
