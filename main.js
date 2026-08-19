@@ -307,6 +307,10 @@ function createManagerWindow() {
     minWidth: 940,
     minHeight: 600,
     backgroundColor: '#04080F',
+    // Dev capture only (DE_SHOT): frameless + larger-than-screen so a 1920x1080 store
+    // screenshot captures at EXACT content size — a framed window's content area is
+    // smaller than its outer bounds, and the OS otherwise clamps it to the display.
+    ...(envFlag('SHOT') ? { frame: false, enableLargerThanScreen: true } : {}),
     // Stay hidden until the page has rendered AND the thumbnail cache is warm, so a
     // first eager drag can never land during the offscreen GPU render swarm (which
     // could hang/crash the app). The splash covers the wait; revealManagerWhenReady
@@ -452,6 +456,8 @@ function createEditorWindow(packId) {
     minWidth: 1200,
     minHeight: 720,
     backgroundColor: '#04080F',
+    // Dev capture only (DE_SHOT): frameless + larger-than-screen for exact-size shots.
+    ...(envFlag('SHOT') ? { frame: false, enableLargerThanScreen: true } : {}),
     ...(parent ? { parent, modal: true } : {}),
     webPreferences: {
       ...COMMON_WEB_PREFERENCES,
