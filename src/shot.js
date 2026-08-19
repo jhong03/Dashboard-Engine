@@ -58,12 +58,16 @@ function waitForWallpaperVideo(root, timeoutMs) {
 }
 
 async function run() {
-  const id = new URLSearchParams(location.search).get('pack') || 'aegis';
-  // This render becomes a PUBLIC preview image — load the SHARED (sanitized) pack
-  // so the author's own content (weather location, countdown, text, labels…) is
-  // shown as placeholders, exactly matching the published pack.json. One source of
-  // truth: packstore.sanitizeForShare (via the shared load).
-  const res = await (aegis.packLoadShared ? aegis.packLoadShared(id) : aegis.packLoad(id));
+  const params = new URLSearchParams(location.search);
+  const id = params.get('pack') || 'aegis';
+  // Normally this render becomes a PUBLIC Workshop preview, so load the SHARED
+  // (sanitized) pack — the author's own content (weather location, countdown, text,
+  // labels…) shows as placeholders, matching the published pack.json (one source of
+  // truth: packstore.sanitizeForShare). The local marketing store-shot tooling sets
+  // ?raw=1 to render a BUILT-IN pack's real designed labels instead; telemetry is
+  // DEMO either way, so no personal data is ever captured.
+  const raw = params.get('raw') === '1';
+  const res = await ((raw || !aegis.packLoadShared) ? aegis.packLoad(id) : aegis.packLoadShared(id));
   if (!res.ok) { window.__shotReady = true; return; }
   const renderer = AegisComponents.createRenderer(services);
   AegisComponents.applySkin(document.body, res.pack, res.assets, { maxFps: 60 });

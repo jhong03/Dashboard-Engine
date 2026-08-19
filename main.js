@@ -951,6 +951,11 @@ function renderPackPreview(packId, sizeOpts) {
   const width = sizeOpts && sizeOpts.width ? sizeOpts.width : 1280;
   const height = sizeOpts && sizeOpts.height ? sizeOpts.height : 720;
   const forcePng = !!(sizeOpts && sizeOpts.png); // store shots want crisp PNG
+  // Marketing store-shots of a built-in pack show the pack's real designed labels,
+  // not the Workshop privacy-sanitized placeholders. ONLY the local store-shot
+  // tooling sets this; the Workshop publish path never does, so its previews stay
+  // sanitized. Telemetry is DEMO either way (no personal system data).
+  const raw = !!(sizeOpts && sizeOpts.raw);
   return new Promise((resolve) => {
     const fs = require('fs');
     const os = require('os');
@@ -1006,7 +1011,7 @@ function renderPackPreview(packId, sizeOpts) {
       }
     });
     win.webContents.on('render-process-gone', () => { clearTimeout(guard); finish(null); });
-    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId) } });
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), raw: raw ? '1' : '' } });
   });
 }
 
@@ -2632,7 +2637,7 @@ if (IS_SESSION) {
         try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { /* best-effort */ }
         for (const id of ids) {
           try {
-            const file = await renderPackPreview(id, { width: sw || 1920, height: sh || 1080, png: true });
+            const file = await renderPackPreview(id, { width: sw || 1920, height: sh || 1080, png: true, raw: true });
             if (file) { fs.copyFileSync(file, path.join(dir, `${id}.png`)); try { fs.rmSync(file); } catch (e) { /* tmp */ } console.log(`[storeshot] ${id} -> ${id}.png`); }
             else console.warn(`[storeshot] ${id}: render failed`);
           } catch (err) { console.warn(`[storeshot] ${id}: ${err.message}`); }
