@@ -921,6 +921,27 @@ function workshopActionRow(item, inLibrary) {
   return wrap;
 }
 
+// F3 (Workshop moderation): an in-app Report control on any Workshop item (pack or
+// voice). Steam is the moderator of record for Workshop content, so this opens the
+// item's Steam page — where Valve's own Report link lives — and points the user at
+// our review channel too. A confirmed violation is added to the bundled blocklist,
+// which refuses to install that item on every machine in the next app update.
+function reportControl(item) {
+  const wrap = document.createElement('div');
+  wrap.className = 'ws-report';
+  const hint = document.createElement('div');
+  hint.className = 'ws-cardstatus';
+  const url = (typeof item.url === 'string' && /^https:\/\/steamcommunity\.com\//.test(item.url))
+    ? item.url
+    : `https://steamcommunity.com/sharedfiles/filedetails/?id=${item.itemId}`;
+  const btn = libButton(t('manager.workshop.report'), () => {
+    aegis.workshopOpenItem(url);
+    hint.textContent = t('manager.workshop.reportHint');
+  }, 'tiny');
+  wrap.append(btn, hint);
+  return wrap;
+}
+
 function workshopCard(item, inLibrary) {
   const card = document.createElement('div');
   card.className = 'ws-card' + (isSelected('workshop', item.itemId) ? ' selected' : '');
@@ -4168,6 +4189,7 @@ async function renderDetail() {
     if (!localPack) detail.appendChild(detailLine(t('manager.workshop.livePreviewHint')));
     detail.appendChild(workshopActionRow(item, !!localPack));
     detail.appendChild(libButton(t('manager.detail.viewOnSteam'), () => aegis.workshopOpenItem(item.url), 'tiny'));
+    detail.appendChild(reportControl(item));
     return;
   }
 
@@ -4203,6 +4225,7 @@ async function renderDetail() {
     detail.appendChild(voiceDepLine(item));
     detail.appendChild(voiceDetailActions(item));
     detail.appendChild(libButton(t('manager.detail.viewOnSteam'), () => aegis.workshopOpenItem(item.url), 'tiny'));
+    detail.appendChild(reportControl(item));
     return;
   }
 

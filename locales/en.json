@@ -448,6 +448,8 @@
   "manager.workshop.sort.top": "Most subscribed",
   "manager.workshop.sort.updated": "Recently updated",
   "manager.workshop.openOnSteam": "Open on Steam",
+  "manager.workshop.report": "Report",
+  "manager.workshop.reportHint": "Opened this item on Steam — use its Report link to flag it to Valve. You can also email dashboardengine.support@gmail.com. Confirmed violations are blocked in the next app update.",
   "manager.workshop.steamWorkshop": "Steam Workshop",
   "manager.workshop.loading": "Loading Workshop…",
   "manager.workshop.signIn": "Start Steam and sign in to browse the Workshop.",

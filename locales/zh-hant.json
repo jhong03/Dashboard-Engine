@@ -448,6 +448,8 @@
   "manager.workshop.sort.top": "訂閱最多",
   "manager.workshop.sort.updated": "最近更新",
   "manager.workshop.openOnSteam": "在 Steam 上開啟",
+  "manager.workshop.report": "檢舉",
+  "manager.workshop.reportHint": "已在 Steam 中開啟此項目——使用其「檢舉」連結向 Valve 檢舉。你也可以寄送電子郵件至 dashboardengine.support@gmail.com。確認違規的內容將在下次更新中被封鎖。",
   "manager.workshop.steamWorkshop": "Steam 創意工坊",
   "manager.workshop.loading": "正在載入創意工坊…",
   "manager.workshop.signIn": "啟動 Steam 並登入以瀏覽創意工坊。",

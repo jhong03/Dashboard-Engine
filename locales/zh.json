@@ -448,6 +448,8 @@
   "manager.workshop.sort.top": "订阅最多",
   "manager.workshop.sort.updated": "最近更新",
   "manager.workshop.openOnSteam": "在 Steam 上打开",
+  "manager.workshop.report": "举报",
+  "manager.workshop.reportHint": "已在 Steam 中打开该项目——使用其“举报”链接向 Valve 举报。你也可以发送邮件至 dashboardengine.support@gmail.com。确认违规的内容将在下次更新中被屏蔽。",
   "manager.workshop.steamWorkshop": "Steam 创意工坊",
   "manager.workshop.loading": "正在加载创意工坊…",
   "manager.workshop.signIn": "启动 Steam 并登录以浏览创意工坊。",

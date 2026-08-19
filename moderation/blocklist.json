@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "updated": "2026-08-19",
+  "note": "Developer-side content kill-switch for Steam Workshop items. Each id here is a Workshop item the app refuses to install/import. Updated in app releases as user or Valve reports are confirmed; Valve removal is requested in parallel. See steam/f3-moderation-plan.md.",
+  "blocked": []
+}

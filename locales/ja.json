@@ -448,6 +448,8 @@
   "manager.workshop.sort.top": "登録者数順",
   "manager.workshop.sort.updated": "最近更新",
   "manager.workshop.openOnSteam": "Steam で開く",
+  "manager.workshop.report": "報告",
+  "manager.workshop.reportHint": "この項目を Steam で開きました。Valve に報告するには Steam の「報告」リンクを使用してください。dashboardengine.support@gmail.com へのメールでも報告できます。違反が確認された項目は次回のアップデートでブロックされます。",
   "manager.workshop.steamWorkshop": "Steam ワークショップ",
   "manager.workshop.loading": "ワークショップを読み込み中…",
   "manager.workshop.signIn": "ワークショップを参照するには Steam を起動してサインインしてください。",

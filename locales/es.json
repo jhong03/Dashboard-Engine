@@ -448,6 +448,8 @@
   "manager.workshop.sort.top": "Más suscritos",
   "manager.workshop.sort.updated": "Actualizados recientemente",
   "manager.workshop.openOnSteam": "Abrir en Steam",
+  "manager.workshop.report": "Denunciar",
+  "manager.workshop.reportHint": "Se abrió este elemento en Steam: usa su enlace Denunciar para informar a Valve. También puedes escribir a dashboardengine.support@gmail.com. Las infracciones confirmadas se bloquean en la próxima actualización.",
   "manager.workshop.steamWorkshop": "Steam Workshop",
   "manager.workshop.loading": "Cargando el Workshop…",
   "manager.workshop.signIn": "Inicia Steam e inicia sesión para explorar el Workshop.",

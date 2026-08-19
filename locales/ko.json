@@ -448,6 +448,8 @@
   "manager.workshop.sort.top": "구독 많은 순",
   "manager.workshop.sort.updated": "최근 업데이트",
   "manager.workshop.openOnSteam": "Steam에서 열기",
+  "manager.workshop.report": "신고",
+  "manager.workshop.reportHint": "이 항목을 Steam에서 열었습니다. Valve에 신고하려면 Steam의 '신고' 링크를 사용하세요. dashboardengine.support@gmail.com 으로 이메일을 보낼 수도 있습니다. 위반이 확인된 항목은 다음 업데이트에서 차단됩니다.",
   "manager.workshop.steamWorkshop": "Steam 창작마당",
   "manager.workshop.loading": "창작마당을 불러오는 중…",
   "manager.workshop.signIn": "창작마당을 둘러보려면 Steam을 시작하고 로그인하세요.",
