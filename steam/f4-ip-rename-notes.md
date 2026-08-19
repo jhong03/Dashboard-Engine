@@ -61,11 +61,21 @@ is off it fails soft to the default pack.
 
 ## Owner action items (outside code)
 
-- **Store assets — RE-SHOOT.** The trailer(s), store screenshots, and any capsule that
-  shows the old pack must be replaced with the Aegis pack before/at resubmission:
-  - `store-assets/` trailers that open on the jarvis hero
-  - hero screenshots that feature the jarvis dashboard
-  - any capsule/library art using it
+- **Store assets — RE-SHOOT (regenerated where JARVIS appeared; gitignored, owner
+  uploads to Steam).** Done in this session:
+  - ✅ `screenshots/01-aegis.png` (was `01-jarvis.png`) — hero, halo ring-clock, AEGIS.
+  - ✅ `screenshots/04-editor.png` — editor on the Aegis pack (clean demo data).
+  - ✅ `screenshots/05-library.png` — library with the Aegis card + detail.
+  - ✅ `trailer/dashboard-engine-trailer.mp4` — main trailer rebuilt with the Aegis
+    opening beat (only beat that referenced JARVIS; editor beat = Neon Cyberpunk,
+    hud beat = ring-clock, banner generic).
+  - 02-sakura / 03-neon-cyberpunk unchanged (no JARVIS).
+  Deferred to the FINAL asset pass (after R2–R5, so they reflect the finished app):
+  - 🕓 `screenshots/06-voice-tuning.png` — stale (Piper/Comma-pause/Breath) + renamed preset.
+  - 🕓 `screenshots/07-assistant.png` — shows the JARVIS persona AND the cloud-AI config R2 removes.
+  - 🕓 `trailer/dashboard-engine-voice-assistant.mp4` — JARVIS baked into composited scenes,
+    scene scripts gone → rebuild from scratch reflecting Aegis + local-only AI.
+  - 🕓 Capsules (`capsules/`) — verify none feature the jarvis dashboard; regenerate if so.
 - **Workshop.** If the pack was ever published to Steam Workshop under this account,
   delist or update it. (Published tab showed 0 items in prior testing — confirm.)
 - **Other seed packs** (hearth, slate, sakura, pastel-dream, gothic-noir, vaporwave,
