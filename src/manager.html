@@ -86,32 +86,20 @@
           <div id="pin-list"></div>
         </div>
         <div class="assistant-cfg hidden" id="assistant-cfg">
-          <p class="hint" data-i18n-html="manager.assistant.introHint">The assistant connects to any OpenAI-compatible endpoint you choose — pick one below.
-            <b>Free options exist:</b> a local model (Ollama / LM Studio — no key, fully offline), or a free-tier key
-            from OpenRouter or Groq. Or use your own OpenAI key. A key you enter is optional (local servers need none),
-            stored encrypted on this PC, and never included in a pack or export.</p>
+          <p class="hint" data-i18n-html="manager.assistant.introHint">The assistant runs on a <b>local model on your own machine or network</b> — no cloud service, no account, no API key.
+            Install <b>Ollama</b> or <b>LM Studio</b>, start it, then enter its address and the model's name below. Everything stays on your PC.</p>
 
-          <!-- BYO OpenAI-compatible: endpoint + optional key + model id -->
+          <!-- Local OpenAI-compatible endpoint (Ollama / LM Studio) + model id. No key. -->
           <label class="cfg-field" id="ai-baseurl-field"><span data-i18n="manager.assistant.baseUrl">Base URL</span>
-            <input id="ai-baseurl" type="text" placeholder="https://openrouter.ai/api/v1" spellcheck="false">
-            <span class="hint cfg-hint" data-i18n-html="manager.assistant.baseUrlHint">The address of an OpenAI-compatible API — it usually ends in <code>/v1</code>. Common ones:
-              OpenRouter <code>https://openrouter.ai/api/v1</code> · Groq <code>https://api.groq.com/openai/v1</code> ·
-              local Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>.
-              Leave blank to use OpenAI (<code>api.openai.com</code>).</span>
-          </label>
-          <label class="cfg-field" id="ai-key-field"><span data-i18n="manager.assistant.apiKey">API key</span>
-            <input id="ai-key" type="password" placeholder="Paste your key — or leave blank for a local server" spellcheck="false" autocomplete="off" data-i18n-attr="placeholder:manager.assistant.keyPlaceholder">
-            <span class="hint cfg-hint" data-i18n-html="manager.assistant.apiKeyHint">Needed for hosted providers: make a free account at OpenRouter or Groq (or your OpenAI account)
-              and paste the key it gives you (usually starts with <code>sk-</code>). <b>Not</b> needed for a local Ollama/LM Studio —
-              leave it blank. Your key is stored encrypted on this PC and never goes into a pack or export.</span>
-            <span class="hint hint-key" id="ai-key-state"></span>
+            <input id="ai-baseurl" type="text" placeholder="http://localhost:11434/v1" spellcheck="false">
+            <span class="hint cfg-hint" data-i18n-html="manager.assistant.baseUrlHint">The address of your local model server (it usually ends in <code>/v1</code>):
+              Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>.
+              Only a local / private-network address is accepted — no public or cloud URLs.</span>
           </label>
           <label class="cfg-field" id="ai-model-field"><span data-i18n="manager.assistant.modelId">Model id</span>
-            <input id="ai-model" type="text" placeholder="e.g. google/gemini-2.0-flash-exp:free" spellcheck="false">
-            <span class="hint cfg-hint" data-i18n-html="manager.assistant.modelIdHint">The exact model name your provider expects — copy it from their models page. Examples:
-              OpenRouter <code>google/gemini-2.0-flash-exp:free</code>, <code>deepseek/deepseek-chat</code> ·
-              Groq <code>llama-3.3-70b-versatile</code> · Ollama/LM Studio the local name like <code>llama3.1</code> or <code>qwen2.5</code> ·
-              OpenAI <code>gpt-4o-mini</code>.</span>
+            <input id="ai-model" type="text" placeholder="e.g. llama3.1" spellcheck="false">
+            <span class="hint cfg-hint" data-i18n-html="manager.assistant.modelIdHint">The exact model name your local server has pulled, e.g. Ollama / LM Studio
+              <code>llama3.1</code>, <code>qwen2.5</code>, or <code>mistral</code>. Run <code>ollama list</code> (or check LM Studio) to see what's installed.</span>
           </label>
 
           <label class="cfg-field"><span data-i18n="manager.assistant.voiceForReplies">Voice for spoken replies</span>

@@ -2236,6 +2236,12 @@ if (IS_SESSION) {
         logEngine('INFO', 'migrated active pack pointer jarvis → aegis (renamed default)');
       }
     } catch (e) { /* fail-soft: leave it; the code defaults to aegis anyway */ }
+    // F1 (Steam review): the external cloud-AI path was removed — local models only.
+    // Wipe any stored API key / cloud base URL a profile still carries, once.
+    try {
+      const removed = require('./lib/assistant').migrateToLocalOnly(USER_DIR);
+      if (removed) logEngine('INFO', `assistant: removed ${removed} (cloud AI path removed — local models only)`);
+    } catch (e) { /* fail-soft */ }
     // Voice models now live in user data (survive updates); bring any the owner
     // downloaded into the old in-app voices/ dir across so they aren't refetched.
     voicebank.migrateModelsFromAppRoot(__dirname);

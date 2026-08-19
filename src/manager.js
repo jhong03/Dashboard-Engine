@@ -1658,28 +1658,6 @@ async function renderAssistantCfg() {
   syncPersonaPresetDropdown(); // reflect the saved persona in the preset dropdown
   $('ai-speak').checked = c.speak !== false;
   $('ai-context-limit').value = c.contextLimit || 12;
-  $('ai-key').value = '';
-  $('ai-key-state').textContent = c.hasKey
-    ? t('manager.assistant.keySaved')
-    : t('manager.assistant.keyNotSaved');
-  // A blank password field can't mean "remove" unambiguously, so removal is an
-  // explicit action (only shown when there's a key to remove).
-  const keyField = $('ai-key-field');
-  const oldRemove = keyField.querySelector('.ai-remove-key');
-  if (oldRemove) oldRemove.remove();
-  if (c.hasKey) {
-    const rm = document.createElement('button');
-    rm.type = 'button';
-    rm.className = 'btn tiny ai-remove-key';
-    rm.textContent = t('manager.assistant.removeKey');
-    rm.addEventListener('click', async () => {
-      const out = await aegis.assistantConfigSet({ apiKey: '' });
-      $('ai-status').textContent = out.ok ? t('manager.assistant.keyRemoved') : (out.error || t('manager.assistant.keyRemoveError'));
-      if (out.ok) renderAssistantCfg();
-    });
-    keyField.appendChild(rm);
-  }
-
   // Voice dropdown: the tuned profiles, plus the engine default.
   const select = $('ai-voice');
   select.textContent = '';
@@ -1777,7 +1755,6 @@ function syncPersonaPresetDropdown() {
 
 async function saveAssistant() {
   const patch = {
-    provider: 'openai',
     baseUrl: $('ai-baseurl').value,
     model: $('ai-model').value,
     persona: $('ai-persona').value,
@@ -1785,8 +1762,6 @@ async function saveAssistant() {
     voiceProfile: $('ai-voice').value,
     contextLimit: Number($('ai-context-limit').value) || 12,
   };
-  const key = $('ai-key').value;
-  if (key.trim() !== '') patch.apiKey = key; // only set when the user typed one
   return aegis.assistantConfigSet(patch);
 }
 
