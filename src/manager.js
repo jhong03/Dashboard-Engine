@@ -4490,19 +4490,14 @@ async function init() {
     });
   }
 
-  // Match Wallpaper Engine: opening the Manager (our Steam-connected UI) signals
-  // "playing" and makes the Workshop available — the wallpaper engine keeps running
-  // regardless. If the Manager opened WITHOUT a Steam session (e.g. reopened from
-  // the tray), silently start one now — no steam:// popup. Dev / an existing session
-  // report available === true, so this no-ops there.
-  if (aegis.workshopLaunchSession && aegis.workshopAvailable) {
-    aegis.workshopAvailable().then((a) => {
-      if (!(a && a.available)) {
-        library.wsConnecting = true;
-        aegis.workshopLaunchSession().catch(() => {});
-      }
-    }).catch(() => {});
-  }
+  // NOTE (green-status fix): we deliberately do NOT auto-launch a Steam session when
+  // the Manager opens. A session registers the app as "Playing" (green) on Steam, and
+  // the Manager warms up hidden behind the splash — auto-connecting there flashed
+  // "Playing" with no visible window to close. The Workshop tabs gate on
+  // workshopAvailable() and show an explicit "Open Workshop in Steam" button, so green
+  // now appears only when the user deliberately opens the Workshop (Manager visible),
+  // and closing the Manager reliably returns Steam to blue. The engine also guards
+  // launchWorkshopSession() so a session can never spawn without a visible Manager.
 
   // A pack was saved in the editor (or hot-reloaded on disk) — refresh so the
   // gallery thumbnail, detail preview, and pack list reflect it immediately,

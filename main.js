@@ -239,6 +239,16 @@ function clearWorkshopLaunch() {
 
 function launchWorkshopSession() {
   if (!app.isPackaged) return false; // dev: Workshop runs locally, no session needed
+  // GREEN-STATUS GUARD: a silent session registers this app with Steam as "Playing",
+  // so only ever spawn one to serve a Manager the user can actually SEE and close. The
+  // Manager warms up hidden behind the splash (and stray/duplicate triggers exist), so
+  // without this a session could flash "Playing" with no visible window to close —
+  // leaving Steam's "Stop" (which also kills the wallpaper) as the only obvious off
+  // switch. No visible Manager → no session → Steam stays blue.
+  if (!managerWindow || managerWindow.isDestroyed() || !managerWindow.isVisible()) {
+    logEngine('INFO', '[engine] workshop: session launch ignored — no visible Manager (avoids a phantom "Playing" status)');
+    return false;
+  }
   // GATE: one-by-one. A live session (ignore until it gracefully ends) or an
   // in-flight launch both short-circuit, so rapid open/close can't stack launches.
   if (sessionLink && sessionLink.hasSession()) { logEngine('INFO', '[engine] workshop: session already connected — ignoring launch'); return true; }
