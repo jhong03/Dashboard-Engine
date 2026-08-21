@@ -8,7 +8,7 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net, desktopCapturer, shell } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net, desktopCapturer, shell, dialog } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
@@ -837,6 +837,7 @@ function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: tr('tray.openManager', 'Open Manager'), click: openManagerFromTray },
     { label: tr('tray.voiceTuning', 'Voice Tuning'), click: createPanelWindow },
+    { label: tr('tray.exportSetup', 'Export Setup…'), click: quickExportSetup },
     { type: 'separator' },
     {
       label: tr('tray.switchPack', 'Switch Pack'),
@@ -1019,6 +1020,33 @@ async function captureSetupImage(opts = {}) {
     } catch { /* keep native on any resize error */ }
   }
   return { ok: true, image };
+}
+
+// Tray one-click export: capture the live desktop (native, no watermark) and save it —
+// no Manager needed. Reuses captureSetupImage + the same default folder as the Manager's
+// "Share setup". Fail-soft: any problem logs, never a raw error dialog at the user.
+async function quickExportSetup() {
+  const fs = require('fs');
+  const cap = await captureSetupImage({ resolution: 'native', watermark: false });
+  if (!cap || !cap.ok) { logEngine('WARN', `setup export (tray): ${(cap && cap.error) || 'capture failed'}`); return; }
+  let dir;
+  try { dir = path.join(app.getPath('pictures'), 'Dashboard Engine'); }
+  catch { try { dir = app.getPath('desktop'); } catch { dir = USER_DIR; } }
+  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* the dialog still opens */ }
+  const d = new Date();
+  const p2 = (n) => String(n).padStart(2, '0');
+  const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
+  let picked;
+  try {
+    picked = await dialog.showSaveDialog({
+      title: 'Export desktop setup',
+      defaultPath: path.join(dir, `dashboard-engine-${stamp}.png`),
+      filters: [{ name: 'PNG image', extensions: ['png'] }],
+    });
+  } catch { return; }
+  if (picked.canceled || !picked.filePath) return; // user cancelled → no-op
+  try { fs.writeFileSync(picked.filePath, cap.image.toPNG()); shell.showItemInFolder(picked.filePath); }
+  catch (err) { logEngine('WARN', `setup export (tray) write: ${err.message}`); }
 }
 
 // Render a pack to a Workshop preview image, off-screen, using DEMO data only

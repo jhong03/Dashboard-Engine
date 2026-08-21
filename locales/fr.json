@@ -10,6 +10,7 @@
   "common.saved": "Enregistré.",
   "tray.openManager": "Ouvrir le gestionnaire",
   "tray.voiceTuning": "Réglage de la voix",
+  "tray.exportSetup": "Export Setup…",
   "tray.switchPack": "Changer de pack",
   "tray.pauseDesktop": "Mettre le bureau en pause",
   "tray.resumeDesktop": "Reprendre le bureau",

@@ -10,6 +10,7 @@
   "common.saved": "저장되었습니다.",
   "tray.openManager": "관리자 열기",
   "tray.voiceTuning": "음성 조정",
+  "tray.exportSetup": "Export Setup…",
   "tray.switchPack": "팩 전환",
   "tray.pauseDesktop": "바탕화면 일시정지",
   "tray.resumeDesktop": "바탕화면 재개",

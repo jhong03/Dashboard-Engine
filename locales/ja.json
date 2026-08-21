@@ -10,6 +10,7 @@
   "common.saved": "保存しました。",
   "tray.openManager": "マネージャーを開く",
   "tray.voiceTuning": "ボイス調整",
+  "tray.exportSetup": "Export Setup…",
   "tray.switchPack": "パックを切り替え",
   "tray.pauseDesktop": "デスクトップを一時停止",
   "tray.resumeDesktop": "デスクトップを再開",

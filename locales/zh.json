@@ -10,6 +10,7 @@
   "common.saved": "已保存。",
   "tray.openManager": "打开管理器",
   "tray.voiceTuning": "语音调节",
+  "tray.exportSetup": "Export Setup…",
   "tray.switchPack": "切换包",
   "tray.pauseDesktop": "暂停桌面",
   "tray.resumeDesktop": "恢复桌面",
