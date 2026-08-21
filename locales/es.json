@@ -520,6 +520,7 @@
   "manager.voices.downloadedOpening": "Descargada: abriendo Ajuste de voz. Está en tus perfiles guardados.",
   "create.title": "Diseña tu propio paquete de panel",
   "create.intro": "Un paquete es un aspecto, un diseño, una personalidad y una voz: todo lo que el fondo necesita para pensar y hablar. Crea uno en el editor y compártelo en el Steam Workshop. Sin cuenta ni código (aunque puedes añadir código aislado si quieres).",
+  "create.shareSetup": "Proud of your desktop? Use “Share setup” (top-right) to capture it as a clean, high-resolution image — great for r/desktops, Discord, or a launch post.",
   "create.startScratch": "Empezar desde cero",
   "create.openEditor": "Abrir el editor",
   "create.readGuide": "Leer la guía completa",

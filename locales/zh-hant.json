@@ -520,6 +520,7 @@
   "manager.voices.downloadedOpening": "已下載——正在開啟語音調節。它在你儲存的配置中。",
   "create.title": "設計你自己的儀表盤包",
   "create.intro": "一個包由外觀、佈局、人格和語音組成——是桌布思考與說話所需的一切。在編輯器中構建一個，然後分享到 Steam 創意工坊。無需賬戶、無需程式碼（不過你也可以加入沙箱程式碼）。",
+  "create.shareSetup": "Proud of your desktop? Use “Share setup” (top-right) to capture it as a clean, high-resolution image — great for r/desktops, Discord, or a launch post.",
   "create.startScratch": "從零開始",
   "create.openEditor": "開啟編輯器",
   "create.readGuide": "閱讀完整指南",

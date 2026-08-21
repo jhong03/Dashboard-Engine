@@ -520,6 +520,7 @@
   "manager.voices.downloadedOpening": "已下载——正在打开语音调节。它在你保存的配置中。",
   "create.title": "设计你自己的仪表盘包",
   "create.intro": "一个包由外观、布局、人格和语音组成——是壁纸思考与说话所需的一切。在编辑器中构建一个，然后分享到 Steam 创意工坊。无需账户、无需代码（不过你也可以加入沙箱代码）。",
+  "create.shareSetup": "Proud of your desktop? Use “Share setup” (top-right) to capture it as a clean, high-resolution image — great for r/desktops, Discord, or a launch post.",
   "create.startScratch": "从零开始",
   "create.openEditor": "打开编辑器",
   "create.readGuide": "阅读完整指南",

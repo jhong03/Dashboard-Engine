@@ -520,6 +520,7 @@
   "manager.voices.downloadedOpening": "Téléchargé — ouverture du Réglage de la voix. Elle est dans vos profils enregistrés.",
   "create.title": "Concevez votre propre pack de tableau de bord",
   "create.intro": "Un pack, c’est un habillage, une disposition, une personnalité et une voix — tout ce dont le fond d’écran a besoin pour penser et parler. Créez-en un dans l’éditeur, puis partagez-le sur Steam Workshop. Aucun compte, aucun code requis (mais vous pouvez ajouter du code en bac à sable si vous le souhaitez).",
+  "create.shareSetup": "Proud of your desktop? Use “Share setup” (top-right) to capture it as a clean, high-resolution image — great for r/desktops, Discord, or a launch post.",
   "create.startScratch": "Partir de zéro",
   "create.openEditor": "Ouvrir l’éditeur",
   "create.readGuide": "Lire le guide complet",

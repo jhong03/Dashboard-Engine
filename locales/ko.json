@@ -520,6 +520,7 @@
   "manager.voices.downloadedOpening": "내려받음 — 음성 조정을 여는 중. 저장한 프로필에 있습니다.",
   "create.title": "나만의 대시보드 팩 디자인하기",
   "create.intro": "팩은 스킨, 레이아웃, 페르소나, 목소리로 이루어집니다 — 배경화면이 생각하고 말하는 데 필요한 모든 것입니다. 에디터에서 하나 만든 뒤 Steam 창작마당에 공유하세요. 계정도 코드도 필요 없습니다(원하면 샌드박스 코드를 추가할 수 있습니다).",
+  "create.shareSetup": "Proud of your desktop? Use “Share setup” (top-right) to capture it as a clean, high-resolution image — great for r/desktops, Discord, or a launch post.",
   "create.startScratch": "처음부터 시작",
   "create.openEditor": "에디터 열기",
   "create.readGuide": "전체 가이드 읽기",

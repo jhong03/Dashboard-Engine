@@ -520,6 +520,7 @@
   "manager.voices.downloadedOpening": "Downloaded — opening Voice tuning. It’s in your saved profiles.",
   "create.title": "Design your own dashboard pack",
   "create.intro": "A pack is a skin, a layout, a persona, and a voice — everything the wallpaper needs to think and speak. Build one in the editor, then share it on Steam Workshop. No account, no code required (though you can add sandboxed code if you want).",
+  "create.shareSetup": "Proud of your desktop? Use “Share setup” (top-right) to capture it as a clean, high-resolution image — great for r/desktops, Discord, or a launch post.",
   "create.startScratch": "Start from scratch",
   "create.openEditor": "Open the editor",
   "create.readGuide": "Read the full guide",

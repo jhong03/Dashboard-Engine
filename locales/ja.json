@@ -520,6 +520,7 @@
   "manager.voices.downloadedOpening": "ダウンロード完了——ボイス調整を開いています。保存済みプロファイルにあります。",
   "create.title": "自分だけのダッシュボードパックをデザイン",
   "create.intro": "パックとは、スキン・レイアウト・ペルソナ・声のこと——壁紙が考え、話すために必要なすべてです。エディターで一つ作り、Steam ワークショップで共有しましょう。アカウントもコードも不要です（望めばサンドボックスのコードを加えることもできます）。",
+  "create.shareSetup": "Proud of your desktop? Use “Share setup” (top-right) to capture it as a clean, high-resolution image — great for r/desktops, Discord, or a launch post.",
   "create.startScratch": "ゼロから始める",
   "create.openEditor": "エディターを開く",
   "create.readGuide": "完全ガイドを読む",

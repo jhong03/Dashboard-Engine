@@ -2042,6 +2042,12 @@ function renderCreate() {
   intro.append(h, p);
   root.appendChild(intro);
 
+  // Share-your-setup nudge — the export lives on the topbar "Share setup" button.
+  const share = document.createElement('p');
+  share.className = 'hint';
+  share.textContent = t('create.shareSetup');
+  root.appendChild(share);
+
   // Actions.
   const actions = document.createElement('div');
   actions.className = 'create-actions';
