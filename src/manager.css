@@ -891,6 +891,11 @@ body {
 .welcome-autostart { margin-top: 2px; }
 .welcome-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 2px; }
 
+/* Setup Export modal */
+.export-field { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; font-size: 13px; }
+.export-field select { padding: 6px 8px; border-radius: 6px; }
+.export-status { min-height: 20px; margin: 12px 0 2px; font-size: 13px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
 /* Drag-drop pack install overlay — engine chrome register (quiet, native), shown
    only while a file is dragged over the Manager. pointer-events:none so it never
    interferes with the drop (handled on window). */

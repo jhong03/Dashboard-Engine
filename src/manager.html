@@ -24,6 +24,7 @@
       <p class="sub"><span data-i18n="manager.topbar.onDesktop">On your desktop:</span> <span id="active-name">—</span></p>
     </div>
     <div class="controls">
+      <button class="btn" id="btn-export" data-i18n="manager.export.share">Share setup</button>
       <button class="btn" id="btn-panel" data-i18n="manager.topbar.voiceTuning">Voice tuning</button>
     </div>
   </header>
@@ -286,6 +287,29 @@
       <div class="welcome-actions">
         <button class="btn" id="welcome-assistant" data-i18n="manager.welcome.setupAssistant">Set up the assistant</button>
         <button class="btn primary" id="welcome-start" data-i18n="manager.welcome.getStarted">Get started</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Setup Export: one-click share-ready screenshot of the LIVE desktop. -->
+  <div class="modal-scrim hidden" id="export-scrim">
+    <div class="welcome-card" role="dialog" aria-modal="true" aria-labelledby="export-title">
+      <h2 id="export-title" data-i18n="manager.export.title">Share your setup</h2>
+      <p class="welcome-lead" data-i18n="manager.export.desc">Capture your desktop exactly as it looks right now — wallpaper, packs, and live widgets — as a clean, high-resolution PNG. No app windows, no cursor, no watermark.</p>
+      <label class="export-field"><span data-i18n="manager.export.resolution">Resolution</span>
+        <select id="export-res">
+          <option value="native" data-i18n="manager.export.resNative">Native (full quality)</option>
+          <option value="1440p" data-i18n="manager.export.res1440">1440p</option>
+          <option value="1080p" data-i18n="manager.export.res1080">1080p</option>
+        </select>
+      </label>
+      <label class="cfg-check"><input id="export-watermark" type="checkbox">
+        <span data-i18n="manager.export.watermark">Add a small “Dashboard Engine” watermark</span></label>
+      <div id="export-status" class="export-status" aria-live="polite"></div>
+      <div class="welcome-actions">
+        <button class="btn" id="export-close" data-i18n="manager.export.close">Close</button>
+        <button class="btn" id="export-copy" data-i18n="manager.export.copyBtn">Copy to clipboard</button>
+        <button class="btn primary" id="export-save" data-i18n="manager.export.exportBtn">Export…</button>
       </div>
     </div>
   </div>

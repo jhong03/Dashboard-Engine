@@ -4509,6 +4509,41 @@ async function init() {
   });
 
   $('btn-panel').addEventListener('click', () => aegis.openPanel());
+
+  // Setup Export — capture the LIVE desktop as a share-ready image (main does the work).
+  function openExportModal() { $('export-status').textContent = ''; $('export-scrim').classList.remove('hidden'); }
+  function closeExportModal() { $('export-scrim').classList.add('hidden'); }
+  function exportOpts() { return { resolution: $('export-res').value, watermark: $('export-watermark').checked }; }
+  function exportSavedInto(status, file) {
+    status.textContent = '✓ ' + t('manager.export.saved') + '  ';
+    const b = document.createElement('button');
+    b.className = 'btn tiny';
+    b.textContent = t('manager.export.openFolder');
+    b.addEventListener('click', () => aegis.setupOpenFolder(file));
+    status.appendChild(b);
+  }
+  async function runExport(kind) {
+    const status = $('export-status'); const save = $('export-save'); const copy = $('export-copy');
+    save.disabled = true; copy.disabled = true;
+    status.textContent = t('manager.export.capturing');
+    try {
+      if (kind === 'clipboard') {
+        const out = await aegis.setupClipboard(exportOpts());
+        status.textContent = out.ok ? '✓ ' + t('manager.export.copied') : '✗ ' + (out.error || t('manager.export.failed'));
+      } else {
+        const out = await aegis.setupExport(exportOpts());
+        if (out.ok) exportSavedInto(status, out.file);
+        else if (out.error === null) status.textContent = ''; // user cancelled the save dialog — no-op
+        else status.textContent = '✗ ' + (out.error || t('manager.export.failed'));
+      }
+    } catch (e) { status.textContent = '✗ ' + t('manager.export.failed'); }
+    save.disabled = false; copy.disabled = false;
+  }
+  $('btn-export').addEventListener('click', openExportModal);
+  $('export-close').addEventListener('click', closeExportModal);
+  $('export-save').addEventListener('click', () => runExport('save'));
+  $('export-copy').addEventListener('click', () => runExport('clipboard'));
+  $('export-scrim').addEventListener('click', (e) => { if (e.target === $('export-scrim')) closeExportModal(); });
   $('tab-installed').addEventListener('click', () => { library.tab = 'installed'; renderGallery(); });
   $('tab-browse').addEventListener('click', () => { library.tab = 'browse'; renderGallery(); });
   $('tab-published').addEventListener('click', () => { library.tab = 'published'; renderGallery(); });
