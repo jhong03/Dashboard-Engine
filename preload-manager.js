@@ -51,6 +51,12 @@ const bridge = {
   exportPack: (id) => ipcRenderer.invoke('aegis:packs:export', String(id)),
   uninstallPack: (id) => ipcRenderer.invoke('aegis:packs:uninstall', String(id)),
 
+  // Setup Export — one-click share-ready screenshot of the LIVE desktop. Main captures
+  // and writes; the renderer only asks and shows the result.
+  setupExport: (opts) => ipcRenderer.invoke('aegis:setup:export', opts || {}),
+  setupClipboard: (opts) => ipcRenderer.invoke('aegis:setup:clipboard', opts || {}),
+  setupOpenFolder: (filePath) => ipcRenderer.invoke('aegis:setup:openFolder', String(filePath || '')),
+
   // Steam Workshop (prototype). All fail-soft when Steam isn't available.
   workshopStatus: () => ipcRenderer.invoke('aegis:workshop:status'),
   // Is the Workshop usable now (dev-local, or a live Steam session)? And a way to
