@@ -8,7 +8,7 @@
 // panel`. All pipeline/pack work happens behind the validated IPC handlers
 // in lib/ipc.js — renderers never touch Node.
 
-const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net, desktopCapturer, shell, dialog } = require('electron');
+const { app, BrowserWindow, screen, Tray, Menu, nativeImage, Notification, protocol, powerMonitor, session, crashReporter, net, desktopCapturer, shell } = require('electron');
 const path = require('path');
 const { pathToFileURL } = require('url');
 const { spawn } = require('child_process');
@@ -837,7 +837,6 @@ function buildTrayMenu() {
   return Menu.buildFromTemplate([
     { label: tr('tray.openManager', 'Open Manager'), click: openManagerFromTray },
     { label: tr('tray.voiceTuning', 'Voice Tuning'), click: createPanelWindow },
-    { label: tr('tray.exportSetup', 'Export Setup…'), click: quickExportSetup },
     { type: 'separator' },
     {
       label: tr('tray.switchPack', 'Switch Pack'),
@@ -960,93 +959,6 @@ function scheduleDevShots(dir) {
     }
     app.quit();
   }, 6000);
-}
-
-// Setup Export: capture the LIVE desktop (wallpaper + packs + real widgets) as a clean,
-// share-ready image. Unlike renderPackPreview (which renders a pack OFF-SCREEN with DEMO
-// data for Workshop-preview privacy), this is the user's OWN screen exactly as they see
-// it, saved locally at their choice — WYSIWYG. The Manager/editor are separate windows,
-// so their chrome is never in frame, and capturePage() excludes the OS cursor. Returns
-// { ok, image } (Electron NativeImage) or { ok:false, error }. Fail-soft.
-async function captureSetupImage(opts = {}) {
-  if (!dashboardWindow || dashboardWindow.isDestroyed()) {
-    return { ok: false, error: 'The desktop isn’t running, so there’s nothing to capture.' };
-  }
-  if (desktopPaused) {
-    return { ok: false, error: 'The desktop is paused — resume it (tray → Resume Desktop), then export.' };
-  }
-  const wc = dashboardWindow.webContents;
-  const watermark = !!opts.watermark;
-  // Opt-in watermark ONLY: a small, low-opacity app name in a corner, composited on the
-  // LIVE DOM for the capture frame then removed. NEVER a baked-in default — a plastered
-  // watermark reads as an ad and defeats sharing (r/desktops etc.).
-  const WM_ADD = "(()=>{try{var d=document.createElement('div');d.id='__de_setup_wm';"
-    + "d.textContent='Dashboard Engine';d.style.cssText='position:fixed;right:26px;bottom:22px;"
-    + "z-index:2147483647;font:600 22px/1 \"Segoe UI\",system-ui,sans-serif;letter-spacing:1.5px;"
-    + "color:rgba(255,255,255,0.30);text-shadow:0 1px 4px rgba(0,0,0,0.5);pointer-events:none';"
-    + "document.body.appendChild(d);}catch(e){}})()";
-  const WM_REMOVE = "(()=>{try{var e=document.getElementById('__de_setup_wm');if(e)e.remove();}catch(e){}})()";
-
-  async function grab() {
-    if (watermark) {
-      try { await wc.executeJavaScript(WM_ADD); } catch { /* ignore */ }
-      await new Promise((r) => setTimeout(r, 60)); // let the watermark paint
-    }
-    let image = null;
-    try { image = await wc.capturePage(); } catch { image = null; }
-    if (watermark) { try { await wc.executeJavaScript(WM_REMOVE); } catch { /* ignore */ } }
-    return image;
-  }
-
-  let image = await grab();
-  // Empty capture (a video layer still decoding, or a just-frozen frame): retry once
-  // after a readiness beat, then fail plainly rather than save a blank/black PNG.
-  if (!image || image.isEmpty()) {
-    await new Promise((r) => setTimeout(r, 300));
-    image = await grab();
-    if (!image || image.isEmpty()) {
-      logEngine('WARN', 'setup export: capture returned empty');
-      return { ok: false, error: 'The capture came back blank — give the wallpaper a moment to finish rendering, then try again.' };
-    }
-  }
-
-  // Resolution: 'native' keeps device pixels (true resolution). Presets downscale to a
-  // target HEIGHT with aspect preserved — and NEVER upscale a smaller display.
-  const targetH = opts.resolution === '1080p' ? 1080 : opts.resolution === '1440p' ? 1440 : 0;
-  if (targetH > 0) {
-    try {
-      const { height } = image.getSize();
-      if (height > targetH) image = image.resize({ height: targetH, quality: 'best' });
-    } catch { /* keep native on any resize error */ }
-  }
-  return { ok: true, image };
-}
-
-// Tray one-click export: capture the live desktop (native, no watermark) and save it —
-// no Manager needed. Reuses captureSetupImage + the same default folder as the Manager's
-// "Share setup". Fail-soft: any problem logs, never a raw error dialog at the user.
-async function quickExportSetup() {
-  const fs = require('fs');
-  const cap = await captureSetupImage({ resolution: 'native', watermark: false });
-  if (!cap || !cap.ok) { logEngine('WARN', `setup export (tray): ${(cap && cap.error) || 'capture failed'}`); return; }
-  let dir;
-  try { dir = path.join(app.getPath('pictures'), 'Dashboard Engine'); }
-  catch { try { dir = app.getPath('desktop'); } catch { dir = USER_DIR; } }
-  try { fs.mkdirSync(dir, { recursive: true }); } catch { /* the dialog still opens */ }
-  const d = new Date();
-  const p2 = (n) => String(n).padStart(2, '0');
-  const stamp = `${d.getFullYear()}${p2(d.getMonth() + 1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
-  let picked;
-  try {
-    picked = await dialog.showSaveDialog({
-      title: 'Export desktop setup',
-      defaultPath: path.join(dir, `dashboard-engine-${stamp}.png`),
-      filters: [{ name: 'PNG image', extensions: ['png'] }],
-    });
-  } catch { return; }
-  if (picked.canceled || !picked.filePath) return; // user cancelled → no-op
-  try { fs.writeFileSync(picked.filePath, cap.image.toPNG()); shell.showItemInFolder(picked.filePath); }
-  catch (err) { logEngine('WARN', `setup export (tray) write: ${err.message}`); }
 }
 
 // Render a pack to a Workshop preview image, off-screen, using DEMO data only
@@ -2495,10 +2407,6 @@ if (IS_SESSION) {
       // tuning bars; no personal data).
       renderVoicePreview: (file) => renderVoicePreview(file),
       renderThumbnail: (id) => getPackThumbnail(id),
-      // Setup Export: capture the LIVE desktop as a share-ready NativeImage (the export
-      // IPC in lib/ipc.js saves it / copies it / writes to clipboard). Main-only: the
-      // renderer never touches dashboardWindow or the filesystem.
-      captureSetup: (opts) => captureSetupImage(opts),
       // Send an event to every live window — used for voice-bank download
       // progress so a download (which runs in main) still updates a window that
       // was closed and reopened mid-download.
