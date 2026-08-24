@@ -393,19 +393,18 @@ function splashStatus(splash, text) {
   splash.webContents.executeJavaScript(`window.__splashStatus && window.__splashStatus(${JSON.stringify(text)})`).catch(() => {});
 }
 
-// Pre-generate the (GPU-heavy) library thumbnails while the Manager is still
-// hidden, so the offscreen render swarm can never collide with an eager first
-// drag. A fast no-op when the cache is already warm; bounded so a slow render
-// never holds the window back too long (any leftovers render lazily after reveal,
-// idle-gated as before).
-async function warmManagerThumbnails(maxMs, onProgress) {
+// Pre-generate EVERY library thumbnail while the Manager is still hidden behind
+// the splash — rendered to COMPLETION, no time cap. The reveal waits for this
+// (and for the offscreen surface teardown) so the interactive window never appears
+// while GPU surfaces are still cycling — the launch-hang can't form. A fast no-op
+// when the cache is already warm (all disk-cache hits, no offscreen windows).
+// Each render self-limits (13 s + drop the surface), so this can't actually hang.
+async function warmManagerThumbnails(onProgress) {
   let ids = [];
   try { ids = (packs.listPacks(__dirname, USER_DIR).packs || []).map((p) => p.id).filter(Boolean); }
   catch (e) { return; }
   if (!ids.length) return;
-  const deadline = Date.now() + maxMs;
   for (let i = 0; i < ids.length; i++) {
-    if (Date.now() > deadline) break;
     if (onProgress) onProgress(i + 1, ids.length);
     try { await getPackThumbnail(ids[i]); } catch (e) { /* skip a bad pack */ }
   }
@@ -430,11 +429,19 @@ const SPLASH_MIN_MS = 750;
 function revealManagerWhenReady(win, splash) {
   const shownAt = Date.now();
   let shown = false, scheduled = false;
-  const failsafe = setTimeout(() => revealNow(), 9000);
+  // Absolute backstop so a wedged GPU can never trap the user behind the splash
+  // forever. Each thumbnail render self-limits (13 s + drop the surface), so the
+  // warm loop can't actually hang — this only fires in a pathological case, and
+  // revealNow tears the offscreen surface down before showing regardless.
+  const failsafe = setTimeout(() => revealNow(), 60000);
   function revealNow() {
     if (shown) return;
     shown = true;
     clearTimeout(failsafe);
+    // The guarantee: NO offscreen GPU surface is alive as the interactive window
+    // appears. On the normal path teardownThumbWin() already ran; this also covers
+    // the failsafe path (reveal while a render might still be mid-flight).
+    destroyThumbWin();
     if (win && !win.isDestroyed()) { markManagerBusy(500); win.show(); win.focus(); }
     // Let the Manager paint a frame before dropping the splash (no desktop flash).
     setTimeout(() => { if (splash && !splash.isDestroyed()) { try { splash.close(); } catch (e) { /* gone */ } } }, 90);
@@ -449,8 +456,14 @@ function revealManagerWhenReady(win, splash) {
       splashStatus(splash, 'Initializing…');
       await waitForManagerReady(win, 6000);
       splashStatus(splash, 'Warming up…');
-      await warmManagerThumbnails(4000, (n, total) => splashStatus(splash, `Warming up… ${n}/${total}`));
+      // Render every card thumbnail to completion (no time cap) — the window is
+      // NOT shown until all offscreen GPU-surface work is done.
+      await warmManagerThumbnails((n, total) => splashStatus(splash, `Warming up… ${n}/${total}`));
+      // Then tear the shared offscreen surface DOWN and wait for it to actually be
+      // gone. That teardown completing is the definitive "GPU-surface work finished"
+      // signal we key the reveal off — no surface is cycling when the window shows.
       splashStatus(splash, 'Almost ready…');
+      await teardownThumbWin();
     } catch (e) { /* reveal regardless */ }
     reveal();
   })();
@@ -496,14 +509,98 @@ function rankedDisplays() {
     (a.bounds.x - b.bounds.x) || (a.bounds.y - b.bounds.y));
 }
 
-// The monitor the wallpaper should render on: the user's pinned display if it
-// still exists, else the primary. Returns { display, explicit } — explicit is
+// A live display's signature we can persist and later re-identify the monitor
+// from, even after Electron reassigns its synthetic id (which Windows does across
+// a reboot / GPU reinit). Position + size are stable across a plain reboot.
+function makeDisplayDescriptor(d) {
+  return {
+    id: d.id,
+    x: d.bounds.x, y: d.bounds.y,
+    width: d.bounds.width, height: d.bounds.height,
+    scaleFactor: d.scaleFactor,
+    label: (d.label || '').trim(),
+  };
+}
+
+// Find the live display a saved pin refers to: exact id (fast path), else the
+// monitor at the same position + resolution (survives an id shuffle across a
+// reboot), else the same-size+label monitor if that's unambiguous. null = the
+// pinned monitor isn't currently present.
+function resolveDisplayFromPin(pin) {
+  if (!pin) return null;
+  const all = screen.getAllDisplays();
+  if (pin.id != null) {
+    const byId = all.find((d) => d.id === pin.id);
+    if (byId) return byId;
+  }
+  if (pin.x != null && pin.width != null) {
+    const byGeom = all.find((d) => d.bounds.x === pin.x && d.bounds.y === pin.y
+      && d.bounds.width === pin.width && d.bounds.height === pin.height);
+    if (byGeom) return byGeom;
+  }
+  if (pin.width != null) {
+    const bySize = all.filter((d) => d.bounds.width === pin.width && d.bounds.height === pin.height
+      && (pin.label ? (d.label || '').trim() === pin.label : true));
+    if (bySize.length === 1) return bySize[0];
+  }
+  return null;
+}
+
+// The monitor the wallpaper should render on: the user's pinned display if it's
+// currently present (matched by id or geometry), else the primary. `explicit` is
 // false when we fell back to primary (auto), which the attach path leaves
 // unchanged from the long-proven single-monitor behaviour.
 function chosenDisplay() {
-  const id = settings.getDisplayId(USER_DIR);
-  const pinned = id != null && screen.getAllDisplays().find((d) => d.id === id);
-  return { display: pinned || screen.getPrimaryDisplay(), explicit: Boolean(pinned) };
+  const pin = settings.getDisplayPin(USER_DIR);
+  const display = resolveDisplayFromPin(pin);
+  return { display: display || screen.getPrimaryDisplay(), explicit: Boolean(display), pin };
+}
+
+// If the pinned monitor is present but its stored signature is stale — the id
+// shuffled since we saved it, OR it's a legacy id-only pin with no geometry —
+// refresh the descriptor so the pin keeps matching after the NEXT reboot and the
+// picker highlights the right monitor. No-op when nothing is pinned or the
+// monitor is currently absent: we KEEP the pin so it re-matches when the monitor
+// returns, and never silently erase the user's choice.
+function reconcileDisplayPin() {
+  const { display, explicit, pin } = chosenDisplay();
+  if (!explicit || !pin) return;
+  const stale = pin.id !== display.id || pin.x == null
+    || pin.x !== display.bounds.x || pin.y !== display.bounds.y
+    || pin.width !== display.bounds.width || pin.height !== display.bounds.height;
+  if (stale) settings.setDisplayPin(USER_DIR, makeDisplayDescriptor(display));
+}
+
+// Persist the user's display choice. id = a live Electron display id to pin, or
+// null to follow the primary. We store the monitor's full signature (not just the
+// id) so the pin survives an id shuffle across a reboot.
+function pinDisplay(id) {
+  if (id == null) { settings.setDisplayPin(USER_DIR, null); return; }
+  const d = screen.getAllDisplays().find((x) => x.id === id);
+  settings.setDisplayPin(USER_DIR, d ? makeDisplayDescriptor(d) : null);
+}
+
+// Diagnostic: record which monitor the wallpaper landed on and HOW the saved pin
+// matched — by id, by geometry after an id shuffle (the reboot case), by
+// size/label, or a primary fallback. Pass the pin snapshot taken BEFORE reconcile
+// heals it, so the "id shuffled X→Y" case is visible. Lets you confirm the reboot
+// fix in engine.log instead of guessing.
+function logDisplayResolution(pin, display, explicit) {
+  try {
+    const b = display.bounds;
+    const at = `id ${display.id} @ ${b.x},${b.y} ${b.width}x${b.height}`;
+    if (!pin) { logEngine('INFO', `[display] no monitor pinned → primary (${at})`); return; }
+    if (!explicit) {
+      logEngine('INFO', `[display] pinned monitor not present (saved id ${pin.id}, ${pin.width}x${pin.height}) → primary fallback; pin kept for when it returns`);
+      return;
+    }
+    let how;
+    if (pin.id === display.id) how = 'by id';
+    else if (pin.x != null && pin.x === b.x && pin.y === b.y && pin.width === b.width && pin.height === b.height) {
+      how = `by GEOMETRY (Electron id shuffled ${pin.id}→${display.id})`;
+    } else how = 'by size/label';
+    logEngine('INFO', `[display] pinned monitor resolved → ${at} (matched ${how})`);
+  } catch (e) { /* logging is best-effort */ }
 }
 
 // The wallpaper's monitor as a (Left,Top) rank — the SAME index desktop-attach.ps1
@@ -549,7 +646,14 @@ let warmedVoiceOnce = false;
 
 async function createDashboardWindow() {
   if (dashboardWindow) return;
-  const { display } = chosenDisplay();
+  // Startup + every relocate route through here — heal a stale/legacy pin so the
+  // monitor choice sticks across reboots (Electron's display id isn't stable).
+  // Snapshot the saved pin BEFORE reconcile heals it so the log can show when the
+  // geometry fallback rescued a shuffled id.
+  const savedPin = settings.getDisplayPin(USER_DIR);
+  reconcileDisplayPin();
+  const { display, explicit } = chosenDisplay();
+  logDisplayResolution(savedPin, display, explicit);
   // The wallpaper always renders on a DEFINITE monitor. When no display is pinned,
   // chosenDisplay() already defaults to the primary; either way, hand the attach
   // that monitor's INDEX so it positions the window with DPI-safe PHYSICAL pixel
@@ -679,7 +783,10 @@ function relocateDesktop() {
 // them, flagged with which is primary and which the user pinned.
 function listDisplays() {
   const primaryId = screen.getPrimaryDisplay().id;
-  const selectedId = settings.getDisplayId(USER_DIR);
+  // Highlight the monitor actually resolved from the pin (by id OR geometry), so
+  // the picker shows the right one even when Electron's id shuffled this boot.
+  const chosen = chosenDisplay();
+  const selectedId = chosen.explicit ? chosen.display.id : null;
   const displays = rankedDisplays().map((d, index) => ({
     id: d.id,
     index,
@@ -700,10 +807,11 @@ let displaysChangedTimer = null;
 function onDisplaysChanged() {
   clearTimeout(displaysChangedTimer);
   displaysChangedTimer = setTimeout(() => {
-    const pinned = settings.getDisplayId(USER_DIR);
-    if (pinned != null && !screen.getAllDisplays().find((d) => d.id === pinned)) {
-      settings.setDisplayId(USER_DIR, null);
-    }
+    // Do NOT erase the pin when the monitor is momentarily absent — displays
+    // enumerate asynchronously at boot, and chosenDisplay() already falls back to
+    // primary at render time, re-matching the pinned monitor when it returns. If
+    // the same monitor came back with a fresh id, reconcile heals the signature.
+    reconcileDisplayPin();
     relocateDesktop();
     if (managerWindow && !managerWindow.isDestroyed()) {
       managerWindow.webContents.send('aegis:displays:changed');
@@ -1816,7 +1924,10 @@ function captureTrailerClip(packId, outDir, opts) {
       }
     });
     // fakeHour forces a time-of-day slot (for the schedule beat); '' = real clock.
-    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), capture: '1', fakeHour: (opts && opts.fakeHour != null) ? String(opts.fakeHour) : '' } });
+    // raw=1: these are BUILT-IN packs, so render their real authored labels
+    // (not the share-sanitizer's "Sample text" placeholders). Telemetry is DEMO
+    // regardless, so no personal data is ever captured. See src/shot.js.
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(packId), capture: '1', raw: '1', fakeHour: (opts && opts.fakeHour != null) ? String(opts.fakeHour) : '' } });
   });
 }
 
@@ -1938,12 +2049,126 @@ function cachedThumbUri(id) {
   return null;
 }
 
+// A SINGLE reused offscreen window renders every card thumbnail. Creating and
+// destroying a GPU-backed BrowserWindow per pack means the browser process syncs
+// with the GPU process once per surface create/teardown; doing that 8× in a row
+// on a cold cache (every first launch after an update — a fresh build marks all
+// cached thumbnails stale) is what contends with the compositor and hangs the
+// browser process (Windows "Not Responding" / AppHang). Reusing one surface
+// across the batch collapses N create/destroy cycles to one, so the churn that
+// triggers the hang is gone. The window is torn down after a short idle; a
+// timeout/crash drops it so a wedged surface never poisons the rest of the batch.
+let thumbRenderWin = null;
+let thumbRenderIdleTimer = null;
+
+function acquireThumbWin() {
+  if (thumbRenderWin && !thumbRenderWin.isDestroyed()) return thumbRenderWin;
+  thumbRenderWin = new BrowserWindow({
+    width: 854, height: 480, useContentSize: true,
+    show: false, frame: false, skipTaskbar: true, backgroundColor: '#04080F',
+    webPreferences: {
+      ...COMMON_WEB_PREFERENCES,
+      preload: path.join(__dirname, 'preload-dashboard.js'),
+      offscreen: true, backgroundThrottling: false,
+    },
+  });
+  return thumbRenderWin;
+}
+
+function destroyThumbWin() {
+  clearTimeout(thumbRenderIdleTimer);
+  thumbRenderIdleTimer = null;
+  if (thumbRenderWin && !thumbRenderWin.isDestroyed()) { try { thumbRenderWin.destroy(); } catch (e) { /* gone */ } }
+  thumbRenderWin = null;
+}
+
+function releaseThumbWinSoon() {
+  clearTimeout(thumbRenderIdleTimer);
+  thumbRenderIdleTimer = setTimeout(destroyThumbWin, 6000);
+}
+
+// Destroy the shared offscreen surface and RESOLVE only once it's actually gone,
+// so the Manager reveal can wait for all GPU-surface work to finish before the
+// interactive window appears. The 'closed' event + a short settle lets the GPU
+// process release the surface; a 600 ms safety keeps the reveal from ever hanging
+// on teardown. No-op (resolves immediately) when no surface was created — e.g. a
+// fully warm cache did zero offscreen renders.
+function teardownThumbWin() {
+  return new Promise((resolve) => {
+    clearTimeout(thumbRenderIdleTimer);
+    thumbRenderIdleTimer = null;
+    const win = thumbRenderWin;
+    thumbRenderWin = null;
+    if (!win || win.isDestroyed()) return resolve();
+    let done = false;
+    const finish = () => { if (done) return; done = true; resolve(); };
+    try {
+      win.once('closed', () => setTimeout(finish, 80)); // let the GPU release the surface
+      win.destroy();
+    } catch (e) { return finish(); }
+    setTimeout(finish, 600); // never hang the reveal on teardown
+  });
+}
+
+// Render one pack's card thumbnail on the shared offscreen window → a temp file
+// path, or null on any error (the card then falls back to its blueprint). The
+// thumb queue serializes calls, so only one render uses the window at a time.
+function renderThumbnailOffscreen(id) {
+  return new Promise((resolve) => {
+    const fs = require('fs');
+    const os = require('os');
+    let win;
+    try { win = acquireThumbWin(); } catch (e) { destroyThumbWin(); return resolve(null); }
+    let settled = false;
+    let onReady = null, onGone = null;
+    const cleanup = () => {
+      clearTimeout(guard);
+      try { if (onReady) win.webContents.removeListener('did-finish-load', onReady); } catch (e) { /* gone */ }
+      try { if (onGone) win.webContents.removeListener('render-process-gone', onGone); } catch (e) { /* gone */ }
+    };
+    // drop=true tears the shared window down (wedged/crashed surface); otherwise
+    // keep it warm for the next pack in the batch and let the idle timer reap it.
+    const finish = (result, drop) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      if (drop) destroyThumbWin(); else releaseThumbWinSoon();
+      resolve(result);
+    };
+    const guard = setTimeout(() => finish(null, true), 13000); // never hang a warm-up
+    onReady = async () => {
+      try {
+        const start = Date.now();
+        while (Date.now() - start < 8000) {
+          const ready = await win.webContents.executeJavaScript('window.__shotReady === true').catch(() => false);
+          if (ready) break;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+        await new Promise((r) => setTimeout(r, 250));
+        const image = await win.webContents.capturePage();
+        const png = image.toPNG();
+        const useJpeg = png.length > 1024 * 1024;
+        const buffer = useJpeg ? image.toJPEG(85) : png;
+        const file = path.join(os.tmpdir(), `de-thumb-${id}-${Date.now()}.${useJpeg ? 'jpg' : 'png'}`);
+        fs.writeFileSync(file, buffer);
+        finish(file, false);
+      } catch (e) { finish(null, true); }
+    };
+    onGone = () => finish(null, true);
+    win.webContents.on('did-finish-load', onReady);
+    win.webContents.on('render-process-gone', onGone);
+    // Same content as before: no raw=1, so the card shows the Workshop-sanitized
+    // (shared) view — identical to the previous renderPackPreview call.
+    win.loadFile(path.join(__dirname, 'src', 'shot.html'), { query: { pack: String(id) } });
+  });
+}
+
 function queuedThumbRender(id) {
   const next = thumbQueue.then(async () => {
     // Hold off while the manager window is settling after open or being dragged/
     // resized, so offscreen GPU renders never churn during an OS modal move loop.
     await whenManagerIdle();
-    return renderPackPreview(id, { width: 854, height: 480 }).catch(() => null);
+    return renderThumbnailOffscreen(id).catch(() => null);
   });
   thumbQueue = next.catch(() => {});
   return next;
@@ -2429,6 +2654,7 @@ if (IS_SESSION) {
       setAutoStart,
       // Multi-monitor: the picker's data + rebuild-on-a-new-display.
       getDisplays: listDisplays,
+      pinDisplay,
       onDisplayChanged: relocateDesktop,
       // A user property changed — the live desktop reloads the pack (with the
       // new overlay). The manager refreshes its own preview client-side.
@@ -2719,5 +2945,6 @@ if (IS_SESSION) {
     if (presenceMonitor) presenceMonitor.stop();
     if (mediaMonitor) mediaMonitor.stop();
     if (audioMixer) audioMixer.stop();
+    destroyThumbWin(); // release the shared offscreen thumbnail surface
   });
 }

@@ -254,6 +254,14 @@ def main():
             sr, pcm = _synthesize(req)
             _write_ok(stdout, sr, pcm)
         except Exception as exc:
+            # Write the FULL traceback to stderr (lib/melotts.js captures it and
+            # logs it on the error) so an intermittent synth fault — e.g. the
+            # Korean "exceptions must derive from BaseException" — reveals its exact
+            # Python line/module instead of only str(exc). The base-init path above
+            # already does this; the synth path swallowed it until now.
+            import traceback
+            sys.stderr.write("melotts-sidecar: synth failed: " + repr(exc) + "\n" + traceback.format_exc())
+            sys.stderr.flush()
             _write_err(stdout, exc)
 
 
