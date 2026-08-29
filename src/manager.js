@@ -1672,8 +1672,6 @@ async function renderAssistantCfg() {
   const res = await aegis.assistantConfigGet();
   if (!res.ok) return libStatus(res.error, true);
   const c = res.config;
-  $('ai-baseurl').value = c.baseUrl || '';
-  $('ai-model').value = c.model || '';
   $('ai-persona').value = c.persona || '';
   renderAssistantPresets(c.personaPresets || []);
   syncPersonaPresetDropdown(); // reflect the saved persona in the preset dropdown
@@ -1776,8 +1774,6 @@ function syncPersonaPresetDropdown() {
 
 async function saveAssistant() {
   const patch = {
-    baseUrl: $('ai-baseurl').value,
-    model: $('ai-model').value,
     persona: $('ai-persona').value,
     speak: $('ai-speak').checked,
     voiceProfile: $('ai-voice').value,

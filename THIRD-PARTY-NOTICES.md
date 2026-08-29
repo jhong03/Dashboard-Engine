@@ -96,6 +96,16 @@ The SIL Open Font License 1.1 text is available at https://openfontlicense.org.
 
 ---
 
+## AI assistant (local language model)
+
+The built-in AI assistant runs entirely on the user's own machine — no cloud, no
+account, no network calls for AI. It bundles:
+
+- **llama.cpp** (`llama-server` + `ggml`) — MIT License — © Georgi Gerganov and the llama.cpp / ggml contributors — https://github.com/ggml-org/llama.cpp
+- **Qwen2.5-1.5B-Instruct** (GGUF) — the bundled language model — Apache License 2.0 — © Alibaba Cloud (Qwen team) — https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct · https://www.apache.org/licenses/LICENSE-2.0
+
+---
+
 Questions about licensing, or requests for the corresponding source of any
 GPL-licensed component, can be directed to the developer via the Dashboard
 Engine Steam store page.

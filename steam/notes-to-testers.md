@@ -1,9 +1,12 @@
 # Notes to the Review Team — Dashboard Engine (re-review)
 
-Thank you for the detailed review of BuildID **24777826**. We've addressed all five
-points, and a **new build containing every fix has been uploaded**, along with an updated
-store page and Content Survey. Below is each point: what your review found, what we
-changed, and how to verify it quickly.
+Thank you for the review of BuildID **24906980**. Your note found that the AI assistant
+relied on an LLM that isn't installed automatically during the Steam install, and that the
+app let the player choose between multiple LLMs. **We've fixed this exactly as
+recommended:** the assistant now ships a **single, specific model bundled and installed
+directly with the app**, and the model-choice UI has been removed. A new build with this
+change has been uploaded. (The five items from the earlier review of BuildID 24777826
+remain addressed — summarized below for completeness.)
 
 **About the app (context):** Dashboard Engine is a single-user **desktop live-wallpaper
 application** (Utilities → Design & Illustration), not a game. It renders an interactive
@@ -12,23 +15,24 @@ launch it opens the **Manager** window with the default **"Aegis"** pack active.
 
 ---
 
-## 1) External service dependency (AI) — REMOVED
-**Finding:** the build depended on the player configuring an external, third-party
-OpenAI-compatible service (payment/management outside Steam).
+## 1) AI/LLM dependency — NOW BUNDLED, SINGLE MODEL, NO CHOICE
+**Finding:** the AI depended on an LLM that isn't installed automatically during the Steam
+installation, and the app allowed the player to choose between multiple LLMs.
 
-**What changed:** the optional AI assistant no longer connects to any external or cloud
-service. It connects **only** to a language model the player runs **locally** on their own
-machine or local network (e.g. Ollama or LM Studio). The endpoint is validated in the
-app's main process to loopback / private-network ranges, and **any public or cloud URL is
-rejected**. There is no API key, no account, and no external service anywhere in the app.
-The assistant is optional and **off until the player enables it**. Nothing requires payment
-or management outside of Steam.
+**What changed:** the assistant now runs a **single, specific language model that is bundled
+in the app and installed automatically with it via Steam** — no external software, no
+account, no network, and **no model choice**. It bundles the **Qwen2.5-1.5B** model
+(Apache-2.0) served by **llama.cpp** (MIT), both included directly in the depot. The model
+loads on the user's own machine and generates replies entirely **on-device / offline**. The
+previous "enter your own local endpoint / model" fields have been **removed** — there is no
+way for the player to select or point at a different model. The assistant works out of the
+box on a clean install with nothing else installed.
 
-**How to verify (~1 min):** Manager → **Assistant** tab. There is **no API-key field**. In
-"Base URL," enter a public address such as `https://api.openai.com/v1` and save — it is
-**rejected** ("only a model on your own machine or local network is allowed"). A local
-address such as `http://localhost:11434/v1` is accepted. The wallpaper and all other
-features run fully with the assistant left unconfigured.
+**How to verify (~1 min):** on a fresh Steam install (nothing else installed), open the chat
+(the "Ask anything…" prompt on the wallpaper, or Manager → **Assistant** → **Test
+connection**) and send a message — the assistant **replies out of the box**. Manager →
+**Assistant** shows a persona and a voice, plus a note that the model is "built-in… no
+setup"; there is **no Base URL or Model-id field and no way to choose a model**.
 
 ## 2) Kokoro TTS vs. Content Survey — SURVEY CORRECTED
 **Finding:** a discrepancy between the default-installed Kokoro TTS model and the AI

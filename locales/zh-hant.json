@@ -59,7 +59,7 @@
   "manager.assistant.savePreset": "將當前儲存為預設…",
   "manager.assistant.presetNamePlaceholder": "為該人格命名（例如：我的教練）",
   "manager.assistant.testConnection": "測試連線",
-  "manager.assistant.introHint": "The assistant runs on a <b>local model on your own machine or network</b> — no cloud service, no account, no API key. Install <b>Ollama</b> or <b>LM Studio</b>, start it, then enter its address and the model's name below. Everything stays on your PC.",
+  "manager.assistant.introHint": "助手使用<b>內建於你本機的 AI 模型</b>——隨應用程式一起安裝，完全離線運作，無需雲端服務、帳戶或任何設定。只需在下方選擇一個角色與語音即可。",
   "manager.assistant.baseUrlHint": "The address of your local model server (it usually ends in <code>/v1</code>): Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>. Only a local / private-network address is accepted — no public or cloud URLs.",
   "manager.assistant.modelIdHint": "The exact model name your local server has pulled, e.g. Ollama / LM Studio <code>llama3.1</code>, <code>qwen2.5</code>, or <code>mistral</code>. Run <code>ollama list</code> (or check LM Studio) to see what's installed.",
   "manager.assistant.voiceHint": "選擇與你人格<strong>語言</strong>相匹配的語音——用英語語音朗讀中文人格會含糊不清。這裡列出了每種語言的預設，在上方選擇某語言的人格會自動選中匹配的語音。要在女聲和男聲之間切換，請選擇該語言的預設——<strong>男聲</strong>可用於英語、西班牙語和法語（帶“· Male”的預設）；中文、日語和韓語目前僅有女聲。你自己的<strong>語音調節</strong>配置也會顯示在這裡。“預設語音”為英語，且<em>不</em>跟隨你的調節。",

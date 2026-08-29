@@ -51,6 +51,7 @@
       "bin/melotts_full/**",
       "bin/piper/**",
       "bin/kokoro/**",
+      "bin/llm/**",
       "!steam_appid.txt",
       "!CLAUDE.md",
       "!build/gen-icon.js",
@@ -66,7 +67,7 @@
     ],
     "win": {
       "target": [
-        "nsis"
+        "dir"
       ],
       "icon": "build/icon.ico",
       "signAndEditExecutable": false

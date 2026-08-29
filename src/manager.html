@@ -86,21 +86,7 @@
           <div id="pin-list"></div>
         </div>
         <div class="assistant-cfg hidden" id="assistant-cfg">
-          <p class="hint" data-i18n-html="manager.assistant.introHint">The assistant runs on a <b>local model on your own machine or network</b> — no cloud service, no account, no API key.
-            Install <b>Ollama</b> or <b>LM Studio</b>, start it, then enter its address and the model's name below. Everything stays on your PC.</p>
-
-          <!-- Local OpenAI-compatible endpoint (Ollama / LM Studio) + model id. No key. -->
-          <label class="cfg-field" id="ai-baseurl-field"><span data-i18n="manager.assistant.baseUrl">Base URL</span>
-            <input id="ai-baseurl" type="text" placeholder="http://localhost:11434/v1" spellcheck="false">
-            <span class="hint cfg-hint" data-i18n-html="manager.assistant.baseUrlHint">The address of your local model server (it usually ends in <code>/v1</code>):
-              Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>.
-              Only a local / private-network address is accepted — no public or cloud URLs.</span>
-          </label>
-          <label class="cfg-field" id="ai-model-field"><span data-i18n="manager.assistant.modelId">Model id</span>
-            <input id="ai-model" type="text" placeholder="e.g. llama3.1" spellcheck="false">
-            <span class="hint cfg-hint" data-i18n-html="manager.assistant.modelIdHint">The exact model name your local server has pulled, e.g. Ollama / LM Studio
-              <code>llama3.1</code>, <code>qwen2.5</code>, or <code>mistral</code>. Run <code>ollama list</code> (or check LM Studio) to see what's installed.</span>
-          </label>
+          <p class="hint" data-i18n-html="manager.assistant.introHint">The assistant runs a <b>built-in AI model on your own machine</b> — it installs with the app and works fully offline, with no cloud service, no account, and no setup. Just pick a persona and voice below.</p>
 
           <label class="cfg-field"><span data-i18n="manager.assistant.voiceForReplies">Voice for spoken replies</span>
             <select id="ai-voice"></select>

@@ -26,6 +26,7 @@ const achievements = require('./lib/achievements');
 const i18n = require('./lib/i18n');
 const logger = require('./lib/logger');
 const { registerIpcHandlers, prewarmAssistantVoice, warmupAssistant } = require('./lib/ipc');
+const llm = require('./lib/llm'); // bundled local LLM server — stop it on freeze/quit to free ~1 GB
 const { createAlertScheduler } = require('./lib/alerts');
 const { userDataDir } = require('./lib/paths');
 
@@ -707,9 +708,10 @@ async function createDashboardWindow() {
   if (!warmedVoiceOnce) {
     warmedVoiceOnce = true;
     setTimeout(() => { try { prewarmAssistantVoice(__dirname, USER_DIR); } catch (e) { /* best effort */ } }, 6000);
-    // Also preload a local LLM (Ollama/LM Studio) so the first assistant reply
-    // isn't a cold start. No-op for hosted endpoints; fail-soft.
-    setTimeout(() => { try { warmupAssistant(USER_DIR); } catch (e) { /* best effort */ } }, 7000);
+    // The bundled LLM is deliberately NOT warmed at launch — it holds ~1 GB, so
+    // spawning it here would add to startup cost. It loads lazily on first
+    // assistant use (or when the chat / Assistant settings opens, via the
+    // aegis:assistant:warmup IPC), and is stopped on the performance freeze / quit.
   }
 
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
@@ -832,6 +834,9 @@ function sendDesktopPower() {
   const shouldPause = desktopPaused || (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery);
   dashboardWindow.webContents.send('aegis:desktop:power', { active: !shouldPause, maxFps: perf.maxFps });
   refreshAudioMixer(); // pause/resume the volume-mixer poll with the wallpaper
+  // Hand a game its RAM back: drop the bundled LLM (~1 GB) while paused / a
+  // full-screen app or battery owns the machine; it respawns lazily on next use.
+  if (shouldPause) llm.stop();
 }
 
 // ── Per-app volume mixer (Windows Core Audio) ────────────────────────────────
@@ -2946,5 +2951,6 @@ if (IS_SESSION) {
     if (mediaMonitor) mediaMonitor.stop();
     if (audioMixer) audioMixer.stop();
     destroyThumbWin(); // release the shared offscreen thumbnail surface
+    llm.stop(); // stop the bundled LLM model server
   });
 }

@@ -59,7 +59,7 @@
   "manager.assistant.savePreset": "현재 설정을 프리셋으로 저장…",
   "manager.assistant.presetNamePlaceholder": "이 페르소나의 이름(예: 내 코치)",
   "manager.assistant.testConnection": "연결 테스트",
-  "manager.assistant.introHint": "The assistant runs on a <b>local model on your own machine or network</b> — no cloud service, no account, no API key. Install <b>Ollama</b> or <b>LM Studio</b>, start it, then enter its address and the model's name below. Everything stays on your PC.",
+  "manager.assistant.introHint": "어시스턴트는 <b>내 컴퓨터에 내장된 AI 모델</b>로 작동합니다. 앱과 함께 설치되며 클라우드 서비스, 계정, 설정 없이 완전히 오프라인으로 사용할 수 있습니다. 아래에서 페르소나와 음성만 선택하면 됩니다.",
   "manager.assistant.baseUrlHint": "The address of your local model server (it usually ends in <code>/v1</code>): Ollama <code>http://localhost:11434/v1</code> · LM Studio <code>http://localhost:1234/v1</code>. Only a local / private-network address is accepted — no public or cloud URLs.",
   "manager.assistant.modelIdHint": "The exact model name your local server has pulled, e.g. Ollama / LM Studio <code>llama3.1</code>, <code>qwen2.5</code>, or <code>mistral</code>. Run <code>ollama list</code> (or check LM Studio) to see what's installed.",
   "manager.assistant.voiceHint": "페르소나의 <strong>언어</strong>에 맞는 목소리를 선택하세요 — 중국어 페르소나를 영어 목소리로 읽으면 뭉개져 들립니다. 각 언어의 프리셋이 여기에 나열되며, 위에서 언어 페르소나를 선택하면 어울리는 목소리가 자동 선택됩니다. 여성과 남성 목소리를 전환하려면 해당 언어의 프리셋을 선택하세요 — <strong>남성 목소리</strong>는 영어, 스페인어, 프랑스어에서 사용할 수 있습니다(“· Male” 프리셋). 중국어, 일본어, 한국어는 현재 여성만 있습니다. 자신의 <strong>음성 조정</strong> 프로필도 여기에 표시됩니다. “기본 목소리”는 영어이며 조정을 따르지 <em>않습니다</em>.",
