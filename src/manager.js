@@ -1807,11 +1807,19 @@ function wireAssistantCfg() {
   // Picking a voice pre-warms its HD engine so the Test below is snappy.
   $('ai-voice').addEventListener('change', prewarmSelectedVoice);
 
+  let savedMsgTimer = null; // fades the "Saved." confirmation so a 2nd save re-confirms
   $('ai-save').addEventListener('click', async () => {
     const out = await saveAssistant();
     if (!out.ok) { $('ai-status').textContent = out.error; return; }
     $('ai-status').textContent = t('common.saved');
     renderAssistantCfg();
+    // Clear the confirmation after a moment so it doesn't linger forever (and a
+    // second save visibly re-shows it). Guarded + reset each save so it never wipes
+    // a newer status (e.g. a Test-connection result) that replaced it since.
+    clearTimeout(savedMsgTimer);
+    savedMsgTimer = setTimeout(() => {
+      if ($('ai-status').textContent === t('common.saved')) $('ai-status').textContent = '';
+    }, 2500);
   });
 
   $('ai-test').addEventListener('click', async () => {
