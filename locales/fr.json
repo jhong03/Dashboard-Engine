@@ -100,7 +100,7 @@
   "manager.settings.startup.unsupported": "Le lancement avec le système n’est pas disponible sur cette plateforme.",
   "manager.settings.voiceAlerts.title": "Alertes vocales",
   "manager.settings.voiceAlerts.speak": "Annoncer les alertes de santé système à voix haute",
-  "manager.settings.voiceAlerts.help": "Votre voix d’assistant annonce quand le processeur, la mémoire ou le disque montent en charge, ou quand la batterie est faible. Nécessite un composant « Infos système » avec les alertes de santé en direct activées, et parle avec la voix définie dans Assistant → Voix.",
+  "manager.settings.voiceAlerts.help": "Votre voix d’assistant annonce quand le processeur, la mémoire ou le disque montent en charge, ou quand la batterie est faible, avec la voix définie dans Assistant → Voix.",
   "manager.settings.performance.title": "Performances",
   "manager.settings.performance.help": "Le fond d’écran animé se met en pause et se limite comme Wallpaper Engine pour rester un bon voisin en arrière-plan. Ce sont les mêmes réglages que le menu Performances de la zone de notification.",
   "manager.settings.performance.pauseFullscreen": "Mettre en pause quand une application plein écran couvre l’écran",

@@ -100,7 +100,7 @@
   "manager.settings.startup.unsupported": "此平台不支持随系统启动。",
   "manager.settings.voiceAlerts.title": "语音提醒",
   "manager.settings.voiceAlerts.speak": "朗读系统健康提醒",
-  "manager.settings.voiceAlerts.help": "当 CPU、内存或磁盘占用过高，或电量偏低时，你的助手语音会播报。需要一个开启了“实时健康提醒”的“系统信息”组件，并使用“助手 → 语音”中的语音朗读。",
+  "manager.settings.voiceAlerts.help": "当 CPU、内存或磁盘占用过高，或电量偏低时，你的助手会用“助手 → 语音”中设置的语音进行播报。",
   "manager.settings.performance.title": "性能",
   "manager.settings.performance.help": "动态壁纸会像 Wallpaper Engine 一样暂停和限速，以保持良好的后台表现。这些与托盘“性能”菜单中的控制项相同。",
   "manager.settings.performance.pauseFullscreen": "当全屏应用覆盖屏幕时暂停",

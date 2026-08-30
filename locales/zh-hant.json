@@ -100,7 +100,7 @@
   "manager.settings.startup.unsupported": "此平臺不支援隨系統啟動。",
   "manager.settings.voiceAlerts.title": "語音提醒",
   "manager.settings.voiceAlerts.speak": "朗讀系統健康提醒",
-  "manager.settings.voiceAlerts.help": "當 CPU、記憶體或磁碟佔用過高，或電量偏低時，你的助手語音會播報。需要一個開啟了“即時健康提醒”的“系統資訊”元件，並使用“助手 → 語音”中的語音朗讀。",
+  "manager.settings.voiceAlerts.help": "當 CPU、記憶體或磁碟佔用過高，或電量偏低時，你的助手會以“助手 → 語音”中設定的語音進行播報。",
   "manager.settings.performance.title": "效能",
   "manager.settings.performance.help": "動態桌布會像 Wallpaper Engine 一樣暫停和限速，以保持良好的後臺表現。這些與托盤“效能”選單中的控制項相同。",
   "manager.settings.performance.pauseFullscreen": "當全屏應用覆蓋螢幕時暫停",

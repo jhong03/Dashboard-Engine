@@ -1952,21 +1952,14 @@ function createRenderer(services) {
       addRow('Status', null, component.options.statusText);
     }
 
+    // The status component's health line is purely VISUAL (it shows the worst
+    // reading in place of the motto). Spoken alerts are handled globally in
+    // render() so they work for any pack, not only ones with this line enabled.
     const monitor = healthCell ? makeHealthMonitor() : null;
-    const reportedSev = {}; // label -> severity we last reported to main (the persistent de-dup authority)
-    // Turning spoken alerts ON mid-session should announce anything already in a
-    // bad state — otherwise a constantly-high metric that never re-crosses its
-    // threshold stays silent forever. Main clears its per-metric memory on enable
-    // and the desktop dispatches this so we re-report the current levels once.
-    if (services.speakHealthAlert) {
-      const rearm = () => { for (const k of Object.keys(reportedSev)) delete reportedSev[k]; };
-      document.addEventListener('aegis:health:rearm', rearm);
-      live.disposers.push(() => document.removeEventListener('aegis:health:rearm', rearm));
-    }
     live.telemetry.subscribers.push((values) => {
       for (const row of rows) row.value.textContent = values[row.valueKey] ?? '—';
       if (!healthCell) return;
-      const { severity, alerts, perMetric } = monitor(values);
+      const { severity, alerts } = monitor(values);
       if (severity === 0) {
         healthCell.textContent = healthIdle;
         healthCell.style.color = '';
@@ -1975,21 +1968,6 @@ function createRenderer(services) {
         healthCell.textContent = alerts.slice(0, 2).map((a) => `${a.label} ${Math.round(a.v)}%`).join(' · ');
         healthCell.style.color = severity === 2 ? 'var(--danger, #ff5a5a)' : 'var(--warn, #ffb23e)';
         healthCell.style.fontWeight = severity === 2 ? '700' : '';
-      }
-      // Voice: report each metric whose (debounced) severity CHANGED — a rise, an
-      // escalation, OR a clear — to the desktop's gated speakHealthAlert (absent in
-      // editor/manager, so previews never speak). Main is the persistent authority:
-      // it speaks once when a metric worsens and stays SILENT while it holds that
-      // level (a constantly-high reading is announced once, never on a loop), and
-      // the clear we send here re-arms it so a genuine LATER re-trip is heard again.
-      if (services.speakHealthAlert) {
-        for (const label of Object.keys(perMetric)) {
-          const sev = perMetric[label].sev;
-          const prev = reportedSev[label] || 0;
-          if (sev === prev) continue;
-          reportedSev[label] = sev;
-          if (sev > 0 || prev > 0) services.speakHealthAlert(label, sev, perMetric[label].v);
-        }
       }
     });
   }
@@ -4353,6 +4331,32 @@ function createRenderer(services) {
       if (builder) builder(component, el, ctx);
       canvasEl.appendChild(el);
       elements.push(el);
+    }
+    // Global spoken-health monitor (desktop only — services.speakHealthAlert is
+    // absent in editor/manager). The Settings "Speak system-health alerts" toggle
+    // must work for ANY pack, not only ones that happen to include a status
+    // component with its health line on — so ONE monitor watches the shared
+    // telemetry and reports per-metric level CHANGES (rise / escalation / clear)
+    // to main, which gates on the opt-in setting and de-duplicates. Pushed BEFORE
+    // startTelemetry so a pack with no telemetry widgets still polls for alerts.
+    if (services.speakHealthAlert) {
+      const healthMon = makeHealthMonitor();
+      const reportedSev = {}; // label -> severity last reported to main
+      // Enabling alerts mid-session re-announces anything already in a bad state:
+      // main clears its memory and the desktop dispatches this so we re-report.
+      const rearm = () => { for (const k of Object.keys(reportedSev)) delete reportedSev[k]; };
+      document.addEventListener('aegis:health:rearm', rearm);
+      live.disposers.push(() => document.removeEventListener('aegis:health:rearm', rearm));
+      live.telemetry.subscribers.push((values) => {
+        const { perMetric } = healthMon(values);
+        for (const label of Object.keys(perMetric)) {
+          const sev = perMetric[label].sev;
+          const prev = reportedSev[label] || 0;
+          if (sev === prev) continue;
+          reportedSev[label] = sev;
+          if (sev > 0 || prev > 0) services.speakHealthAlert(label, sev, perMetric[label].v);
+        }
+      });
     }
     startTelemetry();
     // Keyframe timeline (Phase G): subscribes to the shared loop; the disposer

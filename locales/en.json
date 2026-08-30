@@ -100,7 +100,7 @@
   "manager.settings.startup.unsupported": "Start-with-the-OS isn’t available on this platform.",
   "manager.settings.voiceAlerts.title": "Voice alerts",
   "manager.settings.voiceAlerts.speak": "Speak system-health alerts aloud",
-  "manager.settings.voiceAlerts.help": "Your assistant voice announces when CPU, memory or disk run high, or the battery gets low. Needs a “System info” component with Live health alerts on, and speaks with the voice from Assistant → Voice.",
+  "manager.settings.voiceAlerts.help": "Your assistant voice announces when CPU, memory or disk run high, or the battery gets low, using the voice set in Assistant → Voice.",
   "manager.settings.performance.title": "Performance",
   "manager.settings.performance.help": "The animated wallpaper pauses and throttles like Wallpaper Engine so it stays a good background citizen. These are the same controls as the tray’s Performance menu.",
   "manager.settings.performance.pauseFullscreen": "Pause when a full-screen app covers the screen",

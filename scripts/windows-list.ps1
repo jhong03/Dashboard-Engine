@@ -22,8 +22,11 @@ using System.Text;
 public static class WindowList {
   [DllImport("user32.dll")] static extern bool EnumWindows(EnumWindowsProc cb, IntPtr lParam);
   [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr hWnd);
-  [DllImport("user32.dll")] static extern int GetWindowTextLength(IntPtr hWnd);
-  [DllImport("user32.dll")] static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+  // CharSet.Unicode → the *W (wide) variants. Without it the default ANSI variants
+  // (GetWindowTextA) flatten non-Latin titles (CJK, etc.) to "?" INSIDE the Win32
+  // call, before EmitAscii can escape them — the launcher "OPEN NOW" bug.
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowTextLength(IntPtr hWnd);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
   [DllImport("user32.dll")] static extern IntPtr GetWindow(IntPtr hWnd, uint cmd);
   [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr hWnd, int index);
   [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
