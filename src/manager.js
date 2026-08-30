@@ -4460,14 +4460,31 @@ async function init() {
   const active = await aegis.activeGet();
   library.activeId = active.id || 'aegis';
 
-  // Warm the common English voice engines in the background the moment the Manager
-  // opens — well before the user reaches Browse → Voices → Preview, the tuning
-  // panel, or the assistant Test — so the first synth isn't a cold-start wait. The
-  // first synth on a fresh install pays a big one-time engine load + OS/Defender
-  // first-access scan (see lib/ipc prewarmVoice); doing it now hides that cost.
-  // Fire-and-forget; main-side guards a not-installed voice as a no-op.
-  setTimeout(() => {
-    try { aegis.voicePrewarm('en_us_hd'); aegis.voicePrewarm('en_male'); } catch (e) { /* best effort */ }
+  // Warm the voice the assistant is CONFIGURED to use the moment the Manager opens,
+  // so the first Test / reply isn't a cold-start wait — and, crucially, warm the
+  // user's ACTUAL language, not hardcoded English. MeloTTS runs one language per
+  // process, so warming English and then the user's language would just thrash the
+  // engine (English spawns → gets killed → their language cold-loads anyway); that
+  // is why non-English previously felt slow while English was instant. Kokoro
+  // (en_male) is a separate always-warm engine, so warming it too is harmless.
+  // Fire-and-forget, fail-soft; main-side guards a not-installed voice as a no-op.
+  setTimeout(async () => {
+    let base = 'en_us_hd';
+    try {
+      const cfg = await aegis.assistantConfigGet();
+      const vp = cfg && cfg.ok && cfg.config && cfg.config.voiceProfile;
+      if (vp) {
+        const [pr, prof] = await Promise.all([aegis.voicePresetsList(), aegis.voiceProfilesList()]);
+        if (vp.startsWith('preset:')) {
+          const p = (pr && pr.ok && pr.presets || []).find((x) => `preset:${x.file}` === vp);
+          if (p && p.profile && p.profile.base && p.profile.base.voice) base = p.profile.base.voice;
+        } else {
+          const p = (prof && prof.ok && prof.profiles || []).find((x) => x.file === vp);
+          if (p && p.voice) base = p.voice;
+        }
+      }
+    } catch (e) { /* fall back to en_us_hd */ }
+    try { aegis.voicePrewarm(base); if (base !== 'en_male') aegis.voicePrewarm('en_male'); } catch (e) { /* best effort */ }
   }, 1200);
 
   // The tray can switch packs too — keep the indicator and badges honest.
