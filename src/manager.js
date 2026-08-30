@@ -1818,8 +1818,13 @@ function wireAssistantCfg() {
     const saved = await saveAssistant(); // test uses the current fields
     if (!saved.ok) { $('ai-status').textContent = saved.error; return; }
     $('ai-status').textContent = t('manager.assistant.contacting');
-    // Ask it to introduce itself so the reply reflects the persona you set.
-    const out = await aegis.assistantAsk('Introduce yourself in one short sentence and confirm you are online.');
+    // A NEUTRAL greeting prompt (not "introduce yourself"): a small local model
+    // follows a strong English instruction in the user's turn over the persona's
+    // language lock, so "introduce yourself" made it answer in English and invent
+    // a name. A short greeting lets the persona's own language + identity win, so
+    // the reply reflects the persona you set (Chinese persona → Chinese reply, no
+    // invented name).
+    const out = await aegis.assistantAsk('Reply with a short greeting to confirm you are online and ready.');
     if (out.ok) {
       $('ai-status').textContent = `✓ ${out.text}`;
       // Speak the reply so you hear the persona AND the voice — one test proves
