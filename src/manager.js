@@ -1818,13 +1818,19 @@ function wireAssistantCfg() {
     const saved = await saveAssistant(); // test uses the current fields
     if (!saved.ok) { $('ai-status').textContent = saved.error; return; }
     $('ai-status').textContent = t('manager.assistant.contacting');
-    // A NEUTRAL greeting prompt (not "introduce yourself"): a small local model
-    // follows a strong English instruction in the user's turn over the persona's
-    // language lock, so "introduce yourself" made it answer in English and invent
-    // a name. A short greeting lets the persona's own language + identity win, so
-    // the reply reflects the persona you set (Chinese persona → Chinese reply, no
-    // invented name).
-    const out = await aegis.assistantAsk('Reply with a short greeting to confirm you are online and ready.');
+    // Send the greeting request IN the persona's language. A small local model
+    // reliably replies in the language of the USER turn, so an English test prompt
+    // made it drift to English for some personas (Japanese most stubbornly) even
+    // with a firm "reply only in X" persona. Detect the persona's script: CJK gets
+    // a native greeting; Latin scripts (English, Spanish, French) use English, which
+    // the model already follows into the persona's language. A short greeting (not
+    // "introduce yourself") also keeps it from inventing a name.
+    const persona = $('ai-persona').value || '';
+    let greet = 'Reply with a short greeting to confirm you are online and ready.';
+    if (/[぀-ヿ]/.test(persona)) greet = 'オンラインで準備ができていることを、短いあいさつで伝えてください。';        // Japanese (kana)
+    else if (/[가-힯]/.test(persona)) greet = '온라인 상태로 준비되었음을 짧은 인사로 확인해 주세요.';  // Korean (hangul)
+    else if (/[一-鿿]/.test(persona)) greet = '请用一句简短的问候确认你已经在线、准备就绪。';           // Chinese (han)
+    const out = await aegis.assistantAsk(greet);
     if (out.ok) {
       $('ai-status').textContent = `✓ ${out.text}`;
       // Speak the reply so you hear the persona AND the voice — one test proves
