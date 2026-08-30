@@ -3297,7 +3297,6 @@ function createRenderer(services) {
     try { const c = await services.assistant.config(); speakOn = !!(c && c.ok && c.config.speak); } catch (e) { /* default: silent */ }
     resetSpeech(speakOn);
     const res = await services.assistant.ask(text);
-    const streamedText = chat.stream ? chat.stream.buf : '';
     chat.stream = null;
     if (!res || !res.ok) {
       reply.textContent = (res && res.error) || 'Something went wrong.';
@@ -3307,9 +3306,14 @@ function createRenderer(services) {
       chat.log.scrollTop = chat.log.scrollHeight;
       // The active session may have just been auto-titled from this first message.
       if (services.assistant.sessions) services.assistant.sessions().then(applySessions);
-      // Speak whatever hasn't been spoken yet: the trailing sentence after a stream,
-      // or (for an endpoint that didn't stream) the whole reply as sentences now.
-      if (speakOn) feedSpeech(streamedText && streamedText.trim() ? streamedText : res.text, true);
+      // Speak whatever hasn't been spoken yet: the trailing sentence(s) after a
+      // stream, or (for an endpoint that didn't stream) the whole reply now. Use
+      // res.text — the AUTHORITATIVE full reply — NOT the stream buffer: the stream
+      // delta events can lag behind this resolution and drop the tail, which
+      // truncated the SPOKEN reply mid-sentence even though the displayed text was
+      // complete. spokenLen (a sentence-boundary index into the identical streamed
+      // prefix) makes this speak only the still-unspoken tail, never a repeat.
+      if (speakOn) feedSpeech(res.text, true);
     }
     chat.busy = false;
     chat.sendBtn.disabled = false;
