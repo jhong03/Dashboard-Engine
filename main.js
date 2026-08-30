@@ -918,6 +918,14 @@ function sendBackgroundMotion() {
   dashboardWindow.webContents.send('aegis:desktop:backgroundMotion', settings.getBackgroundMotion(USER_DIR));
 }
 
+// Ask the desktop's health components to re-report their current levels — used
+// when the user enables spoken alerts so a metric already in the orange is heard
+// once now, instead of staying silent until it clears and re-crosses.
+function sendHealthRearm() {
+  if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
+  dashboardWindow.webContents.send('aegis:desktop:healthRearm');
+}
+
 // Start the full-screen watcher + battery listeners once, on ready.
 function startPresenceMonitoring() {
   try { onBattery = powerMonitor.isOnBatteryPower(); } catch (err) { onBattery = false; }
@@ -2655,6 +2663,7 @@ if (IS_SESSION) {
       // the OS login item is owned by main.
       onPerformanceChanged: () => sendDesktopPower(),
       onBackgroundMotionChanged: () => sendBackgroundMotion(),
+      onHealthVoiceEnabled: () => sendHealthRearm(),
       getAutoStart,
       setAutoStart,
       // Multi-monitor: the picker's data + rebuild-on-a-new-display.

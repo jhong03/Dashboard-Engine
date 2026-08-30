@@ -1457,10 +1457,14 @@ function createRenderer(services) {
     };
     return (values) => {
       const alerts = [];
+      const perMetric = {}; // label -> { sev, v } for EVERY metric, so a clear (→0) is visible too
       let worst = 0;
       for (const m of HEALTH_METRICS) {
         // Only a real discharging battery counts — not an AC desktop or none present.
-        if (m.key === 'battery' && values.batteryText !== `${values.battery} %`) { latched[m.key] = 0; continue; }
+        if (m.key === 'battery' && values.batteryText !== `${values.battery} %`) {
+          latched[m.key] = 0; rising[m.key] = 0; perMetric[m.label] = { sev: 0, v: values[m.key] };
+          continue;
+        }
         const v = values[m.key];
         const raw = rawSev(m, v);
         const cur = latched[m.key] || 0;
@@ -1473,10 +1477,11 @@ function createRenderer(services) {
           rising[m.key] = 0;
         }
         const sev = latched[m.key] || 0;
+        perMetric[m.label] = { sev, v };
         if (sev > 0) { worst = Math.max(worst, sev); alerts.push({ sev, label: m.label, v }); }
       }
       alerts.sort((a, b) => b.sev - a.sev);
-      return { severity: worst, alerts };
+      return { severity: worst, alerts, perMetric };
     };
   }
 
@@ -1948,11 +1953,20 @@ function createRenderer(services) {
     }
 
     const monitor = healthCell ? makeHealthMonitor() : null;
-    let lastSpokenSev = 0;
+    const reportedSev = {}; // label -> severity we last reported to main (the persistent de-dup authority)
+    // Turning spoken alerts ON mid-session should announce anything already in a
+    // bad state — otherwise a constantly-high metric that never re-crosses its
+    // threshold stays silent forever. Main clears its per-metric memory on enable
+    // and the desktop dispatches this so we re-report the current levels once.
+    if (services.speakHealthAlert) {
+      const rearm = () => { for (const k of Object.keys(reportedSev)) delete reportedSev[k]; };
+      document.addEventListener('aegis:health:rearm', rearm);
+      live.disposers.push(() => document.removeEventListener('aegis:health:rearm', rearm));
+    }
     live.telemetry.subscribers.push((values) => {
       for (const row of rows) row.value.textContent = values[row.valueKey] ?? '—';
       if (!healthCell) return;
-      const { severity, alerts } = monitor(values);
+      const { severity, alerts, perMetric } = monitor(values);
       if (severity === 0) {
         healthCell.textContent = healthIdle;
         healthCell.style.color = '';
@@ -1962,13 +1976,21 @@ function createRenderer(services) {
         healthCell.style.color = severity === 2 ? 'var(--danger, #ff5a5a)' : 'var(--warn, #ffb23e)';
         healthCell.style.fontWeight = severity === 2 ? '700' : '';
       }
-      // Voice: announce only when severity ESCALATES (nominal→warn, warn→crit)
-      // through the desktop's gated speakHealthAlert (absent in editor/manager,
-      // so previews never speak). Main gates on the setting + rate-limits.
-      if (severity > lastSpokenSev && alerts.length && services.speakHealthAlert) {
-        services.speakHealthAlert(alerts[0].label, severity, alerts[0].v);
+      // Voice: report each metric whose (debounced) severity CHANGED — a rise, an
+      // escalation, OR a clear — to the desktop's gated speakHealthAlert (absent in
+      // editor/manager, so previews never speak). Main is the persistent authority:
+      // it speaks once when a metric worsens and stays SILENT while it holds that
+      // level (a constantly-high reading is announced once, never on a loop), and
+      // the clear we send here re-arms it so a genuine LATER re-trip is heard again.
+      if (services.speakHealthAlert) {
+        for (const label of Object.keys(perMetric)) {
+          const sev = perMetric[label].sev;
+          const prev = reportedSev[label] || 0;
+          if (sev === prev) continue;
+          reportedSev[label] = sev;
+          if (sev > 0 || prev > 0) services.speakHealthAlert(label, sev, perMetric[label].v);
+        }
       }
-      lastSpokenSev = severity;
     });
   }
 

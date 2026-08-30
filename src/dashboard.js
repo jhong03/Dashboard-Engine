@@ -16,10 +16,9 @@ let localReminderEditAt = 0;
 function markLocalReminderEdit() { localReminderEditAt = Date.now(); }
 
 // Spoken health alerts play through their own AudioContext (short
-// clips, independent of the assistant panel and music). Main does the real
-// gating + rate-limiting; this local guard just avoids redundant IPC on a burst.
+// clips, independent of the assistant panel and music). Main does all the
+// gating + de-duplication; the component only reports genuine level CHANGES.
 let alertAudioCtx = null;
-let lastAlertRequestAt = 0;
 function playAlertPcm(pcm, sampleRate) {
   try {
     if (!alertAudioCtx) alertAudioCtx = new AudioContext();
@@ -96,9 +95,6 @@ const renderer = AegisComponents.createRenderer({
   // here we just play the returned PCM (with a light local throttle so a burst of
   // component transitions doesn't spam the IPC).
   speakHealthAlert: (metric, severity, value) => {
-    const now = Date.now();
-    if (now - lastAlertRequestAt < 20000) return;
-    lastAlertRequestAt = now;
     aegis.healthAlert({ metric, severity, value }).then((out) => {
       if (out && out.ok && out.pcm) playAlertPcm(out.pcm, out.sampleRate);
     }).catch(() => {});
@@ -307,5 +303,9 @@ aegis.onBackgroundMotion((v) => {
   bgMotion.parallax = p;
   if (applied.active && cache.pack) renderActive();
 });
+
+// The user just enabled spoken health alerts — nudge the health components to
+// re-report their current levels so anything already in alert is heard now.
+aegis.onHealthRearm(() => document.dispatchEvent(new Event('aegis:health:rearm')));
 
 init().catch((err) => console.error(`[dashboard] failed to initialise: ${err.message}`));

@@ -91,9 +91,10 @@ const bridge = {
   // + rate-limits, and returns PCM to play (or a skipped result).
   healthAlert: (payload) => ipcRenderer.invoke('aegis:health:alert', {
     metric: String(payload.metric || ''),
-    severity: Number(payload.severity) || 1,
+    severity: Number(payload.severity) || 0, // 0 = a clear (re-arm), 1 = warn, 2 = critical
     value: Number(payload.value) || 0,
   }),
+  onHealthRearm: subscription('aegis:desktop:healthRearm'), // re-announce active alerts when enabled
 
   // Background music (configured in Manager → Settings; played here). The
   // desktop only READS the library and hears about changes — it works in opaque
