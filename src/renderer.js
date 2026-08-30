@@ -338,11 +338,24 @@ async function refreshBank() {
 // active, so the FIRST Synthesize isn't a ~13 s cold start — it loads while the
 // user is reading the panel / editing the clip text. No-op for a non-HD or
 // not-installed voice (main's prewarm handler guards those). Cheap to call often.
+let lastPrewarmedVoice = null;
 function prewarmCurrentVoice() {
   try {
     const voiceId = state.profile && state.profile.base && state.profile.base.voice;
-    if (voiceId && aegis.voicePrewarm) aegis.voicePrewarm(voiceId);
+    // Skip a redundant warm for the SAME voice — spawning the neural engine again
+    // is wasted RAM/CPU (it thrashes a modest machine), and switching between
+    // presets that share a voice would otherwise re-spawn it every click.
+    if (!voiceId || voiceId === lastPrewarmedVoice) return;
+    lastPrewarmedVoice = voiceId;
+    if (aegis.voicePrewarm) aegis.voicePrewarm(voiceId);
   } catch { /* best effort — prewarm must never block the UI */ }
+}
+
+// Run a low-priority task once the panel has painted and gone idle, so a heavy
+// background job (the engine warm) never competes with opening the window.
+function afterIdle(fn) {
+  if (typeof requestIdleCallback === 'function') requestIdleCallback(fn, { timeout: 3000 });
+  else setTimeout(fn, 1200);
 }
 
 // A sample sentence per VOICE language, so testing a Chinese voice actually
@@ -380,7 +393,7 @@ function syncTestTextToVoice() {
   ta.value = TEST_PHRASES[lang] || TEST_PHRASES.en;
 }
 
-function applyProfile(profile, presetFile) {
+function applyProfile(profile, presetFile, warm = true) {
   state.profile = structuredClone(profile);
   state.activePresetFile = presetFile || null;
   $('profile-name').value = state.profile.name;
@@ -390,7 +403,9 @@ function applyProfile(profile, presetFile) {
   renderPresets();
   updatePublishButton(); // a loaded imported voice can't be republished
   syncTestTextToVoice(); // match the sample sentence to this voice's language
-  prewarmCurrentVoice(); // panel open + preset/profile load both flow through here
+  // User-driven loads (a preset/voice click) warm immediately; the initial load on
+  // panel open passes warm=false and defers it (see init) so the open stays snappy.
+  if (warm) prewarmCurrentVoice();
 }
 
 function renderPresets() {
@@ -764,7 +779,7 @@ async function init() {
   }
 
   buildSliders();
-  applyProfile(state.profile, first.file);
+  applyProfile(state.profile, first.file, false); // don't warm the engine on the busy open path
   renderEnv(env);
   $('chip-bank').dataset.state = state.voices.some((v) => v.installed) ? 'on' : 'off';
   await refreshSaved();
@@ -785,6 +800,12 @@ async function init() {
   $('test-text').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) synthesize();
   });
+
+  // Warm the neural engine only AFTER the panel is painted and idle. On a modest
+  // machine the engine's cold model load (a heavy background process — heavier
+  // still if the assistant's engine is already resident) competing with opening
+  // the window showed up as a brief "Not Responding". Deferring keeps the open snappy.
+  afterIdle(() => prewarmCurrentVoice());
 
   if (new URLSearchParams(location.search).get('selftest') === '1') {
     selftest();
