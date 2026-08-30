@@ -3657,6 +3657,21 @@ function wireSettingsCfg() {
     await aegis.healthVoiceSet(e.target.checked);
     settingsSaved();
   });
+  // Hear a sample alert in the CURRENT assistant voice, on demand — a real alert
+  // only fires once per problem, so this is the way to check the wording + voice
+  // (incl. the language) without engineering a threshold crossing.
+  $('healthvoice-preview').addEventListener('click', async () => {
+    const btn = $('healthvoice-preview');
+    const status = $('healthvoice-status');
+    btn.disabled = true;
+    status.textContent = t('manager.settings.voiceAlerts.previewing');
+    try {
+      const out = await aegis.healthPreview();
+      if (out && out.ok && out.pcm) { playTestPcm(out.pcm, out.sampleRate); status.textContent = ''; }
+      else { status.textContent = t('manager.settings.voiceAlerts.previewFail'); }
+    } catch (e) { status.textContent = t('manager.settings.voiceAlerts.previewFail'); }
+    btn.disabled = false;
+  });
   $('set-fullscreen').addEventListener('change', async (e) => {
     await aegis.performanceSet({ pauseOnFullscreen: e.target.checked });
     settingsSaved();

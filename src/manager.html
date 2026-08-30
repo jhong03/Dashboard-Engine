@@ -161,7 +161,8 @@
 
           <h3 class="cfg-group-title" data-i18n="manager.settings.voiceAlerts.title">Voice alerts</h3>
           <label class="cfg-check"><input id="set-healthvoice" type="checkbox"><span data-i18n="manager.settings.voiceAlerts.speak">Speak system-health alerts aloud</span></label>
-          <p class="hint cfg-hint" data-i18n="manager.settings.voiceAlerts.help">Your assistant voice announces when CPU, memory or disk run high, or the battery gets low. Needs a “System info” component with Live health alerts on, and speaks with the voice from Assistant → Voice.</p>
+          <p class="hint cfg-hint" data-i18n="manager.settings.voiceAlerts.help">Your assistant voice announces when CPU, memory or disk run high, or the battery gets low, using the voice set in Assistant → Voice.</p>
+          <div class="btn-row"><button class="btn" id="healthvoice-preview" type="button" data-i18n="manager.settings.voiceAlerts.preview">Preview alert</button> <span id="healthvoice-status" class="hint"></span></div>
 
           <h3 class="cfg-group-title" data-i18n="manager.settings.performance.title">Performance</h3>
           <p class="hint" data-i18n="manager.settings.performance.help">The animated wallpaper pauses and throttles like Wallpaper Engine so it stays a good background citizen. These are the same controls as the tray’s Performance menu.</p>
