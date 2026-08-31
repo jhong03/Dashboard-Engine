@@ -3304,6 +3304,7 @@ function createRenderer(services) {
     chat.input.value = '';
     chat.busy = true;
     chat.sendBtn.disabled = true;
+    primeAudio(); // this send is a fresh gesture — make sure audio is unlocked before the reply speaks
     // Drop the "nothing yet" hint on the first message.
     const hint = chat.log.querySelector('.ac-empty');
     if (hint) hint.remove();
@@ -3500,11 +3501,30 @@ function createRenderer(services) {
     // vanishing). It's rebuilt only if the whole window reloads.
   };
 
+  // Create + resume the reply-audio context on a USER GESTURE (the panel-open
+  // click) so the FIRST spoken reply isn't dropped. If the context is instead
+  // created lazily on the first clip (tens of seconds later), it can start
+  // suspended against a stale gesture and silently skip that clip — the "first
+  // response has no voice, second onward is fine" bug. A one-frame silent buffer
+  // nudges it fully into 'running'. Idempotent + fail-soft.
+  const primeAudio = () => {
+    try {
+      if (!chat.audioCtx) chat.audioCtx = new AudioContext();
+      const ctx = chat.audioCtx;
+      if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+      const src = ctx.createBufferSource();
+      src.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch (e) { /* audio unavailable — the reply text still shows */ }
+  };
+
   const openChatPanel = async (component, anchor) => {
     ensureChatPanel();
     chat.anchor = anchor;
     if (component.options.label) chat.input.placeholder = component.options.label;
     chat.panel.classList.add('open');
+    primeAudio(); // unlock audio on this click so the first spoken reply plays
     // Start loading a local model NOW (while the user reads/types) so the first
     // reply isn't a cold start. No-op for hosted endpoints; fully fail-soft.
     if (services.assistant && services.assistant.warmup) services.assistant.warmup('open').catch(() => {}); // main skips this at Low speed
