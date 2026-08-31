@@ -3519,6 +3519,10 @@ async function renderSettingsCfg() {
   const hv = await aegis.healthVoiceGet();
   if (hv.ok) $('set-healthvoice').checked = hv.enabled;
 
+  // Assistant response speed (Low/Medium/High → local model thread count).
+  const as = await aegis.assistantSpeedGet();
+  if (as.ok) $('set-assistant-speed').value = as.speed;
+
   // About & third-party licenses — populated once (the notices don't change).
   const licBox = $('set-licenses');
   if (licBox && !licBox.dataset.loaded) {
@@ -3655,6 +3659,10 @@ function wireSettingsCfg() {
   });
   $('set-healthvoice').addEventListener('change', async (e) => {
     await aegis.healthVoiceSet(e.target.checked);
+    settingsSaved();
+  });
+  $('set-assistant-speed').addEventListener('change', async (e) => {
+    await aegis.assistantSpeedSet(e.target.value);
     settingsSaved();
   });
   // Hear a sample alert in the CURRENT assistant voice, on demand — a real alert

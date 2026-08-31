@@ -133,6 +133,8 @@ const bridge = {
   autoStartSet: (enabled) => ipcRenderer.invoke('aegis:settings:autostart:set', Boolean(enabled)),
   healthVoiceGet: () => ipcRenderer.invoke('aegis:settings:healthvoice:get'),
   healthVoiceSet: (enabled) => ipcRenderer.invoke('aegis:settings:healthvoice:set', Boolean(enabled)),
+  assistantSpeedGet: () => ipcRenderer.invoke('aegis:settings:assistantspeed:get'),
+  assistantSpeedSet: (level) => ipcRenderer.invoke('aegis:settings:assistantspeed:set', String(level)),
   healthPreview: () => ipcRenderer.invoke('aegis:health:preview'), // hear a sample alert in the current voice
   displayGet: () => ipcRenderer.invoke('aegis:settings:display:get'),
   displaySet: (id) => ipcRenderer.invoke('aegis:settings:display:set', id === null ? null : Number(id)),

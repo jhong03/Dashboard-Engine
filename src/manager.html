@@ -164,6 +164,16 @@
           <p class="hint cfg-hint" data-i18n="manager.settings.voiceAlerts.help">Your assistant voice announces when CPU, memory or disk run high, or the battery gets low, using the voice set in Assistant → Voice.</p>
           <div class="btn-row"><button class="btn" id="healthvoice-preview" type="button" data-i18n="manager.settings.voiceAlerts.preview">Preview alert</button> <span id="healthvoice-status" class="hint"></span></div>
 
+          <h3 class="cfg-group-title" data-i18n="manager.settings.assistant.title">Assistant</h3>
+          <label class="cfg-field"><span data-i18n="manager.settings.assistant.speed">AI response speed</span>
+            <select id="set-assistant-speed">
+              <option value="low" data-i18n="manager.settings.assistant.speedLow">Low</option>
+              <option value="medium" data-i18n="manager.settings.assistant.speedMedium">Medium</option>
+              <option value="high" data-i18n="manager.settings.assistant.speedHigh">High</option>
+            </select>
+          </label>
+          <p class="hint cfg-hint" data-i18n="manager.settings.assistant.speedHelp">Higher = faster replies but more CPU while the assistant is thinking; lower = lighter on your system but slower. The desktop stays responsive at any level.</p>
+
           <h3 class="cfg-group-title" data-i18n="manager.settings.performance.title">Performance</h3>
           <p class="hint" data-i18n="manager.settings.performance.help">The animated wallpaper pauses and throttles like Wallpaper Engine so it stays a good background citizen. These are the same controls as the tray’s Performance menu.</p>
           <label class="cfg-check"><input id="set-fullscreen" type="checkbox"><span data-i18n="manager.settings.performance.pauseFullscreen">Pause when a full-screen app covers the screen</span></label>
