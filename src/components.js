@@ -3531,16 +3531,29 @@ function createRenderer(services) {
   const openChatPanel = async (component, anchor) => {
     ensureChatPanel();
     chat.anchor = anchor;
-    if (component.options.label) chat.input.placeholder = component.options.label;
+    const label = component.options.label || 'Ask anything, or give me a task on this machine…';
     chat.panel.classList.add('open');
     primeAudio(); // unlock audio on this click so the first spoken reply plays
-    // Start loading a local model NOW (while the user reads/types) so the first
-    // reply isn't a cold start. No-op for hosted endpoints; fully fail-soft.
-    if (services.assistant && services.assistant.warmup) services.assistant.warmup('open').catch(() => {}); // main skips this at Low speed
     // Anchor to the console on first open; once the user has dragged it, respect
     // where they put it. (The panel is a fixed size now, so no re-clamp needed.)
     if (!chat.moved) positionChatPanel();
     await renderChatHistory();
+    // GATE input until the model + voice are warm, so the first reply has no cold
+    // start — the load, any launch alert, and the resource spike all happen NOW
+    // (while the box says "Warming up…") instead of overlapping the conversation.
+    // Fast when already warm. Fail-soft: on any warmup error we still unlock.
+    if (services.assistant && services.assistant.warmup) {
+      chat.input.disabled = true;
+      if (chat.sendBtn) chat.sendBtn.disabled = true;
+      // Only show the "warming up" copy if it doesn't resolve near-instantly, so an
+      // already-warm reopen doesn't flash it.
+      const warmMsg = setTimeout(() => { chat.input.placeholder = 'Warming up the assistant…'; }, 250);
+      try { await services.assistant.warmup('open'); } catch (e) { /* proceed anyway */ }
+      clearTimeout(warmMsg);
+      chat.input.disabled = false;
+      if (chat.sendBtn) chat.sendBtn.disabled = false;
+    }
+    chat.input.placeholder = label;
     chat.input.focus();
   };
 
