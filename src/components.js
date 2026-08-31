@@ -1350,9 +1350,6 @@ function createRenderer(services) {
   let lastAssistantWarmAt = 0;
   const ASSISTANT_WARM_DEBOUNCE_MS = 30000;
 
-  // Dev diagnostic → engine.log (the desktop has no visible console in a build).
-  const dbg = (m) => { try { if (services.debugLog) services.debugLog(m); } catch (e) { /* ignore */ } };
-
   function cssVar(el, name) {
     return getComputedStyle(el).getPropertyValue(name).trim();
   }
@@ -3107,7 +3104,6 @@ function createRenderer(services) {
       const now = ctx.currentTime;
       const startAt = Math.max(now, speech.playCursor || now);
       src.start(startAt);
-      dbg(`scheduleClip: ctx=${ctx.state} now=${now.toFixed(2)} startAt=${startAt.toFixed(2)} dur=${buffer.duration.toFixed(2)} bytes=${pcm.length}`);
       speech.playCursor = startAt + buffer.duration;
       speech.sources.push(src);
       src.onended = () => { const i = speech.sources.indexOf(src); if (i >= 0) speech.sources.splice(i, 1); };
@@ -3136,8 +3132,7 @@ function createRenderer(services) {
       while (speech && !speech.cancelled && speech.queue.length) {
         const sentence = speech.queue.shift();
         let spoken = null;
-        try { spoken = await services.assistant.speak(sentence); } catch (e) { spoken = null; dbg(`drain: speak threw ${e && e.message}`); }
-        dbg(`drain: speak -> ${spoken ? (spoken.ok ? 'ok ' + (spoken.pcm ? spoken.pcm.length : 0) + 'B' : 'FAIL ' + spoken.error) : 'null'}`);
+        try { spoken = await services.assistant.speak(sentence); } catch (e) { spoken = null; }
         // The first synth after launch can hit a transient (a still-warming engine or
         // a one-off fault) and would otherwise be dropped silently. Retry it once on
         // the now-fresh engine so the FIRST spoken reply isn't lost; skip the retry
@@ -3158,10 +3153,7 @@ function createRenderer(services) {
   // punctuation). Main sanitizes (emoji/markdown/think) + synthesizes each chunk.
   const SENTENCE_END = /[.!?。！？…]+["'”’)\]]*(\s|$)/g;
   const feedSpeech = (fullText, final) => {
-    if (!chat.speech || !chat.speech.speakOn || typeof fullText !== 'string') {
-      dbg(`feedSpeech SKIP: speech=${!!chat.speech} speakOn=${chat.speech && chat.speech.speakOn} final=${final}`);
-      return;
-    }
+    if (!chat.speech || !chat.speech.speakOn || typeof fullText !== 'string') return;
     let cut;
     if (final) {
       cut = fullText.length;
@@ -3172,10 +3164,10 @@ function createRenderer(services) {
       while ((m = re.exec(fullText)) !== null) last = m.index + m[0].length;
       cut = last;
     }
-    if (cut <= chat.speech.spokenLen) { dbg(`feedSpeech: nothing new (cut=${cut} spokenLen=${chat.speech.spokenLen} final=${final})`); return; }
+    if (cut <= chat.speech.spokenLen) return;
     const chunk = fullText.slice(chat.speech.spokenLen, cut).trim();
     chat.speech.spokenLen = cut;
-    if (chunk) { dbg(`feedSpeech: QUEUE "${chunk.slice(0, 24)}" final=${final} qlen=${chat.speech.queue.length + 1}`); chat.speech.queue.push(chunk); drainSpeech(); }
+    if (chunk) { chat.speech.queue.push(chunk); drainSpeech(); }
   };
 
   const addChatMsg = (who, text) => {
@@ -3335,7 +3327,6 @@ function createRenderer(services) {
     // reply + full synth).
     let speakOn = false;
     try { const c = await services.assistant.config(); speakOn = !!(c && c.ok && c.config.speak); } catch (e) { /* default: silent */ }
-    dbg(`submit: speakOn=${speakOn} audioCtx=${chat.audioCtx ? chat.audioCtx.state : 'none'}`);
     resetSpeech(speakOn);
     const res = await services.assistant.ask(text);
     chat.stream = null;
