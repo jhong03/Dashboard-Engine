@@ -4,8 +4,10 @@ Thank you for the review of BuildID **24906980**. Your note found that the AI as
 relied on an LLM that isn't installed automatically during the Steam install, and that the
 app let the player choose between multiple LLMs. **We've fixed this exactly as
 recommended:** the assistant now ships a **single, specific model bundled and installed
-directly with the app**, and the model-choice UI has been removed. A new build with this
-change has been uploaded. (The five items from the earlier review of BuildID 24777826
+directly with the app**, and the model-choice UI has been removed. The build submitted for
+this re-review (**BuildID 25038603**) bundles the model **and its complete runtime**
+directly in the depot, so the AI launches and answers on a clean Windows install with **no
+external software of any kind**. (The five items from the earlier review of BuildID 24777826
 remain addressed — summarized below for completeness.)
 
 **About the app (context):** Dashboard Engine is a single-user **desktop live-wallpaper
@@ -22,11 +24,13 @@ installation, and the app allowed the player to choose between multiple LLMs.
 **What changed:** the assistant now runs a **single, specific language model that is bundled
 in the app and installed automatically with it via Steam** — no external software, no
 account, no network, and **no model choice**. It bundles the **Qwen2.5-1.5B** model
-(Apache-2.0) served by **llama.cpp** (MIT), both included directly in the depot. The model
-loads on the user's own machine and generates replies entirely **on-device / offline**. The
-previous "enter your own local endpoint / model" fields have been **removed** — there is no
-way for the player to select or point at a different model. The assistant works out of the
-box on a clean install with nothing else installed.
+(Apache-2.0) served by **llama.cpp** (MIT), both included directly in the depot **together
+with every runtime library they need** — nothing is downloaded or installed separately, and
+the AI runs on a clean machine that has never had any developer tools or redistributables
+installed. The model loads on the user's own machine and generates replies entirely
+**on-device / offline**. The previous "enter your own local endpoint / model" fields have
+been **removed** — there is no way for the player to select or point at a different model.
+The assistant works out of the box on a clean install with nothing else installed.
 
 **How to verify (~1 min):** on a fresh Steam install (nothing else installed), open the chat
 (the "Ask anything…" prompt on the wallpaper, or Manager → **Assistant** → **Test
@@ -108,3 +112,29 @@ mode to access.
 
 All five items are resolved in the uploaded build and the updated store page / Content
 Survey. Please let us know if anything is unclear — we're happy to provide more detail.
+
+---
+
+## Separate forward-looking question (does NOT affect this build)
+
+This question is **not** about the build under review — the submitted build ships the
+single bundled model with **no choice**, exactly as required, and we will keep that as the
+default no matter the answer. We're only asking to understand the boundary before we design
+anything.
+
+For a **future** update, would the following be permissible?
+
+- The bundled Qwen2.5-1.5B model remains the **always-on default**, working out of the box
+  with no setup — unchanged from this build.
+- An **optional, off-by-default advanced setting** would let a technically-inclined user
+  point the assistant at a language model **already running on their own machine** (e.g. a
+  local server they installed themselves). The app would **not** bundle, download, prompt
+  for, recommend, or require any alternative model, and a normal user would never see a
+  model choice — the setting would be a hidden "advanced" toggle for users who explicitly
+  seek it out.
+
+In other words: the app still *ships and defaults to* one bundled model with no choice; the
+only addition is an opt-in escape hatch for power users who want to use their own local
+model. **If this is not acceptable, we will simply omit it** — the single bundled model
+stands on its own and this does not gate anything. We'd appreciate your guidance on where
+the line is.
