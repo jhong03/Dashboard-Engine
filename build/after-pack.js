@@ -36,8 +36,34 @@ function findRcedit() {
   return null;
 }
 
+// The bundled llama.cpp server + ggml DLLs are built with MSVC and import the
+// Visual C++ 2015-2022 runtime (VCRUNTIME140 / VCRUNTIME140_1 / MSVCP140), which
+// is NOT part of Windows. We ship the `dir` target (no installer to run
+// vc_redist.exe), so the runtime must travel APP-LOCAL: place the three imported
+// DLLs next to llama-server.exe. Windows resolves an exe's own directory first,
+// so the AI runs on a clean machine with no VC++ redist installed. (Steam review
+// rejects a build whose bundled AI "doesn't run due to a missing dependency".)
+// These DLLs are redistributable app-local under the MSVC redistributable licence.
+function ensureVcRuntime(context) {
+  const llmDir = path.join(context.appOutDir, 'resources', 'app', 'bin', 'llm');
+  const server = path.join(llmDir, 'llama-server.exe');
+  if (!fs.existsSync(server)) return; // no bundled LLM in this build — nothing to do
+  const sys32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
+  const need = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'];
+  const notes = [];
+  for (const dll of need) {
+    const dest = path.join(llmDir, dll);
+    if (fs.existsSync(dest)) { notes.push(`${dll} ok`); continue; }
+    const from = path.join(sys32, dll);
+    if (fs.existsSync(from)) { fs.copyFileSync(from, dest); notes.push(`${dll} copied`); }
+    else notes.push(`${dll} MISSING — install the VC++ 2015-2022 x64 redist on the build box`);
+  }
+  console.log(`[after-pack] llama-server VC++ runtime: ${notes.join(', ')}`);
+}
+
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'win32') return; // Windows only
+  ensureVcRuntime(context); // make the bundled AI self-contained on a clean machine
   const product = context.packager.appInfo.productFilename; // "Dashboard Engine"
   const exe = path.join(context.appOutDir, `${product}.exe`);
   const ico = path.join(__dirname, 'icon.ico');
