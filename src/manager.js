@@ -1823,9 +1823,17 @@ function wireAssistantCfg() {
   });
 
   $('ai-test').addEventListener('click', async () => {
-    const saved = await saveAssistant(); // test uses the current fields
-    if (!saved.ok) { $('ai-status').textContent = saved.error; return; }
+    // Testing must NOT persist — the user is trying out a persona/voice and hasn't
+    // clicked Save. Snapshot the SAVED config, apply the current form fields JUST for
+    // this test (the ask/speak paths read the saved config), then restore the
+    // snapshot in `finally` so nothing is saved. We deliberately do NOT re-render
+    // afterwards, so the form keeps the user's current edits: navigating away without
+    // Save then discards them, and coming back shows the last SAVED settings.
+    const snap = await aegis.assistantConfigGet();
+    const applied = await saveAssistant(); // apply current fields for this test only
+    if (!applied.ok) { $('ai-status').textContent = applied.error; return; }
     $('ai-status').textContent = t('manager.assistant.contacting');
+    try {
     // Send the greeting request IN the persona's language. A small local model
     // reliably replies in the language of the USER turn, so an English test prompt
     // made it drift to English for some personas (Japanese most stubbornly) even
@@ -1863,8 +1871,16 @@ function wireAssistantCfg() {
     } else {
       $('ai-status').textContent = `✗ ${out.error}`;
     }
-    await aegis.assistantReset(); // don't leave the test in the real conversation
-    renderAssistantCfg();
+    } finally {
+      // Restore the saved config exactly as it was — the test persisted nothing —
+      // and drop the throwaway greeting from the conversation. No re-render, so the
+      // user's in-progress edits stay in the form.
+      if (snap && snap.ok) {
+        const s = snap.config;
+        await aegis.assistantConfigSet({ persona: s.persona, speak: s.speak, voiceProfile: s.voiceProfile, contextLimit: s.contextLimit });
+      }
+      await aegis.assistantReset();
+    }
   });
 
   // Save the current prompt as the user's own named persona.
