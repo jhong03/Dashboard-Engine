@@ -37,6 +37,7 @@ function playAlertPcm(pcm, sampleRate) {
 const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
   weather: (opts) => aegis.weather(opts),
+  debugLog: (msg) => { try { aegis.debugLog(msg); } catch (e) { /* diagnostic only */ } },
   reminders: (window) => aegis.remindersList(window),
   // Present only on the desktop — the calendar component uses these to let a
   // user manage reminders in place. Editor/manager previews omit them, so the
