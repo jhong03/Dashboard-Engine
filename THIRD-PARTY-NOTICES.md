@@ -56,9 +56,22 @@ GNU General Public License, version 3.**
 > espeak-ng/Piper component itself is covered by the GPL; the rest of Dashboard
 > Engine is not a derivative work of it.
 
-Note: the DSP chain uses **FFmpeg** at runtime when it is present on the system,
-but FFmpeg is **not** distributed with Dashboard Engine — no FFmpeg binaries are
-included in this product.
+**FFmpeg** — used by the voice DSP chain to apply each profile's timbre, character,
+and loudness stages to the synthesized audio. A prebuilt `ffmpeg.exe` is **bundled**
+with Dashboard Engine (in `bin/ffmpeg/`). **This component is licensed under the GNU
+General Public License, version 3.**
+
+- **FFmpeg** — GNU General Public License v3.0 (GPL-3.0) — © 2000–2026 the FFmpeg developers — https://ffmpeg.org · https://www.ffmpeg.org/legal.html
+  (Bundled build: `ffmpeg 8.1.1-full_build` by Gyan Doshi — https://www.gyan.dev/ffmpeg/builds/)
+
+> **Written offer / source availability (GPL-3.0).** The complete corresponding
+> source code for FFmpeg is publicly available at https://ffmpeg.org and (for this
+> exact build) via https://www.gyan.dev/ffmpeg/builds/. You may also request a copy
+> from the developer via the Dashboard Engine Steam store page. FFmpeg is invoked as
+> a **separate executable** (spawned as a child process, with audio passed over
+> standard input/output); it is neither statically nor dynamically linked into
+> Dashboard Engine's own code, so only the FFmpeg component itself is covered by the
+> GPL; the rest of Dashboard Engine is not a derivative work of it.
 
 ---
 

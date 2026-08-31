@@ -61,9 +61,29 @@ function ensureVcRuntime(context) {
   console.log(`[after-pack] llama-server VC++ runtime: ${notes.join(', ')}`);
 }
 
+// The voice DSP chain (timbre / character / loudness stages) shells out to
+// ffmpeg. It must be BUNDLED, else on a clean machine with no system ffmpeg the
+// voice falls back to the raw, untuned neural output. bin/ffmpeg is gitignored
+// (large owner-side binary), so a fresh clone could rebuild without it — verify
+// it made it into the payload, and try DE_FFMPEG_PATH as a copy source if not.
+function ensureFfmpeg(context) {
+  const ffDir = path.join(context.appOutDir, 'resources', 'app', 'bin', 'ffmpeg');
+  const dest = path.join(ffDir, 'ffmpeg.exe');
+  if (fs.existsSync(dest)) { console.log('[after-pack] bundled ffmpeg: ok'); return; }
+  const src = process.env.DE_FFMPEG_PATH;
+  if (src && fs.existsSync(src)) {
+    try { fs.mkdirSync(ffDir, { recursive: true }); fs.copyFileSync(src, dest); console.log('[after-pack] bundled ffmpeg: copied from DE_FFMPEG_PATH'); return; }
+    catch (e) { /* fall through to the warning */ }
+  }
+  console.warn('[after-pack] WARNING: bin/ffmpeg/ffmpeg.exe is MISSING from the build. '
+    + 'The voice will run untuned (raw neural output) on machines without a system ffmpeg. '
+    + 'Place ffmpeg.exe in bin/ffmpeg/ (or set DE_FFMPEG_PATH) and rebuild.');
+}
+
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'win32') return; // Windows only
   ensureVcRuntime(context); // make the bundled AI self-contained on a clean machine
+  ensureFfmpeg(context);    // make the tuned voice self-contained on a clean machine
   const product = context.packager.appInfo.productFilename; // "Dashboard Engine"
   const exe = path.join(context.appOutDir, `${product}.exe`);
   const ico = path.join(__dirname, 'icon.ico');

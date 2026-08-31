@@ -52,6 +52,7 @@
       "bin/piper/**",
       "bin/kokoro/**",
       "bin/llm/**",
+      "bin/ffmpeg/**",
       "!steam_appid.txt",
       "!CLAUDE.md",
       "!build/gen-icon.js",

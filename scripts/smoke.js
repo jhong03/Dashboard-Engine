@@ -60,7 +60,7 @@ async function main() {
   // The bank is all-MeloTTS now, but keep the smoke test engine-agnostic (it
   // mirrors the app's synthClip dispatch) so a Piper voice would still work.
   const isMelo = bank.engineOf(voice) === 'melotts';
-  const ffmpegPath = dsp.findFfmpeg();
+  const ffmpegPath = dsp.findFfmpeg(APP_ROOT);
 
   let enginePath;
   if (isMelo) {
