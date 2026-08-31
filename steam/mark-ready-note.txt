@@ -1,0 +1,17 @@
+Thank you for the re-review. This build (BuildID 25038603) resolves the previous finding on the AI/LLM dependency.
+
+WHAT CHANGED (AI/LLM — now bundled, single model, no choice, runs on a clean machine):
+The AI assistant now ships a single, specific language model that is bundled and installed directly with the app via Steam — no external software, no account, no network, and no model choice. It bundles the Qwen2.5-1.5B model (Apache-2.0) served by llama.cpp (MIT), together with every runtime library they need, all included directly in the depot. Nothing is downloaded or installed separately, and the AI runs on a clean Windows install that has never had developer tools or redistributables on it. The model runs on the user's own machine and generates replies entirely on-device / offline. The previous "enter your own local endpoint / model" fields have been removed — there is no way for a player to select or point at a different model.
+
+HOW TO VERIFY (~1 min):
+On a fresh Steam install (nothing else installed), open the chat (the "Ask anything..." prompt on the wallpaper, or Manager -> Assistant -> Test connection) and send a message: the assistant replies out of the box. Manager -> Assistant shows only a persona and a voice, with a note that the model is "built-in... no setup" — there is no Base URL or Model-id field and no way to choose a model.
+
+EARLIER ITEMS STILL RESOLVED (from the BuildID 24777826 review):
+- AI/LLM dependency: now bundled, single model, no choice (above).
+- Content Survey: corrected to disclose the default on-device neural TTS (MeloTTS English female + Kokoro English male); no pre-generated AI content is bundled; no external AI service.
+- Workshop / UGC moderation: strict schema validation (no code executed from pack data), sandboxed designer scripts with no OS/IPC/network access, an in-app Report action on every Workshop item, a bundled blocklist that refuses to install confirmed violations, and 72-hour triage.
+- Third-party IP: the JARVIS-like built-in pack was renamed to "Aegis" and visually/persona-differentiated; no franchise reference in the app or on the store page. All screenshots and both trailers were regenerated.
+- Online Interactivity: flag unchecked to match the build (Workshop is asynchronous UGC, not online interactivity).
+
+SEPARATE FORWARD-LOOKING QUESTION (does not affect this build):
+This build ships the single bundled model with no choice, exactly as required, and we will keep that as the default regardless of your answer. For a future update, would the following be permissible: the bundled Qwen2.5-1.5B model remains the always-on default (unchanged from this build, working out of the box with no setup), and an optional, off-by-default "advanced" setting lets a technically-inclined user point the assistant at a language model already running on their own machine? The app would not bundle, download, prompt for, recommend, or require any alternative model, and a normal user would never see a model choice. If this is not acceptable we will simply omit it — the single bundled model stands on its own and this does not gate anything. We would appreciate your guidance on where the line is.
