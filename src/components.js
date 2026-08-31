@@ -3133,6 +3133,15 @@ function createRenderer(services) {
         const sentence = speech.queue.shift();
         let spoken = null;
         try { spoken = await services.assistant.speak(sentence); } catch (e) { spoken = null; }
+        // The first synth after launch can hit a transient (a still-warming engine or
+        // a one-off fault) and would otherwise be dropped silently. Retry it once on
+        // the now-fresh engine so the FIRST spoken reply isn't lost; skip the retry
+        // for a clear persistent failure (no installed voice for this language).
+        const transient = !spoken || (!spoken.ok && spoken.error !== 'voice-unavailable');
+        if (transient && !speech.cancelled) {
+          await new Promise((r) => setTimeout(r, 1200));
+          if (!speech.cancelled) { try { spoken = await services.assistant.speak(sentence); } catch (e) { spoken = null; } }
+        }
         if (speech.cancelled) break; // a newer reply took over while we were synthesizing
         if (spoken && spoken.ok && spoken.pcm) scheduleClip(spoken.pcm, spoken.sampleRate, speech);
       }
