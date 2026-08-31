@@ -4420,6 +4420,11 @@ function createRenderer(services) {
       document.addEventListener('aegis:health:rearm', rearm);
       live.disposers.push(() => document.removeEventListener('aegis:health:rearm', rearm));
       live.telemetry.subscribers.push((values) => {
+        // Never announce while the assistant chat is open: the user is focused on it,
+        // and warming/using the assistant spikes the very metrics that would trip an
+        // alert — a spoken alert then just talks over the reply. Alerts resume (and
+        // re-evaluate current levels) once the panel is closed.
+        if (chat.panel && chat.panel.classList.contains('open')) return;
         const { perMetric } = healthMon(values);
         for (const label of Object.keys(perMetric)) {
           const sev = perMetric[label].sev;
