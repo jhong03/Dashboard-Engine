@@ -1747,6 +1747,8 @@ async function renderAssistantCfg() {
   }
 
   prewarmSelectedVoice(); // HD engine loads in the background while you read/type
+  assistantCfg.saved = assistantFormValues(); // baseline for the Test-connection dirty check
+  updateAssistantTestState();
   assistantCfg.loaded = true;
 }
 
@@ -1772,14 +1774,32 @@ function syncPersonaPresetDropdown() {
   sel.value = match;
 }
 
-async function saveAssistant() {
-  const patch = {
+// The current values in the Assistant form — used to save AND to detect unsaved
+// edits for the Test-connection gate below.
+function assistantFormValues() {
+  return {
     persona: $('ai-persona').value,
     speak: $('ai-speak').checked,
     voiceProfile: $('ai-voice').value,
     contextLimit: Number($('ai-context-limit').value) || 12,
   };
-  return aegis.assistantConfigSet(patch);
+}
+
+// "Test connection" is disabled until the form matches the SAVED config, so a test
+// always reflects saved settings — e.g. the voice matches the saved persona's
+// language, rather than an edit that was never applied. Save re-enables it.
+function updateAssistantTestState() {
+  const test = $('ai-test');
+  if (!test || !assistantCfg.saved) return;
+  const s = assistantCfg.saved, cur = assistantFormValues();
+  const dirty = cur.persona !== s.persona || cur.speak !== s.speak
+    || cur.voiceProfile !== s.voiceProfile || cur.contextLimit !== s.contextLimit;
+  test.disabled = dirty;
+  test.title = dirty ? t('manager.assistant.saveToTest') : '';
+}
+
+async function saveAssistant() {
+  return aegis.assistantConfigSet(assistantFormValues());
 }
 
 function wireAssistantCfg() {
@@ -1798,14 +1818,17 @@ function wireAssistantCfg() {
       // an English accent. Auto-selecting a matching voice keeps them in step.
       autoSelectVoiceForPersona(key);
     }
+    updateAssistantTestState();
   });
 
   // As soon as the user edits the prompt, the dropdown may no longer describe it
   // — re-sync (shows the matching preset, or the placeholder when it's custom).
-  $('ai-persona').addEventListener('input', syncPersonaPresetDropdown);
+  $('ai-persona').addEventListener('input', () => { syncPersonaPresetDropdown(); updateAssistantTestState(); });
 
   // Picking a voice pre-warms its HD engine so the Test below is snappy.
-  $('ai-voice').addEventListener('change', prewarmSelectedVoice);
+  $('ai-voice').addEventListener('change', () => { prewarmSelectedVoice(); updateAssistantTestState(); });
+  $('ai-speak').addEventListener('change', updateAssistantTestState);
+  $('ai-context-limit').addEventListener('input', updateAssistantTestState);
 
   let savedMsgTimer = null; // fades the "Saved." confirmation so a 2nd save re-confirms
   $('ai-save').addEventListener('click', async () => {

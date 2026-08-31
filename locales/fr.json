@@ -74,6 +74,7 @@
   "manager.assistant.groupPresets": "Préréglages",
   "manager.assistant.groupYourProfiles": "Vos profils",
   "manager.assistant.contacting": "Contact du modèle…",
+  "manager.assistant.saveToTest": "Enregistrez vos modifications pour tester",
   "manager.assistant.speaking": "parle…",
   "manager.assistant.noVoice": "pas de voix — {reason}",
   "manager.assistant.personaSaved": "Personnalité enregistrée — elle est dans « Vos personnalités enregistrées ».",

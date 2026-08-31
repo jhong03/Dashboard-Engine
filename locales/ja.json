@@ -74,6 +74,7 @@
   "manager.assistant.groupPresets": "プリセット",
   "manager.assistant.groupYourProfiles": "あなたのプロファイル",
   "manager.assistant.contacting": "モデルに接続中…",
+  "manager.assistant.saveToTest": "テストするには変更を保存してください",
   "manager.assistant.speaking": "読み上げ中…",
   "manager.assistant.noVoice": "声なし——{reason}",
   "manager.assistant.personaSaved": "そのペルソナを保存しました——「保存したペルソナ」にあります。",

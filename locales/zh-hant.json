@@ -74,6 +74,7 @@
   "manager.assistant.groupPresets": "預設",
   "manager.assistant.groupYourProfiles": "你的配置",
   "manager.assistant.contacting": "正在聯絡模型…",
+  "manager.assistant.saveToTest": "儲存變更後才能測試",
   "manager.assistant.speaking": "朗讀中…",
   "manager.assistant.noVoice": "無語音——{reason}",
   "manager.assistant.personaSaved": "已儲存該人格——它在“你儲存的人格”中。",

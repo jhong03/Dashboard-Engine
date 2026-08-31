@@ -74,6 +74,7 @@
   "manager.assistant.groupPresets": "Ejemplos",
   "manager.assistant.groupYourProfiles": "Tus perfiles",
   "manager.assistant.contacting": "Contactando con el modelo…",
+  "manager.assistant.saveToTest": "Guarda los cambios para probar",
   "manager.assistant.speaking": "hablando…",
   "manager.assistant.noVoice": "sin voz — {reason}",
   "manager.assistant.personaSaved": "Personalidad guardada: está en «Tus personalidades guardadas».",

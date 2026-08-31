@@ -74,6 +74,7 @@
   "manager.assistant.groupPresets": "Presets",
   "manager.assistant.groupYourProfiles": "Your profiles",
   "manager.assistant.contacting": "Contacting the model…",
+  "manager.assistant.saveToTest": "Save your changes to test",
   "manager.assistant.speaking": "speaking…",
   "manager.assistant.noVoice": "no voice — {reason}",
   "manager.assistant.personaSaved": "Saved that persona — it’s in \"Your saved personas\".",
