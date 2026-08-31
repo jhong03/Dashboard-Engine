@@ -3491,7 +3491,7 @@ function createRenderer(services) {
     chat.panel.classList.add('open');
     // Start loading a local model NOW (while the user reads/types) so the first
     // reply isn't a cold start. No-op for hosted endpoints; fully fail-soft.
-    if (services.assistant && services.assistant.warmup) services.assistant.warmup().catch(() => {});
+    if (services.assistant && services.assistant.warmup) services.assistant.warmup('open').catch(() => {}); // main skips this at Low speed
     // Anchor to the console on first open; once the user has dragged it, respect
     // where they put it. (The panel is a fixed size now, so no re-clamp needed.)
     if (!chat.moved) positionChatPanel();
@@ -3531,7 +3531,7 @@ function createRenderer(services) {
     // Debounced against frequent re-renders; the panel-open warm is the backstop.
     if (services.assistant.warmup && Date.now() - lastAssistantWarmAt > ASSISTANT_WARM_DEBOUNCE_MS) {
       lastAssistantWarmAt = Date.now();
-      services.assistant.warmup().catch(() => {});
+      services.assistant.warmup('render').catch(() => {}); // main only acts on this at High speed
     }
   }
 

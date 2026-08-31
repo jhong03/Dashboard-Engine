@@ -67,7 +67,7 @@ const renderer = AegisComponents.createRenderer({
     config: () => aegis.assistantConfig(),
     history: () => aegis.assistantHistory(),
     reset: () => aegis.assistantReset(),
-    warmup: () => aegis.assistantWarmup(),
+    warmup: (trigger) => aegis.assistantWarmup(trigger),
     onStream: (cb) => aegis.onAssistantStream(cb),
     // Multiple local chat sessions.
     sessions: () => aegis.assistantSessions(),

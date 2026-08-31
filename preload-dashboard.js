@@ -79,7 +79,7 @@ const bridge = {
   assistantConfig: () => ipcRenderer.invoke('aegis:assistant:config:get'),
   assistantHistory: () => ipcRenderer.invoke('aegis:assistant:history'),
   assistantReset: () => ipcRenderer.invoke('aegis:assistant:reset'),
-  assistantWarmup: () => ipcRenderer.invoke('aegis:assistant:warmup'),
+  assistantWarmup: (trigger) => ipcRenderer.invoke('aegis:assistant:warmup', typeof trigger === 'string' ? trigger : ''),
   onAssistantStream: subscription('aegis:assistant:stream'), // live reply tokens
   // Multiple local chat sessions (personal data, never in a pack).
   assistantSessions: () => ipcRenderer.invoke('aegis:assistant:sessions'),
