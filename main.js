@@ -27,6 +27,8 @@ const i18n = require('./lib/i18n');
 const logger = require('./lib/logger');
 const { registerIpcHandlers, prewarmAssistantVoice, warmupAssistant } = require('./lib/ipc');
 const llm = require('./lib/llm'); // bundled local LLM server — stop it on freeze/quit to free ~1 GB
+const melotts = require('./lib/melotts'); // HD voice engine — stop on freeze to free ~0.9 GB
+const kokoro = require('./lib/kokoro');   // male-voice engine — stop on freeze to free ~0.4 GB
 const { createAlertScheduler } = require('./lib/alerts');
 const { userDataDir } = require('./lib/paths');
 
@@ -834,9 +836,15 @@ function sendDesktopPower() {
   const shouldPause = desktopPaused || (perf.pauseOnFullscreen && isFullscreen) || (perf.pauseOnBattery && onBattery);
   dashboardWindow.webContents.send('aegis:desktop:power', { active: !shouldPause, maxFps: perf.maxFps });
   refreshAudioMixer(); // pause/resume the volume-mixer poll with the wallpaper
-  // Hand a game its RAM back: drop the bundled LLM (~1 GB) while paused / a
-  // full-screen app or battery owns the machine; it respawns lazily on next use.
-  if (shouldPause) llm.stop();
+  // Hand a game its RAM back: drop the bundled LLM (~1 GB) AND the voice engines
+  // (~0.9 GB MeloTTS + ~0.4 GB Kokoro) while paused / a full-screen app or battery
+  // owns the machine; each respawns lazily on next use. Fail-soft — a stop must
+  // never take down the wallpaper.
+  if (shouldPause) {
+    try { llm.stop(); } catch { /* ignore */ }
+    try { melotts.shutdown(); } catch { /* ignore */ }
+    try { kokoro.killEngine(); } catch { /* ignore */ }
+  }
 }
 
 // ── Per-app volume mixer (Windows Core Audio) ────────────────────────────────
