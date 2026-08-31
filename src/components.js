@@ -1344,6 +1344,12 @@ function createRenderer(services) {
     telemetry: { subscribers: [], history: { cpu: [], mem: [], disk: [], battery: [] } },
   };
 
+  // The desktop warms the local model as soon as an assistant component renders
+  // (buildAssistant), hiding the ~1 GB cold load behind the time before the user
+  // opens the chat. Debounced so frequent re-renders don't re-fire the warm.
+  let lastAssistantWarmAt = 0;
+  const ASSISTANT_WARM_DEBOUNCE_MS = 30000;
+
   function cssVar(el, name) {
     return getComputedStyle(el).getPropertyValue(name).trim();
   }
@@ -3519,6 +3525,14 @@ function createRenderer(services) {
 
     el.classList.add('ac-trigger');
     row.addEventListener('click', () => openChatPanel(component, row));
+    // Warm the local model NOW — its cold load (~1 GB) takes tens of seconds on a
+    // modest machine, so starting it when the assistant first appears (long before
+    // the user opens the chat) hides the load instead of racing the first message.
+    // Debounced against frequent re-renders; the panel-open warm is the backstop.
+    if (services.assistant.warmup && Date.now() - lastAssistantWarmAt > ASSISTANT_WARM_DEBOUNCE_MS) {
+      lastAssistantWarmAt = Date.now();
+      services.assistant.warmup().catch(() => {});
+    }
   }
 
   // Per-app volume mixer (Windows Core Audio). A master slider + one row per app
