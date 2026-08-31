@@ -3084,8 +3084,12 @@ function createRenderer(services) {
   // Schedule a PCM clip to start exactly when the previous queued clip ends, so
   // sentences play in order, gaplessly, with no overlap (playCursor is the audio
   // time the next clip should begin; it never schedules in the past).
-  const scheduleClip = (pcm, sampleRate) => {
+  // `speech` is passed in (never read from the module var) so a clip always belongs
+  // to the reply that produced it — a newer reply can't hijack an in-flight clip.
+  // We track every scheduled source on that reply so it can be stopped if superseded.
+  const scheduleClip = (pcm, sampleRate, speech) => {
     try {
+      if (!speech || speech.cancelled) return; // a newer reply took over — drop this clip
       if (!chat.audioCtx) chat.audioCtx = new AudioContext();
       const ctx = chat.audioCtx;
       if (ctx.state === 'suspended') ctx.resume().catch(() => {});
@@ -3098,29 +3102,41 @@ function createRenderer(services) {
       src.buffer = buffer;
       src.connect(ctx.destination);
       const now = ctx.currentTime;
-      const startAt = Math.max(now, (chat.speech && chat.speech.playCursor) || now);
+      const startAt = Math.max(now, speech.playCursor || now);
       src.start(startAt);
-      if (chat.speech) chat.speech.playCursor = startAt + buffer.duration;
+      speech.playCursor = startAt + buffer.duration;
+      speech.sources.push(src);
+      src.onended = () => { const i = speech.sources.indexOf(src); if (i >= 0) speech.sources.splice(i, 1); };
     } catch (err) { console.warn(`[assistant] playback: ${err.message}`); }
   };
 
   const resetSpeech = (speakOn) => {
-    chat.speech = { spokenLen: 0, playCursor: 0, synthing: false, queue: [], speakOn: !!speakOn };
+    // A new reply supersedes any in-flight one: cancel its drain and STOP its
+    // scheduled/playing audio so the two voices never overlap ("one voice at a
+    // time"). The old drain checks `cancelled` and bails; unplayed clips are dropped.
+    if (chat.speech) {
+      chat.speech.cancelled = true;
+      for (const s of chat.speech.sources) { try { s.stop(); } catch (e) { /* already ended */ } }
+    }
+    chat.speech = { spokenLen: 0, playCursor: 0, synthing: false, queue: [], speakOn: !!speakOn, cancelled: false, sources: [] };
   };
 
   // Synthesize queued sentences ONE at a time (serial: they finish in order and
-  // schedule gaplessly). Runs until the queue drains; re-entrant-safe.
+  // schedule gaplessly). Bound to THIS reply's speech object so a superseding reply
+  // (which sets cancelled) stops it cleanly instead of racing a second drain.
   const drainSpeech = async () => {
-    if (!chat.speech || chat.speech.synthing) return;
-    chat.speech.synthing = true;
+    const speech = chat.speech;
+    if (!speech || speech.synthing) return;
+    speech.synthing = true;
     try {
-      while (chat.speech && chat.speech.queue.length) {
-        const sentence = chat.speech.queue.shift();
+      while (speech && !speech.cancelled && speech.queue.length) {
+        const sentence = speech.queue.shift();
         let spoken = null;
         try { spoken = await services.assistant.speak(sentence); } catch (e) { spoken = null; }
-        if (spoken && spoken.ok && spoken.pcm) scheduleClip(spoken.pcm, spoken.sampleRate);
+        if (speech.cancelled) break; // a newer reply took over while we were synthesizing
+        if (spoken && spoken.ok && spoken.pcm) scheduleClip(spoken.pcm, spoken.sampleRate, speech);
       }
-    } finally { if (chat.speech) chat.speech.synthing = false; }
+    } finally { speech.synthing = false; }
   };
 
   // Queue any complete sentences in `fullText` past what we've already spoken. When
