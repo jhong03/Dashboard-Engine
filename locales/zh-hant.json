@@ -110,7 +110,7 @@
   "manager.settings.assistant.speedLow": "低",
   "manager.settings.assistant.speedMedium": "中",
   "manager.settings.assistant.speedHigh": "高",
-  "manager.settings.assistant.speedHelp": "越高 = 回應越快，但助手思考時佔用更多 CPU；越低 = 對系統更輕但更慢。任何等級下桌面都保持流暢。",
+  "manager.settings.assistant.speedHelp": "設定助手回應的速度以及保持就緒的記憶體量。低——最輕量：語音引擎在閒置時釋放，因此暫停後的第一次回應需要重新載入（短暫等待）。中——平衡：保持就緒的時間更長，重新載入更快。高——最快：引擎保持載入並始終就緒，無需重新載入，佔用最多記憶體。任何等級下桌面都保持流暢。",
   "manager.settings.performance.title": "效能",
   "manager.settings.performance.help": "動態桌布會像 Wallpaper Engine 一樣暫停和限速，以保持良好的後臺表現。這些與托盤“效能”選單中的控制項相同。",
   "manager.settings.performance.pauseFullscreen": "當全屏應用覆蓋螢幕時暫停",

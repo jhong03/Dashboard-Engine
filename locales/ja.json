@@ -110,7 +110,7 @@
   "manager.settings.assistant.speedLow": "低",
   "manager.settings.assistant.speedMedium": "中",
   "manager.settings.assistant.speedHigh": "高",
-  "manager.settings.assistant.speedHelp": "高いほど応答は速くなりますが、アシスタントの思考中に CPU をより多く使います。低いほどシステムへの負荷は軽くなりますが遅くなります。どの設定でもデスクトップは快適に動作します。",
+  "manager.settings.assistant.speedHelp": "アシスタントの応答の速さと、待機状態で保持するメモリ量を設定します。低 — 最も軽量：音声エンジンはアイドル時に解放されるため、一時停止後の最初の応答は再読み込みが必要です（短い待ち時間）。中 — バランス：より長く待機し、再読み込みも速くなります。高 — 最速：エンジンは読み込まれたまま常に待機し、再読み込み不要で、最も多くのメモリを使います。どの設定でもデスクトップは快適に動作します。",
   "manager.settings.performance.title": "パフォーマンス",
   "manager.settings.performance.help": "アニメーション壁紙は Wallpaper Engine のように一時停止・制限し、良き背景の一員であり続けます。これらはトレイの「パフォーマンス」メニューと同じ設定です。",
   "manager.settings.performance.pauseFullscreen": "全画面アプリが画面を覆ったら一時停止",

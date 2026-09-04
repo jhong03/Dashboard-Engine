@@ -110,7 +110,7 @@
   "manager.settings.assistant.speedLow": "Basse",
   "manager.settings.assistant.speedMedium": "Moyenne",
   "manager.settings.assistant.speedHigh": "Haute",
-  "manager.settings.assistant.speedHelp": "Plus élevée = réponses plus rapides mais plus de CPU pendant que l’IA réfléchit ; plus basse = plus légère pour votre système mais plus lente. Le bureau reste réactif à tous les niveaux.",
+  "manager.settings.assistant.speedHelp": "Définit la rapidité des réponses de l’IA et la quantité de mémoire qu’elle garde prête. Basse — la plus légère : le moteur vocal est libéré à l’inactivité, donc la première réponse après une pause le recharge (courte attente). Moyenne — équilibrée : il reste prêt plus longtemps et se recharge plus vite. Haute — la plus rapide : le moteur reste chargé et toujours prêt, sans rechargement, en utilisant plus de mémoire. Le bureau reste réactif à tous les niveaux.",
   "manager.settings.performance.title": "Performances",
   "manager.settings.performance.help": "Le fond d’écran animé se met en pause et se limite comme Wallpaper Engine pour rester un bon voisin en arrière-plan. Ce sont les mêmes réglages que le menu Performances de la zone de notification.",
   "manager.settings.performance.pauseFullscreen": "Mettre en pause quand une application plein écran couvre l’écran",

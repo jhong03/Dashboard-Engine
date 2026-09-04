@@ -110,7 +110,7 @@
   "manager.settings.assistant.speedLow": "Baja",
   "manager.settings.assistant.speedMedium": "Media",
   "manager.settings.assistant.speedHigh": "Alta",
-  "manager.settings.assistant.speedHelp": "Más alta = respuestas más rápidas pero más CPU mientras la IA piensa; más baja = más ligera para tu sistema pero más lenta. El escritorio sigue respondiendo en cualquier nivel.",
+  "manager.settings.assistant.speedHelp": "Define la rapidez con que responde la IA y cuánta memoria mantiene lista. Baja — la más ligera: el motor de voz se libera cuando está inactivo, así que la primera respuesta tras una pausa lo vuelve a cargar (una breve espera). Media — equilibrada: permanece lista más tiempo y recarga más rápido. Alta — la más rápida: el motor permanece cargado y siempre listo, sin recargas, usando más memoria. El escritorio sigue respondiendo en cualquier nivel.",
   "manager.settings.performance.title": "Rendimiento",
   "manager.settings.performance.help": "El fondo animado se pausa y se ralentiza como Wallpaper Engine para ser un buen ciudadano en segundo plano. Son los mismos controles que el menú Rendimiento de la bandeja.",
   "manager.settings.performance.pauseFullscreen": "Pausar cuando una aplicación a pantalla completa cubre la pantalla",

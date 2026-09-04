@@ -110,7 +110,7 @@
   "manager.settings.assistant.speedLow": "낮음",
   "manager.settings.assistant.speedMedium": "중간",
   "manager.settings.assistant.speedHigh": "높음",
-  "manager.settings.assistant.speedHelp": "높을수록 응답이 빠르지만 어시스턴트가 생각하는 동안 CPU를 더 많이 사용합니다. 낮을수록 시스템 부담은 적지만 느립니다. 어떤 수준에서도 데스크톱은 계속 원활하게 작동합니다.",
+  "manager.settings.assistant.speedHelp": "어시스턴트의 응답 속도와 준비 상태로 유지하는 메모리 양을 설정합니다. 낮음 — 가장 가벼움: 음성 엔진이 유휴 상태일 때 해제되므로 일시정지 후 첫 응답은 다시 로드됩니다(잠깐 대기). 중간 — 균형: 더 오래 준비 상태를 유지하고 더 빠르게 다시 로드합니다. 높음 — 가장 빠름: 엔진이 로드된 상태로 항상 준비되어 다시 로드가 필요 없고 메모리를 가장 많이 사용합니다. 어떤 수준에서도 데스크톱은 계속 원활하게 작동합니다.",
   "manager.settings.performance.title": "성능",
   "manager.settings.performance.help": "애니메이션 배경화면은 Wallpaper Engine처럼 일시정지하고 제한하여 좋은 배경 시민으로 남습니다. 트레이의 성능 메뉴와 동일한 컨트롤입니다.",
   "manager.settings.performance.pauseFullscreen": "전체 화면 앱이 화면을 덮으면 일시정지",

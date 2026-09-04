@@ -110,7 +110,7 @@
   "manager.settings.assistant.speedLow": "低",
   "manager.settings.assistant.speedMedium": "中",
   "manager.settings.assistant.speedHigh": "高",
-  "manager.settings.assistant.speedHelp": "越高 = 回复越快，但助手思考时占用更多 CPU；越低 = 对系统更轻但更慢。任何级别下桌面都保持流畅。",
+  "manager.settings.assistant.speedHelp": "设置助手回复的速度以及保持就绪的内存量。低——最轻量：语音引擎在空闲时释放，因此暂停后的第一次回复需要重新加载（短暂等待）。中——平衡：保持就绪的时间更长，重新加载更快。高——最快：引擎保持加载并始终就绪，无需重新加载，占用最多内存。任何级别下桌面都保持流畅。",
   "manager.settings.performance.title": "性能",
   "manager.settings.performance.help": "动态壁纸会像 Wallpaper Engine 一样暂停和限速，以保持良好的后台表现。这些与托盘“性能”菜单中的控制项相同。",
   "manager.settings.performance.pauseFullscreen": "当全屏应用覆盖屏幕时暂停",
