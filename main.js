@@ -840,7 +840,12 @@ function sendDesktopPower() {
   // (~0.9 GB MeloTTS + ~0.4 GB Kokoro) while paused / a full-screen app or battery
   // owns the machine; each respawns lazily on next use. Fail-soft — a stop must
   // never take down the wallpaper.
-  if (shouldPause) {
+  // EXCEPTION: the "High" assistant-speed tier promises the engine stays warm /
+  // always ready, so it opts OUT of this RAM-freeing — the engine survives a
+  // fullscreen app so returning to the desktop finds the assistant hot. The render
+  // loop still freezes for all tiers (that's the CPU/GPU citizenship that matters
+  // most); High only keeps the engine RAM resident.
+  if (shouldPause && settings.getAssistantSpeed(USER_DIR) !== 'high') {
     try { llm.stop(); } catch { /* ignore */ }
     try { melotts.shutdown(); } catch { /* ignore */ }
     try { kokoro.killEngine(); } catch { /* ignore */ }
