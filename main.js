@@ -34,6 +34,25 @@ const { userDataDir } = require('./lib/paths');
 
 const USER_DIR = userDataDir();
 
+// ALWAYS-ON WATCHDOG: make main-thread STALLS self-documenting. A native "Not
+// Responding" hang (AppHangB1) never reaches the JS crash log, so this timer records
+// the gap between its own fires — a late fire means the main thread was blocked, and
+// we log how long, to USER_DIR/logs. It only WRITES on a real stall (>400 ms), so it
+// is silent in normal use and cheap to leave on in production. (A FATAL hang that
+// kills the process mid-block can't self-log, but the last PERF line before the
+// silence — plus Event Viewer's AppHang — still points at the culprit.) DE_STALLLOG
+// additionally turns on the verbose per-operation PERF timing below.
+{
+  const TICK_MS = 250, STALL_MS = 400;
+  let last = Date.now();
+  setInterval(() => {
+    const now = Date.now();
+    const stall = now - last - TICK_MS;
+    if (stall > STALL_MS) { try { logger.write(USER_DIR, 'STALL', `main-thread blocked ~${stall}ms`); } catch (e) { /* ignore */ } }
+    last = now;
+  }, TICK_MS).unref();
+}
+
 // Crash reporting, privacy-first: collect NATIVE crash minidumps locally and
 // NEVER upload them (there is no server, and nothing about this app should phone
 // home). Combined with lib/logger, a user who hits a crash has a local trail to
@@ -2204,11 +2223,22 @@ function queuedThumbRender(id) {
 // on first request). null on any failure — the card then shows its blueprint.
 async function getPackThumbnail(id) {
   if (!THUMB_ID_PATTERN.test(String(id))) return null;
+  const _t0 = Date.now();
   const hit = cachedThumbUri(id);
-  if (hit) return hit;
+  if (hit) {
+    // A cached read is fast + frequent (every card, every open); only log a SLOW one
+    // (a big base64 read that could stutter) unless verbose.
+    const _d = Date.now() - _t0;
+    if (_d > 60 || process.env.DE_STALLLOG) { try { logger.write(USER_DIR, 'PERF', `thumbnail ${id} CACHED read=${_d}ms`); } catch (e) { /* ignore */ } }
+    return hit;
+  }
   if (thumbInFlight.has(id)) return thumbInFlight.get(id);
+  // An offscreen render is RARE (only a stale/new thumbnail) and is the documented
+  // AppHang trigger, so log it always — the last line before a silent hang names it.
+  try { logger.write(USER_DIR, 'PERF', `thumbnail ${id} STALE → offscreen render starting`); } catch (e) { /* ignore */ }
   const job = (async () => {
     const file = await queuedThumbRender(id);
+    try { logger.write(USER_DIR, 'PERF', `thumbnail ${id} RENDER done=${Date.now() - _t0}ms (file=${!!file})`); } catch (e) { /* ignore */ }
     if (!file) return null;
     const fs = require('fs');
     try {
