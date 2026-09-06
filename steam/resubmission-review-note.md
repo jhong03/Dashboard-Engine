@@ -43,6 +43,8 @@ STEP 2 — The AI assistant (the main test):
 4) When the text box lights up, type a message (e.g. "Hello, who are you?") + Enter.
 5) It replies in text and speaks the reply aloud. This confirms the AI + voice work.
 
+ASSISTANT LANGUAGE & VOICE (important — so a language setting isn't mistaken for a broken voice): the assistant's reply language ("Persona") and its spoken "Voice" are BOTH set in Manager -> Assistant. The DEFAULT is English and speaks out of the box (the English voice ships with the app). To check or change it: right-click the tray icon -> Open Manager -> Assistant tab -> pick a Persona and a Voice. If you test a non-English language, set BOTH the Persona AND the Voice to the SAME language. On a fresh install only the English voice is bundled; other languages download on demand from that same screen (the Voice list marks not-yet-downloaded languages as unavailable). By design, if the chosen language's voice hasn't been downloaded, the assistant stays SILENT and prompts you to download it rather than speaking in the wrong language — so silence there means "voice not installed," not "broken." For the quickest verification, leave both on the default English.
+
 STEP 3 — The launcher (works even while the AI warms):
 1) The dashboard shows a Launcher area with small app tiles.
 2) Click any tile — that app opens (or its window comes to the front). This confirms the
