@@ -3582,7 +3582,11 @@ function createRenderer(services) {
     if (!interactive) { el.classList.add('ac-inert'); return; }
 
     el.classList.add('ac-trigger');
-    row.addEventListener('click', () => openChatPanel(component, row));
+    // Make the ENTIRE component clickable, not just the inner text row — the whole
+    // bar already shows a pointer cursor (.ac-trigger), so the padding/edges must open
+    // the chat too. A click on the Execute button bubbles up to here as well. (This
+    // also gives a reviewer a much larger, harder-to-miss target.)
+    el.addEventListener('click', () => openChatPanel(component, row));
     // Warm the local model NOW — its cold load (~1 GB) takes tens of seconds on a
     // modest machine, so starting it when the assistant first appears (long before
     // the user opens the chat) hides the load instead of racing the first message.
