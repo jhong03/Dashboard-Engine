@@ -17,11 +17,12 @@ FAILURE 1 — "dashboard cannot be interacted with / clicks have no effect" — 
 ==================================================
 
 WHAT IT WAS: clicks were never disabled. Clicking the AI assistant loaded its local
-model, and on the reviewed build that load FROZE the whole dashboard for up to ~48
+model, and on the reviewed build that load FROZE the whole dashboard for up to ~30-48
 seconds while it worked (the animated background kept moving, so it looked fine but
 nothing responded — clicks were queued and only reacted once the load finished). This
-build loads the model in the BACKGROUND without freezing anything, so the desktop stays
-clickable the entire time. We also made the AI bar clickable across its whole area.
+build loads the model on a background worker thread, so it can never block the
+interface; the desktop stays clickable the entire time. We also made the AI bar
+clickable across its whole area.
 
 HOW TO VERIFY:
 
