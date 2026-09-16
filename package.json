@@ -12,6 +12,7 @@
     "calibrate": "node scripts/calibrate.js",
     "audition": "node scripts/audition.js",
     "selftest": "node scripts/selftest.js",
+    "desktop-check": "node scripts/desktop-helper-check.js",
     "perf": "node scripts/perf.js",
     "packs": "node scripts/packs.js",
     "i18n:export": "node scripts/i18n-csv.js export",
@@ -63,6 +64,8 @@
       "!steampipe/**",
       "!scratch/**",
       "!store-assets/**",
+      "!AGENTS.md",
+      "!_steam-app-backup/**",
       "!BUILD.md",
       "!**/.git/**"
     ],

@@ -119,6 +119,28 @@ Cloudflare R2 is the upgrade path if download volume gets heavy.
 
 ## Real Steam release checklist (business + build)
 
+### Desktop-interaction candidate check
+
+Before preparing a review candidate, run the bounded Windows helper checks from a
+developer shell:
+
+```powershell
+npm.cmd run desktop-check
+npm.cmd run packs -- validate
+```
+
+`desktop-check` compiles both PowerShell helpers, rejects an invalid HWND without
+touching Explorer, and starts the event-driven fullscreen watcher long enough to
+observe its initial state. It does not prove desktop z-order or real pointer
+routing; those require a clean physical or VM run of the exact packaged build.
+For that run, set `DE_INPUT_TRACE=1` and inspect `%APPDATA%\dashboard-engine\logs\engine.log`
+if a click appears inert. The interpretation guide is
+[`steam/desktop-interaction-troubleshooting.md`](steam/desktop-interaction-troubleshooting.md).
+
+The build file excludes local review notes (`AGENTS.md`) and `_steam-app-backup/**`
+so they cannot enter a depot through the broad app-file glob. Keep
+`steam_appid.txt` out of the depot as well; the VDF already excludes it.
+
 1. Steam Direct ($100) → **create your app** in Steamworks, get its **AppID**,
    and **enable Workshop** for it. (Until all of that exists, Spacewar/480 is
    the only app you can publish to — there is no generic "public" Workshop.)

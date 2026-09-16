@@ -3,6 +3,29 @@
 Rejection of BuildID **24777826** (2026-08-19), five failures F1–F5. This tracks the
 remediation and the resubmission. Full per-item detail: `steam/f{1..5}-*.md`.
 
+## Latest desktop-interaction investigation (2026-09-15)
+
+The second review reports that every desktop-attached dashboard is inert. Local
+source inspection found three independent failure paths that can produce that
+symptom: the first successful `SetParent` can return a legitimate null previous
+parent; `SetParent` leaves the Electron popup style unchanged; and the
+fullscreen watcher can mistake a focused, full-screen dashboard for the app it
+should pause. The candidate patch now verifies the resulting parent/style,
+captures the native error before any follow-up API call, rolls back partial
+attachment, excludes the dashboard HWND from fullscreen detection, and
+recreates a fresh ordinary window if fallback detachment cannot be verified.
+
+The patch also logs each bounded helper attempt and captures helper stderr. An
+opt-in renderer trace (`DE_INPUT_TRACE=1`) records trusted input milestones
+without text, keys, clipboard data, or notification contents. This is evidence
+collection and candidate code; it is not a claim that Steam acceptance is done.
+
+Verified locally: Node syntax checks, PowerShell parsing, embedded C# compilation
+through controlled invalid-HWND and watcher-start checks, `npm run desktop-check`,
+`npm run packs -- validate`, and `git diff --check`. No production helper was
+run against Explorer. Clean-VM, physical-PC, and Steam candidate interaction
+tests remain pending.
+
 ## Reviewer cover note (paste into the resubmission notes / reply to Valve)
 
 > Thank you for the detailed review. We've addressed all five points:

@@ -2,7 +2,7 @@
 # means: a real app window is currently COVERING THE MONITOR THE WALLPAPER IS ON
 # — so the wallpaper is actually hidden and worth pausing.
 #
-#   powershell -File fullscreen-watch.ps1 [-Monitor <index>]
+#   powershell -File fullscreen-watch.ps1 [-Monitor <index>] [-ExcludeHwnd <hwnd>]
 #
 # -Monitor is the wallpaper's monitor, ranked by (Left, Top) — the SAME index the
 # main process computes (rankedDisplays) and desktop-attach.ps1 uses, so the two
@@ -33,7 +33,10 @@
 # wrongly freezes. Main (lib/presence.js) reads the lines, respawns this with a new
 # -Monitor when the dashboard's screen changes, and kills it on quit.
 
-param([int]$Monitor = -1)
+param(
+  [int]$Monitor = -1,
+  [uint64]$ExcludeHwnd = 0
+)
 
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -52,6 +55,7 @@ public static class FsWatch {
   [DllImport("user32.dll")] static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr clip, MonitorEnumProc cb, IntPtr data);
   [DllImport("user32.dll", CharSet=CharSet.Auto)] static extern bool GetMonitorInfo(IntPtr h, ref MONITORINFO mi);
   [DllImport("user32.dll")] static extern IntPtr SetWinEventHook(uint eMin, uint eMax, IntPtr hmod, WinEventDelegate cb, uint pid, uint tid, uint flags);
+  [DllImport("user32.dll", SetLastError=true)] static extern bool SetProcessDpiAwarenessContext(IntPtr value);
   [DllImport("user32.dll")] static extern IntPtr SetTimer(IntPtr hWnd, IntPtr nIDEvent, uint uElapse, IntPtr lpTimerFunc);
   [DllImport("user32.dll")] static extern bool KillTimer(IntPtr hWnd, IntPtr uIDEvent);
   [DllImport("user32.dll")] static extern int GetMessage(out MSG msg, IntPtr hWnd, uint min, uint max);
@@ -95,6 +99,9 @@ public static class FsWatch {
     try {
       IntPtr h = GetForegroundWindow();
       if (h == IntPtr.Zero) return "NORMAL";
+      // Explicitly exclude the dashboard while its assistant input is focused.
+      // WS_CHILD remains a defensive fallback because SetParent does not set it.
+      if (_exclude != IntPtr.Zero && h == _exclude) return "NORMAL";
       // Skip our own reparented wallpaper window: SetParent makes it a child window
       // (WS_CHILD = 0x40000000), which a normal app window never is.
       int style = GetWindowLong(h, -16); // GWL_STYLE
@@ -117,10 +124,12 @@ public static class FsWatch {
   }
 
   static int _monitor;
+  static IntPtr _exclude;
   static string _last = null;
   static WinEventDelegate _cb; // held so the GC can't collect the callback
   static IntPtr _debTimer = IntPtr.Zero;
   static IntPtr _backTimer = IntPtr.Zero;
+  static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new IntPtr(-4);
   const uint WM_TIMER = 0x0113;
 
   static void Emit() {
@@ -143,8 +152,12 @@ public static class FsWatch {
   }
 
   // Register the hooks and pump messages forever. Returns only on GetMessage error.
-  public static void Run(int monitor) {
+  public static void Run(int monitor, ulong excludeHwnd) {
+    try { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2); } catch { }
     _monitor = monitor;
+    _exclude = IntPtr.Size == 8
+      ? new IntPtr(unchecked((long)excludeHwnd))
+      : new IntPtr(unchecked((int)excludeHwnd));
     Emit(); // report the state at startup (e.g. a game already covering the screen)
     _cb = new WinEventDelegate(OnEvent);
     SetWinEventHook(0x0003, 0x0003, IntPtr.Zero, _cb, 0, 0, 0); // EVENT_SYSTEM_FOREGROUND
@@ -170,7 +183,7 @@ public static class FsWatch {
 
 if ($compiled) {
   try {
-    [FsWatch]::Run($Monitor) # blocks, emitting on every real change
+    [FsWatch]::Run($Monitor, $ExcludeHwnd) # blocks, emitting on every real change
   } catch {
     # Runtime hook/pump failure (rare) → degrade to the old cheap poll. GetState still
     # exists because the type compiled, so we keep the exact same behaviour, just slower.

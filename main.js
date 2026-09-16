@@ -641,32 +641,78 @@ function dashboardMonitorIndex() {
 // Reparent the dashboard under the shell's wallpaper layer, optionally moving it
 // onto a specific monitor (rank in rankedDisplays; -1 = leave bounds as set).
 // The hwnd is program-generated; the PowerShell argv is fixed (CLAUDE.md rule).
-function attachToDesktop(win, monitorIndex = -1) {
+function runDesktopHelper(operation, args, successToken, context = '') {
   return new Promise((resolve) => {
-    if (process.platform !== 'win32') {
-      resolve(false);
-      return;
-    }
-    const handle = win.getNativeWindowHandle();
-    const hwnd = handle.length >= 8 ? handle.readBigUInt64LE(0) : BigInt(handle.readUInt32LE(0));
-    const child = spawn('powershell.exe', [
-      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-      '-File', path.join(__dirname, 'scripts', 'desktop-attach.ps1'),
-      hwnd.toString(), String(monitorIndex),
-    ], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
-
+    if (process.platform !== 'win32') { resolve(false); return; }
+    let child;
     let out = '';
-    child.stdout.on('data', (chunk) => { out += chunk.toString('utf8'); });
-    child.on('error', () => resolve(false));
-    child.on('close', (code) => resolve(code === 0 && out.includes('attached:')));
+    let err = '';
+    let settled = false;
+    let timer = null;
+    const finish = (ok, detail) => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      const stdout = out.replace(/\s+/g, ' ').trim().slice(-1200);
+      const stderr = err.replace(/\s+/g, ' ').trim().slice(-800);
+      logEngine(ok ? 'INFO' : 'WARN', `[desktop] ${operation} helper ${ok ? 'ok' : 'failed'}${context ? ` ${context}` : ''}${detail ? ` (${detail})` : ''}${stdout ? ` stdout=${stdout}` : ''}${stderr ? ` stderr=${stderr}` : ''}`);
+      resolve(ok);
+    };
+    try {
+      child = spawn('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', path.join(__dirname, 'scripts', 'desktop-attach.ps1'),
+        ...args,
+      ], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+      child.stdout.on('data', (chunk) => { out += chunk.toString('utf8'); });
+      child.stderr.on('data', (chunk) => { err += chunk.toString('utf8'); });
+      child.on('error', (e) => finish(false, e && e.message));
+      child.on('close', (code) => finish(code === 0 && out.includes(successToken), `exit ${code}`));
+      // Add-Type can stall if PowerShell is unavailable or blocked by policy;
+      // never leave the engine waiting indefinitely for an attach attempt.
+      timer = setTimeout(() => {
+        try { child.kill(); } catch (e) { /* already gone */ }
+        finish(false, 'timeout');
+      }, 8000);
+    } catch (e) {
+      finish(false, e && e.message);
+    }
   });
+}
+
+function nativeHwnd(win) {
+  const handle = win.getNativeWindowHandle();
+  return handle.length >= 8 ? handle.readBigUInt64LE(0) : BigInt(handle.readUInt32LE(0));
+}
+
+function attachToDesktop(win, monitorIndex = -1, attempt = 1) {
+  if (!win || win.isDestroyed()) return Promise.resolve(false);
+  try {
+    return runDesktopHelper('attach', [nativeHwnd(win).toString(), String(monitorIndex)], 'attached:', `attempt=${attempt} monitor=${monitorIndex}`);
+  } catch (e) {
+    logEngine('WARN', `[desktop] attach preparation failed: ${e && e.message}`);
+    return Promise.resolve(false);
+  }
+}
+
+// A failed helper may have changed the native parent before it exited. Restore
+// top-level parent/style explicitly before exposing the ordinary-window fallback.
+function detachFromDesktop(win) {
+  if (!win || win.isDestroyed() || process.platform !== 'win32') return Promise.resolve(true);
+  try {
+    return runDesktopHelper('detach', [nativeHwnd(win).toString(), '-Detach'], 'detached');
+  } catch (e) {
+    logEngine('WARN', `[desktop] detach preparation failed: ${e && e.message}`);
+    return Promise.resolve(false);
+  }
 }
 
 // Warm the assistant voice engine at most once per app session (the desktop can
 // reload / re-attach, and we don't want the warm-up to stack).
 let warmedVoiceOnce = false;
 
-async function createDashboardWindow() {
+async function createDashboardWindow(options = {}) {
+  const forcePlain = Boolean(options.forcePlain);
   if (dashboardWindow) return;
   // Startup + every relocate route through here — heal a stale/legacy pin so the
   // monitor choice sticks across reboots (Electron's display id isn't stable).
@@ -713,8 +759,15 @@ async function createDashboardWindow() {
       autoplayPolicy: 'no-user-gesture-required',
     },
   });
+  // Give the fullscreen watcher the exact top-level HWND. The dashboard can
+  // briefly own keyboard focus, so style-based exclusion alone is insufficient.
+  if (presenceMonitor) {
+    try { presenceMonitor.setWindow(nativeHwnd(dashboardWindow)); } catch (e) {
+      logEngine('WARN', `[desktop] fullscreen watcher HWND registration failed: ${e && e.message}`);
+    }
+  }
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
-    query: { pack: envFlag('PACK') || '', nogl: envFlag('NO_GL') ? '1' : '', perf: envFlag('PERF') ? '1' : '', fakeHour: envFlag('FAKE_HOUR') || '' },
+    query: { pack: envFlag('PACK') || '', nogl: envFlag('NO_GL') ? '1' : '', perf: envFlag('PERF') ? '1' : '', fakeHour: envFlag('FAKE_HOUR') || '', inputTrace: envFlag('INPUT_TRACE') === '1' ? '1' : '' },
   });
   dashboardWindow.on('closed', () => { dashboardWindow = null; });
   // Push the current power state on first load and every reload/hot-reload, so
@@ -738,18 +791,34 @@ async function createDashboardWindow() {
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
   dashboardWindow.showInactive(); // visible, but don't grab focus on launch
 
-  if (!NO_DESKTOP) {
+  if (!NO_DESKTOP && !forcePlain) {
     // The shell's wallpaper WorkerW may not exist the instant we launch (common
     // on quiet-launch-at-login, before explorer has finished spawning it), so a
     // single attach can miss and drop us to a taskbar window. Retry a few times
     // with a short delay before giving up.
     let attached = false;
     for (let attempt = 0; attempt < 5 && !attached; attempt++) {
-      attached = await attachToDesktop(dashboardWindow, monitorIndex);
+      attached = await attachToDesktop(dashboardWindow, monitorIndex, attempt + 1);
       if (!attached && attempt < 4) await new Promise((resolve) => setTimeout(resolve, 600));
     }
     if (attached) return;
     console.warn('[desktop] could not attach to the wallpaper layer after retries; falling back to a normal window.');
+    const detached = await detachFromDesktop(dashboardWindow);
+    if (!detached) {
+      // If native state cannot be verified, discard the HWND and construct a
+      // fresh ordinary BrowserWindow. Resizing the ambiguous child in place is
+      // not a real fallback and can leave Chromium input routed to Explorer.
+      logEngine('WARN', '[desktop] fallback detach could not verify a top-level window; recreating plain window');
+      const oldWindow = dashboardWindow;
+      await new Promise((resolve) => {
+        if (!oldWindow || oldWindow.isDestroyed()) { resolve(); return; }
+        oldWindow.once('closed', resolve);
+        try { oldWindow.destroy(); } catch (e) { resolve(); }
+      });
+      if (dashboardWindow === oldWindow) dashboardWindow = null;
+      await createDashboardWindow({ forcePlain: true });
+      return;
+    }
   }
   // Fallback (non-Windows, RDP, or a shell change): a normal resizable
   // window instead of a hidden fullscreen one lurking behind everything.
@@ -966,7 +1035,7 @@ function startPresenceMonitoring() {
   presenceMonitor = createPresenceMonitor(__dirname, (fullscreen) => {
     isFullscreen = fullscreen;
     sendDesktopPower();
-  }, dashboardMonitorIndex());
+  }, dashboardMonitorIndex(), (message) => logEngine('WARN', `[fullscreen-watch] ${message}`));
   // "Now playing" from the Windows media session — pushed to the desktop for the
   // `nowplaying` component (personal data; never enters a pack).
   // Exclude our OWN media session (the background-music <audio> registers with
@@ -2395,6 +2464,17 @@ if (IS_SESSION) {
     contents.setWindowOpenHandler(() => ({ action: 'deny' }));
     contents.on('will-navigate', (event) => event.preventDefault());
     contents.on('will-redirect', (event) => event.preventDefault());
+    // Desktop input diagnostics are opt-in and renderer-controlled only through
+    // the fixed DE_INPUT_TRACE flag. The renderer emits milestone lines without
+    // key values or user content; copy just those lines into the rotating engine
+    // log so a clean packaged run can prove where interaction stops.
+    if (envFlag('INPUT_TRACE') === '1') {
+      contents.on('console-message', (_event, _level, message) => {
+        if (typeof message === 'string' && message.startsWith('[input-trace] ')) {
+          logEngine('INPUT', message.slice('[input-trace] '.length));
+        }
+      });
+    }
     // Lock out DevTools + reload in the shipped app. devTools:false already stops
     // DevTools from opening; this also kills the reload shortcut (which could reset
     // a pack's state) and is the belt-and-suspenders for the key combos. In dev,
@@ -2517,7 +2597,8 @@ if (IS_SESSION) {
     // View → Toggle DevTools (+ Reload) would hand end users a way into the renderer
     // and the untrusted-pack surface. The tray menu is separate and unaffected.
     Menu.setApplicationMenu(null);
-    logEngine('INFO', `engine start — v${app.getVersion()} · electron ${process.versions.electron} · ${process.platform} · ${LAUNCHED_AT_LOGIN ? 'login' : 'manual'}`);
+    const launchRoute = IS_SESSION ? 'session' : (WANT_PANEL ? 'panel' : (LAUNCHED_AT_LOGIN ? 'login' : 'engine'));
+    logEngine('INFO', `engine start — pid=${process.pid} packaged=${app.isPackaged ? 1 : 0} route=${launchRoute} · v${app.getVersion()} · electron ${process.versions.electron} · ${process.platform} · userData=${USER_DIR}`);
     // One-time id-alias migration (F4 IP remediation): the built-in default pack was
     // renamed jarvis → aegis. A profile still pointing at the old id resolves to Aegis
     // so it doesn't fall back to a blank pack. Fail-soft; runs once (after the rewrite
