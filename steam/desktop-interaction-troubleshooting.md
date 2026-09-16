@@ -31,6 +31,11 @@ npm.cmd run packs -- validate
 `desktop-check` rejects an invalid HWND and starts the fullscreen watcher long
 enough to observe its initial state. It does not call `SetParent` on Explorer.
 
+Fresh VM consoles can take longer to initialize PowerShell's embedded C# helper
+than a developer machine, so the packaged attach attempt is bounded at 30 seconds.
+The Manager also clamps and centers itself to the available work area; this keeps
+first-run onboarding visible on small VM displays such as 820x615.
+
 ## Interpreting the trace
 
 - No `pointerdown` line after a real click: investigate the native HWND, parent,

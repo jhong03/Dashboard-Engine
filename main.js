@@ -335,11 +335,28 @@ function createManagerWindow() {
     return;
   }
   const splash = createSplashWindow(); // branded loading dialog, shown immediately
+  // Fresh VM consoles are often smaller than the design-size Manager. Clamp the
+  // window to the available work area and center it so first-run onboarding is
+  // visible instead of opening mostly outside the screen.
+  let managerWidth = 1180;
+  let managerHeight = 760;
+  let managerMinWidth = 940;
+  let managerMinHeight = 600;
+  try {
+    const area = screen.getPrimaryDisplay().workAreaSize;
+    const usableWidth = Math.max(320, Number(area.width) - 32);
+    const usableHeight = Math.max(240, Number(area.height) - 32);
+    managerWidth = Math.min(managerWidth, usableWidth);
+    managerHeight = Math.min(managerHeight, usableHeight);
+    managerMinWidth = Math.min(managerMinWidth, managerWidth);
+    managerMinHeight = Math.min(managerMinHeight, managerHeight);
+  } catch { /* keep the design-size fallback */ }
   managerWindow = new BrowserWindow({
-    width: 1180,
-    height: 760,
-    minWidth: 940,
-    minHeight: 600,
+    width: managerWidth,
+    height: managerHeight,
+    minWidth: managerMinWidth,
+    minHeight: managerMinHeight,
+    center: true,
     backgroundColor: '#04080F',
     // Dev capture only (DE_SHOT): frameless + larger-than-screen so a 1920x1080 store
     // screenshot captures at EXACT content size — a framed window's content area is
@@ -641,6 +658,8 @@ function dashboardMonitorIndex() {
 // Reparent the dashboard under the shell's wallpaper layer, optionally moving it
 // onto a specific monitor (rank in rankedDisplays; -1 = leave bounds as set).
 // The hwnd is program-generated; the PowerShell argv is fixed (CLAUDE.md rule).
+const DESKTOP_HELPER_TIMEOUT_MS = 30 * 1000;
+
 function runDesktopHelper(operation, args, successToken, context = '') {
   return new Promise((resolve) => {
     if (process.platform !== 'win32') { resolve(false); return; }
@@ -668,12 +687,13 @@ function runDesktopHelper(operation, args, successToken, context = '') {
       child.stderr.on('data', (chunk) => { err += chunk.toString('utf8'); });
       child.on('error', (e) => finish(false, e && e.message));
       child.on('close', (code) => finish(code === 0 && out.includes(successToken), `exit ${code}`));
-      // Add-Type can stall if PowerShell is unavailable or blocked by policy;
-      // never leave the engine waiting indefinitely for an attach attempt.
+      // Add-Type can be slow on a fresh VM while PowerShell/JIT/Defender warm up;
+      // keep the operation bounded without making the first attach race that
+      // cold-start path. A failure still falls back to a normal window.
       timer = setTimeout(() => {
         try { child.kill(); } catch (e) { /* already gone */ }
         finish(false, 'timeout');
-      }, 8000);
+      }, DESKTOP_HELPER_TIMEOUT_MS);
     } catch (e) {
       finish(false, e && e.message);
     }
