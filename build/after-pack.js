@@ -36,29 +36,32 @@ function findRcedit() {
   return null;
 }
 
-// The bundled llama.cpp server + ggml DLLs are built with MSVC and import the
-// Visual C++ 2015-2022 runtime (VCRUNTIME140 / VCRUNTIME140_1 / MSVCP140), which
-// is NOT part of Windows. We ship the `dir` target (no installer to run
-// vc_redist.exe), so the runtime must travel APP-LOCAL: place the three imported
-// DLLs next to llama-server.exe. Windows resolves an exe's own directory first,
-// so the AI runs on a clean machine with no VC++ redist installed. (Steam review
-// rejects a build whose bundled AI "doesn't run due to a missing dependency".)
+// The bundled native engines (llama.cpp, Piper/ONNX, MeloTTS, and Kokoro) are
+// built with MSVC and import the Visual C++ 2015-2022 runtime (VCRUNTIME140 /
+// VCRUNTIME140_1 / MSVCP140), which is NOT part of Windows. We ship the `dir`
+// target (no installer to run vc_redist.exe), so the runtime must travel
+// APP-LOCAL beside every native executable. Windows resolves an exe's own
+// directory first, so every bundled engine runs on a clean machine with no
+// VC++ redist installed.
 // These DLLs are redistributable app-local under the MSVC redistributable licence.
 function ensureVcRuntime(context) {
-  const llmDir = path.join(context.appOutDir, 'resources', 'app', 'bin', 'llm');
-  const server = path.join(llmDir, 'llama-server.exe');
-  if (!fs.existsSync(server)) return; // no bundled LLM in this build — nothing to do
+  const appDir = path.join(context.appOutDir, 'resources', 'app');
+  const nativeDirs = ['bin/llm', 'bin/piper', 'bin/melotts_full', 'bin/kokoro']
+    .map((relative) => path.join(appDir, relative));
   const sys32 = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32');
   const need = ['vcruntime140.dll', 'vcruntime140_1.dll', 'msvcp140.dll'];
-  const notes = [];
-  for (const dll of need) {
-    const dest = path.join(llmDir, dll);
-    if (fs.existsSync(dest)) { notes.push(`${dll} ok`); continue; }
-    const from = path.join(sys32, dll);
-    if (fs.existsSync(from)) { fs.copyFileSync(from, dest); notes.push(`${dll} copied`); }
-    else notes.push(`${dll} MISSING — install the VC++ 2015-2022 x64 redist on the build box`);
+  for (const nativeDir of nativeDirs) {
+    if (!fs.existsSync(nativeDir)) continue;
+    const notes = [];
+    for (const dll of need) {
+      const dest = path.join(nativeDir, dll);
+      if (fs.existsSync(dest)) { notes.push(`${dll} ok`); continue; }
+      const from = path.join(sys32, dll);
+      if (fs.existsSync(from)) { fs.copyFileSync(from, dest); notes.push(`${dll} copied`); }
+      else notes.push(`${dll} MISSING — install the VC++ 2015-2022 x64 redist on the build box`);
+    }
+    console.log(`[after-pack] ${path.relative(appDir, nativeDir)} VC++ runtime: ${notes.join(', ')}`);
   }
-  console.log(`[after-pack] llama-server VC++ runtime: ${notes.join(', ')}`);
 }
 
 // The voice DSP chain (timbre / character / loudness stages) shells out to
