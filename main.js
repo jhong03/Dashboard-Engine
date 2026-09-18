@@ -641,33 +641,125 @@ function dashboardMonitorIndex() {
 // Reparent the dashboard under the shell's wallpaper layer, optionally moving it
 // onto a specific monitor (rank in rankedDisplays; -1 = leave bounds as set).
 // The hwnd is program-generated; the PowerShell argv is fixed (CLAUDE.md rule).
-function attachToDesktop(win, monitorIndex = -1) {
+const DESKTOP_HELPER_TIMEOUT_MS = 8000;
+
+function runDesktopHelper(operation, win, args, successToken, context = '') {
   return new Promise((resolve) => {
-    if (process.platform !== 'win32') {
-      resolve(false);
-      return;
-    }
+    if (process.platform !== 'win32' || !win || win.isDestroyed()) { resolve(false); return; }
     const handle = win.getNativeWindowHandle();
     const hwnd = handle.length >= 8 ? handle.readBigUInt64LE(0) : BigInt(handle.readUInt32LE(0));
-    const child = spawn('powershell.exe', [
-      '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
-      '-File', path.join(__dirname, 'scripts', 'desktop-attach.ps1'),
-      hwnd.toString(), String(monitorIndex),
-    ], { stdio: ['ignore', 'pipe', 'ignore'], windowsHide: true });
-
+    let child;
     let out = '';
-    child.stdout.on('data', (chunk) => { out += chunk.toString('utf8'); });
-    child.on('error', () => resolve(false));
-    child.on('close', (code) => resolve(code === 0 && out.includes('attached:')));
+    let err = '';
+    let settled = false;
+    let timer = null;
+    const finish = (ok, detail = '') => {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      const stdout = out.replace(/\s+/g, ' ').trim().slice(-1000);
+      const stderr = err.replace(/\s+/g, ' ').trim().slice(-600);
+      const contextText = context ? ' ' + context : '';
+      const detailText = detail ? ' (' + detail + ')' : '';
+      logEngine(ok ? 'INFO' : 'WARN',
+        '[desktop] ' + operation + ' helper ' + (ok ? 'ok' : 'failed') + contextText + detailText
+        + (stdout ? ' stdout=' + stdout : '') + (stderr ? ' stderr=' + stderr : ''));
+      resolve(ok);
+    };
+    try {
+      child = spawn('powershell.exe', [
+        '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass',
+        '-File', path.join(__dirname, 'scripts', 'desktop-attach.ps1'),
+        hwnd.toString(), ...args,
+      ], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+      child.stdout.on('data', (chunk) => { out += chunk.toString('utf8'); });
+      child.stderr.on('data', (chunk) => { err += chunk.toString('utf8'); });
+      child.on('error', (e) => finish(false, e && e.message));
+      child.on('close', (code) => finish(code === 0 && out.includes(successToken), 'exit ' + code));
+      timer = setTimeout(() => {
+        try { child.kill(); } catch (e) { /* already gone */ }
+        finish(false, 'timeout');
+      }, DESKTOP_HELPER_TIMEOUT_MS);
+    } catch (e) {
+      finish(false, e && e.message);
+    }
   });
+}
+
+function attachToDesktop(win, monitorIndex = -1, context = '') {
+  return runDesktopHelper('attach', win, [String(monitorIndex)], 'attached:', context);
+}
+
+function verifyDesktopAttachment(win, context = '') {
+  return runDesktopHelper('verify', win, ['-Verify'], 'verified ', context);
 }
 
 // Warm the assistant voice engine at most once per app session (the desktop can
 // reload / re-attach, and we don't want the warm-up to stack).
 let warmedVoiceOnce = false;
+let desktopAttached = false;
+let desktopWatchTimer = null;
+let desktopWatchBusy = false;
 
-async function createDashboardWindow() {
+function stopDesktopAttachmentWatch() {
+  if (desktopWatchTimer) clearInterval(desktopWatchTimer);
+  desktopWatchTimer = null;
+  desktopWatchBusy = false;
+}
+
+async function recreatePlainDashboard(reason) {
+  desktopAttached = false;
+  stopDesktopAttachmentWatch();
+  logEngine('WARN', '[desktop] recreating plain interactive window reason=' + reason);
+  const oldWindow = dashboardWindow;
+  if (oldWindow && !oldWindow.isDestroyed()) {
+    await new Promise((resolve) => {
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      oldWindow.once('closed', finish);
+      try { oldWindow.destroy(); } catch (e) { finish(); }
+      setTimeout(finish, 1500);
+    });
+  }
+  if (dashboardWindow === oldWindow) dashboardWindow = null;
+  desktopPaused = false;
+  await createDashboardWindow({ forcePlain: true });
+}
+
+function startDesktopAttachmentWatch() {
+  stopDesktopAttachmentWatch();
+  if (NO_DESKTOP || !desktopAttached) return;
+  desktopWatchTimer = setInterval(async () => {
+    if (desktopWatchBusy || !desktopAttached) return;
+    if (!dashboardWindow || dashboardWindow.isDestroyed()) {
+      desktopAttached = false;
+      return;
+    }
+    desktopWatchBusy = true;
+    try {
+      const alive = await verifyDesktopAttachment(dashboardWindow, 'watch');
+      if (alive) return;
+      logEngine('WARN', '[desktop] attachment verification failed; attempting reattach');
+      const monitorIndex = dashboardMonitorIndex();
+      const restored = await attachToDesktop(dashboardWindow, monitorIndex, 'recover');
+      if (restored) {
+        logEngine('INFO', '[desktop] attachment recovered');
+        return;
+      }
+      await recreatePlainDashboard('desktop attachment lost');
+    } finally {
+      desktopWatchBusy = false;
+    }
+  }, 2500);
+}
+
+async function createDashboardWindow(options = {}) {
   if (dashboardWindow) return;
+  const forcePlain = Boolean(options.forcePlain);
   // Startup + every relocate route through here — heal a stale/legacy pin so the
   // monitor choice sticks across reboots (Electron's display id isn't stable).
   // Snapshot the saved pin BEFORE reconcile heals it so the log can show when the
@@ -716,7 +808,11 @@ async function createDashboardWindow() {
   dashboardWindow.loadFile(path.join(__dirname, 'src', 'dashboard.html'), {
     query: { pack: envFlag('PACK') || '', nogl: envFlag('NO_GL') ? '1' : '', perf: envFlag('PERF') ? '1' : '', fakeHour: envFlag('FAKE_HOUR') || '' },
   });
-  dashboardWindow.on('closed', () => { dashboardWindow = null; });
+  const createdDashboardWindow = dashboardWindow;
+  createdDashboardWindow.on('closed', () => {
+    if (dashboardWindow === createdDashboardWindow) dashboardWindow = null;
+    desktopAttached = false;
+  });
   // Push the current power state on first load and every reload/hot-reload, so
   // the renderer starts at the right fps / frozen if a game is already up.
   dashboardWindow.webContents.on('did-finish-load', () => { sendDesktopPower(); sendBackgroundMotion(); });
@@ -738,22 +834,33 @@ async function createDashboardWindow() {
   await new Promise((resolve) => dashboardWindow.once('ready-to-show', resolve));
   dashboardWindow.showInactive(); // visible, but don't grab focus on launch
 
-  if (!NO_DESKTOP) {
+  if (!NO_DESKTOP && !forcePlain) {
     // The shell's wallpaper WorkerW may not exist the instant we launch (common
     // on quiet-launch-at-login, before explorer has finished spawning it), so a
     // single attach can miss and drop us to a taskbar window. Retry a few times
     // with a short delay before giving up.
     let attached = false;
     for (let attempt = 0; attempt < 5 && !attached; attempt++) {
-      attached = await attachToDesktop(dashboardWindow, monitorIndex);
+      attached = await attachToDesktop(dashboardWindow, monitorIndex, 'startup-' + (attempt + 1));
       if (!attached && attempt < 4) await new Promise((resolve) => setTimeout(resolve, 600));
     }
-    if (attached) return;
-    console.warn('[desktop] could not attach to the wallpaper layer after retries; falling back to a normal window.');
+    if (attached) {
+      desktopAttached = true;
+      startDesktopAttachmentWatch();
+      // Verify once immediately, before returning control to the rest of the
+      // engine. A shell race must not leave a half-attached HWND alive.
+      if (!(await verifyDesktopAttachment(dashboardWindow, 'startup'))) {
+        await recreatePlainDashboard('startup verification failed');
+      }
+      return;
+    }
+    await recreatePlainDashboard('startup attach failed');
+    return;
   }
   // Fallback (non-Windows, RDP, or a shell change): a normal resizable
   // window instead of a hidden fullscreen one lurking behind everything.
   if (dashboardWindow) {
+    desktopAttached = false;
     dashboardWindow.setFocusable(true);
     dashboardWindow.setSkipTaskbar(false);
     dashboardWindow.setResizable(true);
@@ -791,6 +898,8 @@ function toggleDesktop() {
 function relocateDesktop() {
   if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
   const wasPaused = desktopPaused;
+  desktopAttached = false;
+  stopDesktopAttachmentWatch();
   dashboardWindow.destroy();
   dashboardWindow = null;
   desktopPaused = false;
@@ -2999,6 +3108,7 @@ if (IS_SESSION) {
 
   // Don't leave the full-screen watcher process behind on quit.
   app.on('before-quit', () => {
+    stopDesktopAttachmentWatch();
     if (presenceMonitor) presenceMonitor.stop();
     if (mediaMonitor) mediaMonitor.stop();
     if (audioMixer) audioMixer.stop();

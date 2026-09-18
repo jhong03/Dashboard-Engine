@@ -25,19 +25,26 @@
 
 param(
     [Parameter(Mandatory = $true)][uint64]$Hwnd,
-    [int]$Monitor = -1
+    [int]$Monitor = -1,
+    [switch]$Verify
 )
 
 Add-Type @"
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text;
 
 public static class DesktopLayer {
     [DllImport("user32.dll")] static extern IntPtr FindWindow(string cls, string title);
     [DllImport("user32.dll")] static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
     [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, UIntPtr w, IntPtr l, uint flags, uint timeout, out UIntPtr result);
     [DllImport("user32.dll")] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
+    [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr child);
+    [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] static extern bool IsWindowEnabled(IntPtr h);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder name, int max);
     [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc cb, IntPtr l);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] static extern bool MoveWindow(IntPtr h, int x, int y, int w, int ht, bool repaint);
@@ -84,6 +91,29 @@ public static class DesktopLayer {
         MoveWindow(child, m.Left - origin.Left, m.Top - origin.Top, m.Right - m.Left, m.Bottom - m.Top, true);
     }
 
+    static string ClassName(IntPtr h) {
+        StringBuilder name = new StringBuilder(128);
+        return h != IntPtr.Zero && GetClassName(h, name, name.Capacity) > 0 ? name.ToString() : "?";
+    }
+
+    static string State(IntPtr child) {
+        IntPtr parent = GetParent(child);
+        return String.Format("parent={0} class={1} visible={2} parentVisible={3} enabled={4}",
+            parent.ToInt64(), ClassName(parent), IsWindowVisible(child),
+            parent != IntPtr.Zero && IsWindowVisible(parent), IsWindowEnabled(child));
+    }
+
+    public static string Verify(long hwnd) {
+        IntPtr child = new IntPtr(hwnd);
+        if (!IsWindow(child)) return "verify-failed invalid-window";
+        IntPtr parent = GetParent(child);
+        if (parent == IntPtr.Zero || !IsWindow(parent)) return "verify-failed parent-missing";
+        if (!IsWindowVisible(child)) return "verify-failed child-hidden";
+        if (!IsWindowVisible(parent)) return "verify-failed parent-hidden";
+        if (!IsWindowEnabled(child)) return "verify-failed child-disabled";
+        return "verified " + State(child);
+    }
+
     public static long Attach(long hwnd, int monitor) {
         IntPtr progman = FindWindow("Progman", null);
         if (progman == IntPtr.Zero) return 0;
@@ -103,14 +133,26 @@ public static class DesktopLayer {
         if (target == IntPtr.Zero) return 0;
 
         IntPtr child = new IntPtr(hwnd);
-        if (SetParent(child, target) == IntPtr.Zero) return 0;
+        // SetParent returns the PREVIOUS parent. NULL is valid when the
+        // top-level Electron window has no previous parent, so verify the
+        // resulting relationship instead of treating the return value as the
+        // success signal.
+        SetParent(child, target);
+        if (GetParent(child) != target) return 0;
         if (monitor >= 0) PositionOnMonitor(child, target, monitor);
         return target.ToInt64();
     }
 }
 "@
 
-$target = [DesktopLayer]::Attach([long]$Hwnd, $Monitor)
+$hwndLong = [long]$Hwnd
+if ($Verify) {
+    $status = [DesktopLayer]::Verify($hwndLong)
+    Write-Output $status
+    if ($status.StartsWith("verified ")) { exit 0 }
+    exit 1
+}
+$target = [DesktopLayer]::Attach($hwndLong, $Monitor)
 if ($target -eq 0) {
     Write-Output "attach-failed"
     exit 1
