@@ -95,6 +95,7 @@ const bridge = {
     value: Number(payload.value) || 0,
   }),
   onHealthRearm: subscription('aegis:desktop:healthRearm'), // re-announce active alerts when enabled
+  onHealthVoiceChanged: subscription('aegis:healthvoice:changed'),
 
   // Background music (configured in Manager → Settings; played here). The
   // desktop only READS the library and hears about changes — it works in opaque

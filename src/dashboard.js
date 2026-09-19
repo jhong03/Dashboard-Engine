@@ -5,7 +5,7 @@
 // edit is exactly what your desktop shows. No chrome, no input; selection
 // happens in the manager/tray and arrives over IPC.
 
-/* global aegis, AegisComponents */
+/* global aegis, AegisComponents, AegisHealthAlerts */
 
 // Reminder edits made from the desktop calendar's own popover repaint in place;
 // their reminders:changed echo must NOT force a full pack reload (that would
@@ -18,21 +18,15 @@ function markLocalReminderEdit() { localReminderEditAt = Date.now(); }
 // Spoken health alerts play through their own AudioContext (short
 // clips, independent of the assistant panel and music). Main does all the
 // gating + de-duplication; the component only reports genuine level CHANGES.
-let alertAudioCtx = null;
-function playAlertPcm(pcm, sampleRate) {
-  try {
-    if (!alertAudioCtx) alertAudioCtx = new AudioContext();
-    const int16 = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength >> 1);
-    const floats = new Float32Array(int16.length);
-    for (let i = 0; i < int16.length; i++) floats[i] = int16[i] / 32768;
-    const buffer = alertAudioCtx.createBuffer(1, floats.length, sampleRate || 22050);
-    buffer.copyToChannel(floats, 0);
-    const src = alertAudioCtx.createBufferSource();
-    src.buffer = buffer;
-    src.connect(alertAudioCtx.destination);
-    src.start();
-  } catch { /* audio unavailable — the visual health line still shows the alert */ }
-}
+const alertPlayer = AegisHealthAlerts.createPlayer();
+const alertQueue = AegisHealthAlerts.createQueue({
+  request: (payload) => aegis.healthAlert(payload),
+  play: alertPlayer.play,
+  stop: alertPlayer.stop,
+  cooldownMs: 2000,
+});
+window.addEventListener('beforeunload', () => alertQueue.setEnabled(false));
+aegis.onHealthVoiceChanged((enabled) => alertQueue.setEnabled(enabled));
 
 const renderer = AegisComponents.createRenderer({
   stats: () => aegis.stats(),
@@ -92,12 +86,9 @@ const renderer = AegisComponents.createRenderer({
   },
   // Spoken health alerts. Present ONLY on the desktop, so editor /
   // manager previews never speak. Main gates on the opt-in setting + rate-limits;
-  // here we just play the returned PCM (with a light local throttle so a burst of
-  // component transitions doesn't spam the IPC).
+  // Queue the entire request/playback lifecycle so fast synths cannot overlap.
   speakHealthAlert: (metric, severity, value) => {
-    aegis.healthAlert({ metric, severity, value }).then((out) => {
-      if (out && out.ok && out.pcm) playAlertPcm(out.pcm, out.sampleRate);
-    }).catch(() => {});
+    alertQueue.enqueue({ metric, severity, value });
   },
 });
 
