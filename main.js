@@ -857,12 +857,14 @@ async function createDashboardWindow(options = {}) {
     await recreatePlainDashboard('startup attach failed');
     return;
   }
-  // Fallback (non-Windows, RDP, or a shell change): a normal resizable
-  // window instead of a hidden fullscreen one lurking behind everything.
+  // Fallback (non-Windows, RDP, or a shell change): keep a usable resizable
+  // window, but do not present it as an application in the taskbar. The
+  // desktop attachment failed, so this is still a recovery surface rather
+  // than a normal app window.
   if (dashboardWindow) {
     desktopAttached = false;
     dashboardWindow.setFocusable(true);
-    dashboardWindow.setSkipTaskbar(false);
+    dashboardWindow.setSkipTaskbar(true);
     dashboardWindow.setResizable(true);
     dashboardWindow.setBounds({ width: 1180, height: 760, x: display.bounds.x + 60, y: display.bounds.y + 60 });
   }
