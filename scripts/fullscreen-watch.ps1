@@ -33,7 +33,7 @@
 # wrongly freezes. Main (lib/presence.js) reads the lines, respawns this with a new
 # -Monitor when the dashboard's screen changes, and kills it on quit.
 
-param([int]$Monitor = -1)
+param([int]$Monitor = -1, [uint64]$CheckWindow = 0)
 
 $ErrorActionPreference = 'SilentlyContinue'
 
@@ -46,6 +46,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 public static class FsWatch {
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr h, uint flags);
   [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h, out RECT r);
   [DllImport("user32.dll")] public static extern int GetWindowLong(IntPtr h, int idx);
   [DllImport("user32.dll", CharSet=CharSet.Auto)] public static extern int GetClassName(IntPtr h, StringBuilder s, int max);
@@ -92,11 +93,14 @@ public static class FsWatch {
 
   // The state right now: is the foreground window covering the wallpaper's monitor?
   public static string GetState(int monitor) {
+    return GetWindowState(GetForegroundWindow(), monitor);
+  }
+
+  public static string GetWindowState(IntPtr h, int monitor) {
     try {
-      IntPtr h = GetForegroundWindow();
       if (h == IntPtr.Zero) return "NORMAL";
-      // Skip our own reparented wallpaper window: SetParent makes it a child window
-      // (WS_CHILD = 0x40000000), which a normal app window never is.
+      // SetParent does NOT set WS_CHILD. The dashboard keeps its popup style
+      // for keyboard focus, so also identify it by its real desktop parent.
       int style = GetWindowLong(h, -16); // GWL_STYLE
       if ((style & 0x40000000) != 0) return "NORMAL";
       // Skip the shell/desktop itself (Progman / WorkerW / the taskbar).
@@ -104,6 +108,10 @@ public static class FsWatch {
       GetClassName(h, sb, 260);
       string cls = sb.ToString();
       if (cls == "" || cls == "Progman" || cls == "WorkerW" || cls == "Shell_TrayWnd" || cls == "Shell_SecondaryTrayWnd") return "NORMAL";
+      IntPtr parent = GetAncestor(h, 1); // GA_PARENT, not popup owner
+      sb.Clear();
+      if (parent != IntPtr.Zero) GetClassName(parent, sb, 260);
+      if (sb.ToString() == "Progman" || sb.ToString() == "WorkerW") return "NORMAL";
       RECT wr;
       if (!GetWindowRect(h, out wr)) return "NORMAL";
       RECT dash = new RECT();
@@ -167,6 +175,12 @@ public static class FsWatch {
 "@
   $compiled = $true
 } catch { $compiled = $false }
+
+if ($CheckWindow -ne 0) {
+  if (!$compiled) { Write-Error 'Fullscreen checker compilation failed'; exit 1 }
+  Write-Output ([FsWatch]::GetWindowState([IntPtr][long]$CheckWindow, $Monitor))
+  exit 0
+}
 
 if ($compiled) {
   try {

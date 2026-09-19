@@ -734,18 +734,23 @@ function startDesktopAttachmentWatch() {
   stopDesktopAttachmentWatch();
   if (NO_DESKTOP || !desktopAttached) return;
   desktopWatchTimer = setInterval(async () => {
-    if (desktopWatchBusy || !desktopAttached) return;
+    // Manual pause intentionally hides the HWND; it is not attachment loss.
+    if (desktopWatchBusy || !desktopAttached || desktopPaused) return;
     if (!dashboardWindow || dashboardWindow.isDestroyed()) {
       desktopAttached = false;
       return;
     }
     desktopWatchBusy = true;
+    const watchedWindow = dashboardWindow;
     try {
-      const alive = await verifyDesktopAttachment(dashboardWindow, 'watch');
+      const alive = await verifyDesktopAttachment(watchedWindow, 'watch');
+      // The user may pause or change displays while the helper is running.
+      if (desktopPaused || dashboardWindow !== watchedWindow || watchedWindow.isDestroyed()) return;
       if (alive) return;
       logEngine('WARN', '[desktop] attachment verification failed; attempting reattach');
       const monitorIndex = dashboardMonitorIndex();
-      const restored = await attachToDesktop(dashboardWindow, monitorIndex, 'recover');
+      const restored = await attachToDesktop(watchedWindow, monitorIndex, 'recover');
+      if (desktopPaused || dashboardWindow !== watchedWindow || watchedWindow.isDestroyed()) return;
       if (restored) {
         logEngine('INFO', '[desktop] attachment recovered');
         return;

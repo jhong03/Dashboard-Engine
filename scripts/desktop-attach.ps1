@@ -26,7 +26,8 @@
 param(
     [Parameter(Mandatory = $true)][uint64]$Hwnd,
     [int]$Monitor = -1,
-    [switch]$Verify
+    [switch]$Verify,
+    [switch]$Inspect
 )
 
 Add-Type @"
@@ -39,8 +40,11 @@ public static class DesktopLayer {
     [DllImport("user32.dll")] static extern IntPtr FindWindow(string cls, string title);
     [DllImport("user32.dll")] static extern IntPtr FindWindowEx(IntPtr parent, IntPtr after, string cls, string title);
     [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, UIntPtr w, IntPtr l, uint flags, uint timeout, out UIntPtr result);
-    [DllImport("user32.dll")] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
+    [DllImport("user32.dll", SetLastError=true)] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
     [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr child);
+    [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr child, uint flags);
+    [DllImport("user32.dll")] static extern IntPtr GetDesktopWindow();
+    [DllImport("kernel32.dll")] static extern void SetLastError(uint error);
     [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
     [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] static extern bool IsWindowEnabled(IntPtr h);
@@ -59,6 +63,7 @@ public static class DesktopLayer {
 
     static IntPtr workerAfterDefView = IntPtr.Zero;
     static List<RECT> monitors;
+    public static string LastStatus = "not-started";
 
     static bool Scan(IntPtr h, IntPtr l) {
         if (FindWindowEx(h, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero) {
@@ -96,18 +101,32 @@ public static class DesktopLayer {
         return h != IntPtr.Zero && GetClassName(h, name, name.Capacity) > 0 ? name.ToString() : "?";
     }
 
-    static string State(IntPtr child) {
-        IntPtr parent = GetParent(child);
-        return String.Format("parent={0} class={1} visible={2} parentVisible={3} enabled={4}",
-            parent.ToInt64(), ClassName(parent), IsWindowVisible(child),
-            parent != IntPtr.Zero && IsWindowVisible(parent), IsWindowEnabled(child));
+    static IntPtr ActualParent(IntPtr child) {
+        // GetParent reports the OWNER for WS_POPUP windows. Build 13 keeps
+        // Electron's popup style for keyboard input, so use the actual tree.
+        return GetAncestor(child, 1); // GA_PARENT
     }
+
+    static string State(IntPtr child) {
+        IntPtr parent = ActualParent(child);
+        RECT rect;
+        GetWindowRect(child, out rect);
+        return String.Format("hwnd={0} parent={1} class={2} visible={3} parentVisible={4} enabled={5} getParent={6} rect={7},{8},{9},{10}",
+            child.ToInt64(),
+            parent.ToInt64(), ClassName(parent), IsWindowVisible(child),
+            parent != IntPtr.Zero && IsWindowVisible(parent), IsWindowEnabled(child), GetParent(child).ToInt64(),
+            rect.Left, rect.Top, rect.Right, rect.Bottom);
+    }
+
+    public static string Inspect(long hwnd) { return State(new IntPtr(hwnd)); }
 
     public static string Verify(long hwnd) {
         IntPtr child = new IntPtr(hwnd);
         if (!IsWindow(child)) return "verify-failed invalid-window";
-        IntPtr parent = GetParent(child);
-        if (parent == IntPtr.Zero || !IsWindow(parent)) return "verify-failed parent-missing";
+        IntPtr parent = ActualParent(child);
+        if (parent == IntPtr.Zero || parent == GetDesktopWindow() || !IsWindow(parent)) return "verify-failed parent-missing " + State(child);
+        string cls = ClassName(parent);
+        if (cls != "Progman" && cls != "WorkerW") return "verify-failed unexpected-parent " + State(child);
         if (!IsWindowVisible(child)) return "verify-failed child-hidden";
         if (!IsWindowVisible(parent)) return "verify-failed parent-hidden";
         if (!IsWindowEnabled(child)) return "verify-failed child-disabled";
@@ -115,8 +134,10 @@ public static class DesktopLayer {
     }
 
     public static long Attach(long hwnd, int monitor) {
+        IntPtr child = new IntPtr(hwnd);
+        if (!IsWindow(child)) { LastStatus = "invalid-window"; return 0; }
         IntPtr progman = FindWindow("Progman", null);
-        if (progman == IntPtr.Zero) return 0;
+        if (progman == IntPtr.Zero) { LastStatus = "progman-not-found"; return 0; }
 
         // Ask Progman to spawn the wallpaper WorkerW (no-op if already there).
         UIntPtr ignored;
@@ -130,22 +151,32 @@ public static class DesktopLayer {
             EnumWindows(Scan, IntPtr.Zero);
             target = workerAfterDefView;
         }
-        if (target == IntPtr.Zero) return 0;
+        if (target == IntPtr.Zero) { LastStatus = "wallpaper-target-not-found"; return 0; }
 
-        IntPtr child = new IntPtr(hwnd);
         // SetParent returns the PREVIOUS parent. NULL is valid when the
         // top-level Electron window has no previous parent, so verify the
         // resulting relationship instead of treating the return value as the
         // success signal.
-        SetParent(child, target);
-        if (GetParent(child) != target) return 0;
+        SetLastError(0);
+        IntPtr previous = SetParent(child, target);
+        int error = Marshal.GetLastWin32Error();
+        if (ActualParent(child) != target) {
+            LastStatus = String.Format("parent-mismatch target={0} previous={1} error={2} {3}",
+                target.ToInt64(), previous.ToInt64(), error, State(child));
+            return 0;
+        }
         if (monitor >= 0) PositionOnMonitor(child, target, monitor);
+        LastStatus = State(child);
         return target.ToInt64();
     }
 }
 "@
 
 $hwndLong = [long]$Hwnd
+if ($Inspect) {
+    Write-Output ([DesktopLayer]::Inspect($hwndLong))
+    exit 0
+}
 if ($Verify) {
     $status = [DesktopLayer]::Verify($hwndLong)
     Write-Output $status
@@ -154,8 +185,8 @@ if ($Verify) {
 }
 $target = [DesktopLayer]::Attach($hwndLong, $Monitor)
 if ($target -eq 0) {
-    Write-Output "attach-failed"
+    Write-Output "attach-failed $([DesktopLayer]::LastStatus)"
     exit 1
 }
-Write-Output "attached:$target"
+Write-Output "attached:$target $([DesktopLayer]::LastStatus)"
 exit 0
