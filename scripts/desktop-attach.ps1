@@ -218,35 +218,27 @@ public static class DesktopLayer {
         if (target == IntPtr.Zero) { LastStatus = "wallpaper-target-not-found"; return 0; }
         if (!IsWindow(target)) { LastStatus = "wallpaper-target-invalid"; return 0; }
 
-        IntPtr oldParent = GetParent(child);
+        IntPtr oldParent = ActualParent(child);
         IntPtr oldStyle = GetStyle(child);
         RECT oldRect;
         bool hadRect = GetWindowRect(child, out oldRect);
         if (oldStyle == IntPtr.Zero) { LastStatus = "style-read-failed"; return 0; }
 
-        // SetParent does not update WS_CHILD/WS_POPUP. Make the window a real
-        // child before reparenting, then verify the resulting style and parent.
-        long childStyle = (oldStyle.ToInt64() & 0xFFFFFFFFL & ~WS_POPUP) | WS_CHILD;
-        if (!SetStyle(child, StyleValue(childStyle))) {
-            LastStatus = "child-style-update-failed";
-            Restore(child, oldParent, oldStyle, oldRect, hadRect);
-            return 0;
-        }
-        FrameChanged(child);
-
-        // The return value is the PREVIOUS parent. It is legitimately NULL when
-        // the top-level Electron window is first attached, so success is decided
-        // by the post-call parent relationship, not by the return value alone.
+        // Keep Electron's WS_POPUP style. SetParent changes the desktop ownership
+        // relationship, while the popup style is what lets Chromium activate the
+        // window and route mouse/keyboard focus into HTML controls. A WS_CHILD
+        // conversion renders behind the shell but cannot reliably activate from
+        // the desktop on every Windows 11 shell build.
         IntPtr previous = SetParent(child, target);
         int setParentError = Marshal.GetLastWin32Error();
-        IntPtr resultingParent = GetParent(child);
+        IntPtr resultingParent = ActualParent(child);
         if (resultingParent != target) {
             LastStatus = String.Format("setparent-failed previous={0} error={1}", previous.ToInt64(), setParentError);
             Restore(child, oldParent, oldStyle, oldRect, hadRect);
             return 0;
         }
         IntPtr resultingStyle = GetStyle(child);
-        if ((resultingStyle.ToInt64() & WS_CHILD) == 0 || (resultingStyle.ToInt64() & WS_POPUP) != 0) {
+        if ((resultingStyle.ToInt64() & WS_POPUP) == 0) {
             LastStatus = "post-attach-style-invalid";
             Restore(child, oldParent, oldStyle, oldRect, hadRect);
             return 0;
