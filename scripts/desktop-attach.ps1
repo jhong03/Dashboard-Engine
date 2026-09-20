@@ -70,8 +70,11 @@ public static class DesktopLayer {
     [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
 
     const int GWL_STYLE = -16;
+    const int GWL_EXSTYLE = -20;
     const long WS_CHILD = 0x40000000L;
     const long WS_POPUP = 0x80000000L;
+    const long WS_EX_TOOLWINDOW = 0x00000080L;
+    const long WS_EX_APPWINDOW = 0x00040000L;
     const uint SWP_NOSIZE = 0x0001;
     const uint SWP_NOMOVE = 0x0002;
     const uint SWP_NOZORDER = 0x0004;
@@ -96,15 +99,27 @@ public static class DesktopLayer {
         return GetStyle(h) == style;
     }
 
+    static IntPtr GetExStyle(IntPtr h) {
+        long value = IntPtr.Size == 8 ? GetWindowLongPtr64(h, GWL_EXSTYLE).ToInt64() : GetWindowLong32(h, GWL_EXSTYLE);
+        return StyleValue(value & 0xFFFFFFFFL);
+    }
+
+    static bool SetExStyle(IntPtr h, IntPtr style) {
+        if (IntPtr.Size == 8) SetWindowLongPtr64(h, GWL_EXSTYLE, style);
+        else SetWindowLong32(h, GWL_EXSTYLE, style.ToInt32());
+        return GetExStyle(h) == style;
+    }
+
     static void FrameChanged(IntPtr h) {
         SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     }
 
-    static void Restore(IntPtr child, IntPtr parent, IntPtr style, RECT oldRect, bool hadRect) {
+    static void Restore(IntPtr child, IntPtr parent, IntPtr style, IntPtr exStyle, RECT oldRect, bool hadRect) {
         if (IsWindow(child)) {
             if (GetParent(child) != parent) SetParent(child, parent);
             SetStyle(child, style);
+            SetExStyle(child, exStyle);
             if (hadRect) SetWindowPos(child, IntPtr.Zero, oldRect.Left, oldRect.Top,
                 oldRect.Right - oldRect.Left, oldRect.Bottom - oldRect.Top,
                 SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
@@ -220,6 +235,7 @@ public static class DesktopLayer {
 
         IntPtr oldParent = ActualParent(child);
         IntPtr oldStyle = GetStyle(child);
+        IntPtr oldExStyle = GetExStyle(child);
         RECT oldRect;
         bool hadRect = GetWindowRect(child, out oldRect);
         if (oldStyle == IntPtr.Zero) { LastStatus = "style-read-failed"; return 0; }
@@ -234,18 +250,32 @@ public static class DesktopLayer {
         IntPtr resultingParent = ActualParent(child);
         if (resultingParent != target) {
             LastStatus = String.Format("setparent-failed previous={0} error={1}", previous.ToInt64(), setParentError);
-            Restore(child, oldParent, oldStyle, oldRect, hadRect);
+            Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
             return 0;
         }
         IntPtr resultingStyle = GetStyle(child);
         if ((resultingStyle.ToInt64() & WS_POPUP) == 0) {
             LastStatus = "post-attach-style-invalid";
-            Restore(child, oldParent, oldStyle, oldRect, hadRect);
+            Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
+            return 0;
+        }
+        // A popup remains focusable, but the tool-window extended style keeps
+        // the attached dashboard out of the taskbar and Alt+Tab list.
+        long attachedExStyle = (GetExStyle(child).ToInt64() & 0xFFFFFFFFL & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW;
+        if (!SetExStyle(child, StyleValue(attachedExStyle))) {
+            LastStatus = "desktop-exstyle-update-failed";
+            Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
+            return 0;
+        }
+        IntPtr resultingExStyle = GetExStyle(child);
+        if ((resultingExStyle.ToInt64() & WS_EX_TOOLWINDOW) == 0 || (resultingExStyle.ToInt64() & WS_EX_APPWINDOW) != 0) {
+            LastStatus = "post-attach-exstyle-invalid";
+            Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
             return 0;
         }
         if (!PositionOnMonitor(child, target, monitor)) {
             LastStatus = "monitor-position-failed";
-            Restore(child, oldParent, oldStyle, oldRect, hadRect);
+            Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
             return 0;
         }
         LastStatus = State(child);
@@ -270,6 +300,11 @@ public static class DesktopLayer {
         long topStyle = (style.ToInt64() & 0xFFFFFFFFL & ~WS_CHILD) | WS_POPUP;
         if (!SetStyle(child, StyleValue(topStyle))) {
             LastStatus = "top-level-style-update-failed";
+            return false;
+        }
+        long topExStyle = (GetExStyle(child).ToInt64() & 0xFFFFFFFFL & ~WS_EX_TOOLWINDOW) | WS_EX_APPWINDOW;
+        if (!SetExStyle(child, StyleValue(topExStyle))) {
+            LastStatus = "top-level-exstyle-update-failed";
             return false;
         }
         FrameChanged(child);
