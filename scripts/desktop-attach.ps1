@@ -21,13 +21,13 @@
 # bounds untouched (the primary/default path, unchanged from before).
 #
 # Exit code 0 + "attached:<target>" on success; non-zero means the caller
-# should fall back to a plain window.
+# should fall back to a plain window. -Detach is used by that fallback to
+# restore a genuinely top-level window after a partial/ambiguous attach.
 
 param(
     [Parameter(Mandatory = $true)][uint64]$Hwnd,
     [int]$Monitor = -1,
-    [switch]$Verify,
-    [switch]$Inspect
+    [switch]$Detach
 )
 
 Add-Type @"
@@ -42,13 +42,16 @@ public static class DesktopLayer {
     [DllImport("user32.dll")] static extern IntPtr SendMessageTimeout(IntPtr h, uint msg, UIntPtr w, IntPtr l, uint flags, uint timeout, out UIntPtr result);
     [DllImport("user32.dll", SetLastError=true)] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
     [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr child);
-    [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr child, uint flags);
-    [DllImport("user32.dll")] static extern IntPtr GetDesktopWindow();
-    [DllImport("kernel32.dll")] static extern void SetLastError(uint error);
     [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
-    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
-    [DllImport("user32.dll")] static extern bool IsWindowEnabled(IntPtr h);
-    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder name, int max);
+    // Use the exported Unicode entry points explicitly. The Win32 headers
+    // expose these names as macros, but there is no reliable undecorated
+    // Get/SetWindowLongPtr export for a C# P/Invoke lookup.
+    [DllImport("user32.dll", EntryPoint="GetWindowLongPtrW", SetLastError=true)] static extern IntPtr GetWindowLongPtr64(IntPtr h, int index);
+    [DllImport("user32.dll", EntryPoint="SetWindowLongPtrW", SetLastError=true)] static extern IntPtr SetWindowLongPtr64(IntPtr h, int index, IntPtr value);
+    [DllImport("user32.dll", EntryPoint="GetWindowLongW", SetLastError=true)] static extern int GetWindowLong32(IntPtr h, int index);
+    [DllImport("user32.dll", EntryPoint="SetWindowLongW", SetLastError=true)] static extern int SetWindowLong32(IntPtr h, int index, int value);
+    [DllImport("user32.dll", SetLastError=true)] static extern bool SetWindowPos(IntPtr h, IntPtr after, int x, int y, int w, int ht, uint flags);
+    [DllImport("user32.dll", SetLastError=true)] static extern bool SetProcessDpiAwarenessContext(IntPtr value);
     [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc cb, IntPtr l);
     [DllImport("user32.dll")] static extern bool GetWindowRect(IntPtr h, out RECT r);
     [DllImport("user32.dll")] static extern bool MoveWindow(IntPtr h, int x, int y, int w, int ht, bool repaint);
@@ -60,6 +63,60 @@ public static class DesktopLayer {
 
     [StructLayout(LayoutKind.Sequential)] public struct RECT { public int Left, Top, Right, Bottom; }
     [StructLayout(LayoutKind.Sequential)] public struct MONITORINFO { public int cbSize; public RECT rcMonitor; public RECT rcWork; public uint dwFlags; }
+
+    const int GWL_STYLE = -16;
+    const long WS_CHILD = 0x40000000L;
+    const long WS_POPUP = 0x80000000L;
+    const uint SWP_NOSIZE = 0x0001;
+    const uint SWP_NOMOVE = 0x0002;
+    const uint SWP_NOZORDER = 0x0004;
+    const uint SWP_NOACTIVATE = 0x0010;
+    const uint SWP_FRAMECHANGED = 0x0020;
+    static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new IntPtr(-4);
+
+    public static string LastStatus = "";
+
+    static IntPtr StyleValue(long value) {
+        return IntPtr.Size == 8 ? new IntPtr(value) : new IntPtr(unchecked((int)value));
+    }
+
+    static IntPtr GetStyle(IntPtr h) {
+        long value = IntPtr.Size == 8 ? GetWindowLongPtr64(h, GWL_STYLE).ToInt64() : GetWindowLong32(h, GWL_STYLE);
+        // GWL_STYLE is a 32-bit value even when LONG_PTR is 64-bit. Normalize
+        // it before bit operations so WS_POPUP is never sign-extended on x64.
+        return StyleValue(value & 0xFFFFFFFFL);
+    }
+
+    static bool SetStyle(IntPtr h, IntPtr style) {
+        if (IntPtr.Size == 8) SetWindowLongPtr64(h, GWL_STYLE, style);
+        else SetWindowLong32(h, GWL_STYLE, style.ToInt32());
+        return GetStyle(h) == style;
+    }
+
+    static void FrameChanged(IntPtr h) {
+        SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+    }
+
+    static string State(IntPtr h) {
+        RECT r;
+        IntPtr style = GetStyle(h);
+        string rect = GetWindowRect(h, out r)
+            ? String.Format("rect={0},{1},{2},{3}", r.Left, r.Top, r.Right, r.Bottom)
+            : "rect=?";
+        return String.Format("parent={0} style=0x{1:X} {2}", GetParent(h).ToInt64(), style.ToInt64(), rect);
+    }
+
+    static void Restore(IntPtr child, IntPtr parent, IntPtr style, RECT oldRect, bool hadRect) {
+        if (IsWindow(child)) {
+            if (GetParent(child) != parent) SetParent(child, parent);
+            SetStyle(child, style);
+            if (hadRect) SetWindowPos(child, IntPtr.Zero, oldRect.Left, oldRect.Top,
+                oldRect.Right - oldRect.Left, oldRect.Bottom - oldRect.Top,
+                SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+            else FrameChanged(child);
+        }
+    }
 
     static IntPtr workerAfterDefView = IntPtr.Zero;
     static List<RECT> monitors;
@@ -82,18 +139,27 @@ public static class DesktopLayer {
     // Move the reparented child to cover the given monitor exactly. The wallpaper
     // layer's window origin is the virtual-desktop top-left (can be negative), so
     // the child's parent-relative position is monitor-origin minus layer-origin.
-    static void PositionOnMonitor(IntPtr child, IntPtr layer, int monitor) {
+    static bool PositionOnMonitor(IntPtr child, IntPtr layer, int monitor) {
+        if (monitor < 0) return true;
         monitors = new List<RECT>();
-        EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, CollectMonitor, IntPtr.Zero);
+        if (!EnumDisplayMonitors(IntPtr.Zero, IntPtr.Zero, CollectMonitor, IntPtr.Zero)) return false;
         monitors.Sort(delegate(RECT a, RECT b) {
             if (a.Left != b.Left) return a.Left.CompareTo(b.Left);
             return a.Top.CompareTo(b.Top);
         });
-        if (monitor < 0 || monitor >= monitors.Count) return;
+        if (monitor >= monitors.Count) return false;
         RECT m = monitors[monitor];
         RECT origin;
-        if (!GetWindowRect(layer, out origin)) return;
-        MoveWindow(child, m.Left - origin.Left, m.Top - origin.Top, m.Right - m.Left, m.Bottom - m.Top, true);
+        if (!GetWindowRect(layer, out origin)) return false;
+        if (!MoveWindow(child, m.Left - origin.Left, m.Top - origin.Top,
+            m.Right - m.Left, m.Bottom - m.Top, true)) return false;
+        RECT placed;
+        if (!GetWindowRect(child, out placed)) return false;
+        // GetWindowRect is authoritative for the child after MoveWindow. A
+        // mismatch means DPI virtualization or a shell race changed the
+        // geometry; report failure so the caller can restore a usable window.
+        return placed.Left == m.Left && placed.Top == m.Top
+            && placed.Right == m.Right && placed.Bottom == m.Bottom;
     }
 
     static string ClassName(IntPtr h) {
@@ -134,6 +200,10 @@ public static class DesktopLayer {
     }
 
     public static long Attach(long hwnd, int monitor) {
+        // The helper uses physical monitor rectangles. Opt into per-monitor V2
+        // before querying or moving windows so mixed-DPI displays do not turn
+        // an otherwise valid attach into a falsely scaled geometry.
+        try { SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2); } catch { }
         IntPtr child = new IntPtr(hwnd);
         if (!IsWindow(child)) { LastStatus = "invalid-window"; return 0; }
         IntPtr progman = FindWindow("Progman", null);
@@ -152,41 +222,90 @@ public static class DesktopLayer {
             target = workerAfterDefView;
         }
         if (target == IntPtr.Zero) { LastStatus = "wallpaper-target-not-found"; return 0; }
+        if (!IsWindow(target)) { LastStatus = "wallpaper-target-invalid"; return 0; }
 
-        // SetParent returns the PREVIOUS parent. NULL is valid when the
-        // top-level Electron window has no previous parent, so verify the
-        // resulting relationship instead of treating the return value as the
-        // success signal.
-        SetLastError(0);
-        IntPtr previous = SetParent(child, target);
-        int error = Marshal.GetLastWin32Error();
-        if (ActualParent(child) != target) {
-            LastStatus = String.Format("parent-mismatch target={0} previous={1} error={2} {3}",
-                target.ToInt64(), previous.ToInt64(), error, State(child));
+        IntPtr oldParent = GetParent(child);
+        IntPtr oldStyle = GetStyle(child);
+        RECT oldRect;
+        bool hadRect = GetWindowRect(child, out oldRect);
+        if (oldStyle == IntPtr.Zero) { LastStatus = "style-read-failed"; return 0; }
+
+        // SetParent does not update WS_CHILD/WS_POPUP. Make the window a real
+        // child before reparenting, then verify the resulting style and parent.
+        long childStyle = (oldStyle.ToInt64() & 0xFFFFFFFFL & ~WS_POPUP) | WS_CHILD;
+        if (!SetStyle(child, StyleValue(childStyle))) {
+            LastStatus = "child-style-update-failed";
+            Restore(child, oldParent, oldStyle, oldRect, hadRect);
             return 0;
         }
-        if (monitor >= 0) PositionOnMonitor(child, target, monitor);
+        FrameChanged(child);
+
+        // The return value is the PREVIOUS parent. It is legitimately NULL when
+        // the top-level Electron window is first attached, so success is decided
+        // by the post-call parent relationship, not by the return value alone.
+        IntPtr previous = SetParent(child, target);
+        int setParentError = Marshal.GetLastWin32Error();
+        IntPtr resultingParent = GetParent(child);
+        if (resultingParent != target) {
+            LastStatus = String.Format("setparent-failed previous={0} error={1}", previous.ToInt64(), setParentError);
+            Restore(child, oldParent, oldStyle, oldRect, hadRect);
+            return 0;
+        }
+        IntPtr resultingStyle = GetStyle(child);
+        if ((resultingStyle.ToInt64() & WS_CHILD) == 0 || (resultingStyle.ToInt64() & WS_POPUP) != 0) {
+            LastStatus = "post-attach-style-invalid";
+            Restore(child, oldParent, oldStyle, oldRect, hadRect);
+            return 0;
+        }
+        if (!PositionOnMonitor(child, target, monitor)) {
+            LastStatus = "monitor-position-failed";
+            Restore(child, oldParent, oldStyle, oldRect, hadRect);
+            return 0;
+        }
         LastStatus = State(child);
         return target.ToInt64();
+    }
+
+    public static bool Detach(long hwnd) {
+        IntPtr child = new IntPtr(hwnd);
+        if (!IsWindow(child)) { LastStatus = "invalid-window"; return false; }
+        IntPtr parent = GetParent(child);
+        IntPtr style = GetStyle(child);
+        if (style == IntPtr.Zero) { LastStatus = "style-read-failed"; return false; }
+        IntPtr result = SetParent(child, IntPtr.Zero);
+        int setParentError = Marshal.GetLastWin32Error();
+        // A NULL previous parent is valid; the resulting relationship is the
+        // authoritative check. If it was already top-level, this is idempotent.
+        IntPtr resultingParent = GetParent(child);
+        if (resultingParent != IntPtr.Zero) {
+            LastStatus = String.Format("detach-failed previous={0} error={1}", result.ToInt64(), setParentError);
+            return false;
+        }
+        long topStyle = (style.ToInt64() & 0xFFFFFFFFL & ~WS_CHILD) | WS_POPUP;
+        if (!SetStyle(child, StyleValue(topStyle))) {
+            LastStatus = "top-level-style-update-failed";
+            return false;
+        }
+        FrameChanged(child);
+        LastStatus = State(child);
+        return true;
     }
 }
 "@
 
 $hwndLong = [long]$Hwnd
-if ($Inspect) {
-    Write-Output ([DesktopLayer]::Inspect($hwndLong))
+if ($Detach) {
+    if (-not [DesktopLayer]::Detach($hwndLong)) {
+        Write-Output ("detach-failed " + [DesktopLayer]::LastStatus)
+        exit 1
+    }
+    Write-Output ("detached " + [DesktopLayer]::LastStatus)
     exit 0
-}
-if ($Verify) {
-    $status = [DesktopLayer]::Verify($hwndLong)
-    Write-Output $status
-    if ($status.StartsWith("verified ")) { exit 0 }
-    exit 1
 }
 $target = [DesktopLayer]::Attach($hwndLong, $Monitor)
 if ($target -eq 0) {
-    Write-Output "attach-failed $([DesktopLayer]::LastStatus)"
+    Write-Output ("attach-failed " + [DesktopLayer]::LastStatus)
     exit 1
 }
-Write-Output "attached:$target $([DesktopLayer]::LastStatus)"
+Write-Output ("attached:$target " + [DesktopLayer]::LastStatus)
 exit 0

@@ -189,6 +189,51 @@ async function musicSync() {
 
 const state = { packId: null };
 
+// Opt-in renderer input trace for desktop-attachment investigations. This is
+// deliberately disabled in normal builds and records only event milestones
+// (never key values, input text, clipboard data, or component contents). A
+// packaged diagnostic run can enable it with DE_INPUT_TRACE=1; main forwards
+// the console lines to engine.log when that flag is set.
+const inputTrace = (() => {
+  try {
+    const enabled = new URLSearchParams(location.search).get('inputTrace') === '1';
+    if (!enabled) return false;
+    const describe = (target) => {
+      if (!target || typeof target !== 'object') return 'unknown';
+      const tag = typeof target.tagName === 'string' ? target.tagName.toLowerCase() : 'node';
+      const id = typeof target.id === 'string' && target.id ? `#${target.id.slice(0, 40)}` : '';
+      const cls = typeof target.className === 'string' && target.className
+        ? `.${target.className.trim().split(/\s+/).slice(0, 3).join('.')}` : '';
+      return `${tag}${id}${cls}`.slice(0, 120);
+    };
+    const emit = (kind, event) => {
+      const point = event && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)
+        ? ` x=${Math.round(event.clientX)} y=${Math.round(event.clientY)}` : '';
+      const trusted = event && event.isTrusted === true ? ' trusted=1' : ' trusted=0';
+      const target = describe(event && event.target);
+      const active = document.activeElement ? describe(document.activeElement) : 'none';
+      console.info(`[input-trace] ${kind}${point}${trusted} target=${target} active=${active} visibility=${document.visibilityState}`);
+    };
+    for (const kind of ['pointerdown', 'pointerup', 'click', 'focusin', 'focusout', 'keydown']) {
+      document.addEventListener(kind, (event) => emit(kind, event), true);
+    }
+    window.addEventListener('error', (event) => {
+      const message = event && event.error && event.error.message ? event.error.message : (event && event.message) || 'unknown';
+      console.error(`[input-trace] renderer-error ${String(message).slice(0, 240)}`);
+    });
+    window.addEventListener('unhandledrejection', (event) => {
+      const reason = event && event.reason;
+      const message = reason && reason.message ? reason.message : String(reason || 'unknown');
+      console.error(`[input-trace] renderer-rejection ${message.slice(0, 240)}`);
+    });
+    console.info(`[input-trace] enabled ready=${document.readyState} visibility=${document.visibilityState}`);
+    return true;
+  } catch (err) {
+    // Diagnostics must never interfere with the dashboard surface.
+    return false;
+  }
+})();
+
 // Performance citizenship: main drives this over aegis:desktop:power. `active`
 // false freezes the wallpaper (a full-screen app is up / on battery); `maxFps`
 // caps the ambience frame rate. We cache the last pack so resuming re-renders
@@ -203,18 +248,22 @@ let cache = { pack: null, assets: null };
 // Render the active pack at the current frame cap, then freeze if we're paused.
 function renderActive() {
   if (!cache.pack) return;
+  if (inputTrace) console.info(`[input-trace] render-start pack=${String(cache.pack.id || state.packId || '').slice(0, 80)} frozen=${power.active ? 0 : 1}`);
   AegisComponents.applySkin(document.body, cache.pack, cache.assets, { maxFps: power.maxFps, parallaxMultiplier: bgMotion.parallax });
   renderer.render(document.getElementById('canvas'), cache.pack, cache.assets);
   applied.active = true;
   applied.maxFps = power.maxFps;
+  if (inputTrace) console.info(`[input-trace] render-ready components=${Array.isArray(cache.pack.components) ? cache.pack.components.length : 0} active=${document.activeElement ? document.activeElement.tagName : 'none'}`);
   if (!power.active) freezeNow();
 }
 
 // Stop the animation loops and telemetry; the last frame stays on screen.
 function freezeNow() {
+  if (inputTrace) console.info(`[input-trace] freeze-start active=${document.activeElement ? document.activeElement.tagName : 'none'}`);
   renderer.destroy();
   AegisComponents.freezeAmbience(document.body);
   applied.active = false;
+  if (inputTrace) console.info(`[input-trace] freeze-ready active=${document.activeElement ? document.activeElement.tagName : 'none'}`);
 }
 
 function applyPower() {
@@ -228,6 +277,7 @@ function applyPower() {
 }
 
 async function loadPack(id) {
+  if (inputTrace) console.info(`[input-trace] pack-load-start id=${String(id).slice(0, 80)}`);
   const res = await aegis.packLoad(id);
   if (!res.ok) {
     console.warn(`[dashboard] ${res.error}`);
@@ -237,6 +287,7 @@ async function loadPack(id) {
   cache = { pack: res.pack, assets: res.assets };
   renderActive();
   document.title = `${res.pack.persona.name} — ${res.pack.name}`;
+  if (inputTrace) console.info(`[input-trace] pack-load-ready id=${String(res.pack.id || id).slice(0, 80)}`);
   for (const w of res.warnings) console.warn(`[pack] ${w}`);
 }
 
@@ -278,6 +329,7 @@ async function init() {
 aegis.onPower((p) => {
   power.active = p.active !== false;
   power.maxFps = Number(p.maxFps) > 0 ? Number(p.maxFps) : 30;
+  if (inputTrace) console.info(`[input-trace] power active=${power.active ? 1 : 0} maxFps=${power.maxFps}`);
   applyPower();
   // Music follows the same power state as the visuals — driven straight off the
   // signal (not the render state machine, which no-ops before a pack loads), so
