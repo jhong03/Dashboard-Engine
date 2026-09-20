@@ -186,10 +186,11 @@ public static class DesktopLayer {
         IntPtr parent = ActualParent(child);
         RECT rect;
         GetWindowRect(child, out rect);
-        return String.Format("hwnd={0} parent={1} class={2} visible={3} parentVisible={4} enabled={5} getParent={6} rect={7},{8},{9},{10}",
+        return String.Format("hwnd={0} parent={1} class={2} visible={3} parentVisible={4} enabled={5} getParent={6} style=0x{7:X8} exstyle=0x{8:X8} rect={9},{10},{11},{12}",
             child.ToInt64(),
             parent.ToInt64(), ClassName(parent), IsWindowVisible(child),
             parent != IntPtr.Zero && IsWindowVisible(parent), IsWindowEnabled(child), GetParent(child).ToInt64(),
+            GetStyle(child).ToInt64() & 0xFFFFFFFFL, GetExStyle(child).ToInt64() & 0xFFFFFFFFL,
             rect.Left, rect.Top, rect.Right, rect.Bottom);
     }
 
@@ -253,8 +254,19 @@ public static class DesktopLayer {
             Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
             return 0;
         }
+        // SetParent may rewrite the style when the target is a shell window.
+        // Restore the popup bits after the relationship is established so the
+        // window remains an activatable Chromium surface rather than a child
+        // control that the shell can paint but cannot focus.
+        long popupStyle = (oldStyle.ToInt64() & 0xFFFFFFFFL & ~WS_CHILD) | WS_POPUP;
+        if (!SetStyle(child, StyleValue(popupStyle))) {
+            LastStatus = "popup-style-update-failed";
+            Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
+            return 0;
+        }
+        FrameChanged(child);
         IntPtr resultingStyle = GetStyle(child);
-        if ((resultingStyle.ToInt64() & WS_POPUP) == 0) {
+        if ((resultingStyle.ToInt64() & WS_POPUP) == 0 || (resultingStyle.ToInt64() & WS_CHILD) != 0) {
             LastStatus = "post-attach-style-invalid";
             Restore(child, oldParent, oldStyle, oldExStyle, oldRect, hadRect);
             return 0;
