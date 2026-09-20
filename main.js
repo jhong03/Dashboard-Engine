@@ -737,7 +737,6 @@ let desktopWatchBusy = false;
 async function createDashboardWindow(options = {}) {
   const forcePlain = Boolean(options.forcePlain);
   if (dashboardWindow) return;
-  const forcePlain = Boolean(options.forcePlain);
   // Startup + every relocate route through here — heal a stale/legacy pin so the
   // monitor choice sticks across reboots (Electron's display id isn't stable).
   // Snapshot the saved pin BEFORE reconcile heals it so the log can show when the
@@ -892,7 +891,6 @@ function relocateDesktop() {
   if (!dashboardWindow || dashboardWindow.isDestroyed()) return;
   const wasPaused = desktopPaused;
   desktopAttached = false;
-  stopDesktopAttachmentWatch();
   dashboardWindow.destroy();
   dashboardWindow = null;
   desktopPaused = false;
@@ -3113,7 +3111,6 @@ if (IS_SESSION) {
 
   // Don't leave the full-screen watcher process behind on quit.
   app.on('before-quit', () => {
-    stopDesktopAttachmentWatch();
     if (presenceMonitor) presenceMonitor.stop();
     if (mediaMonitor) mediaMonitor.stop();
     if (audioMixer) audioMixer.stop();

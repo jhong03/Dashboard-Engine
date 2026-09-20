@@ -13,6 +13,8 @@
     "audition": "node scripts/audition.js",
     "selftest": "node scripts/selftest.js",
     "desktop-check": "node scripts/desktop-helper-check.js",
+    "test:health-alerts": "node --test scripts/check-health-alerts.js",
+    "test:health-audio": "electron scripts/check-health-alerts-electron.js",
     "perf": "node scripts/perf.js",
     "packs": "node scripts/packs.js",
     "i18n:export": "node scripts/i18n-csv.js export",

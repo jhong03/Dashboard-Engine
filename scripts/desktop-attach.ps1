@@ -43,6 +43,11 @@ public static class DesktopLayer {
     [DllImport("user32.dll", SetLastError=true)] static extern IntPtr SetParent(IntPtr child, IntPtr parent);
     [DllImport("user32.dll")] static extern IntPtr GetParent(IntPtr child);
     [DllImport("user32.dll")] static extern bool IsWindow(IntPtr h);
+    [DllImport("user32.dll", CharSet=CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder name, int max);
+    [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+    [DllImport("user32.dll")] static extern bool IsWindowEnabled(IntPtr h);
+    [DllImport("user32.dll")] static extern IntPtr GetAncestor(IntPtr child, uint flags);
+    [DllImport("user32.dll")] static extern IntPtr GetDesktopWindow();
     // Use the exported Unicode entry points explicitly. The Win32 headers
     // expose these names as macros, but there is no reliable undecorated
     // Get/SetWindowLongPtr export for a C# P/Invoke lookup.
@@ -74,8 +79,6 @@ public static class DesktopLayer {
     const uint SWP_FRAMECHANGED = 0x0020;
     static readonly IntPtr DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 = new IntPtr(-4);
 
-    public static string LastStatus = "";
-
     static IntPtr StyleValue(long value) {
         return IntPtr.Size == 8 ? new IntPtr(value) : new IntPtr(unchecked((int)value));
     }
@@ -96,15 +99,6 @@ public static class DesktopLayer {
     static void FrameChanged(IntPtr h) {
         SetWindowPos(h, IntPtr.Zero, 0, 0, 0, 0,
             SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
-    }
-
-    static string State(IntPtr h) {
-        RECT r;
-        IntPtr style = GetStyle(h);
-        string rect = GetWindowRect(h, out r)
-            ? String.Format("rect={0},{1},{2},{3}", r.Left, r.Top, r.Right, r.Bottom)
-            : "rect=?";
-        return String.Format("parent={0} style=0x{1:X} {2}", GetParent(h).ToInt64(), style.ToInt64(), rect);
     }
 
     static void Restore(IntPtr child, IntPtr parent, IntPtr style, RECT oldRect, bool hadRect) {
